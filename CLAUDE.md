@@ -101,6 +101,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   生の HTML は誤りにし、`boxloom check` が場所つきの JSON で返す。IR の写し(YAML/JSON)を
   併存させ、Go DSL は開発者・試験用、TeX 風は採らない。仕様は `docs/content-syntax.md`、
   比較は `docs/content-syntax-comparison.md`。
+- **意味の中間表現(IR)**:どの記法も JSON の IR に落とし、テンプレートは IR だけを
+  見る。Schema は `schema/`(入口 `boxloom-ir.schema.json`)、設計は `docs/ir.md`、
+  検査は `python3 tools/validate_ir.py`。
 
 ## アーキテクチャ: コアの二層構造(レイアウトとサブシステム)
 
