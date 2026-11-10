@@ -128,3 +128,98 @@ func measureTextHeight(text string, fontSizePt, maxWidthPt float64, bold bool) f
 	lines := wrapText(text, fontSizePt, maxWidthPt, bold)
 	return float64(len(lines)) * fontSizePt * lineHeightMult
 }
+
+// --- 装飾つきの文字(強調などを含む1つの段落) ---
+
+// TextRun は同じ見た目が続く文字の塊。意味(強調など)を見た目(色・太さ)に
+// 変えるのはテンプレートで、ここには見た目だけが入る。
+type TextRun struct {
+	Text  string
+	Color string
+	Bold  bool
+}
+
+// runsText は塊をつないだ文字列。
+func runsText(runs []TextRun) string {
+	var b strings.Builder
+	for _, r := range runs {
+		b.WriteString(r.Text)
+	}
+	return b.String()
+}
+
+// richRunes は塊を1文字ずつにほどいたもの(文字と、その文字の塊の番号)。
+func richRunes(runs []TextRun) ([]rune, []int) {
+	var rs []rune
+	var style []int
+	for i, r := range runs {
+		for _, ch := range r.Text {
+			rs = append(rs, ch)
+			style = append(style, i)
+		}
+	}
+	return rs, style
+}
+
+// naturalRunsWidth は折り返さないときの幅(安全マージン込み)。
+func naturalRunsWidth(runs []TextRun, fontSizePt float64) float64 {
+	total := 0.0
+	for _, r := range runs {
+		for _, ch := range r.Text {
+			total += charEmWidth(ch, r.Bold)
+		}
+	}
+	return total * fontSizePt * measureSafetyMargin
+}
+
+// wrapRuns は wrapText と同じ規則(トークン単位・空白では折り返さない・"\n" は
+// 段落の境目)で、装飾つきの文字を折り返す。太さは文字ごとに測る。
+func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
+	rs, style := richRunes(runs)
+	var lines [][2]int // [start, end) の文字の位置
+	start := 0
+	for paraEnd := 0; paraEnd <= len(rs); paraEnd++ {
+		if paraEnd < len(rs) && rs[paraEnd] != '\n' {
+			continue
+		}
+		pos := start
+		lineStart, curW, curLen := start, 0.0, 0
+		for _, tok := range tokenizeLine(string(rs[start:paraEnd])) {
+			n := len([]rune(tok))
+			tokW := 0.0
+			for k := pos; k < pos+n; k++ {
+				tokW += charEmWidth(rs[k], runs[style[k]].Bold) * fontSizePt
+			}
+			tokW *= measureSafetyMargin
+			const wrapEps = 1e-6
+			if curLen > 0 && curW+tokW > maxWidthPt+wrapEps && strings.TrimSpace(tok) != "" {
+				lines = append(lines, [2]int{lineStart, pos})
+				lineStart, curW, curLen = pos, 0, 0
+			}
+			curW += tokW
+			curLen += n
+			pos += n
+		}
+		lines = append(lines, [2]int{lineStart, paraEnd})
+		start = paraEnd + 1
+	}
+	out := make([][]TextRun, 0, len(lines))
+	for _, ln := range lines {
+		var line []TextRun
+		for k := ln[0]; k < ln[1]; k++ {
+			r := runs[style[k]]
+			if len(line) > 0 && k > ln[0] && style[k] == style[k-1] {
+				line[len(line)-1].Text += string(rs[k])
+				continue
+			}
+			line = append(line, TextRun{Text: string(rs[k]), Color: r.Color, Bold: r.Bold})
+		}
+		out = append(out, line)
+	}
+	return out
+}
+
+// measureRunsHeight は折り返した行数から高さを出す。
+func measureRunsHeight(runs []TextRun, fontSizePt, maxWidthPt float64) float64 {
+	return float64(len(wrapRuns(runs, fontSizePt, maxWidthPt))) * fontSizePt * lineHeightMult
+}

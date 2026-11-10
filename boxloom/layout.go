@@ -60,6 +60,7 @@ type Spec struct {
 	Height         *float64
 
 	Text     string
+	Runs     []TextRun // 空でなければ Text の代わりに使う(強調などの装飾つき)
 	FontSize float64
 	Color    string
 	Bold     bool
@@ -112,6 +113,73 @@ func TextNode(content string, opts ...SpecOpt) *Spec {
 	return apply(s, opts)
 }
 
+// RichTextNode は装飾つきの文字の葉。
+func RichTextNode(runs []TextRun, opts ...SpecOpt) *Spec {
+	s := &Spec{Kind: KindText, Runs: runs, Text: runsText(runs), FontSize: 12.5, Color: defaultTextColor, Align: "left", Anchor: "top"}
+	return apply(s, opts)
+}
+
+// textNaturalWidth / textHeightFor は、文字の葉の幅と、幅を決めたときの高さ。
+func textNaturalWidth(s *Spec) float64 {
+	if len(s.Runs) > 0 {
+		return naturalRunsWidth(s.Runs, s.FontSize)
+	}
+	return naturalTextWidth(s)
+}
+
+func textHeightFor(s *Spec, width float64) float64 {
+	if len(s.Runs) > 0 {
+		return measureRunsHeight(s.Runs, s.FontSize, width)
+	}
+	return measureTextHeight(s.Text, s.FontSize, width, s.Bold)
+}
+
+// heightForWidth は、幅を決めたときの高さ。列(Col)の中に置いた入れ子の箱の
+// 高さを、中の文字の折り返しまで含めて測るのに使う。naturalSize の 'h' は
+// 文字を1行と見なすので、行(Row)の中で文字が折り返すと高さが足りなくなる
+// (Python 版から引き継いだ割り切り)。それを補うための、Go 版での拡張。
+func heightForWidth(s *Spec, width float64) float64 {
+	if s.Height != nil {
+		return *s.Height
+	}
+	switch s.Kind {
+	case KindText:
+		return textHeightFor(s, width)
+	case KindSubsystem:
+		if s.Subsystem == nil {
+			return 0
+		}
+		return s.Subsystem.Measure(Constraint{Width: width}).Natural.Height
+	}
+	if len(s.Children) == 0 {
+		return 2 * s.Padding
+	}
+	inner := max0(width - 2*s.Padding)
+	if s.Kind == KindCol {
+		total := s.Gap * float64(max(0, len(s.Children)-1))
+		for _, c := range s.Children {
+			cw := inner
+			if c.Width != nil {
+				cw = *c.Width
+			} else if s.AlignItems != AlignStretch {
+				cw = naturalSize(c, 'w')
+			}
+			total += heightForWidth(c, cw)
+		}
+		return total + 2*s.Padding
+	}
+	// 行: 子の幅を決めるために一度並べてみる(高さは仮)。並べた結果の Box は
+	// あとで本当の computeLayout が上書きする。
+	computeLayout(s, 0, 0, width, naturalSize(s, 'h'))
+	m := 0.0
+	for _, c := range s.Children {
+		if v := heightForWidth(c, c.Box.Width); v > m {
+			m = v
+		}
+	}
+	return m + 2*s.Padding
+}
+
 // SubsystemNode はサブシステムを葉として置く。大きさは Measure の自己申告で
 // 決まる(明示の Width/Height/Basis があればそちらが勝つ)。
 func SubsystemNode(sub Subsystem, opts ...SpecOpt) *Spec {
@@ -143,6 +211,17 @@ func subsystemNatural(s *Spec, axis byte, c Constraint) float64 {
 	return n.Height
 }
 
+// subsystemMaxMain はサブシステムが申告した主軸の上限(無ければ 0)。
+func subsystemMaxMain(c *Spec, isRow bool, cross float64) float64 {
+	if c.Kind != KindSubsystem || c.Subsystem == nil {
+		return 0
+	}
+	if isRow {
+		return c.Subsystem.Measure(Constraint{Height: cross}).Max.Width
+	}
+	return c.Subsystem.Measure(Constraint{Width: cross}).Max.Height
+}
+
 const defaultTextColor = "F5F7FA"
 
 // naturalSize は親からの確定サイズを一切前提にしない、コンテンツだけから決まる
@@ -158,7 +237,7 @@ func naturalSize(s *Spec, axis byte) float64 {
 	switch s.Kind {
 	case KindText:
 		if axis == 'w' {
-			return naturalTextWidth(s)
+			return textNaturalWidth(s)
 		}
 		return s.FontSize * lineHeightMult
 	case KindSubsystem:
@@ -253,9 +332,9 @@ func computeLayout(s *Spec, x, y, width, height float64) {
 			basisSizes[i] = *explicitMain
 		case c.Kind == KindText:
 			if isRow {
-				basisSizes[i] = naturalTextWidth(c)
+				basisSizes[i] = textNaturalWidth(c)
 			} else {
-				basisSizes[i] = measureTextHeight(c.Text, c.FontSize, cs, c.Bold)
+				basisSizes[i] = textHeightFor(c, cs)
 			}
 		case c.Kind == KindSubsystem:
 			// 交差軸の大きさ(cs)を伝えて、主軸の自然な大きさを自己申告させる。
@@ -264,12 +343,12 @@ func computeLayout(s *Spec, x, y, width, height float64) {
 			} else {
 				basisSizes[i] = subsystemNatural(c, 'h', Constraint{Width: cs})
 			}
+		case !isRow:
+			// 列の中の入れ子の箱: 幅(cs)を決めたときの高さ。中に文字の折り返しが
+			// 無ければ naturalSize と同じ値になる。
+			basisSizes[i] = heightForWidth(c, cs)
 		default:
-			mainAxisOfParent := byte('h')
-			if isRow {
-				mainAxisOfParent = 'w'
-			}
-			basisSizes[i] = naturalSize(c, mainAxisOfParent)
+			basisSizes[i] = naturalSize(c, 'w')
 		}
 	}
 
@@ -338,6 +417,29 @@ func computeLayout(s *Spec, x, y, width, height float64) {
 	case free > 0 && totalGrow > 0:
 		for i, c := range children {
 			mainSizes[i] = basisSizes[i] + free*(c.Grow/totalGrow)
+		}
+		// サブシステムが申告した上限(Max)を超えた分は、上限の無いほかの伸びる
+		// 子へ grow の比で回す(1回だけ。回す先が無ければ空きのまま)。
+		excess, restGrow := 0.0, 0.0
+		capped := make([]bool, n)
+		for i, c := range children {
+			if c.Grow <= 0 {
+				continue
+			}
+			if mx := subsystemMaxMain(c, isRow, crossSizes[i]); mx > 0 && mainSizes[i] > mx {
+				excess += mainSizes[i] - mx
+				mainSizes[i] = mx
+				capped[i] = true
+				continue
+			}
+			restGrow += c.Grow
+		}
+		if excess > 0 && restGrow > 0 {
+			for i, c := range children {
+				if c.Grow > 0 && !capped[i] {
+					mainSizes[i] += excess * (c.Grow / restGrow)
+				}
+			}
 		}
 	case free < 0 && basisTotal > 0:
 		for i, b := range basisSizes {

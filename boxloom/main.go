@@ -8,8 +8,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -79,6 +81,10 @@ func renderSpec(ctx RenderContext, s *Spec) {
 	}
 	switch s.Kind {
 	case KindText:
+		if len(s.Runs) > 0 {
+			p.AddRichTextBox(s.Box, s.Runs, s.FontSize, s.Align, s.Anchor)
+			return
+		}
 		p.AddTextBox(s.Box, s.Text, s.FontSize, s.Color, s.Bold, s.Align, s.Anchor)
 		return
 	case KindSubsystem:
@@ -175,6 +181,9 @@ func generate(outPath string, th Theme, subtitle string) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "build" {
+		os.Exit(runBuild(os.Args[2:]))
+	}
 	if err := os.MkdirAll("out", 0o755); err != nil {
 		panic(err)
 	}
@@ -188,5 +197,55 @@ func boolToInt(b bool) int {
 	if b {
 		return 1
 	}
+	return 0
+}
+
+// runBuild は「boxloom build」: IR(JSON)を読んで pptx を書く。
+//
+//	go run . build [-o out.pptx] [-template dark|light] deck.json
+//
+// テンプレートは -template > IR の template > light の順で決まる。
+func runBuild(args []string) int {
+	fs := flag.NewFlagSet("build", flag.ContinueOnError)
+	out := fs.String("o", "", "書き出す pptx(省くと out/<IR の名前>.pptx)")
+	tmpl := fs.String("template", "", "テンプレートの名前(省くと IR の template)")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 1 {
+		fmt.Fprintln(os.Stderr, "usage: boxloom build [-o out.pptx] [-template dark|light] deck.json")
+		return 2
+	}
+	in := fs.Arg(0)
+	deck, err := ReadIR(in)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+	name := deck.Template
+	if *tmpl != "" {
+		name = *tmpl
+	}
+	t, err := LookupTemplate(name)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+	if *out == "" {
+		*out = filepath.Join("out", strings.TrimSuffix(filepath.Base(in), filepath.Ext(in))+".pptx")
+	}
+	if err := os.MkdirAll(filepath.Dir(*out), 0o755); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		return 1
+	}
+	warnings, err := t.RenderDeck(deck, *out)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %s: %v\n", in, err)
+		return 1
+	}
+	for _, w := range warnings {
+		fmt.Println(w)
+	}
+	fmt.Printf("saved: %s (%d slides, template %s)\n", *out, len(deck.Slides), t.Name)
 	return 0
 }

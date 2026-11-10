@@ -5,8 +5,9 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 決める。
 
 > 状態: 第一版の下書き(版 `0.1`)。`docs/content-syntax-comparison.md` の共通の
-> お題3枚(表紙・論点と比較・Gantt)をすべて表せる範囲で作った。パーサーと
-> テンプレートはまだ IR を読まない。
+> お題3枚(表紙・論点と比較・Gantt)をすべて表せる範囲で作った。Go 版は
+> IR を読んで PPTX を書ける(`go run . build`、`docs/build.md`)。Markdown から
+> IR へのパーサーはまだ無い。
 
 ## ファイル
 
@@ -16,6 +17,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `schema/subsystems/gantt.schema.json` | Gantt サブシステムのブロック |
 | `schema/boxloom-ir.schema.json` | 検査の入口。コアに同梱のサブシステムを差し込んだもの |
 | `examples/ir/demo-deck.json` | お題3枚を IR で書いた例 |
+| `examples/ir/gantt-full.json` | デモの Gantt 全体(3グループ・9行・注釈4つ)を IR で書いた例 |
 | `examples/ir/invalid/` | 断られるべき例(色・位置・見た目の装飾などを1か所だけ足したもの) |
 | `tools/validate_ir.py` | 検査のコマンド |
 
@@ -152,6 +154,7 @@ IR は人が書くものではなく、パーサーの出力・AI の構造化�
 - **画像・表・コード片・図の引用**など、お題3枚に無いブロック。
 - **スライドの骨組みの枠**(title / body / aside …)をコンテンツから指すか。いまの
   IR は `body` の1つだけ。
-- **デモの Gantt の再現**:デモの注釈は手で位置(`AnchorYFrac`)を決めているが、
-  IR は位置を持たない。サブシステムが位置を自分で決められるようになるまでは、
-  IR からデモと同じ見た目は作れない。
+- **デモの Gantt の再現**:注釈の置き場所は Gantt サブシステムが決める
+  ようになった(`docs/subsystem.md` の6節)。デモの Gantt 全体を IR で書いた例が
+  `examples/ir/gantt-full.json`。置き方は自動なので、手で決めたデモと全く同じ
+  見た目ではない(注釈の上下が一部違う)。

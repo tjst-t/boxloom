@@ -10,6 +10,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -72,6 +73,7 @@ type GanttSegment struct {
 	Role       string // 意味役割名。生の色は入らない。
 	Label      string
 	OpenEnd    bool
+	Tentative  bool // 確定していない区間(破線の枠で描く)
 }
 
 type GanttRow struct {
@@ -109,13 +111,22 @@ type LegendItem struct {
 	Label string
 }
 
+// Annotation は日付への吹き出し。
+//
+// Direction を "up" / "down" にすると、手で決めた置き方(AnchorYFrac の高さ・
+// そのレーン)になる(Go で直接組んだデモ用)。Direction が空なら、置き方は
+// サブシステムが決める(IR から作るとき): 指す先は TargetGroup / TargetRow
+// (-1 は「指さない」)で、上下のレーンと横のずらしは planAnnotations が
+// 重なりを避けて選ぶ。
 type Annotation struct {
 	AnchorDate  time.Time
 	AnchorYFrac float64
 	Text        string
 	Role        string
-	Direction   string // "up" | "down"
+	Direction   string // "up" | "down" | ""(自動)
 	Emphasis    bool
+
+	TargetGroup, TargetRow int
 }
 
 type GanttChart struct {
@@ -189,8 +200,15 @@ func NewGanttSubsystem(data any) (Subsystem, error) {
 		return &GanttSubsystem{Chart: v}, nil
 	case GanttChart:
 		return &GanttSubsystem{Chart: &v}, nil
+	case json.RawMessage:
+		// IR の data(schema/subsystems/gantt.schema.json の形)。
+		chart, err := ganttFromIR(v)
+		if err != nil {
+			return nil, err
+		}
+		return &GanttSubsystem{Chart: chart}, nil
 	}
-	return nil, fmt.Errorf("gantt: expected *GanttChart, got %T", data)
+	return nil, fmt.Errorf("gantt: expected *GanttChart or IR data, got %T", data)
 }
 
 func (g *GanttSubsystem) Name() string { return "gantt" }
@@ -203,6 +221,7 @@ func (g *GanttSubsystem) Render(ctx RenderContext, box LBox) {
 // 文字(typeMicro)とバーが重ならずに収まる下限。
 const (
 	naturalRowH   = 26.0
+	maxRowH       = 40.0  // これより行を高くしても読みやすくならない(帯が間延びする)
 	naturalChartW = 560.0 // 日付軸の部分の自然な幅
 	minChartW     = 240.0 // 日付軸の部分がこれより狭いと目盛りの文字が重なる
 )
@@ -214,7 +233,12 @@ const (
 // 収まるだけの行の高さも下限に入れる。幅が分かっていれば幅はそのまま返す。
 func (g *GanttSubsystem) Measure(c Constraint) Measurement {
 	chart := g.Chart
-	m := ganttMetricsFor(chart)
+	gutterW := gutterGroupW + gutterSubW + gutterLabelW
+	natW := 2*spaceMD + gutterW + naturalChartW
+	if c.Width > 0 {
+		natW = c.Width
+	}
+	m := ganttMetricsFor(chart, natW)
 	totalRows, nGroups := 0, len(chart.Groups)
 	labelRowH := 0.0 // グループ名を収めるのに要る、1行あたりの高さ
 	for i := range chart.Groups {
@@ -236,18 +260,14 @@ func (g *GanttSubsystem) Measure(c Constraint) Measurement {
 		return rowH*float64(totalRows) + gaps
 	}
 
-	gutterW := gutterGroupW + gutterSubW + gutterLabelW
-	natW := 2*spaceMD + gutterW + naturalChartW
-	if lw := 2*spaceMD + m.legendW; lw > natW {
+	if lw := 2*spaceMD + m.legendW; lw > natW && c.Width <= 0 {
 		natW = lw
 	}
 	minW := 2*spaceMD + gutterW + minChartW
-	if c.Width > 0 {
-		natW = c.Width
-	}
 	return Measurement{
 		Natural: Size{Width: natW, Height: m.chromeH + bodyFor(naturalRowH)},
 		Min:     Size{Width: minW, Height: m.chromeH + bodyFor(minRowH)},
+		Max:     Size{Height: m.chromeH + bodyFor(maxRowH)},
 	}
 }
 
@@ -259,14 +279,15 @@ type ganttMetrics struct {
 	legendW                         float64
 }
 
-func ganttMetricsFor(chart *GanttChart) ganttMetrics {
+// boxWidth はサブシステムに割り当てる幅(注釈をどちらのレーンに置くかが
+// 横の重なりで変わるため)。
+func ganttMetricsFor(chart *GanttChart, boxWidth float64) ganttMetrics {
 	var m ganttMetrics
 	hasUp, hasDown := false, false
-	for _, a := range chart.Annotations {
-		if a.Direction == "up" {
+	for _, pl := range planAnnotations(chart, spaceMD, boxWidth-2*spaceMD) {
+		if pl.up {
 			hasUp = true
-		}
-		if a.Direction == "down" {
+		} else {
 			hasDown = true
 		}
 	}
@@ -295,7 +316,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles) {
 	x0, y0 := box.X+pad, box.Y+pad
 	w, h := box.Width-2*pad, box.Height-2*pad
 
-	gm := ganttMetricsFor(chart)
+	gm := ganttMetricsFor(chart, box.Width)
 	annTopH, annBottomH, milestoneH := gm.annTopH, gm.annBottomH, gm.milestoneH
 
 	// --- 凡例(実測した文字幅でカーソルを前進させる。本物と同じ) ---
@@ -368,9 +389,11 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles) {
 	labelX := subX + gutterSubW
 
 	yCursor := bodyTop
+	groupTops := make([]float64, nGroups)
 	for gi := range chart.Groups {
 		group := &chart.Groups[gi]
 		groupTop := yCursor
+		groupTops[gi] = groupTop
 		groupH := rowH * float64(len(group.Rows))
 
 		if group.HasRiskBand {
@@ -428,11 +451,18 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles) {
 					ww = 1.0
 				}
 				segColor := c(seg.Role)
-				p.AddRect(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, segColor, 3)
+				if seg.Tentative {
+					p.AddRectFull(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, "", 3, segColor, "dash", 1.25)
+				} else {
+					p.AddRect(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, segColor, 3)
+				}
 				if seg.Label != "" && (bx2-bx1) > 46 {
 					labelColor := c("text_primary")
-					if seg.Role == "conditional" {
+					if seg.Role == "conditional" && !seg.Tentative {
 						labelColor = c("on_conditional")
+					}
+					if seg.Tentative {
+						labelColor = segColor
 					}
 					p.AddTextBoxNoWrap(LBox{X: bx1 + 5, Y: barY, Width: bx2 - bx1 - 8, Height: barH}, seg.Label, typeNano, labelColor, false, "left", "middle")
 				}
@@ -459,12 +489,15 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles) {
 		p.AddTextBoxNoWrap(LBox{X: ex0, Y: ey - 15, Width: (x0 + w) - ex0, Height: 13}, chart.ExtNoteLabel, typeNano, c(chart.ExtNoteRole), true, "left", "top")
 	}
 
-	// --- 注釈(上下レーン、水平方向の重なりを動的に回避) ---
+	// --- 注釈(置き場所は planAnnotations が決める) ---
 	downY := bodyTop + bodyH + annLaneGap
-	var placed []placedBox
-	for _, ann := range chart.Annotations {
+	plan := planAnnotations(chart, x0, w)
+	for i, ann := range chart.Annotations {
 		ax := sx(ann.AnchorDate)
 		ay := bodyTop + ann.AnchorYFrac*bodyH
+		if ann.Direction == "" {
+			ay = autoAnchorY(chart, ann, groupTops, rowH, bodyTop, bodyH)
+		}
 		annColor := c(ann.Role)
 
 		if ann.Emphasis {
@@ -472,28 +505,11 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles) {
 		}
 		p.AddDot(ax, ay, 3.0, annColor)
 
-		bx := clamp(ax-annBoxW/2, x0, x0+w-annBoxW)
+		bx := plan[i].bx
 		by := downY
-		if ann.Direction == "up" {
+		if plan[i].up {
 			by = upY
 		}
-		step := annBoxW + 8
-		tries := 0
-		for tries < 6 {
-			conflict := false
-			for _, pb := range placed {
-				if rectsOverlap(placedBox{bx, by, annBoxW, annBoxH}, pb, 4.0) {
-					conflict = true
-					break
-				}
-			}
-			if !conflict {
-				break
-			}
-			bx = clamp(bx+step, x0, x0+w-annBoxW)
-			tries++
-		}
-		placed = append(placed, placedBox{bx, by, annBoxW, annBoxH})
 
 		p.AddRectFull(LBox{X: bx, Y: by, Width: annBoxW, Height: annBoxH}, c("card_alt"), 8, annColor, "", 1.25)
 		p.AddTextBox(LBox{X: bx + 8, Y: by + 4, Width: annBoxW - 16, Height: annBoxH - 8}, ann.Text, typeNano+0.5, c("text_primary"), false, "left", "top")
@@ -503,6 +519,113 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles) {
 		}
 		p.AddLine(ax, ay, bx+annBoxW/2, connY, 1.0, annColor, "dash")
 	}
+}
+
+// annPlacement は1つの注釈の置き場所: 上のレーンか下のレーンか、と箱の左端。
+type annPlacement struct {
+	up bool
+	bx float64
+}
+
+// planAnnotations は注釈の置き場所を決める。x0・w はチャートの内側の左端と幅
+// (Measure と renderGantt で同じ幅を渡すので、申告した高さと描いた結果が
+// ずれない)。
+//
+//   - 手で決めた注釈(Direction が "up"/"down"): そのレーンで、日付の真上に
+//     置き、ほかの箱と重なれば右へずらす(従来どおり)。
+//   - 自動の注釈(Direction が空): 指す先がチャートの上半分なら上のレーン、
+//     下半分(か真ん中)なら下のレーンを先に試す。日付の真上に置けなければ
+//     もう一方のレーンの真上、それも駄目なら左右に少しずつずらして、最初に
+//     空いた場所に置く。
+func planAnnotations(chart *GanttChart, x0, w float64) []annPlacement {
+	gutterW := gutterGroupW + gutterSubW + gutterLabelW
+	chartX0, chartW := x0+gutterW, w-gutterW
+	step := annBoxW + 8
+	type laid struct {
+		up bool
+		x  float64
+	}
+	var placed []laid
+	free := func(up bool, bx float64) bool {
+		for _, pb := range placed {
+			if pb.up == up && rectsOverlap(placedBox{bx, 0, annBoxW, annBoxH}, placedBox{pb.x, 0, annBoxW, annBoxH}, 4.0) {
+				return false
+			}
+		}
+		return true
+	}
+	out := make([]annPlacement, len(chart.Annotations))
+	for i, ann := range chart.Annotations {
+		ax := chart.Scale.X(ann.AnchorDate, chartX0, chartW)
+		center := clamp(ax-annBoxW/2, x0, x0+w-annBoxW)
+		var pl annPlacement
+		if ann.Direction != "" {
+			pl = annPlacement{up: ann.Direction == "up", bx: center}
+			for tries := 0; tries < 6 && !free(pl.up, pl.bx); tries++ {
+				pl.bx = clamp(pl.bx+step, x0, x0+w-annBoxW)
+			}
+		} else {
+			prefUp := annAnchorFrac(chart, ann) < 0.5
+			pl = annPlacement{up: prefUp, bx: center}
+			found := false
+			for k := 0; k <= 6 && !found; k++ {
+				offsets := []float64{0}
+				if k > 0 {
+					offsets = []float64{float64(k) * step / 2, -float64(k) * step / 2}
+				}
+				for _, off := range offsets {
+					for _, up := range []bool{prefUp, !prefUp} {
+						bx := clamp(center+off, x0, x0+w-annBoxW)
+						if free(up, bx) {
+							pl, found = annPlacement{up: up, bx: bx}, true
+							break
+						}
+					}
+					if found {
+						break
+					}
+				}
+			}
+		}
+		placed = append(placed, laid{pl.up, pl.bx})
+		out[i] = pl
+	}
+	return out
+}
+
+// annAnchorFrac は自動の注釈が指す先の、本体の中での縦の位置(0=上端、1=下端)。
+// 行の数だけで決める(行の高さに依らないので、Measure でも同じ値になる)。
+func annAnchorFrac(chart *GanttChart, ann Annotation) float64 {
+	if ann.TargetGroup < 0 {
+		return 0.5
+	}
+	total, before := 0, 0
+	for gi := range chart.Groups {
+		if gi < ann.TargetGroup {
+			before += len(chart.Groups[gi].Rows)
+		}
+		total += len(chart.Groups[gi].Rows)
+	}
+	if total == 0 {
+		return 0.5
+	}
+	if ann.TargetRow >= 0 {
+		return (float64(before+ann.TargetRow) + 0.5) / float64(total)
+	}
+	return (float64(before) + float64(len(chart.Groups[ann.TargetGroup].Rows))/2) / float64(total)
+}
+
+// autoAnchorY は自動の注釈の点の高さ: 指したグループか行の縦の真ん中。
+// 指す先が無ければ本体の真ん中。
+func autoAnchorY(chart *GanttChart, ann Annotation, groupTops []float64, rowH, bodyTop, bodyH float64) float64 {
+	if ann.TargetGroup < 0 || ann.TargetGroup >= len(groupTops) {
+		return bodyTop + bodyH/2
+	}
+	top := groupTops[ann.TargetGroup]
+	if ann.TargetRow >= 0 {
+		return top + (float64(ann.TargetRow)+0.5)*rowH
+	}
+	return top + rowH*float64(len(chart.Groups[ann.TargetGroup].Rows))/2
 }
 
 // buildChart はv11(本物)のbuild_chart()と同じ内容を再現したもの。
@@ -545,11 +668,11 @@ func buildChart() *GanttChart {
 			RiskEnd:     d(2031, time.February, 1),
 			Rows: []GanttRow{
 				{Label: "Loom 2", SubGroup: "固定版", Segments: []GanttSegment{
-					{d(2026, time.September, 1), d(2029, time.December, 1), none, "内部利用のみ、外部保守", false},
+					{d(2026, time.September, 1), d(2029, time.December, 1), none, "内部利用のみ、外部保守", false, false},
 				}},
 				{Label: "Loom 3", SubGroup: "固定版", Segments: []GanttSegment{
-					{d(2026, time.September, 1), d(2028, time.August, 1), support, "内部+外部利用", false},
-					{d(2028, time.August, 1), d(2029, time.December, 1), cond, "延長要確認", false},
+					{d(2026, time.September, 1), d(2028, time.August, 1), support, "内部+外部利用", false, false},
+					{d(2028, time.August, 1), d(2029, time.December, 1), cond, "延長要確認", false, false},
 				}},
 				{Label: "Loom 3/4/5", SubGroup: "定額版",
 					HasNote: true, NoteStart: d(2027, time.October, 1), NoteEnd: d(2029, time.December, 1),
@@ -560,18 +683,18 @@ func buildChart() *GanttChart {
 			Label: "第2世代\nBoard B\n240台\nStore Y",
 			Rows: []GanttRow{
 				{Label: "Loom 2/3", SubGroup: "固定版", Segments: []GanttSegment{
-					{d(2026, time.September, 1), d(2031, time.June, 1), none, "内部利用のみ、外部保守", false},
+					{d(2026, time.September, 1), d(2031, time.June, 1), none, "内部利用のみ、外部保守", false, false},
 				}},
 				{Label: "(Loom 3)", SubGroup: "固定版", Segments: []GanttSegment{
-					{d(2026, time.September, 1), d(2029, time.December, 1), support, "内部+外部利用", false},
+					{d(2026, time.September, 1), d(2029, time.December, 1), support, "内部+外部利用", false, false},
 				}},
 				{Label: "Loom 3/4/5", SubGroup: "定額版", Segments: []GanttSegment{
-					{d(2026, time.September, 1), d(2028, time.August, 1), support, "サポート対象", false},
-					{d(2028, time.August, 1), d(2029, time.December, 1), cond, "延長要確認", false},
-					{d(2029, time.December, 1), d(2031, time.June, 1), cond, "ベンダーのサポート可否は要協議", false},
+					{d(2026, time.September, 1), d(2028, time.August, 1), support, "サポート対象", false, false},
+					{d(2028, time.August, 1), d(2029, time.December, 1), cond, "延長要確認", false, false},
+					{d(2029, time.December, 1), d(2031, time.June, 1), cond, "ベンダーのサポート可否は要協議", false, false},
 				}},
 				{Label: "Weft OS 22", Segments: []GanttSegment{
-					{d(2026, time.September, 1), d(2034, time.November, 1), support, "", true},
+					{d(2026, time.September, 1), d(2034, time.November, 1), support, "", true, false},
 				}},
 			},
 		},
@@ -579,22 +702,22 @@ func buildChart() *GanttChart {
 			Label: "第2世代\nBoard C\n80台\nStore Y",
 			Rows: []GanttRow{
 				{Label: "Loom 3→4→5", SubGroup: "定額版", Segments: []GanttSegment{
-					{d(2026, time.September, 1), d(2027, time.October, 1), cond, "Loom 3", false},
-					{d(2027, time.October, 1), d(2028, time.August, 1), cond, "Loom 4", false},
-					{d(2028, time.August, 1), d(2034, time.November, 1), support, "Loom 5", true},
+					{d(2026, time.September, 1), d(2027, time.October, 1), cond, "Loom 3", false, false},
+					{d(2027, time.October, 1), d(2028, time.August, 1), cond, "Loom 4", false, false},
+					{d(2028, time.August, 1), d(2034, time.November, 1), support, "Loom 5", true, false},
 				}},
 				{Label: "Weft OS 22", Segments: []GanttSegment{
-					{d(2027, time.October, 1), d(2034, time.November, 1), support, "", true},
+					{d(2027, time.October, 1), d(2034, time.November, 1), support, "", true, false},
 				}},
 			},
 		},
 	}
 
 	annotations := []Annotation{
-		{d(2027, time.October, 1), 0.13, "外部向け第2世代はセキュリティ要件で\nLoom 4化が必須(デモ)", "conditional", "up", false},
-		{d(2029, time.December, 1), 0.0, "ここまでに全利用者を\nBoard B/Cへ移行予定(デモ)", "danger", "down", true},
-		{d(2031, time.February, 1), 0.55, "保守不可ならBoard C移行が要るが、\n増設/移行の期間が不足(デモ)", "conditional", "up", false},
-		{d(2031, time.June, 1), 0.55, fmt.Sprintf("ベンダー:27/6までLoom対応\n開発元:27/8にLoom 5公開予定(デモ)"), "conditional", "down", false},
+		{d(2027, time.October, 1), 0.13, "外部向け第2世代はセキュリティ要件で\nLoom 4化が必須(デモ)", "conditional", "up", false, -1, -1},
+		{d(2029, time.December, 1), 0.0, "ここまでに全利用者を\nBoard B/Cへ移行予定(デモ)", "danger", "down", true, -1, -1},
+		{d(2031, time.February, 1), 0.55, "保守不可ならBoard C移行が要るが、\n増設/移行の期間が不足(デモ)", "conditional", "up", false, -1, -1},
+		{d(2031, time.June, 1), 0.55, fmt.Sprintf("ベンダー:27/6までLoom対応\n開発元:27/8にLoom 5公開予定(デモ)"), "conditional", "down", false, -1, -1},
 	}
 
 	return &GanttChart{

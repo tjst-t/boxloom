@@ -44,7 +44,8 @@ type shape struct {
 	color    string
 	align    string
 	anchor   string
-	wrap     bool // true: このGo版の自前ロジックで幅に収まるよう折り返す。false: "\n"のみを境界として扱い、幅では折り返さない(本物のwrap=Falseに相当)。
+	runs     []TextRun // 空でなければ text・color・bold の代わりに使う
+	wrap     bool      // true: このGo版の自前ロジックで幅に収まるよう折り返す。false: "\n"のみを境界として扱い、幅では折り返さない(本物のwrap=Falseに相当)。
 
 	x1, y1, x2, y2 float64
 	lineColor      string
@@ -115,6 +116,14 @@ func (p *PPTXBuilder) AddTextBoxNoWrap(box LBox, text string, fontSize float64, 
 	p.Shapes = append(p.Shapes, shape{
 		id: p.allocID(), kind: skText, box: box,
 		text: text, fontSize: fontSize, bold: bold, color: color, align: align, anchor: anchor, wrap: false,
+	})
+}
+
+// AddRichTextBox は装飾つきの文字(wrap=True 相当)。
+func (p *PPTXBuilder) AddRichTextBox(box LBox, runs []TextRun, fontSize float64, align, anchor string) {
+	p.Shapes = append(p.Shapes, shape{
+		id: p.allocID(), kind: skText, box: box,
+		text: runsText(runs), runs: runs, fontSize: fontSize, align: align, anchor: anchor, wrap: true,
 	})
 }
 
@@ -229,21 +238,35 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 `, s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), fillXML)
 
 	case skText:
-		var lines []string
-		if s.wrap {
-			lines = wrapText(s.text, s.fontSize, s.box.Width, s.bold)
-		} else {
-			lines = strings.Split(s.text, "\n")
+		var lines [][]TextRun
+		switch {
+		case len(s.runs) > 0:
+			lines = wrapRuns(s.runs, s.fontSize, s.box.Width)
+		case s.wrap:
+			for _, l := range wrapText(s.text, s.fontSize, s.box.Width, s.bold) {
+				lines = append(lines, []TextRun{{Text: l, Color: s.color, Bold: s.bold}})
+			}
+		default:
+			for _, l := range strings.Split(s.text, "\n") {
+				lines = append(lines, []TextRun{{Text: l, Color: s.color, Bold: s.bold}})
+			}
 		}
 		var paras strings.Builder
-		boldAttr := ""
-		if s.bold {
-			boldAttr = ` b="1"`
-		}
 		szHundredths := int(s.fontSize * 100)
 		for _, line := range lines {
-			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"/><a:r><a:rPr lang="ja-JP" sz="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr><a:t>%s</a:t></a:r></a:p>`,
-				alignAttr(s.align), szHundredths, boldAttr, hexColor(s.color), escapeXML(line)))
+			if len(line) == 0 {
+				line = []TextRun{{Color: s.color, Bold: s.bold}}
+			}
+			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"/>`, alignAttr(s.align)))
+			for _, r := range line {
+				boldAttr := ""
+				if r.Bold {
+					boldAttr = ` b="1"`
+				}
+				paras.WriteString(fmt.Sprintf(`<a:r><a:rPr lang="ja-JP" sz="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr><a:t>%s</a:t></a:r>`,
+					szHundredths, boldAttr, hexColor(r.Color), escapeXML(r.Text)))
+			}
+			paras.WriteString(`</a:p>`)
 		}
 		return fmt.Sprintf(`<p:sp>
 <p:nvSpPr><p:cNvPr id="%d" name="TextBox %d"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
@@ -292,8 +315,22 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 	return ""
 }
 
-// Save はpptx(zipコンテナ)一式を書き出す。
+// Save はこの1枚だけの pptx を書き出す。
 func (p *PPTXBuilder) Save(path string) error {
+	return SaveDeck(path, []*PPTXBuilder{p}, "")
+}
+
+// SaveDeck は複数枚のスライドを1つの pptx(zipコンテナ)に書き出す。大きさは
+// 1枚目のものを使う。title は文書の題(空なら "boxloom")。
+func SaveDeck(path string, slides []*PPTXBuilder, title string) error {
+	if len(slides) == 0 {
+		return fmt.Errorf("SaveDeck: no slides")
+	}
+	p := slides[0]
+	n := len(slides)
+	if title == "" {
+		title = "boxloom"
+	}
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -310,7 +347,24 @@ func (p *PPTXBuilder) Save(path string) error {
 		return err
 	}
 
-	hasNotes := p.Notes != ""
+	hasNotes := false
+	for _, sl := range slides {
+		if sl.Notes != "" {
+			hasNotes = true
+		}
+	}
+	var slideTypes, notesTypes, sldIDs, slideRelsList strings.Builder
+	for i, sl := range slides {
+		slideTypes.WriteString(fmt.Sprintf(`
+<Override PartName="/ppt/slides/slide%d.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`, i+1))
+		if sl.Notes != "" {
+			notesTypes.WriteString(fmt.Sprintf(`
+<Override PartName="/ppt/notesSlides/notesSlide%d.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml"/>`, i+1))
+		}
+		sldIDs.WriteString(fmt.Sprintf(`<p:sldId id="%d" r:id="rId%d"/>`, 256+i, i+2))
+		slideRelsList.WriteString(fmt.Sprintf(`
+<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide%d.xml"/>`, i+2, i+1))
+	}
 
 	contentTypes := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -318,15 +372,13 @@ func (p *PPTXBuilder) Save(path string) error {
 <Default Extension="xml" ContentType="application/xml"/>
 <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
 <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-<Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>` + slideTypes.String() + `
 <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
 <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>`
 	if hasNotes {
 		contentTypes += `
-<Override PartName="/ppt/notesMasters/notesMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml"/>
-<Override PartName="/ppt/notesSlides/notesSlide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml"/>`
+<Override PartName="/ppt/notesMasters/notesMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml"/>` + notesTypes.String()
 	}
 	contentTypes += `
 </Types>`
@@ -340,7 +392,7 @@ func (p *PPTXBuilder) Save(path string) error {
 
 	coreXML := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">
-<dc:title>boxloom</dc:title><dc:creator>boxloom</dc:creator>
+<dc:title>` + escapeXML(title) + `</dc:title><dc:creator>boxloom</dc:creator>
 </cp:coreProperties>`
 
 	appXML := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -352,19 +404,18 @@ func (p *PPTXBuilder) Save(path string) error {
 	presentation := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
 <p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>
-<p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst>
+<p:sldIdLst>%s</p:sldIdLst>
 <p:sldSz cx="%d" cy="%d"/>
 %s
-</p:presentation>`, ptToEMU(p.WidthPt), ptToEMU(p.HeightPt), notesSz)
+</p:presentation>`, sldIDs.String(), ptToEMU(p.WidthPt), ptToEMU(p.HeightPt), notesSz)
 
 	presRels := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>`
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>` + slideRelsList.String() + fmt.Sprintf(`
+<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>`, n+2)
 	if hasNotes {
-		presRels += `
-<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster" Target="notesMasters/notesMaster1.xml"/>`
+		presRels += fmt.Sprintf(`
+<Relationship Id="rId%d" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster" Target="notesMasters/notesMaster1.xml"/>`, n+3)
 	}
 	presRels += `
 </Relationships>`
@@ -425,31 +476,6 @@ func (p *PPTXBuilder) Save(path string) error {
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
 </Relationships>`
 
-	var shapesXML strings.Builder
-	for i := range p.Shapes {
-		shapesXML.WriteString(p.shapeXML(&p.Shapes[i]))
-	}
-
-	slide := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-<p:cSld><p:spTree>
-<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
-<p:grpSpPr/>
-%s
-</p:spTree></p:cSld>
-<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
-</p:sld>`, shapesXML.String())
-
-	slideRels := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>`
-	if hasNotes {
-		slideRels += `
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide1.xml"/>`
-	}
-	slideRels += `
-</Relationships>`
-
 	if err := write("[Content_Types].xml", contentTypes); err != nil {
 		return err
 	}
@@ -483,11 +509,10 @@ func (p *PPTXBuilder) Save(path string) error {
 	if err := write("ppt/slideLayouts/_rels/slideLayout1.xml.rels", layoutRels); err != nil {
 		return err
 	}
-	if err := write("ppt/slides/slide1.xml", slide); err != nil {
-		return err
-	}
-	if err := write("ppt/slides/_rels/slide1.xml.rels", slideRels); err != nil {
-		return err
+	for i, sl := range slides {
+		if err := writeSlide(write, i+1, sl); err != nil {
+			return err
+		}
 	}
 
 	if hasNotes {
@@ -500,7 +525,54 @@ func (p *PPTXBuilder) Save(path string) error {
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
 </Relationships>`
-		notesSlide := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+		if err := write("ppt/notesMasters/notesMaster1.xml", notesMaster); err != nil {
+			return err
+		}
+		if err := write("ppt/notesMasters/_rels/notesMaster1.xml.rels", notesMasterRels); err != nil {
+			return err
+		}
+	}
+
+	return zw.Close()
+}
+
+// writeSlide は num 枚目のスライド(と、あればノート)を書く。
+func writeSlide(write func(name, content string) error, num int, p *PPTXBuilder) error {
+	var shapesXML strings.Builder
+	for i := range p.Shapes {
+		shapesXML.WriteString(p.shapeXML(&p.Shapes[i]))
+	}
+
+	slide := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+<p:cSld><p:spTree>
+<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+<p:grpSpPr/>
+%s
+</p:spTree></p:cSld>
+<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
+</p:sld>`, shapesXML.String())
+
+	slideRels := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>`
+	if p.Notes != "" {
+		slideRels += fmt.Sprintf(`
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide%d.xml"/>`, num)
+	}
+	slideRels += `
+</Relationships>`
+
+	if err := write(fmt.Sprintf("ppt/slides/slide%d.xml", num), slide); err != nil {
+		return err
+	}
+	if err := write(fmt.Sprintf("ppt/slides/_rels/slide%d.xml.rels", num), slideRels); err != nil {
+		return err
+	}
+	if p.Notes == "" {
+		return nil
+	}
+	notesSlide := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:notes xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
 <p:cSld><p:spTree>
 <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>
@@ -511,25 +583,14 @@ func (p *PPTXBuilder) Save(path string) error {
 </p:spTree></p:cSld>
 <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
 </p:notes>`, escapeXML(p.Notes))
-		notesSlideRels := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+	notesSlideRels := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster" Target="../notesMasters/notesMaster1.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="../slides/slide1.xml"/>
-</Relationships>`
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="../slides/slide%d.xml"/>
+</Relationships>`, num)
 
-		if err := write("ppt/notesMasters/notesMaster1.xml", notesMaster); err != nil {
-			return err
-		}
-		if err := write("ppt/notesMasters/_rels/notesMaster1.xml.rels", notesMasterRels); err != nil {
-			return err
-		}
-		if err := write("ppt/notesSlides/notesSlide1.xml", notesSlide); err != nil {
-			return err
-		}
-		if err := write("ppt/notesSlides/_rels/notesSlide1.xml.rels", notesSlideRels); err != nil {
-			return err
-		}
+	if err := write(fmt.Sprintf("ppt/notesSlides/notesSlide%d.xml", num), notesSlide); err != nil {
+		return err
 	}
-
-	return zw.Close()
+	return write(fmt.Sprintf("ppt/notesSlides/_rels/notesSlide%d.xml.rels", num), notesSlideRels)
 }

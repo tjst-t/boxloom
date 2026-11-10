@@ -126,6 +126,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
      大きさの間のゆとり」を先に返す(Phase3a)。サブシステムを含まない木では
      何もしないので、Python 版との一致は崩れない。最小を下回ったら
      `[SUBSYSTEM WARNING]` を出す。
+   - Go 版だけの追加(その2): サブシステムは上限(Max)も申告でき、grow は
+     そこで止まる。列の中の入れ子の箱の高さは、中の文字の折り返しまで含めて
+     測る(`heightForWidth`)。どちらも従来のデモの出力を変えない。
 2. **inner canvas sub-engine**: サブシステムの葉(`Subsystem` interface。
    Python 版では grow=1, basis=0 で領域確保のみの `canvas`)の中に、Gantt専用の座標スケール(`TimeScale`: 日付→x座標の
    区分線形補間、区間圧縮に対応)でチャートを描画する(`render_gantt()` /
@@ -156,6 +159,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `pptx.go` = python-pptxの代わりに、OOXML(zip+XML)を直接組み立てる自前
     ライター(`archive/zip`のみ使用。無料で成熟したGo製pptxライブラリが
     存在しないため — `unidoc/unioffice`は商用ライセンス)
+  - `ir.go` / `template.go` / `gantt_ir.go` = IR(JSON)を読み、テンプレート
+    (dark / light)で Box の木に組み、PPTX に書く道。`go run . build
+    ../examples/ir/demo-deck.json` → `out/demo-deck.pptx`。Gantt の注釈の
+    置き場所はサブシステムが決める。詳細は `docs/build.md`
   - `main.go` = デモコンテンツとfill-ratioリンター(本物の
     `content_fill_ratio()`/`lint_fill_ratio()`の移植)。`go build .` →
     `./boxloom` で `out/` 配下に `boxloom_dark.pptx`/`boxloom_light.pptx`
