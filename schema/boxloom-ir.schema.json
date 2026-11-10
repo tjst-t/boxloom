@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/boxloom-ir.schema.json",
+  "title": "Boxloom IR (0.1) — core + 同梱のサブシステム",
+  "description": "IR を検査するときの入口。コアの Schema を参照し、差し込み口(#subsystem)を同梱のサブシステムの Schema で埋める。サブシステムを足すときは、ここの enum と allOf に1つずつ足す(テンプレートが自分のサブシステムを持つときは、この形の入口をテンプレート側で作る)。",
+  "$ref": "core.schema.json",
+  "$defs": {
+    "subsystem": {
+      "$dynamicAnchor": "subsystem",
+      "description": "同梱のサブシステム。subsystem の名前で振り分ける。足すときは enum と allOf に1つずつ足す。",
+      "type": "object",
+      "properties": {
+        "subsystem": {
+          "enum": [
+            "gantt"
+          ]
+        }
+      },
+      "required": [
+        "subsystem"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "subsystem": {
+                "const": "gantt"
+              }
+            },
+            "required": [
+              "subsystem"
+            ]
+          },
+          "then": {
+            "$ref": "subsystems/gantt.schema.json"
+          }
+        }
+      ]
+    }
+  }
+}

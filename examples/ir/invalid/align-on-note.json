@@ -1,0 +1,159 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "ランタイム移行計画",
+    "subtitle": "ボード世代ごとの選択肢と期限",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "論点",
+      "body": [
+        {
+          "type": "points",
+          "items": [
+            [
+              "第1世代(Board A)は ",
+              {
+                "type": "em",
+                "content": "2029年12月"
+              },
+              " にハードウェア保守が切れる"
+            ],
+            "Loom 4 は Store X 非対応のため、第1世代は移行先になり得ない",
+            "第2世代以降は Loom 継続と Weft OS 移行の両方が選べる"
+          ]
+        },
+        {
+          "type": "compare",
+          "options": [
+            {
+              "label": "Loom 継続",
+              "pros": [
+                "既存の運用手順をそのまま使える"
+              ],
+              "cons": [
+                "定額料金が 28/5・31/5 に更新"
+              ]
+            },
+            {
+              "label": "Weft OS 移行",
+              "pros": [
+                "OS 25 で 2034年11月まで延ばせる"
+              ],
+              "cons": [
+                "移行期間の確保が要る"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "content": "期日はすべてイメージ",
+          "align": "center"
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "title": "ランタイム選択肢と利用可能期間",
+      "body": [
+        {
+          "type": "subsystem",
+          "subsystem": "gantt",
+          "data": {
+            "span": {
+              "from": "2026-09",
+              "to": "2034-11"
+            },
+            "ticks": [
+              {
+                "at": "2029-12",
+                "label": "Board A・Store X",
+                "status": "danger"
+              }
+            ],
+            "milestones": [
+              {
+                "at": "2028-05",
+                "label": "ライセンス更新"
+              }
+            ],
+            "legend": {
+              "support": "ランタイム サポート有",
+              "none": "ランタイム サポート無",
+              "risk": "ハードウェア サポート無"
+            },
+            "groups": [
+              {
+                "id": "gen1",
+                "label": [
+                  "第1世代",
+                  "Board A",
+                  "120台",
+                  "Store X"
+                ],
+                "risk": {
+                  "from": "2029-12",
+                  "to": "2031-02"
+                },
+                "rows": [
+                  {
+                    "label": "Loom 2",
+                    "sub": "固定版",
+                    "segments": [
+                      {
+                        "from": "2026-09",
+                        "to": "2029-12",
+                        "status": "none",
+                        "label": "内部利用のみ、外部保守"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "Loom 3",
+                    "sub": "固定版",
+                    "segments": [
+                      {
+                        "from": "2026-09",
+                        "to": "2028-08",
+                        "status": "support",
+                        "label": "内部+外部利用"
+                      },
+                      {
+                        "from": "2028-08",
+                        "to": "2029-12",
+                        "status": "conditional",
+                        "label": "延長要確認"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "annotations": [
+              {
+                "at": "2029-12",
+                "target": "gen1",
+                "text": [
+                  "ここまでに全利用者を",
+                  {
+                    "type": "br"
+                  },
+                  "Board B/C へ移行予定"
+                ],
+                "status": "danger",
+                "emphasis": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

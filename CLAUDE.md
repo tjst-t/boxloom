@@ -97,6 +97,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   この原則を破っていて、行ラベルのようなコンテンツの識別子を色のキーに
   使っていた。本物の Python ソースと突き合わせて修正済み。)
 - **記法は未決定**。候補の比較は `docs/content-syntax-comparison.md`。
+- **意味の中間表現(IR)**:どの記法も JSON の IR に落とし、テンプレートは IR だけを
+  見る。Schema は `schema/`(入口 `boxloom-ir.schema.json`)、設計は `docs/ir.md`、
+  検査は `python3 tools/validate_ir.py`。
 
 ## アーキテクチャ: コアの二層構造(レイアウトとサブシステム)
 
