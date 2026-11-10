@@ -30,7 +30,7 @@ const (
 	KindRow Kind = iota
 	KindCol
 	KindText
-	KindCanvas
+	KindSubsystem // 葉: サブシステム(subsystem.go)
 )
 
 // LBox は確定した絶対座標(pt単位)。Python版のLBox/Boxに相当。
@@ -38,10 +38,9 @@ type LBox struct {
 	X, Y, Width, Height float64
 }
 
-// CanvasRenderFunc は canvas 葉ノードに割り当てられた確定boxを受け取り、
-// その領域の中身を自分で描画するコールバック(Ganttチャート等の専用サブエンジンが
-// ここに差し込まれる)。
-type CanvasRenderFunc func(p *PPTXBuilder, box LBox)
+// CanvasRenderFunc は、自然な大きさを申告しない簡易なサブシステムを関数1つで
+// 書くためのもの(Canvas ヘルパー用)。
+type CanvasRenderFunc func(ctx RenderContext, box LBox)
 
 // Spec はPython版のSpecデータクラスに相当する、レイアウト木のノード。
 type Spec struct {
@@ -67,7 +66,7 @@ type Spec struct {
 	Align    string // "left" | "center" | "right"
 	Anchor   string // "top" | "middle" | "bottom"
 
-	CanvasRender CanvasRenderFunc
+	Subsystem Subsystem // KindSubsystem のときだけ
 
 	Box LBox // compute_layout()実行後に確定する
 }
@@ -113,9 +112,35 @@ func TextNode(content string, opts ...SpecOpt) *Spec {
 	return apply(s, opts)
 }
 
-func Canvas(render CanvasRenderFunc, opts ...SpecOpt) *Spec {
-	s := &Spec{Kind: KindCanvas, CanvasRender: render, Color: defaultTextColor}
+// SubsystemNode はサブシステムを葉として置く。大きさは Measure の自己申告で
+// 決まる(明示の Width/Height/Basis があればそちらが勝つ)。
+func SubsystemNode(sub Subsystem, opts ...SpecOpt) *Spec {
+	s := &Spec{Kind: KindSubsystem, Subsystem: sub, Color: defaultTextColor}
 	return apply(s, opts)
+}
+
+// Canvas は関数1つで描く簡易なサブシステムを置く。自然な大きさは 0 を申告する
+// ので、場所は grow で受け取る(旧来の canvas と同じふるまい)。
+func Canvas(render CanvasRenderFunc, opts ...SpecOpt) *Spec {
+	return SubsystemNode(funcSubsystem{render}, opts...)
+}
+
+type funcSubsystem struct{ render CanvasRenderFunc }
+
+func (funcSubsystem) Name() string                         { return "canvas" }
+func (funcSubsystem) Measure(Constraint) Measurement       { return Measurement{} }
+func (f funcSubsystem) Render(ctx RenderContext, box LBox) { f.render(ctx, box) }
+
+// subsystemNatural は Measure の自然な大きさのうち axis の値を返す。
+func subsystemNatural(s *Spec, axis byte, c Constraint) float64 {
+	if s.Subsystem == nil {
+		return 0
+	}
+	n := s.Subsystem.Measure(c).Natural
+	if axis == 'w' {
+		return n.Width
+	}
+	return n.Height
 }
 
 const defaultTextColor = "F5F7FA"
@@ -136,8 +161,8 @@ func naturalSize(s *Spec, axis byte) float64 {
 			return naturalTextWidth(s)
 		}
 		return s.FontSize * lineHeightMult
-	case KindCanvas:
-		return 0.0
+	case KindSubsystem:
+		return subsystemNatural(s, axis, Constraint{})
 	}
 
 	// row / col コンテナ
@@ -232,8 +257,13 @@ func computeLayout(s *Spec, x, y, width, height float64) {
 			} else {
 				basisSizes[i] = measureTextHeight(c.Text, c.FontSize, cs, c.Bold)
 			}
-		case c.Kind == KindCanvas:
-			basisSizes[i] = 0.0
+		case c.Kind == KindSubsystem:
+			// 交差軸の大きさ(cs)を伝えて、主軸の自然な大きさを自己申告させる。
+			if isRow {
+				basisSizes[i] = subsystemNatural(c, 'w', Constraint{Height: cs})
+			} else {
+				basisSizes[i] = subsystemNatural(c, 'h', Constraint{Width: cs})
+			}
 		default:
 			mainAxisOfParent := byte('h')
 			if isRow {
@@ -249,6 +279,55 @@ func computeLayout(s *Spec, x, y, width, height float64) {
 		basisTotal += b
 	}
 	free := innerMain - basisTotal - gapTotal
+
+	// --- Phase 3a: 足りないとき、サブシステムが自己申告した「自然な大きさと
+	// 最小の大きさの間のゆとり」を先に返してもらう。テキストなどほかの子は
+	// ここでは縮めない。サブシステムを含まない木では何もしない(Python版と同じ)。
+	if free < 0 {
+		slack := make([]float64, n)
+		totalSlack := 0.0
+		for i, c := range children {
+			if c.Kind != KindSubsystem || c.Subsystem == nil || c.Basis != nil {
+				continue
+			}
+			var explicitMain *float64
+			if isRow {
+				explicitMain = c.Width
+			} else {
+				explicitMain = c.Height
+			}
+			if explicitMain != nil {
+				continue
+			}
+			var minMain float64
+			if isRow {
+				minMain = c.Subsystem.Measure(Constraint{Height: crossSizes[i]}).Min.Width
+			} else {
+				minMain = c.Subsystem.Measure(Constraint{Width: crossSizes[i]}).Min.Height
+			}
+			if v := basisSizes[i] - minMain; v > 0 {
+				slack[i] = v
+				totalSlack += v
+			}
+		}
+		if totalSlack > 0 {
+			take := -free
+			if take > totalSlack {
+				take = totalSlack
+			}
+			for i := range children {
+				if slack[i] > 0 {
+					d := take * slack[i] / totalSlack
+					basisSizes[i] -= d
+					basisTotal -= d
+				}
+			}
+			free = innerMain - basisTotal - gapTotal
+			if free > -1e-9 && free < 0 {
+				free = 0
+			}
+		}
+	}
 	totalGrow := 0.0
 	for _, c := range children {
 		totalGrow += c.Grow

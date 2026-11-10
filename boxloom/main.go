@@ -10,6 +10,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 func themeDark() Theme {
@@ -49,9 +50,14 @@ func buildSlideSpec(th Theme, subtitle string) *Spec {
 		TextNode(subtitle, WithFontSize(typeCaption-1), WithColor(th.c("text_muted")), WithHeight(14)),
 	}, WithGap(4))
 
-	chart := buildChart()
-	chartCanvas := Canvas(func(p *PPTXBuilder, box LBox) { renderGantt(p, box, chart, th) },
-		WithGrow(1), WithBasis(0), WithBackground(th.c("card")), WithRadius(12))
+	// コンテンツ(buildChart)は意味だけを持ち、描き方は登録簿から引く。
+	// 高さは Gantt の自己申告(自然な高さ)を出発点に、残りを grow で受け取る。
+	chart, err := DefaultSubsystems().Build("gantt", buildChart())
+	if err != nil {
+		panic(err)
+	}
+	chartCanvas := SubsystemNode(chart,
+		WithGrow(1), WithBackground(th.c("card")), WithRadius(12))
 
 	footer := Row([]*Spec{
 		TextNode("Boxloom デモ", WithFontSize(typeCaption), WithColor(th.c("text_muted"))),
@@ -62,7 +68,8 @@ func buildSlideSpec(th Theme, subtitle string) *Spec {
 		WithGap(spaceSM), WithPadding(spaceLG), WithBackground(th.c("bg")))
 }
 
-func renderSpec(p *PPTXBuilder, s *Spec) {
+func renderSpec(ctx RenderContext, s *Spec) {
+	p := ctx.Out
 	if s.Background != "" {
 		radius := 0.0
 		if s.HasRadius {
@@ -74,14 +81,14 @@ func renderSpec(p *PPTXBuilder, s *Spec) {
 	case KindText:
 		p.AddTextBox(s.Box, s.Text, s.FontSize, s.Color, s.Bold, s.Align, s.Anchor)
 		return
-	case KindCanvas:
-		if s.CanvasRender != nil {
-			s.CanvasRender(p, s.Box)
+	case KindSubsystem:
+		if s.Subsystem != nil {
+			s.Subsystem.Render(ctx, s.Box)
 		}
 		return
 	}
 	for _, c := range s.Children {
-		renderSpec(p, c)
+		renderSpec(ctx, c)
 	}
 }
 
@@ -143,10 +150,22 @@ func generate(outPath string, th Theme, subtitle string) {
 		fmt.Printf("[%s] content fill ratio: %.1f%%  OK\n", outPath, ratio*100)
 	}
 
-	p := NewPPTXBuilder(pageW, pageH)
-	renderSpec(p, spec)
+	warnings := lintSubsystemMin(spec)
 	if warning != "" {
-		p.SetNotes(warning)
+		warnings = append([]string{warning}, warnings...)
+	}
+
+	p := NewPPTXBuilder(pageW, pageH)
+	roles := newCheckedRoles(th)
+	renderSpec(RenderContext{Out: p, Roles: roles}, spec)
+	if missing := roles.Missing(); len(missing) > 0 {
+		warnings = append(warnings, fmt.Sprintf("[ROLE WARNING] theme has no value for roles: %v", missing))
+	}
+	for _, w := range warnings[boolToInt(warning != ""):] {
+		fmt.Printf("[%s] %s\n", outPath, w)
+	}
+	if len(warnings) > 0 {
+		p.SetNotes(strings.Join(warnings, "\n"))
 	}
 
 	if err := p.Save(outPath); err != nil {
@@ -163,4 +182,11 @@ func main() {
 		"boxloom: v11(Python)をGoへ移植。box_engine.pyの箱配置アルゴリズムと意味役割名によるテーマ分離をそのまま踏襲")
 	generate("out/boxloom_light.pptx", themeLight(),
 		"boxloom: 自作エンジン + ブルー基調の明るいテーマ(内容は一切変更していない)")
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

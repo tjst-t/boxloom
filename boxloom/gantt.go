@@ -20,6 +20,9 @@ type Theme map[string]string
 
 func (th Theme) c(role string) string { return th[role] }
 
+// Color は Roles を満たす(テーマは役割名の解決器)。
+func (th Theme) Color(role string) string { return th[role] }
+
 // --- データモデル(本物のGanttSegment/GanttRow/GanttGroup/Annotation/GanttChart
 //     ・TimeScaleと1:1対応) ---
 
@@ -172,14 +175,92 @@ func clamp(v, lo, hi float64) float64 {
 	return v
 }
 
-// renderGantt はbox(確定済みの絶対座標)の中にGanttチャート全体を描画する。
-// 本物のrender_gantt()と同じ手順・同じピクセル計算式で移植している。
-func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, th Theme) {
-	c := th.c
-	pad := spaceMD
-	x0, y0 := box.X+pad, box.Y+pad
-	w, h := box.Width-2*pad, box.Height-2*pad
+// --- サブシステムとしての Gantt(subsystem.go の Subsystem を満たす) ---
 
+// GanttSubsystem は GanttChart(意味だけのデータ)を描くサブシステム。
+type GanttSubsystem struct {
+	Chart *GanttChart
+}
+
+// NewGanttSubsystem は登録簿の Factory。data は *GanttChart か GanttChart。
+func NewGanttSubsystem(data any) (Subsystem, error) {
+	switch v := data.(type) {
+	case *GanttChart:
+		return &GanttSubsystem{Chart: v}, nil
+	case GanttChart:
+		return &GanttSubsystem{Chart: &v}, nil
+	}
+	return nil, fmt.Errorf("gantt: expected *GanttChart, got %T", data)
+}
+
+func (g *GanttSubsystem) Name() string { return "gantt" }
+
+func (g *GanttSubsystem) Render(ctx RenderContext, box LBox) {
+	renderGantt(ctx.Out, box, g.Chart, ctx.Roles)
+}
+
+// 自己申告に使う大きさ。naturalRowH は行が詰まって見えない高さ、minRowH は
+// 文字(typeMicro)とバーが重ならずに収まる下限。
+const (
+	naturalRowH   = 26.0
+	naturalChartW = 560.0 // 日付軸の部分の自然な幅
+	minChartW     = 240.0 // 日付軸の部分がこれより狭いと目盛りの文字が重なる
+)
+
+// Measure は Gantt の自然な大きさと最小の大きさを申告する。
+//
+// 高さ = 周りの固定の部品(凡例・注釈のレーン・節目・軸)+ 行の高さ×行数 +
+// グループ間の隙間。行の高さは全グループで同じなので、グループ名(複数行)が
+// 収まるだけの行の高さも下限に入れる。幅が分かっていれば幅はそのまま返す。
+func (g *GanttSubsystem) Measure(c Constraint) Measurement {
+	chart := g.Chart
+	m := ganttMetricsFor(chart)
+	totalRows, nGroups := 0, len(chart.Groups)
+	labelRowH := 0.0 // グループ名を収めるのに要る、1行あたりの高さ
+	for i := range chart.Groups {
+		gr := &chart.Groups[i]
+		totalRows += len(gr.Rows)
+		if len(gr.Rows) == 0 {
+			continue
+		}
+		lh := measureTextHeight(gr.Label, typeNano, gutterGroupW-10, true)
+		if v := lh / float64(len(gr.Rows)); v > labelRowH {
+			labelRowH = v
+		}
+	}
+	gaps := groupGap * float64(max(0, nGroups-1))
+	bodyFor := func(rowH float64) float64 {
+		if rowH < labelRowH {
+			rowH = labelRowH
+		}
+		return rowH*float64(totalRows) + gaps
+	}
+
+	gutterW := gutterGroupW + gutterSubW + gutterLabelW
+	natW := 2*spaceMD + gutterW + naturalChartW
+	if lw := 2*spaceMD + m.legendW; lw > natW {
+		natW = lw
+	}
+	minW := 2*spaceMD + gutterW + minChartW
+	if c.Width > 0 {
+		natW = c.Width
+	}
+	return Measurement{
+		Natural: Size{Width: natW, Height: m.chromeH + bodyFor(naturalRowH)},
+		Min:     Size{Width: minW, Height: m.chromeH + bodyFor(minRowH)},
+	}
+}
+
+// ganttMetrics は Measure と renderGantt が共有する、行の本体以外の寸法。
+// 両方が同じ計算を使うので、申告した大きさと実際の描画がずれない。
+type ganttMetrics struct {
+	annTopH, annBottomH, milestoneH float64
+	chromeH                         float64 // 行の本体以外の高さの合計(内側の余白を含む)
+	legendW                         float64
+}
+
+func ganttMetricsFor(chart *GanttChart) ganttMetrics {
+	var m ganttMetrics
 	hasUp, hasDown := false, false
 	for _, a := range chart.Annotations {
 		if a.Direction == "up" {
@@ -189,17 +270,33 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, th Theme) {
 			hasDown = true
 		}
 	}
-	annTopH, annBottomH := 0.0, 0.0
 	if hasUp {
-		annTopH = annBoxH + annLaneGap
+		m.annTopH = annBoxH + annLaneGap
 	}
 	if hasDown {
-		annBottomH = annBoxH + annLaneGap
+		m.annBottomH = annBoxH + annLaneGap
 	}
-	milestoneH := 0.0
 	if len(chart.Milestones) > 0 {
-		milestoneH = milestoneH0 + 4
+		m.milestoneH = milestoneH0 + 4
 	}
+	// renderGantt の縦の並び: 余白 / 凡例 / 上の注釈 / 節目 / 軸の文字 / 軸 / 本体 / 下の注釈 / 余白
+	m.chromeH = 2*spaceMD + legendH + spaceXS + m.annTopH + m.milestoneH + axisLabelH + 5 + 5 + m.annBottomH
+	for _, li := range chart.Legend {
+		m.legendW += 19 + 6 + runWidthPt(li.Label, typeMicro, false) + spaceMD
+	}
+	return m
+}
+
+// renderGantt はbox(確定済みの絶対座標)の中にGanttチャート全体を描画する。
+// 本物のrender_gantt()と同じ手順・同じピクセル計算式で移植している。
+func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles) {
+	c := roles.Color
+	pad := spaceMD
+	x0, y0 := box.X+pad, box.Y+pad
+	w, h := box.Width-2*pad, box.Height-2*pad
+
+	gm := ganttMetricsFor(chart)
+	annTopH, annBottomH, milestoneH := gm.annTopH, gm.annBottomH, gm.milestoneH
 
 	// --- 凡例(実測した文字幅でカーソルを前進させる。本物と同じ) ---
 	lx := x0
