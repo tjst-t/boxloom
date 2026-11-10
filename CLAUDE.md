@@ -42,9 +42,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
 - **サブシステムの差し込み口**: サブシステムは割り当てられた矩形と役割名の
   解決器を受け取って描く。outer engine とは独立していて、エンジンを差し替えても
   サブシステムは変わらない(後述の inner canvas sub-engine)。
-  **サブシステムは自分の自然な大きさ(要る高さなど)を自己申告できるようにする**
-  (合意済みの方針。未実装で、いまの canvas は grow=1, basis=0 で場所をもらう
-  だけ)。
+  **サブシステムは自分の自然な大きさと最小の大きさを自己申告する**
+  (Go 版で実装済み。`Subsystem` interface の `Measure`。詳細は
+  `docs/subsystem.md`)。テンプレートは登録簿(`SubsystemRegistry`)で
+  サブシステムの描き方を差し替えられる。
 - **役割名の解決**: コアは「役割名→値」を引く仕組みだけを持ち、具体的な値は
   知らない。
 - **表現できる範囲を狭めない**: 中央揃えのようにデザインとして避けたいものも、
@@ -120,8 +121,13 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
    - サポート範囲はROW/COLUMNのみ、JustifyContent START/SPACE_BETWEENのみ、
      AlignItems STRETCH/CENTERのみ。flex-wrap・min/max制約は未使用(実際の
      コンテンツを機械的に洗い出した結果)。
-2. **inner canvas sub-engine**: `canvas`種別のleaf(outer側はgrow=1, basis=0で
-   領域確保のみ)の中に、Gantt専用の座標スケール(`TimeScale`: 日付→x座標の
+   - Go 版だけの追加: サブシステムの葉は、basis を自己申告の自然な大きさから
+     取る。足りないときは Phase3 の前に、サブシステムが「自然な大きさと最小の
+     大きさの間のゆとり」を先に返す(Phase3a)。サブシステムを含まない木では
+     何もしないので、Python 版との一致は崩れない。最小を下回ったら
+     `[SUBSYSTEM WARNING]` を出す。
+2. **inner canvas sub-engine**: サブシステムの葉(`Subsystem` interface。
+   Python 版では grow=1, basis=0 で領域確保のみの `canvas`)の中に、Gantt専用の座標スケール(`TimeScale`: 日付→x座標の
    区分線形補間、区間圧縮に対応)でチャートを描画する(`render_gantt()` /
    Go版`gantt.go`)。outerのレイアウトエンジンを何度差し替えても
    (Taffy→自作Python→Go)、この層のロジックは一切変更していない。
@@ -142,7 +148,11 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `text.go` = テキスト計測(Pillowの代わりに、事前計測した「1emあたりの
     グリフ幅」テーブル`metrics_gen.go`を使う。`export_font_metrics.py`で
     生成)
-  - `gantt.go` = inner canvas sub-engineの移植(render_gantt()相当)
+  - `gantt.go` = inner canvas sub-engineの移植(render_gantt()相当)。
+    `GanttSubsystem` として `Subsystem` interface を満たす
+  - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
+    `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
+  - `subsystem_test.go` = 差し込み口とレイアウトの試験(`go test ./...`)
   - `pptx.go` = python-pptxの代わりに、OOXML(zip+XML)を直接組み立てる自前
     ライター(`archive/zip`のみ使用。無料で成熟したGo製pptxライブラリが
     存在しないため — `unidoc/unioffice`は商用ライセンス)
