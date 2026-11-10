@@ -96,7 +96,11 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   類似 OSS `hirokisakabe/pom` と同じ欠陥になる。実際、Go 移植の最初のバージョンは
   この原則を破っていて、行ラベルのようなコンテンツの識別子を色のキーに
   使っていた。本物の Python ソースと突き合わせて修正済み。)
-- **記法は未決定**。候補の比較は `docs/content-syntax-comparison.md`。
+- **記法(決定)**: 作者の主な入口は厳格な Markdown(Boxloom Markdown。意味ブロックは
+  `:::名前` の囲み、サブシステムは言語名つきのコードブロックに YAML)。知らない囲み・属性・
+  生の HTML は誤りにし、`boxloom check` が場所つきの JSON で返す。IR の写し(YAML/JSON)を
+  併存させ、Go DSL は開発者・試験用、TeX 風は採らない。仕様は `docs/content-syntax.md`、
+  比較は `docs/content-syntax-comparison.md`。
 
 ## アーキテクチャ: コアの二層構造(レイアウトとサブシステム)
 
