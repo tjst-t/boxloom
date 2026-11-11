@@ -151,7 +151,7 @@
       "number": 50,
       "kind": "task",
       "title": "見本の文書:「AI が社会に与える影響」を調べて全部の語彙を使ったデッキを作る",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "verify-hypothesis",
       "dependsOn": [
         "light-conditional-1",
@@ -167,9 +167,14 @@
       "doneWhen": "examples/md/ に .bx.md、out/ に light・dark の PPTX があり、check の誤り0件・警告0件(残すなら理由を書く)、LibreOffice の絵を人に見せた。",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "0d5c04a5-6a7a-4131-bbd1-1943cc5d46a4"
+        }
+      ],
       "createdAt": "2026-11-11T05:56:10.642Z",
-      "updatedAt": "2026-11-11T05:56:10.642Z",
+      "updatedAt": "2026-11-11T06:08:26.310Z",
       "closedAt": null,
       "extra": {}
     },
