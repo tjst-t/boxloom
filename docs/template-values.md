@@ -13,9 +13,36 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 | `boxloom/subsystems/shapes.json` | shapes(生の図形への逃げ道)の既定の寸法 |
 | `boxloom/values.go` | 読み込みと検査 |
 
-どちらも `go:embed` でバイナリに同梱する(外のファイルを指定して読む口はまだ無い)。
-テンプレートの一覧はこのフォルダのファイルから作るので、`templates/` に
-ファイルを1つ足せば `-template <名前>` で選べる。
+どちらも `go:embed` でバイナリに同梱する。テンプレートの一覧はこのフォルダの
+ファイルから作るので、`templates/` にファイルを1つ足せば `-template <名前>` で選べる。
+
+## 外の値の表を使う(Backlog #31)
+
+自分たちの色と字体で使いたいときは、同梱のものと同じ形の JSON を作り、
+`-template` にファイルのパスを渡す(`build`・`check`・`schema`・`fonts` のどれでも)。
+
+```
+go run ./cmd/boxloom build -template ./my-brand.json deck.bx.md
+go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレートが名乗るものだけ
+```
+
+- `-template` の値が `.json` で終わるか、パスの区切り(`/`・`\`)を含めばファイル、
+  そうでなければ同梱の名前として引く。
+- 検査は同梱のものと**同じ**(次の節)。`name` はファイル名(拡張子を除いた最後の
+  部分)と同じでなければならない。IR の `template` より `-template` が優先する。
+- 誤りは5章の形の1件(`code` は `template-values`、`file` は値の表のファイル、
+  `path` は値の表の中の場所、`line` はその行の目安)。`check` は値の表に誤りが
+  あれば文書を検査せず、その1件だけを返す(終了コード 1)。
+
+  ```
+  error: ./my-brand.json:36 /values/blockGap: template-values: values.blockGap: 13 is not on the spacing scale (multiples of 4); nearest: 12 or 16
+  ```
+- 囲み・部品・骨組みはまだコードなので、外の値の表で変えられるのは値の表の中身
+  (色・余白・字の大きさ・字体・印・サブシステムの寸法)だけ。囲みの一覧は同梱の
+  テンプレートと同じ。
+- ライブラリでは `ParseTemplate(file, data)` で読み、`BuildOptions.Values`・
+  `CheckOptions.Values`・`SchemaTemplate` に渡す(`docs/library.md`)。
+- 例は `examples/templates/forest.json`(架空の緑の配色)。
 
 ## 読み込みの検査
 

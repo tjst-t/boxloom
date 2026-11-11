@@ -8,6 +8,7 @@ AI に文書を書かせるときは、これをそのまま渡す。
 cd boxloom
 go run ./cmd/boxloom schema                    # 全部のテンプレート(dark・light)
 go run ./cmd/boxloom schema -template dark     # そのテンプレートが名乗るものだけ
+go run ./cmd/boxloom schema -template ./my.json  # 外の値の表(docs/template-values.md)でも絞れる
 ```
 
 - 知らないテンプレートの名前は誤り(終了コード 1)。引数の誤りは 2。

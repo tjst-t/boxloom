@@ -1,0 +1,75 @@
+{
+  "name": "forest",
+  "theme": {
+    "bg": "FBFBF7",
+    "card": "F1F5EE",
+    "card_alt": "E2EBDD",
+    "text_primary": "1D2A1F",
+    "text_muted": "5D6B5F",
+    "grid": "D3DDCF",
+    "support": "5FA36A",
+    "conditional": "B7791F",
+    "none": "A9B3A8",
+    "danger": "B23A3A",
+    "risk": "F3DEDC",
+    "accent": "2F6B3A",
+    "on_conditional": "FFFFFF"
+  },
+  "scale": {
+    "spacingUnit": 4,
+    "typeSizes": [
+      8,
+      10,
+      12,
+      14,
+      16,
+      24,
+      36
+    ]
+  },
+  "values": {
+    "pageWidth": 960,
+    "pageHeight": 540,
+    "pagePadding": 24,
+    "coverPadding": 48,
+    "sectionGap": 16,
+    "blockGap": 16,
+    "itemGap": 8,
+    "coverTitle": 36,
+    "coverSubtitle": 16,
+    "coverAuthor": 12,
+    "slideTitle": 24,
+    "body": 14,
+    "subPoint": 12,
+    "optionLabel": 16,
+    "optionItem": 12,
+    "small": 10,
+    "pointIndentEm": 1.5,
+    "cardPadding": 16,
+    "cardRadius": 10,
+    "subsystemRadius": 12,
+    "coverRuleWidth": 64,
+    "coverRuleHeight": 4,
+    "fillRatioMin": 0.65
+  },
+  "marks": {
+    "point": "・",
+    "subPoint": "– ",
+    "pro": "＋ ",
+    "con": "－ "
+  },
+  "fonts": {
+    "latin": "Noto Sans CJK JP",
+    "eastAsian": "Noto Sans CJK JP",
+    "fallbackFonts": [
+      "BIZ UDPGothic",
+      "BIZ UDGothic",
+      "IPAexGothic",
+      "Liberation Sans",
+      "DejaVu Sans"
+    ],
+    "widthMargin": 1.05,
+    "fixedLineSpacing": true
+  },
+  "variants": []
+}

@@ -245,6 +245,9 @@ func WriteFontList(w io.Writer) {
 type FontCheck struct {
 	// Template は文書の template より優先するテンプレートの名前。
 	Template string
+	// Values は外から読んだテンプレートの値の表(ParseTemplate)。nil でなければ
+	// Template より優先する。
+	Values *Template
 	// Verbose ははみ出す行を1行ずつ出す。
 	Verbose bool
 
@@ -270,9 +273,12 @@ func (fc *FontCheck) Deck(w io.Writer, file string, d *IRDeck) error {
 	if fc.Template != "" {
 		name = fc.Template
 	}
-	t, err := LookupTemplate(name)
-	if err != nil {
-		return err
+	t := fc.Values
+	if t == nil {
+		var err error
+		if t, err = LookupTemplate(name); err != nil {
+			return err
+		}
 	}
 	pages, _, err := t.RenderPages(d)
 	if err != nil {

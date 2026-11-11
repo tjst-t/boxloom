@@ -55,6 +55,9 @@ type CheckOptions struct {
 	// Template は IR の template より優先するテンプレートの名前(空なら IR の
 	// template、それも無ければ light)。
 	Template string
+	// Values は外から読んだテンプレートの値の表(ParseTemplate)。nil でなければ
+	// Template と IR の template より優先する。
+	Values *Template
 	// Strict は警告も誤りとして扱う(CheckResult.OK が false になる)。
 	Strict bool
 }
@@ -68,7 +71,7 @@ type CheckOptions struct {
 // 返す CheckResult の切れ端は nil にならない(JSON で [] になる)。
 func Check(file string, data []byte, opt CheckOptions) *CheckResult {
 	defer useFonts(activeFonts)() // 組み立てが替えた字体を、終わったら戻す
-	errs, warns, caps := checkCapacity(file, data, opt.Template)
+	errs, warns, caps := checkCapacity(file, data, opt.Template, opt.Values)
 	res := &CheckResult{Errors: []Issue{}, Warnings: []Issue{}, Capacity: []SlideCapacity{}}
 	res.Errors = append(res.Errors, errs...)
 	res.Warnings = append(res.Warnings, warns...)
@@ -79,15 +82,15 @@ func Check(file string, data []byte, opt CheckOptions) *CheckResult {
 
 // checkCapacity は Check の中身。.md なら容量のスライドとブロックにも
 // Markdown の行を添える。
-func checkCapacity(file string, b []byte, templateOverride string) (errs, warns []Issue, caps []SlideCapacity) {
+func checkCapacity(file string, b []byte, templateOverride string, values *Template) (errs, warns []Issue, caps []SlideCapacity) {
 	if !isMarkdownPath(file) {
-		return CheckIRCapacity(file, b, templateOverride)
+		return checkIRCapacity(file, b, templateOverride, values)
 	}
 	ir, mdErrs, lines := ParseMarkdownWithMap(b, file)
 	if len(mdErrs) > 0 {
 		return mdErrs, nil, nil
 	}
-	errs, warns, caps = CheckIRCapacity(file, ir, templateOverride)
+	errs, warns, caps = checkIRCapacity(file, ir, templateOverride, values)
 	for _, list := range [][]Issue{errs, warns} {
 		for i := range list {
 			list[i].Line = lines.Line(list[i].Path)
@@ -110,6 +113,12 @@ func CheckIR(file string, b []byte, templateOverride string) (errs, warns []Issu
 
 // CheckIRCapacity は CheckIR に容量を足したもの。誤りがあれば容量は空。
 func CheckIRCapacity(file string, b []byte, templateOverride string) (errs, warns []Issue, caps []SlideCapacity) {
+	return checkIRCapacity(file, b, templateOverride, nil)
+}
+
+// checkIRCapacity は CheckIRCapacity の中身。values(外から読んだ値の表)が
+// あれば、名前より優先する。
+func checkIRCapacity(file string, b []byte, templateOverride string, values *Template) (errs, warns []Issue, caps []SlideCapacity) {
 	var doc any
 	if err := json.Unmarshal(b, &doc); err != nil {
 		return []Issue{{File: file, Path: "", Message: "not JSON: " + err.Error(), Code: "json"}}, nil, nil
@@ -122,7 +131,10 @@ func CheckIRCapacity(file string, b []byte, templateOverride string) (errs, warn
 	if templateOverride != "" {
 		name, at = templateOverride, ""
 	}
-	tm, terr := LookupTemplate(name)
+	tm, terr := values, error(nil)
+	if tm == nil {
+		tm, terr = LookupTemplate(name)
+	}
 	if terr != nil {
 		c.add(at, terr.Error(), "template-exists")
 	}

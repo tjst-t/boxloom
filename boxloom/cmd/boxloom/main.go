@@ -2,8 +2,8 @@
 // 入口(docs/library.md)だけを使い、ここではフラグ・ファイルの読み書き・
 // 終了コードを受け持つ。
 //
-//	boxloom build [-o out.pptx] [-template dark|light] deck.json|deck.bx.md
-//	boxloom check [-format text|json] [-capacity] [-template dark|light] [-strict] deck.json|deck.bx.md ...
+//	boxloom build [-o out.pptx] [-template dark|light|./my.json] deck.json|deck.bx.md
+//	boxloom check [-format text|json] [-capacity] [-template dark|light|./my.json] [-strict] deck.json|deck.bx.md ...
 //	boxloom parse [-format text|json] deck.bx.md
 //	boxloom schema [-template NAME]
 //	boxloom fonts [-template 名前] [-against "欧文/和文;…"] [-v] deck… | -list
@@ -79,6 +79,28 @@ func runDemo(stdout, stderr io.Writer) int {
 	return 0
 }
 
+// templateFlag は -template の値を読む。ファイルのパス(.json で終わるか、
+// パスの区切りを含む)なら値の表を読んで検査し、名前ならそのまま返す。
+// 誤りは5章の形の1件で返す。
+func templateFlag(v string) (name string, values *boxloom.Template, issue *boxloom.Issue) {
+	if !boxloom.IsTemplateFile(v) {
+		return v, nil, nil
+	}
+	b, err := os.ReadFile(v)
+	if err != nil {
+		return "", nil, &boxloom.Issue{File: v, Message: err.Error(), Code: "read"}
+	}
+	t, err := boxloom.ParseTemplate(v, b)
+	var te *boxloom.TemplateError
+	if errors.As(err, &te) {
+		return "", nil, &te.Issue
+	}
+	if err != nil {
+		return "", nil, &boxloom.Issue{File: v, Message: err.Error(), Code: "template-values"}
+	}
+	return "", t, nil
+}
+
 // readDeck は path を読み、拡張子で IR(JSON)か Boxloom Markdown かを選ぶ。
 func readDeck(path string) (*boxloom.IRDeck, error) {
 	b, err := os.ReadFile(path)
@@ -105,22 +127,27 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("build", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	out := fs.String("o", "", "書き出す pptx(省くと out/<IR の名前>.pptx)")
-	tmpl := fs.String("template", "", "テンプレートの名前(省くと IR の template)")
+	tmpl := fs.String("template", "", "テンプレートの名前か値の表のファイル(./my.json。省くと IR の template)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(stderr, "usage: boxloom build [-o out.pptx] [-template dark|light] deck.json|deck.bx.md")
+		fmt.Fprintln(stderr, "usage: boxloom build [-o out.pptx] [-template dark|light|./my.json] deck.json|deck.bx.md")
 		return 2
 	}
 	in := fs.Arg(0)
+	tname, tvalues, tissue := templateFlag(*tmpl)
+	if tissue != nil {
+		fmt.Fprintln(stderr, "error:", tissue.String())
+		return 1
+	}
 	deck, err := readDeck(in)
 	if err != nil {
 		fmt.Fprintln(stderr, "error:", err)
 		return 1
 	}
 	var buf bytes.Buffer
-	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: *tmpl})
+	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: tname, Values: tvalues})
 	if errors.Is(err, boxloom.ErrUnknownTemplate) {
 		fmt.Fprintln(stderr, "error:", err)
 		return 1
@@ -151,7 +178,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 func runCheck(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	tmpl := fs.String("template", "", "テンプレートの名前(省くと IR の template)")
+	tmpl := fs.String("template", "", "テンプレートの名前か値の表のファイル(./my.json。省くと IR の template)")
 	strict := fs.Bool("strict", false, "警告も誤りとして扱う(終了コード 1)")
 	format := fs.String("format", "text", "出し方: text か json")
 	showCap := fs.Bool("capacity", false, "text の出し方でも容量(本文の残り)を出す(json では常に出る)")
@@ -159,18 +186,25 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() == 0 || (*format != "text" && *format != "json") {
-		fmt.Fprintln(stderr, "usage: boxloom check [-format text|json] [-capacity] [-template dark|light] [-strict] deck.json|deck.bx.md ...")
+		fmt.Fprintln(stderr, "usage: boxloom check [-format text|json] [-capacity] [-template dark|light|./my.json] [-strict] deck.json|deck.bx.md ...")
 		return 2
 	}
 	res := boxloom.CheckResult{OK: true, Errors: []boxloom.Issue{}, Warnings: []boxloom.Issue{}, Capacity: []boxloom.SlideCapacity{}}
-	for _, f := range fs.Args() {
+	tname, tvalues, tissue := templateFlag(*tmpl)
+	files := fs.Args()
+	if tissue != nil {
+		// 値の表が読めなければ、文書は検査しない(どのテンプレートで見るか決まらない)。
+		res.OK, files = false, nil
+		res.Errors = append(res.Errors, *tissue)
+	}
+	for _, f := range files {
 		b, err := os.ReadFile(f)
 		if err != nil {
 			res.OK = false
 			res.Errors = append(res.Errors, boxloom.Issue{File: f, Message: err.Error(), Code: "read"})
 			continue
 		}
-		r := boxloom.Check(f, b, boxloom.CheckOptions{Template: *tmpl, Strict: *strict})
+		r := boxloom.Check(f, b, boxloom.CheckOptions{Template: tname, Values: tvalues, Strict: *strict})
 		res.OK = res.OK && r.OK
 		res.Errors = append(res.Errors, r.Errors...)
 		res.Warnings = append(res.Warnings, r.Warnings...)
@@ -242,15 +276,26 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 func runSchema(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("schema", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	tmpl := fs.String("template", "", "このテンプレートが名乗るものだけを出す(省くと全部: "+strings.Join(boxloom.Templates(), ", ")+")")
+	tmpl := fs.String("template", "", "このテンプレート(名前か値の表のファイル)が名乗るものだけを出す(省くと全部: "+strings.Join(boxloom.Templates(), ", ")+")")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(stderr, "usage: boxloom schema [-template NAME]")
+		fmt.Fprintln(stderr, "usage: boxloom schema [-template NAME|./my.json]")
 		return 2
 	}
-	b, err := boxloom.Schema(*tmpl)
+	tname, tvalues, tissue := templateFlag(*tmpl)
+	if tissue != nil {
+		fmt.Fprintln(stderr, "boxloom schema:", tissue.String())
+		return 1
+	}
+	var b []byte
+	var err error
+	if tvalues != nil {
+		b, err = boxloom.SchemaTemplate(tvalues)
+	} else {
+		b, err = boxloom.Schema(tname)
+	}
 	if err != nil {
 		fmt.Fprintln(stderr, "boxloom schema:", err)
 		return 1
@@ -289,7 +334,12 @@ func runFonts(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "error:", err)
 		return 2
 	}
-	fc.Template, fc.Verbose = *tmpl, *verbose
+	tname, tvalues, tissue := templateFlag(*tmpl)
+	if tissue != nil {
+		fmt.Fprintln(stderr, "error:", tissue.String())
+		return 1
+	}
+	fc.Template, fc.Values, fc.Verbose = tname, tvalues, *verbose
 	for _, in := range fs.Args() {
 		d, err := readDeck(in)
 		if err != nil {

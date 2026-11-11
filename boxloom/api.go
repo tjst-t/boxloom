@@ -81,6 +81,9 @@ func Templates() []string {
 type BuildOptions struct {
 	// Template はテンプレートの名前。空なら IR の template、それも無ければ light。
 	Template string
+	// Values は外から読んだテンプレートの値の表(ParseTemplate)。nil でなければ
+	// Template と IR の template より優先する。
+	Values *Template
 }
 
 // BuildResult は Build の結果。
@@ -99,13 +102,16 @@ type BuildResult struct {
 // 返す(どちらも w には何も書かない)。
 func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 	defer useFonts(activeFonts)() // 組み立てが替えた字体を、終わったら戻す
-	name := deck.Template
-	if opt.Template != "" {
-		name = opt.Template
-	}
-	t, err := LookupTemplate(name)
-	if err != nil {
-		return nil, err
+	t := opt.Values
+	if t == nil {
+		name := deck.Template
+		if opt.Template != "" {
+			name = opt.Template
+		}
+		var err error
+		if t, err = LookupTemplate(name); err != nil {
+			return nil, err
+		}
 	}
 	pages, warnings, err := t.RenderPages(deck)
 	if err != nil {
@@ -130,6 +136,16 @@ func Schema(template string) ([]byte, error) {
 		names = []string{template}
 	}
 	out, err := BuildSchemaOutput(names)
+	if err != nil {
+		return nil, err
+	}
+	return json.MarshalIndent(out, "", "  ")
+}
+
+// SchemaTemplate は Schema の、外から読んだテンプレート(ParseTemplate)版。
+// そのテンプレートが名乗るものだけを出す。
+func SchemaTemplate(t *Template) ([]byte, error) {
+	out, err := buildSchemaOutput([]*Template{t})
 	if err != nil {
 		return nil, err
 	}

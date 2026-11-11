@@ -65,6 +65,19 @@ type SubsystemSchema struct {
 
 // BuildSchemaOutput は names のテンプレートが名乗るものをまとめる。
 func BuildSchemaOutput(names []string) (*SchemaOutput, error) {
+	var ts []*Template
+	for _, name := range names {
+		t, err := LookupTemplate(name)
+		if err != nil {
+			return nil, err
+		}
+		ts = append(ts, t)
+	}
+	return buildSchemaOutput(ts)
+}
+
+// buildSchemaOutput は読んだテンプレートの一覧から一覧を作る。
+func buildSchemaOutput(templates []*Template) (*SchemaOutput, error) {
 	out := &SchemaOutput{
 		Boxloom: schemaVersion,
 		About: "Boxloom の文書の書き方。作者は意味だけを書き、見た目はテンプレートが決める。" +
@@ -85,11 +98,7 @@ func BuildSchemaOutput(names []string) (*SchemaOutput, error) {
 		},
 	}
 	subs := map[string]SubsystemDecl{} // 全テンプレートの和(irSchema に同梱する)
-	for _, name := range names {
-		t, err := LookupTemplate(name)
-		if err != nil {
-			return nil, err
-		}
+	for _, t := range templates {
 		ts := TemplateSchema{Name: t.Name, Variants: []string{}, Blocks: t.Blocks}
 		for v := range t.Variants {
 			ts.Variants = append(ts.Variants, v)
@@ -124,8 +133,8 @@ func BuildSchemaOutput(names []string) (*SchemaOutput, error) {
 		out.Templates = append(out.Templates, ts)
 	}
 	bundleName := "all"
-	if len(names) == 1 {
-		bundleName = names[0]
+	if len(templates) == 1 {
+		bundleName = templates[0].Name
 	}
 	ir, err := bundleIRSchema(bundleName, subs)
 	if err != nil {

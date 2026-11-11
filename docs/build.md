@@ -12,7 +12,8 @@ go run ./cmd/boxloom build -template dark -o out/x.pptx ../examples/ir/gantt-ful
 go run ./cmd/boxloom                                                      # 従来の Go で組んだデモ(変わらない)
 ```
 
-- テンプレートは `-template` > IR の `template` > `light` の順で決まる。
+- テンプレートは `-template` > IR の `template` > `light` の順で決まる。`-template` には
+  外の値の表のファイル(`./my.json`)も渡せる(`docs/template-values.md` の「外の値の表を使う」)。
 - 誤りは IR の中の場所を添えて止まる(例 `slides[2]: body[0]: gantt: ticks[0].status:
   unknown status "text_primary"`)。`examples/ir/invalid/` の9件は全部ここで断られる。
 - 警告(本文の埋まり具合・本文のはみ出し・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名)は
