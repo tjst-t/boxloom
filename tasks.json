@@ -1087,7 +1087,7 @@
       "number": 63,
       "kind": "task",
       "title": "計測の印を配置の段の語彙にする(irType・columns・cards・keepLine・nestedSlack・List・card)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [
         "component-registry"
@@ -1101,7 +1101,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T13:58:39.286Z",
-      "updatedAt": "2026-11-11T13:58:39.286Z",
+      "updatedAt": "2026-11-11T14:57:04.052Z",
       "closedAt": null,
       "extra": {}
     },
