@@ -1,11 +1,12 @@
 # IR から PPTX を作る(boxloom build)
 
-IR(`docs/ir.md`)を読んで、テンプレートで Box の木に組み、PPTX に書き出す道。
+IR(`docs/ir.md`)か Boxloom Markdown(`docs/content-syntax.md`。拡張子 `.md`)を読んで、テンプレートで Box の木に組み、PPTX に書き出す道。
 Go 版(`boxloom/`)だけにある。
 
 ```sh
 cd boxloom
 go run . build ../examples/ir/demo-deck.json                  # → out/demo-deck.pptx
+go run . build ../examples/md/demo-deck.bx.md                 # Markdown からも同じものができる
 go run . build -template dark -o out/x.pptx ../examples/ir/gantt-full.json
 go run .                                                      # 従来の Go で組んだデモ(変わらない)
 ```
@@ -57,7 +58,6 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 
 ## まだやっていないこと
 
-- Markdown(`docs/content-syntax.md`)から IR へのパーサー。
 - テンプレートの値の表(色・大きさ)をデータ(ファイル)にすること。いまは Go のコード。
 - 押せるリンク、`code` の等幅の字体。
 - 本文の高さがページに収まらないときの扱い(いまは比例で縮むだけで、警告は

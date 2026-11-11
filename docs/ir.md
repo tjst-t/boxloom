@@ -6,8 +6,8 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 
 > 状態: 第一版の下書き(版 `0.1`)。`docs/content-syntax-comparison.md` の共通の
 > お題3枚(表紙・論点と比較・Gantt)をすべて表せる範囲で作った。Go 版は
-> IR を読んで PPTX を書ける(`go run . build`、`docs/build.md`)。Markdown から
-> IR へのパーサーはまだ無い。
+> IR を読んで PPTX を書ける(`go run . build`、`docs/build.md`)。Boxloom Markdown
+> から IR へのパーサーもある(`go run . parse`、`docs/content-syntax.md` の8章)。
 
 ## ファイル
 

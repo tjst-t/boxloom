@@ -184,6 +184,9 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "build" {
 		os.Exit(runBuild(os.Args[2:]))
 	}
+	if len(os.Args) > 1 && os.Args[1] == "parse" {
+		os.Exit(runParse(os.Args[2:], os.Stdout, os.Stderr))
+	}
 	if err := os.MkdirAll("out", 0o755); err != nil {
 		panic(err)
 	}
@@ -200,7 +203,7 @@ func boolToInt(b bool) int {
 	return 0
 }
 
-// runBuild は「boxloom build」: IR(JSON)を読んで pptx を書く。
+// runBuild は「boxloom build」: IR(JSON)か Boxloom Markdown を読んで pptx を書く。
 //
 //	go run . build [-o out.pptx] [-template dark|light] deck.json
 //
@@ -213,11 +216,11 @@ func runBuild(args []string) int {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: boxloom build [-o out.pptx] [-template dark|light] deck.json")
+		fmt.Fprintln(os.Stderr, "usage: boxloom build [-o out.pptx] [-template dark|light] deck.json|deck.bx.md")
 		return 2
 	}
 	in := fs.Arg(0)
-	deck, err := ReadIR(in)
+	deck, err := readDeck(in)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 1
@@ -232,7 +235,7 @@ func runBuild(args []string) int {
 		return 1
 	}
 	if *out == "" {
-		*out = filepath.Join("out", strings.TrimSuffix(filepath.Base(in), filepath.Ext(in))+".pptx")
+		*out = filepath.Join("out", deckBaseName(in)+".pptx")
 	}
 	if err := os.MkdirAll(filepath.Dir(*out), 0o755); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
