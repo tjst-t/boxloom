@@ -651,20 +651,25 @@
       "id": "subsystem-chart",
       "number": 38,
       "kind": "task",
-      "title": "数値のグラフ(chart):出し方を決める(本物の c:chart か、図形で描くか)",
-      "status": "backlog",
+      "title": "数値のグラフ(chart):PowerPoint の本物のグラフ(c:chart+埋め込み xlsx)で出す",
+      "status": "in-progress",
       "parent": "canvas-patterns",
       "dependsOn": [],
       "milestone": null,
       "priority": "high",
       "labels": [],
-      "body": "docs/patterns.md の5章の1。Zelazny の5分類(構成比・項目比較・時系列・度数分布・相関)を受ける。案 A:PowerPoint の本物のグラフ(c:chart+埋め込み xlsx。編集できるが、xlsx を依存ゼロで書く手間と、アプリごとの描画の差)。案 B:図形で描く(寸法を制御でき、はみ出しも測れるが、グラフとして編集できない)。推しは A を主に。人が決める。",
-      "doneWhen": "出し方が決まり Memory にあり、LibreOffice と(できれば)Google Slides で試作を開いた見た目を確かめている",
+      "body": "人が決めた:案 A(本物のグラフ)を主にする。実装の前に、試作の PPTX を LibreOffice と Google Slides で開いて見た目を確かめる(Google Slides は人が開く)。Zelazny の5分類(構成比・項目比較・時系列・度数分布・相関)を受ける。xlsx は依存ゼロ(archive/zip と encoding/xml)で書く。色は役割名、字は段の名前。軸・目盛りの配置はアプリが決めるので、はみ出しの検査の扱いも決める。",
+      "doneWhen": "試作を LibreOffice と Google Slides で開いた結果が docs にあり、chart サブシステムが IR・Schema・Markdown・dark/light・試験・例・schema の出力まで揃い、validate_pptx.py を通る",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "0d5c04a5-6a7a-4131-bbd1-1943cc5d46a4"
+        }
+      ],
       "createdAt": "2026-11-11T03:02:37.916Z",
-      "updatedAt": "2026-11-11T03:02:37.916Z",
+      "updatedAt": "2026-11-11T03:48:15.829Z",
       "closedAt": null,
       "extra": {}
     },
