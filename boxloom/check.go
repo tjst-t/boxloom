@@ -540,6 +540,8 @@ var warnBlockRe = regexp.MustCompile(`^body\[([0-9]+)\]: (.*)$`)
 
 var warnShapeItemRe = regexp.MustCompile(`^shapes: items\[([0-9]+)\]`)
 
+var warnGanttSegRe = regexp.MustCompile(`^gantt: groups\[([0-9]+)\]\.rows\[([0-9]+)\]\.segments\[([0-9]+)\]`)
+
 var warnRuleNames = map[string]string{"SUBSYSTEM": "subsystem-min", "ROLE": "theme-role"}
 
 func warningIssue(file, w string) Issue {
@@ -552,6 +554,10 @@ func warningIssue(file, w string) Issue {
 	if m[2] == "SUBSYSTEM" && strings.Contains(m[3], "overlaps another annotation") {
 		// Gantt の注釈の置き場所が無かった(lintSubsystems が拾う SubsystemLinter の警告)
 		rule = "annotation-overlap"
+	}
+	if m[2] == "SUBSYSTEM" && strings.Contains(m[3], "gantt: groups[") && strings.Contains(m[3], "is not drawn") {
+		// Gantt の区間の文を帯が狭すぎて置けなかった(GanttSubsystem.Lint)
+		rule = "gantt-segment-label"
 	}
 	shapes := m[2] == "SUBSYSTEM" && strings.Contains(m[3], "shapes: items[")
 	if shapes && strings.Contains(m[3], ") overlaps items[") {
@@ -570,6 +576,10 @@ func warningIssue(file, w string) Issue {
 		// shapes の警告は、最初に名指しした図形まで指す。
 		if im := warnShapeItemRe.FindStringSubmatch(msg); im != nil {
 			path += "/data/items/" + im[1]
+		}
+		// Gantt の区間の文の警告は、その区間まで指す。
+		if gm := warnGanttSegRe.FindStringSubmatch(msg); gm != nil {
+			path += "/data/groups/" + gm[1] + "/rows/" + gm[2] + "/segments/" + gm[3]
 		}
 	}
 	return Issue{File: file, Path: path, Message: msg, Code: rule}

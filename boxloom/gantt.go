@@ -336,7 +336,77 @@ func noteNeedGrid(gv *GanttValues, chart *GanttChart, boxWidth float64) [][]floa
 	for _, n := range ganttNoteNeeds(gv, chart, boxWidth) {
 		grid[n.group][n.row] = n.rowH
 	}
+	// 区間の文が1行に収まらず帯の中で折り返す行も、収まる高さまで高くする。
+	chartW := boxWidth - 2*gv.Padding - (gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW)
+	for gi := range chart.Groups {
+		for ri := range chart.Groups[gi].Rows {
+			row := &chart.Groups[gi].Rows[ri]
+			if row.HasNote {
+				continue
+			}
+			for _, seg := range row.Segments {
+				lp := planSegmentLabel(gv, chart, chartW, seg)
+				if lp.mode == segLabelWrap && lp.rowH > grid[gi][ri] {
+					grid[gi][ri] = lp.rowH
+				}
+			}
+		}
+	}
 	return grid
+}
+
+// 区間の文の置き方。
+const (
+	segLabelNone   = iota // 文が無い
+	segLabelFit           // 帯の中に1行で収まる(従来どおり)
+	segLabelWrap          // 帯の中で折り返す(行を高くする)
+	segLabelHidden        // 帯が狭すぎて置けない(描かずに警告する)
+)
+
+// ganttSegLabelMaxLines は、区間の文を帯の中で折り返してよい行数の上限。
+// これを越えるほど帯が狭いときは、文を描かずに警告する(縦に細長い文の柱を
+// 作らない)。
+const ganttSegLabelMaxLines = 3
+
+// segLabelPlan は区間の文の置き方の計画。
+type segLabelPlan struct {
+	mode        int
+	textW, need float64 // 文に使える幅・文に要る幅(1行のとき)
+	rowH        float64 // 折り返すときに要る行の高さ(帯の上下の隙間を含む)
+}
+
+// planSegmentLabel は、本体の幅 chartW で描いたときの区間の文の置き方を決める。
+// Measure・Lint・描画が同じ計算を使う(申告と描画と警告がずれないように)。
+func planSegmentLabel(gv *GanttValues, chart *GanttChart, chartW float64, seg GanttSegment) segLabelPlan {
+	if seg.Label == "" {
+		return segLabelPlan{mode: segLabelNone}
+	}
+	ww := chart.Scale.X(seg.End, 0, chartW) - chart.Scale.X(seg.Start, 0, chartW)
+	textW := ww - 8
+	lines := wrapText(seg.Label, gv.SmallText, math.Max(textW, 1), false)
+	need := 0.0
+	for _, para := range strings.Split(seg.Label, "\n") {
+		need = math.Max(need, runWidthPt(para, gv.SmallText, false))
+	}
+	p := segLabelPlan{textW: textW, need: need}
+	const eps = 1e-6
+	if len(lines) == 1 && need <= textW+eps {
+		p.mode = segLabelFit
+		return p
+	}
+	fits := textW >= 2*gv.SmallText && len(lines) <= ganttSegLabelMaxLines
+	for _, l := range lines {
+		if runWidthPt(l, gv.SmallText, false) > textW+eps {
+			fits = false // 折り返しても切れない語が帯より長い
+		}
+	}
+	if !fits {
+		p.mode = segLabelHidden
+		return p
+	}
+	p.mode = segLabelWrap
+	p.rowH = float64(len(lines))*gv.SmallText*lineHeightMult + ganttNoteBarInset
+	return p
 }
 
 // rowsFor は行の高さの合計を avail(本体の高さ − グループ間の隙間)にする base を
@@ -595,7 +665,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 				} else {
 					p.AddRect(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, segColor, 3)
 				}
-				if seg.Label != "" && (bx2-bx1) > 46 {
+				if lp := planSegmentLabel(gv, chart, chartW, seg); lp.mode == segLabelFit || lp.mode == segLabelWrap {
 					labelColor := c("text_primary")
 					if seg.Role == "conditional" && !seg.Tentative {
 						labelColor = c("on_conditional")
@@ -603,7 +673,12 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 					if seg.Tentative {
 						labelColor = segColor
 					}
-					p.AddTextBoxNoWrap(LBox{X: bx1 + 5, Y: barY, Width: bx2 - bx1 - 8, Height: barH}, seg.Label, gv.SmallText, labelColor, false, "left", "middle")
+					lbox := LBox{X: bx1 + 5, Y: barY, Width: bx2 - bx1 - 8, Height: barH}
+					if lp.mode == segLabelWrap {
+						p.AddTextBox(lbox, seg.Label, gv.SmallText, labelColor, false, "left", "middle")
+					} else {
+						p.AddTextBoxNoWrap(lbox, seg.Label, gv.SmallText, labelColor, false, "left", "middle")
+					}
 				}
 				if seg.OpenEnd {
 					for _, dx := range []float64{5, 11, 17} {
@@ -774,6 +849,25 @@ func (g *GanttSubsystem) Lint(box LBox) []string {
 		}
 		first := strings.SplitN(g.Chart.Annotations[i].Text, "\n", 2)[0]
 		out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] gantt: annotation %d (%q) has no free place and overlaps another annotation", i, first))
+	}
+	// 帯が狭すぎて区間の文を置けない(描かない)ものを警告にする。黙って消さない。
+	chartW := box.Width - 2*gv.Padding - (gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW)
+	for gi := range g.Chart.Groups {
+		for ri := range g.Chart.Groups[gi].Rows {
+			row := &g.Chart.Groups[gi].Rows[ri]
+			if row.HasNote {
+				continue
+			}
+			for si, seg := range row.Segments {
+				lp := planSegmentLabel(gv, g.Chart, chartW, seg)
+				if lp.mode != segLabelHidden {
+					continue
+				}
+				first := strings.SplitN(seg.Label, "\n", 2)[0]
+				out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] gantt: groups[%d].rows[%d].segments[%d] label (%q) is not drawn: the bar leaves %.1fpt for text, needs %.1fpt (up to %d lines)",
+					gi, ri, si, first, math.Max(lp.textW, 0), lp.need, ganttSegLabelMaxLines))
+			}
+		}
 	}
 	return out
 }
