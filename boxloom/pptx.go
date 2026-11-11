@@ -5,13 +5,14 @@
 // encoding/xml相当の文字列組み立て)だけでOOXMLを手書きする。サポート範囲は
 // このデモが実際に必要とする最小限(角丸/矩形の塗り、テキストボックス、直線/
 // コネクタ、ノート)に絞っている。
-package main
+
+package boxloom
 
 import (
 	"archive/zip"
 	"fmt"
+	"io"
 	"math"
-	"os"
 	"strings"
 )
 
@@ -533,28 +534,18 @@ func connectorXML(s *shape) string {
 `, s.id, s.id, cxn, flip, ptToEMU(x0), ptToEMU(y0), ptToEMU(w), ptToEMU(h), ptToEMU(s.lineWidthPt), hexColor(s.lineColor), tail)
 }
 
-// Save はこの1枚だけの pptx を書き出す。
-func (p *PPTXBuilder) Save(path string) error {
-	return SaveDeck(path, []*PPTXBuilder{p}, "")
-}
-
-// SaveDeck は複数枚のスライドを1つの pptx(zipコンテナ)に書き出す。大きさは
-// 1枚目のものを使う。title は文書の題(空なら "boxloom")。
-func SaveDeck(path string, slides []*PPTXBuilder, title string) error {
+// WriteDeck は複数枚のスライドを1つの pptx(zipコンテナ)として w に書く。
+// 大きさは1枚目のものを使う。title は文書の題(空なら "boxloom")。
+func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	if len(slides) == 0 {
-		return fmt.Errorf("SaveDeck: no slides")
+		return fmt.Errorf("WriteDeck: no slides")
 	}
 	p := slides[0]
 	n := len(slides)
 	if title == "" {
 		title = "boxloom"
 	}
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	zw := zip.NewWriter(f)
+	zw := zip.NewWriter(w)
 
 	write := func(name, content string) error {
 		w, err := zw.Create(name)

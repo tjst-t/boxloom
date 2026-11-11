@@ -10,10 +10,12 @@
 //
 // デモのテンプレート dark / light の方針: 中央揃えを使わない、SPACE_BETWEEN は
 // フッターだけ、本文が少なくても引き伸ばして埋めない(足りなければ警告)。
-package main
+
+package boxloom
 
 import (
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -294,10 +296,10 @@ func lintBlockSubsystems(b *BuiltSlide) []string {
 
 // --- 書き出し ---
 
-// RenderDeck は IR を組み、並べ、描いて pptx に書く。警告(本文の埋まり具合・
+// RenderDeck は IR を組み、並べ、描いて pptx を w に書く。警告(本文の埋まり具合・
 // サブシステムの最小の大きさ・テーマに無い役割名・はみ出し)は返り値で返し、
 // ノートには入れない(ノートは作者の文だけ)。
-func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
+func (t *Template) RenderDeck(d *IRDeck, w io.Writer) ([]string, error) {
 	pages, all, err := t.RenderPages(d)
 	if err != nil {
 		return nil, err
@@ -306,7 +308,7 @@ func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
 	if d.Meta != nil {
 		title = d.Meta.Title.Plain()
 	}
-	return all, SaveDeck(outPath, pages, title)
+	return all, WriteDeck(w, pages, title)
 }
 
 // RenderPages は RenderDeck のうち、ファイルに書く前まで(組み・並べ・描いた

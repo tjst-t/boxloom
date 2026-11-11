@@ -8,7 +8,8 @@
 // 寸法は fonts/<slug>.json(tools/export_font_metrics.py が Pillow で測った
 // 「1em あたりの送り幅」)。字体のファイルそのものは持たない。寸法の無い字体を
 // テンプレートが選ぶと読み込みで誤り。
-package main
+
+package boxloom
 
 import (
 	"embed"

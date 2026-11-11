@@ -439,7 +439,7 @@ def mutations(shapes, notes):
 
 
 def build_examples(outdir):
-    """examples から dark/light で PPTX を作る。従来のデモ(go run .)も。"""
+    """examples から dark/light で PPTX を作る。従来のデモ(go run ./cmd/boxloom)も。"""
     go = shutil.which("go") or "/usr/local/go/bin/go"
     gdir = ROOT / "boxloom"
     srcs = sorted((ROOT / "examples" / "ir").glob("*.json")) + sorted((ROOT / "examples" / "md").glob("*.bx.md")) \
@@ -448,7 +448,7 @@ def build_examples(outdir):
     for src in srcs:
         for tpl in ("dark", "light"):
             dst = outdir / f"{src.parent.name}-{src.name}-{tpl}.pptx"
-            r = subprocess.run([go, "run", ".", "build", "-template", tpl, "-o", str(dst), str(src)], cwd=gdir, capture_output=True, text=True)
+            r = subprocess.run([go, "run", "./cmd/boxloom", "build", "-template", tpl, "-o", str(dst), str(src)], cwd=gdir, capture_output=True, text=True)
             if r.returncode != 0:
                 sys.exit(f"build failed for {src} ({tpl}):\n{r.stderr}")
             out.append(dst)
@@ -458,9 +458,9 @@ def build_examples(outdir):
     tmpgo = outdir / "go"
     shutil.copytree(gdir, tmpgo, ignore=shutil.ignore_patterns("out"))
     (tmpgo / "out").mkdir()
-    r = subprocess.run([go, "run", "."], cwd=tmpgo, capture_output=True, text=True)
+    r = subprocess.run([go, "run", "./cmd/boxloom"], cwd=tmpgo, capture_output=True, text=True)
     if r.returncode != 0:
-        sys.exit(f"go run . failed:\n{r.stderr}")
+        sys.exit(f"go run ./cmd/boxloom failed:\n{r.stderr}")
     out += sorted((tmpgo / "out").glob("*.pptx"))
     return out
 

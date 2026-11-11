@@ -1,16 +1,14 @@
 // `boxloom schema`:いまのテンプレートとサブシステムが名乗る囲み・属性・
 // サブシステムの Schema を、AI に渡せる1つの JSON にまとめて出す
 // (docs/content-syntax.md の6章。出力の形は docs/schema-command.md)。
-package main
+
+package boxloom
 
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
-	"io"
 	"sort"
-	"strings"
 )
 
 const (
@@ -63,36 +61,6 @@ type SubsystemSchema struct {
 	Schema string `json:"schema"`
 	// SchemaID はその Schema の $id。
 	SchemaID string `json:"schemaId"`
-}
-
-func runSchema(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("schema", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	tmpl := fs.String("template", "", "このテンプレートが名乗るものだけを出す(省くと全部: "+strings.Join(TemplateNames, ", ")+")")
-	if err := fs.Parse(args); err != nil {
-		return 2
-	}
-	if fs.NArg() != 0 {
-		fmt.Fprintln(stderr, "usage: boxloom schema [-template NAME]")
-		return 2
-	}
-	names := TemplateNames
-	if *tmpl != "" {
-		names = []string{*tmpl}
-	}
-	out, err := BuildSchemaOutput(names)
-	if err != nil {
-		fmt.Fprintln(stderr, "boxloom schema:", err)
-		return 1
-	}
-	b, err := json.MarshalIndent(out, "", "  ")
-	if err != nil {
-		fmt.Fprintln(stderr, "boxloom schema:", err)
-		return 1
-	}
-	stdout.Write(b)
-	fmt.Fprintln(stdout)
-	return 0
 }
 
 // BuildSchemaOutput は names のテンプレートが名乗るものをまとめる。

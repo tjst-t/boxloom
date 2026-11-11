@@ -2,7 +2,7 @@
 
 どれも `../demo-deck.json`・`../gantt-full.json`・`../shapes.json` のどれかを1か所だけ変えたもの。
 形(キー・型・enum)は正しいので `tools/validate_ir.py` は通す(`--self-test` は
-「通ること」を確かめる)。意味が通らないので `go run . check` が断る
+「通ること」を確かめる)。意味が通らないので `go run ./cmd/boxloom check` が断る
 (`boxloom/check_test.go` が、ファイルごとに決まった rule の誤りが1件だけ出ることを
 確かめる)。
 

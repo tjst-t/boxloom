@@ -12,7 +12,8 @@
 // どちらもバイナリに同梱する(embed)。読むときは厳しく見る: 知らないキー・
 // 欠けたキー・型の違い・色の形の誤り・0 以下の大きさは、すべて誤りにする
 // (黙って既定値で埋めない)。形は docs/template-values.md。
-package main
+
+package boxloom
 
 import (
 	"bytes"
@@ -471,7 +472,7 @@ func loadTemplate(name string) (*Template, error) {
 	file := path.Join("templates", name+".json")
 	data, err := valueFiles.ReadFile(file)
 	if err != nil || strings.ContainsAny(name, "/\\") {
-		return nil, fmt.Errorf("unknown template %q (known: %s)", name, strings.Join(TemplateNames, ", "))
+		return nil, unknownTemplateError{name}
 	}
 	t, err := parseTemplateFile(name, data)
 	if err != nil {

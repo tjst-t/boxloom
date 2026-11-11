@@ -1,6 +1,6 @@
 // boxloom check: JSON Schema では書けない IR の検査。
 //
-//	go run . check [-format text|json] [-capacity] [-template dark|light] [-strict] deck.json|deck.bx.md ...
+//	go run ./cmd/boxloom check [-format text|json] [-capacity] [-template dark|light] [-strict] deck.json|deck.bx.md ...
 //
 // 誤りと警告は docs/content-syntax.md の5章の形(Issue)で出す:
 //
@@ -25,13 +25,13 @@
 // 日付の前後・範囲の外の日付・暦に無い日付・テンプレートに無い variant)を見る。
 // Go の IR の読み込み(ir.go)が断るもの(知らないキーなど)も、場所つきの
 // 誤りとして出す。
-package main
+
+package boxloom
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
-	"os"
+	"io"
 	"regexp"
 	"sort"
 	"strconv"
@@ -50,76 +50,44 @@ type CheckResult struct {
 	Capacity []SlideCapacity `json:"capacity"`
 }
 
-func runCheck(args []string) int {
-	fs := flag.NewFlagSet("check", flag.ContinueOnError)
-	tmpl := fs.String("template", "", "テンプレートの名前(省くと IR の template)")
-	strict := fs.Bool("strict", false, "警告も誤りとして扱う(終了コード 1)")
-	format := fs.String("format", "text", "出し方: text か json")
-	showCap := fs.Bool("capacity", false, "text の出し方でも容量(本文の残り)を出す(json では常に出る)")
-	if err := fs.Parse(args); err != nil {
-		return 2
-	}
-	if fs.NArg() == 0 || (*format != "text" && *format != "json") {
-		fmt.Fprintln(os.Stderr, "usage: boxloom check [-format text|json] [-capacity] [-template dark|light] [-strict] deck.json|deck.bx.md ...")
-		return 2
-	}
-	res := CheckResult{Errors: []Issue{}, Warnings: []Issue{}, Capacity: []SlideCapacity{}}
-	for _, f := range fs.Args() {
-		errs, warns, caps := CheckFileCapacity(f, *tmpl)
-		res.Errors = append(res.Errors, errs...)
-		res.Warnings = append(res.Warnings, warns...)
-		res.Capacity = append(res.Capacity, caps...)
-	}
-	res.OK = len(res.Errors) == 0 && (!*strict || len(res.Warnings) == 0)
-	if *format == "json" {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetEscapeHTML(false)
-		enc.SetIndent("", "  ")
-		_ = enc.Encode(res)
-	} else {
-		for _, e := range res.Errors {
-			fmt.Println("error:", e.String())
-		}
-		for _, w := range res.Warnings {
-			fmt.Println("warning:", w.String())
-		}
-		if *showCap {
-			for _, c := range res.Capacity {
-				fmt.Println(c.String())
-			}
-		}
-		fmt.Printf("%d error(s), %d warning(s)\n", len(res.Errors), len(res.Warnings))
-	}
-	if !res.OK {
-		return 1
-	}
-	return 0
+// CheckOptions は Check の選択。
+type CheckOptions struct {
+	// Template は IR の template より優先するテンプレートの名前(空なら IR の
+	// template、それも無ければ light)。
+	Template string
+	// Strict は警告も誤りとして扱う(CheckResult.OK が false になる)。
+	Strict bool
 }
 
-// CheckFile は1つのファイルを検査する。templateOverride が空でなければ IR の
-// template より優先する。.md は Boxloom Markdown として読み、記法の誤りが
-// あればそれを返す。無ければできた IR を検査し、誤りと警告に Markdown の行を
-// 添える(IR の場所から、その場所を作った Markdown の行を引く)。
-func CheckFile(path, templateOverride string) (errs, warns []Issue) {
-	errs, warns, _ = CheckFileCapacity(path, templateOverride)
-	return errs, warns
+// Check は1つの文書(file の名前、data の中身)を検査する。file の拡張子が
+// .md なら Boxloom Markdown として読み、記法の誤りがあればそれを返す。無ければ
+// できた IR を検査し、誤りと警告に Markdown の行を添える(IR の場所から、その
+// 場所を作った Markdown の行を引く)。.md でなければ IR(JSON)として読む。
+//
+// 誤りが無ければ組み立て(build)まで通し、そのときの警告と本文の容量も返す。
+// 返す CheckResult の切れ端は nil にならない(JSON で [] になる)。
+func Check(file string, data []byte, opt CheckOptions) *CheckResult {
+	defer useFonts(activeFonts)() // 組み立てが替えた字体を、終わったら戻す
+	errs, warns, caps := checkCapacity(file, data, opt.Template)
+	res := &CheckResult{Errors: []Issue{}, Warnings: []Issue{}, Capacity: []SlideCapacity{}}
+	res.Errors = append(res.Errors, errs...)
+	res.Warnings = append(res.Warnings, warns...)
+	res.Capacity = append(res.Capacity, caps...)
+	res.OK = len(res.Errors) == 0 && (!opt.Strict || len(res.Warnings) == 0)
+	return res
 }
 
-// CheckFileCapacity は CheckFile に容量(本文を持つスライドごと)を足したもの。
-// .md なら容量のスライドとブロックにも Markdown の行を添える。
-func CheckFileCapacity(path, templateOverride string) (errs, warns []Issue, caps []SlideCapacity) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return []Issue{{File: path, Message: err.Error(), Code: "read"}}, nil, nil
+// checkCapacity は Check の中身。.md なら容量のスライドとブロックにも
+// Markdown の行を添える。
+func checkCapacity(file string, b []byte, templateOverride string) (errs, warns []Issue, caps []SlideCapacity) {
+	if !isMarkdownPath(file) {
+		return CheckIRCapacity(file, b, templateOverride)
 	}
-	if !isMarkdownPath(path) {
-		return CheckIRCapacity(path, b, templateOverride)
-	}
-	ir, mdErrs, lines := ParseMarkdownWithMap(b, path)
+	ir, mdErrs, lines := ParseMarkdownWithMap(b, file)
 	if len(mdErrs) > 0 {
 		return mdErrs, nil, nil
 	}
-	errs, warns, caps = CheckIRCapacity(path, ir, templateOverride)
+	errs, warns, caps = CheckIRCapacity(file, ir, templateOverride)
 	for _, list := range [][]Issue{errs, warns} {
 		for i := range list {
 			list[i].Line = lines.Line(list[i].Path)
@@ -173,7 +141,7 @@ func CheckIRCapacity(file string, b []byte, templateOverride string) (errs, warn
 	}
 	pages, warnings, caps, berr := tm.renderPages(deck)
 	if berr == nil {
-		berr = SaveDeck(os.DevNull, pages, "")
+		berr = WriteDeck(io.Discard, pages, "")
 	}
 	if berr != nil {
 		c.add(locationToPointer(berr.Error()), berr.Error(), "build")

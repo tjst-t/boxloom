@@ -1,4 +1,4 @@
-package main
+package boxloom
 
 import (
 	"encoding/json"
@@ -126,19 +126,24 @@ func TestLocationToPointer(t *testing.T) {
 	}
 }
 
-func TestRunCheckExitCodes(t *testing.T) {
-	old := os.Stdout
-	null, _ := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
-	os.Stdout = null
-	defer func() { os.Stdout = old; null.Close() }()
-	if c := runCheck([]string{demoDeckPath}); c != 0 {
-		t.Errorf("valid deck: exit %d, want 0", c)
+func TestCheckOK(t *testing.T) {
+	read := func(p string) []byte {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b
 	}
-	if c := runCheck([]string{"-strict", demoDeckPath}); c != 1 {
-		t.Errorf("-strict with warnings: exit %d, want 1", c)
+	demo := read(demoDeckPath)
+	if r := Check(demoDeckPath, demo, CheckOptions{}); !r.OK || len(r.Warnings) == 0 || len(r.Capacity) == 0 {
+		t.Errorf("valid deck: ok %v, %d warning(s), %d capacity", r.OK, len(r.Warnings), len(r.Capacity))
 	}
-	if c := runCheck([]string{"../examples/ir/check-invalid/date-order.json"}); c != 1 {
-		t.Errorf("invalid deck: exit %d, want 1", c)
+	if r := Check(demoDeckPath, demo, CheckOptions{Strict: true}); r.OK {
+		t.Errorf("strict with warnings: ok")
+	}
+	bad := "../examples/ir/check-invalid/date-order.json"
+	if r := Check(bad, read(bad), CheckOptions{}); r.OK || len(r.Errors) == 0 || r.Capacity == nil {
+		t.Errorf("invalid deck: %+v", r)
 	}
 }
 

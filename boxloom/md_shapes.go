@@ -6,7 +6,8 @@
 // 形の誤り(知らないキー・0〜1 の外の数・16進の色・知らない字の段)だけ。
 // x+w が 1 を超える・知らない役割名・無い id を指すコネクタは、boxloom check が
 // 図形ごとの行と決まった code で返す(SourceMap の mark は gObject・gSeq が付ける)。
-package main
+
+package boxloom
 
 import (
 	"fmt"

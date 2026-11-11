@@ -1,4 +1,4 @@
-package main
+package boxloom
 
 import (
 	"archive/zip"
@@ -13,7 +13,7 @@ const ganttFullPath = "../examples/ir/gantt-full.json"
 
 func mustReadIR(t *testing.T, path string) *IRDeck {
 	t.Helper()
-	d, err := ReadIR(path)
+	d, err := readIRFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestInvalidExamplesAreRejected(t *testing.T) {
 		t.Fatal("no invalid examples found")
 	}
 	for _, f := range files {
-		d, err := ReadIR(f)
+		d, err := readIRFile(f)
 		if err == nil {
 			tm, terr := LookupTemplate(d.Template)
 			if terr != nil {
@@ -229,7 +229,7 @@ func TestRenderDeckWritesAllSlides(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := filepath.Join(t.TempDir(), "deck.pptx")
-	if _, err := tm.RenderDeck(d, out); err != nil {
+	if _, err := renderDeckToFile(tm, d, out); err != nil {
 		t.Fatal(err)
 	}
 	zr, err := zip.OpenReader(out)

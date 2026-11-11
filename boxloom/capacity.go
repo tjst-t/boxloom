@@ -6,7 +6,8 @@
 //
 // layout-overflow の警告とは、同じ measureBody から作るので数字が食い違わない
 // (警告の文の pt は、ここの値を 0.1pt に丸めたものと同じ)。
-package main
+
+package boxloom
 
 import (
 	"fmt"

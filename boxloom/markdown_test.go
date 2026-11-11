@@ -1,4 +1,4 @@
-package main
+package boxloom
 
 import (
 	"archive/zip"
@@ -12,7 +12,7 @@ import (
 
 func mdToAny(t *testing.T, src string) (any, []Issue) {
 	t.Helper()
-	ir, errs := ParseMarkdown([]byte(src), "t.bx.md")
+	ir, errs := MarkdownToIR("t.bx.md", []byte(src))
 	if len(errs) > 0 {
 		return nil, errs
 	}
@@ -71,11 +71,8 @@ func TestBuildFromMarkdown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tm.RenderDeck(d, t.TempDir()+"/x.pptx"); err != nil {
+	if _, err := renderDeckToFile(tm, d, t.TempDir()+"/x.pptx"); err != nil {
 		t.Fatal(err)
-	}
-	if deckBaseName("a/demo-deck.bx.md") != "demo-deck" || deckBaseName("x.json") != "x" {
-		t.Fatal("deckBaseName")
 	}
 }
 
@@ -182,7 +179,7 @@ func TestMarkdownErrors(t *testing.T) {
 		{"cover notes no cover", ":::notes\na\n:::\n# A\n", codeMisplaced, 1},
 	}
 	for _, c := range cases {
-		_, errs := ParseMarkdown([]byte(c.src), "t.bx.md")
+		_, errs := MarkdownToIR("t.bx.md", []byte(c.src))
 		found := false
 		for _, e := range errs {
 			if e.Code == c.code && e.Line == c.line {
@@ -215,7 +212,7 @@ func TestGanttYAMLErrors(t *testing.T) {
 		{"row needs segments", "span: 2026-01 .. 2027-01\ngroups:\n  - label: g\n    rows:\n      - label: r\n", codeMissingKey, "/slides/0/body/0/data/groups/0/rows/0", 7},
 	}
 	for _, c := range cases {
-		_, errs := ParseMarkdown([]byte(head+c.yaml+"```\n"), "t.bx.md")
+		_, errs := MarkdownToIR("t.bx.md", []byte(head+c.yaml+"```\n"))
 		found := false
 		for _, e := range errs {
 			if e.Code == c.code && e.Line == c.line && strings.HasPrefix(e.Path, c.path) {
@@ -327,7 +324,7 @@ func TestSpeakerNotesPPTX(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := t.TempDir() + "/n.pptx"
-	warnings, err := tm.RenderDeck(d, out)
+	warnings, err := renderDeckToFile(tm, d, out)
 	if err != nil {
 		t.Fatal(err)
 	}

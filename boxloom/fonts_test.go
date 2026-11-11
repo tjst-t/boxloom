@@ -1,4 +1,4 @@
-package main
+package boxloom
 
 import (
 	"archive/zip"
@@ -111,7 +111,7 @@ func TestPPTXFontsAndFixedLineSpacing(t *testing.T) {
 	tm, _ := LookupTemplate("light")
 	dir := t.TempDir()
 	plain := filepath.Join(dir, "plain.pptx")
-	if _, err := tm.RenderDeck(d, plain); err != nil {
+	if _, err := renderDeckToFile(tm, d, plain); err != nil {
 		t.Fatal(err)
 	}
 	theme := read(plain, "ppt/theme/theme1.xml")
@@ -129,7 +129,7 @@ func TestPPTXFontsAndFixedLineSpacing(t *testing.T) {
 	fs.Latin, fs.EastAsian, fs.FixedLineSpacing = biz, biz, true
 	t2.Fonts = &fs
 	fixed := filepath.Join(dir, "fixed.pptx")
-	if _, err := t2.RenderDeck(d, fixed); err != nil {
+	if _, err := renderDeckToFile(&t2, d, fixed); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(read(fixed, "ppt/theme/theme1.xml"), `<a:ea typeface="BIZ UDPGothic"/>`) {

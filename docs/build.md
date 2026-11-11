@@ -1,14 +1,15 @@
 # IR から PPTX を作る(boxloom build)
 
 IR(`docs/ir.md`)か Boxloom Markdown(`docs/content-syntax.md`。拡張子 `.md`)を読んで、テンプレートで Box の木に組み、PPTX に書き出す道。
-Go 版(`boxloom/`)だけにある。
+Go 版(`boxloom/`)だけにある。コマンドは `boxloom/cmd/boxloom`、同じことを Go の
+プログラムから呼ぶなら `docs/library.md`(`ReadDeck` → `Build`)。
 
 ```sh
 cd boxloom
-go run . build ../examples/ir/demo-deck.json                  # → out/demo-deck.pptx
-go run . build ../examples/md/demo-deck.bx.md                 # Markdown からも同じものができる
-go run . build -template dark -o out/x.pptx ../examples/ir/gantt-full.json
-go run .                                                      # 従来の Go で組んだデモ(変わらない)
+go run ./cmd/boxloom build ../examples/ir/demo-deck.json                  # → out/demo-deck.pptx
+go run ./cmd/boxloom build ../examples/md/demo-deck.bx.md                 # Markdown からも同じものができる
+go run ./cmd/boxloom build -template dark -o out/x.pptx ../examples/ir/gantt-full.json
+go run ./cmd/boxloom                                                      # 従来の Go で組んだデモ(変わらない)
 ```
 
 - テンプレートは `-template` > IR の `template` > `light` の順で決まる。
@@ -26,9 +27,9 @@ go run .                                                      # 従来の Go で
 - IR の `notes`(発表者ノート)は、改行ごとに1段落でそのスライドのノートに入る。
   ノートのページにはスライドの縮図と文の置き場を置く(LibreOffice のノートの
   ページでも見える)。
-- 字体が置き換わったときに文字がはみ出すかは `go run . fonts deck.json`
-  (`docs/fonts.md`)。`go run . fonts -list` で寸法を持つ字体の一覧。
-- 書き出さずに検査だけするなら `go run . check deck.json`(`.bx.md` も可。誤りと
+- 字体が置き換わったときに文字がはみ出すかは `go run ./cmd/boxloom fonts deck.json`
+  (`docs/fonts.md`)。`go run ./cmd/boxloom fonts -list` で寸法を持つ字体の一覧。
+- 書き出さずに検査だけするなら `go run ./cmd/boxloom check deck.json`(`.bx.md` も可。誤りと
   警告を `docs/content-syntax.md` の5章の形で出す。`-format json` で JSON。
   `docs/ir.md` の「意味の検査」)。JSON には本文の容量(残りの高さ・行の数)も
   付く(`-capacity` で text でも出る。`docs/ir.md` の「容量の計測」)。
@@ -37,7 +38,7 @@ go run .                                                      # 従来の Go で
 
 ```
 IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec の木(1枚ずつ)
-   ──computeLayout──▶ 座標 ──renderSpec / Subsystem.Render──▶ PPTXBuilder ──SaveDeck──▶ .pptx
+   ──computeLayout──▶ 座標 ──renderSpec / Subsystem.Render──▶ PPTXBuilder ──WriteDeck──▶ .pptx
 ```
 
 | ファイル | 役目 |
@@ -47,7 +48,7 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 | `gantt_ir.go` | Gantt の `data` から `GanttChart` を組む(軸の圧縮・目盛りの文字・注釈の指す先) |
 | `gantt.go` | 注釈の置き場所と箱の大きさを決める(`planAnnotations`)。置けない注釈は警告(`Lint`)。確定していない区間を破線で描く |
 | `overflow.go` | 本文のはみ出しの検査(`layout-overflow`)。縮めなければ要る高さを測り直し、本文の領域と比べる |
-| `pptx.go` | 複数枚の書き出し(`SaveDeck`)と、装飾つきの文字(`AddRichTextBox`) |
+| `pptx.go` | 複数枚の書き出し(`WriteDeck`。io.Writer に書く)と、装飾つきの文字(`AddRichTextBox`) |
 
 ## テンプレートが決めていること(dark / light)
 
@@ -70,7 +71,7 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 - **折り返しを含む高さ**:列の中に置いた入れ子の箱(行など)の高さを、中の文字の
   折り返しまで含めて測る(`heightForWidth`)。いままでは文字を1行と見なしていたので、
   比較のカードのように横に並べた文字が折り返すと高さが足りなかった。
-- どちらも、従来の Go で組んだデモ(`go run .`)の出力を変えない(展開して `diff -r` で
+- どちらも、従来の Go で組んだデモ(`go run ./cmd/boxloom`)の出力を変えない(展開して `diff -r` で
   同じことを確かめた)。
 
 ## PPTX の検査(tools/validate_pptx.py)

@@ -7,7 +7,8 @@
 // 見ながら移植し直したバージョン。色は生の16進数ではなく、必ず意味役割名
 // ("support"/"conditional"/"none"/"danger"/"risk"/"accent"/"on_conditional"等)
 // 経由でThemeを引く ― build_chart()自体はThemeの存在を一切知らない。
-package main
+
+package boxloom
 
 import (
 	"encoding/json"

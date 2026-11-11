@@ -7,7 +7,8 @@
 //   - 目盛りの文字: 日付から "29/12" の形を作る。範囲の両端に目盛りが無ければ足す。
 //   - 注釈の位置: 上下どちらのレーンに置くか・横のずらしは、描くときに
 //     planAnnotations が重なりを避けて決める(Direction を空にしておく)。
-package main
+
+package boxloom
 
 import (
 	"bytes"
