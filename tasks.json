@@ -1279,6 +1279,27 @@
       "updatedAt": "2026-11-11T07:08:10.143Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "stat",
+      "number": 54,
+      "kind": "bug",
+      "title": "stat:値が長いと単位が次の行に落ちる(「ド/ル」)",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "見本 ai-society(#50)で Fable が見つけた。stat の値が長いと、単位が次の行に落ち、しかも語の途中で折れる(「ド/ル」)。見本では値を「1/280」に変えて避けた。値+単位を1つの塊として測り、カードの幅に入らないなら警告にするか、値と単位を折り返さない作りにする。",
+      "doneWhen": "値と単位が途中で折れない。入らないときは check が警告する。試験・docs・SKILL.md の直し方の表を更新。ci.sh go python pptx が通る。LibreOffice の絵で確かめる。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T07:08:10.238Z",
+      "updatedAt": "2026-11-11T07:08:10.238Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
