@@ -413,7 +413,7 @@
       "number": 20,
       "kind": "task",
       "title": "段組み(2〜3列にブロックを並べる)",
-      "status": "ready",
+      "status": "done",
       "parent": "slide-patterns",
       "dependsOn": [
         "pattern-vocabulary"
@@ -423,12 +423,12 @@
       "labels": [],
       "body": "content-syntax.md 7章の columns の未決。列の幅の比は意味(主と従など)で書き、数では書かせない。",
       "doneWhen": "IR・Schema・Markdown・dark/light の描き方・試験・例が揃い、はみ出しの検査が列ごとに効く",
-      "resolution": null,
+      "resolution": "columns(2〜3、幅は role=main の意味で)。はみ出しはまとまりごと。main 27e6af1。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:02:58.852Z",
-      "updatedAt": "2026-11-11T02:02:58.852Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:14:25.717Z",
+      "closedAt": "2026-11-11T05:14:25.717Z",
       "extra": {}
     },
     {
