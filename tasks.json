@@ -853,7 +853,7 @@
       "milestone": null,
       "priority": "normal",
       "labels": [],
-      "body": "リモートのリポジトリができてから動く。固有名の一覧そのものをリポジトリに書かないよう、一覧は CI の秘密から渡す。",
+      "body": "リモートのリポジトリができてから動く。固有名の一覧そのものをリポジトリに書かないよう、一覧は CI の秘密から渡す。\n\n## 済んだこと(main 5d97660)\n- `.github/workflows/ci.yml`(job test・readers)と、その中身を1つにまとめた `tools/ci.sh`(go・python・pptx・readers・terms)。\n- `tools/check_terms.py`:一覧は環境変数 `BOXLOOM_FORBIDDEN_TERMS`(CI では同名の秘密)。文字のファイル・PPTX の中・`--history` で全コミットと履歴の PPTX まで見る。push では一覧が空なら落とす。\n- ローカルで `sh tools/ci.sh go python pptx terms readers` が通る。語を入れた試しのコミットで落ちることも、ローカルの写しで確かめた。\n\n## 残り(完了条件を満たせない理由)\nリモートのリポジトリが無いので、GitHub Actions の上で緑になるか・秘密を入れて試しのコミットで落ちるかは確かめられない。リポジトリを作ったら、秘密 BOXLOOM_FORBIDDEN_TERMS を登録して push し、確かめる。",
       "doneWhen": "GitHub Actions の実行が緑で、固有名を入れた試しのコミットで落ちる",
       "resolution": null,
       "refs": [],
@@ -864,7 +864,7 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:59.118Z",
-      "updatedAt": "2026-11-11T02:59:22.425Z",
+      "updatedAt": "2026-11-11T03:08:41.917Z",
       "closedAt": null,
       "extra": {}
     },
