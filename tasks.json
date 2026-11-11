@@ -762,7 +762,7 @@
       "number": 32,
       "kind": "task",
       "title": "方向性の文書をリポジトリに置く(docs/vision.md)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "oss-release-prep",
       "dependsOn": [],
       "milestone": null,
@@ -772,9 +772,14 @@
       "doneWhen": "docs/vision.md があり、CLAUDE.md から辿れ、固有名の grep に当たらない",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "c307f4f9-0798-44a0-96f8-d89f9bc61fb0"
+        }
+      ],
       "createdAt": "2026-11-11T02:02:59.118Z",
-      "updatedAt": "2026-11-11T02:02:59.118Z",
+      "updatedAt": "2026-11-11T02:59:20.039Z",
       "closedAt": null,
       "extra": {}
     },
