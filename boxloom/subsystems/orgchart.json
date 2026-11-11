@@ -1,0 +1,21 @@
+{
+  "padding": 16,
+  "unitGap": 24,
+  "memberGap": 12,
+  "maxRootWidth": 200,
+  "maxUnitWidth": 180,
+  "maxMemberWidth": 120,
+  "minBoxHeight": 32,
+  "naturalBoxHeight": 48,
+  "maxBoxHeight": 64,
+  "minLevelGap": 24,
+  "naturalLevelGap": 40,
+  "maxLevelGap": 64,
+  "naturalWidth": 640,
+  "minWidth": 200,
+  "textInsetX": 8,
+  "textInsetY": 4,
+  "lineWidth": 1.25,
+  "outlineWidth": 1.25,
+  "cornerRadius": 8
+}

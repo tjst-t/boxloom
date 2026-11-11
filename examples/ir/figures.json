@@ -1,0 +1,276 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "図のサブシステムの見本",
+    "subtitle": "プロセス・組織図・マトリクス・ファネル(すべて架空)",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "申請は7段階で、審査と承認が一番長い",
+      "body": [
+        {
+          "type": "subsystem",
+          "subsystem": "process",
+          "data": {
+            "caption": "架空の会社 Hoshizora の、備品の購入申請の流れ",
+            "steps": [
+              {
+                "title": "申請",
+                "detail": "申請者が書く"
+              },
+              {
+                "title": "上長の確認",
+                "detail": "1営業日"
+              },
+              {
+                "title": "審査",
+                "detail": [
+                  "平均3営業日",
+                  {
+                    "type": "br"
+                  },
+                  {
+                    "type": "em",
+                    "content": "ここが詰まる"
+                  }
+                ],
+                "emphasis": true
+              },
+              {
+                "title": "見積もり",
+                "detail": "購買の係"
+              },
+              {
+                "title": "承認",
+                "detail": "2営業日",
+                "status": "conditional"
+              },
+              {
+                "title": "発注",
+                "detail": "即日"
+              },
+              {
+                "title": "受け取り",
+                "detail": "1〜2週間",
+                "status": "support"
+              }
+            ]
+          }
+        },
+        {
+          "type": "points",
+          "items": [
+            [
+              "申請から受け取りまで、いまは ",
+              {
+                "type": "em",
+                "content": "平均3週間"
+              }
+            ],
+            "審査(3)を1営業日にすれば、承認(5)の待ちも短くなる",
+            "発注より後は取引先の都合で、社内では縮められない"
+          ]
+        },
+        {
+          "type": "note",
+          "content": "数字はすべて架空のデモ"
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "title": "推進は責任者の下の3チームで進める",
+      "body": [
+        {
+          "type": "subsystem",
+          "subsystem": "orgchart",
+          "data": {
+            "root": {
+              "title": "推進の責任者",
+              "detail": "架空 花子",
+              "emphasis": true
+            },
+            "units": [
+              {
+                "title": "基盤チーム",
+                "detail": "5名",
+                "members": [
+                  {
+                    "title": "ネットワーク",
+                    "detail": "2名"
+                  },
+                  {
+                    "title": "認証",
+                    "detail": "2名",
+                    "status": "danger"
+                  },
+                  {
+                    "title": "監視",
+                    "detail": "1名"
+                  }
+                ]
+              },
+              {
+                "title": "移行チーム",
+                "detail": "4名",
+                "members": [
+                  {
+                    "title": "調査",
+                    "detail": "2名"
+                  },
+                  {
+                    "title": "切り替え",
+                    "detail": "2名"
+                  }
+                ]
+              },
+              {
+                "title": "窓口",
+                "detail": "2名"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "title": "案 B だけが3つの要件を満たす",
+      "body": [
+        {
+          "type": "subsystem",
+          "subsystem": "matrix",
+          "data": {
+            "columns": [
+              "案 A(据え置き)",
+              "案 B(段階移行)",
+              "案 C(一括移行)"
+            ],
+            "rows": [
+              {
+                "label": "費用",
+                "cells": [
+                  {
+                    "status": "support",
+                    "text": "追加なし"
+                  },
+                  {
+                    "status": "conditional",
+                    "text": "年に約200万円"
+                  },
+                  {
+                    "status": "danger",
+                    "text": "初年度に約900万円"
+                  }
+                ]
+              },
+              {
+                "label": "止まる時間",
+                "cells": [
+                  {
+                    "status": "support",
+                    "text": "なし"
+                  },
+                  {
+                    "status": "support",
+                    "text": "夜間に1時間ずつ"
+                  },
+                  {
+                    "status": "danger",
+                    "text": "週末を2回"
+                  }
+                ]
+              },
+              {
+                "label": "保守の期限",
+                "cells": [
+                  {
+                    "status": "danger",
+                    "text": "2028年に切れる"
+                  },
+                  {
+                    "status": "support",
+                    "text": "2034年まで"
+                  },
+                  {
+                    "status": "support",
+                    "text": "2034年まで"
+                  }
+                ]
+              },
+              {
+                "label": "運用の手間",
+                "cells": [
+                  {
+                    "status": "none"
+                  },
+                  {
+                    "status": "conditional",
+                    "text": "移行中だけ増える"
+                  },
+                  {
+                    "status": "support",
+                    "text": "減る"
+                  }
+                ]
+              }
+            ],
+            "legend": {
+              "support": "満たす",
+              "danger": "満たさない"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "title": "見積もりの依頼のうち、契約まで進むのは 2%",
+      "body": [
+        {
+          "type": "subsystem",
+          "subsystem": "funnel",
+          "data": {
+            "unit": "件",
+            "stages": [
+              {
+                "label": "サイトの訪問",
+                "value": 12000,
+                "note": "検索と紹介が半分ずつ"
+              },
+              {
+                "label": "資料の請求",
+                "value": 1500
+              },
+              {
+                "label": "見積もりの依頼",
+                "value": 480,
+                "note": [
+                  "ここから ",
+                  {
+                    "type": "em",
+                    "content": "商談"
+                  },
+                  " に入る"
+                ],
+                "status": "conditional"
+              },
+              {
+                "label": "契約",
+                "value": 9,
+                "emphasis": true,
+                "note": "今期の目標は12件"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

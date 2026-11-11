@@ -46,6 +46,7 @@ func TestCheckInvalidSemanticExamples(t *testing.T) {
 		"shapes-out-of-frame.json":      {"shape-bounds", "/slides/1/body/1/data/items/6/w"},
 		"shapes-unknown-connector.json": {"target-exists", "/slides/1/body/1/data/items/12/to"},
 		"shapes-unknown-role.json":      {"role-exists", "/slides/1/body/1/data/items/7/fill"},
+		"matrix-cells.json":             {"matrix-cells", "/slides/3/body/0/data/rows/1/cells"},
 		"unknown-target.json":           {"target-exists", "/slides/2/body/0/data/annotations/0/target"},
 		"unknown-template.json":         {"template-exists", "/template"},
 		"unknown-variant.json":          {"variant-exists", "/slides/1/variant"},

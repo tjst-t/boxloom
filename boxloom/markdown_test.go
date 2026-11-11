@@ -44,6 +44,7 @@ func TestMarkdownExamplesMatchIR(t *testing.T) {
 		{"../examples/md/speaker-notes.bx.md", "../examples/ir/speaker-notes.json"},
 		{"../examples/md/shapes.bx.md", "../examples/ir/shapes.json"},
 		{"../examples/md/text-patterns.bx.md", "../examples/ir/text-patterns.json"},
+		{"../examples/md/figures.bx.md", "../examples/ir/figures.json"},
 	}
 	for _, pr := range pairs {
 		src, err := os.ReadFile(pr[0])

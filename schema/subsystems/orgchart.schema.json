@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/orgchart.schema.json",
+  "title": "Boxloom IR: orgchart subsystem (0.1)",
+  "description": "上下の関係(docs/patterns.md の R9)。root の下に units、各 unit の下に members の3段まで。親と子は本物のコネクタ(曲がる線)で繋がる。置き場所・大きさ・色は書けない。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "subsystem"
+    },
+    "subsystem": {
+      "const": "orgchart"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "data": {
+      "$ref": "#/$defs/orgchart"
+    }
+  },
+  "required": [
+    "type",
+    "subsystem",
+    "data"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "inline": {
+      "$ref": "../core.schema.json#/$defs/inline"
+    },
+    "status": {
+      "description": "状態の意味の名前。色はテンプレートが決める(16進の色・役割名は書けない)。",
+      "enum": [
+        "support",
+        "conditional",
+        "none",
+        "danger"
+      ]
+    },
+    "emphasis": {
+      "description": "目立たせる(塗りがアクセントの色になる)。既定 false。",
+      "type": "boolean"
+    },
+    "node": {
+      "description": "箱1つ。title が1行目、detail がその下(人の名前・人数・補足)。",
+      "type": "object",
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "detail": {
+          "$ref": "#/$defs/inline"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "emphasis": {
+          "$ref": "#/$defs/emphasis"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "unit": {
+      "description": "2段目の箱と、その下の3段目(members)。",
+      "type": "object",
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "detail": {
+          "$ref": "#/$defs/inline"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "emphasis": {
+          "$ref": "#/$defs/emphasis"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "orgchart": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "$ref": "#/$defs/node"
+        },
+        "units": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/unit"
+          }
+        }
+      },
+      "required": [
+        "root",
+        "units"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

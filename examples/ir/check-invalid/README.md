@@ -1,6 +1,6 @@
 # Schema では通るが、boxloom check で断られる IR の例
 
-どれも `../demo-deck.json`・`../gantt-full.json`・`../shapes.json`・`../text-patterns.json` のどれかを1か所だけ変えたもの。
+どれも `../demo-deck.json`・`../gantt-full.json`・`../shapes.json`・`../text-patterns.json`・`../figures.json` のどれかを1か所だけ変えたもの。
 形(キー・型・enum)は正しいので `tools/validate_ir.py` は通す(`--self-test` は
 「通ること」を確かめる)。意味が通らないので `go run ./cmd/boxloom check` が断る
 (`boxloom/check_test.go` が、ファイルごとに決まった rule の誤りが1件だけ出ることを
@@ -19,6 +19,7 @@
 | `shapes-unknown-connector.json` | shapes のコネクタの to を、どこにも無い id にした | `target-exists` |
 | `shapes-unknown-role.json` | shapes の図形の塗りを、テーマに無い役割名にした | `role-exists` |
 | `quote-empty-source.json` | 引用の出どころを空白だけにした | `empty-text` |
+| `matrix-cells.json` | matrix の2行目のセルを1つ減らした(列は3つ) | `matrix-cells` |
 
 形が誤っていて Schema で断られる例は `../invalid/` にある。それらも
 `boxloom check` は断る(Go の IR の読み込みが断る。rule は `ir-read` か `build`)。

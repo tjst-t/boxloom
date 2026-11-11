@@ -180,6 +180,7 @@ func DefaultSubsystems() *SubsystemRegistry {
 	must(r.Declare("gantt", ganttDecl()))
 	must(r.Register("shapes", NewShapesSubsystem))
 	must(r.Declare("shapes", shapesDecl()))
+	registerFigures(r)
 	return r
 }
 

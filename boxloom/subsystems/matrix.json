@@ -1,0 +1,19 @@
+{
+  "padding": 16,
+  "cellGap": 4,
+  "headerHeight": 32,
+  "minRowHeight": 28,
+  "naturalRowHeight": 40,
+  "maxRowHeight": 64,
+  "maxRowHeaderFraction": 0.3,
+  "dotSize": 10,
+  "dotGap": 8,
+  "legendGap": 12,
+  "legendItemGap": 20,
+  "legendDotSize": 8,
+  "naturalWidth": 640,
+  "minWidth": 240,
+  "textInsetX": 12,
+  "textInsetY": 4,
+  "cellCornerRadius": 4
+}

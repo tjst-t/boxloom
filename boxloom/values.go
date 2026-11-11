@@ -166,6 +166,11 @@ type templateFile struct {
 type templateSubsystems struct {
 	Gantt  *GanttValues  `json:"gantt,omitempty"`
 	Shapes *ShapesValues `json:"shapes,omitempty"`
+	// 図のサブシステム(figures.go)
+	Process  *ProcessValues  `json:"process,omitempty"`
+	OrgChart *OrgChartValues `json:"orgchart,omitempty"`
+	Matrix   *MatrixValues   `json:"matrix,omitempty"`
+	Funnel   *FunnelValues   `json:"funnel,omitempty"`
 }
 
 // themeRoles はテーマが持たなければならない役割名(コア・デモのテンプレートの
@@ -355,6 +360,11 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		}
 		return ss, nil
 	}))
+	// 図のサブシステム(process・orgchart・matrix・funnel)も字の段をこのテンプレートの
+	// values から引き、寸法をこの段で確かめる。
+	if err := templateFigures(t, &f); err != nil {
+		return nil, err
+	}
 	return t, nil
 }
 

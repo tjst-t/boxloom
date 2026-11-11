@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/funnel.schema.json",
+  "title": "Boxloom IR: funnel subsystem (0.1)",
+  "description": "段階ごとに数が減る流れ(docs/patterns.md の R10)。帯の幅は値に比例せず、上から等しい刻みで狭まる。値は帯の中に書き、note は帯の右に置く。置き場所・大きさ・色は書けない。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "subsystem"
+    },
+    "subsystem": {
+      "const": "funnel"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "data": {
+      "$ref": "#/$defs/funnel"
+    }
+  },
+  "required": [
+    "type",
+    "subsystem",
+    "data"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "inline": {
+      "$ref": "../core.schema.json#/$defs/inline"
+    },
+    "status": {
+      "description": "状態の意味の名前。色はテンプレートが決める(16進の色・役割名は書けない)。",
+      "enum": [
+        "support",
+        "conditional",
+        "none",
+        "danger"
+      ]
+    },
+    "emphasis": {
+      "description": "目立たせる(塗りがアクセントの色になる)。既定 false。",
+      "type": "boolean"
+    },
+    "stage": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/inline"
+        },
+        "value": {
+          "description": "数(unit を後ろに付けて書く)か文字列。",
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "note": {
+          "$ref": "#/$defs/inline"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "emphasis": {
+          "$ref": "#/$defs/emphasis"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "funnel": {
+      "type": "object",
+      "properties": {
+        "unit": {
+          "description": "数の値の後ろに付ける単位(例 社)。",
+          "type": "string",
+          "minLength": 1
+        },
+        "stages": {
+          "description": "段。上から下へ。",
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/stage"
+          }
+        }
+      },
+      "required": [
+        "stages"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

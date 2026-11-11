@@ -1,0 +1,21 @@
+{
+  "padding": 16,
+  "captionGap": 12,
+  "arrowGap": 32,
+  "minStepWidth": 88,
+  "maxStepWidth": 200,
+  "minBoxHeight": 40,
+  "naturalBoxHeight": 64,
+  "maxBoxHeight": 88,
+  "detailGap": 8,
+  "minRowGap": 16,
+  "naturalRowGap": 24,
+  "maxRowGap": 40,
+  "naturalWidth": 640,
+  "minWidth": 160,
+  "textInsetX": 8,
+  "textInsetY": 4,
+  "lineWidth": 1.5,
+  "outlineWidth": 1.25,
+  "cornerRadius": 8
+}

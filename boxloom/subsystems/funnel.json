@@ -1,0 +1,17 @@
+{
+  "padding": 16,
+  "noteFraction": 0.36,
+  "noteGap": 24,
+  "minWidthFraction": 0.36,
+  "minBarHeight": 32,
+  "naturalBarHeight": 44,
+  "maxBarHeight": 64,
+  "minGap": 4,
+  "naturalGap": 8,
+  "maxGap": 12,
+  "naturalWidth": 640,
+  "minWidth": 240,
+  "textInsetX": 8,
+  "textInsetY": 4,
+  "outlineWidth": 1.25
+}

@@ -1428,8 +1428,12 @@ func (p *mdParser) compareBlock(f *mdFenceBlk, path string) any {
 
 // mdSubsystems はコードブロックの言語名 → IR の data を作るもの。
 var mdSubsystems = map[string]func(p *mdParser, n *yNode, path string) any{
-	"gantt":  ganttDataFromYAML,
-	"shapes": shapesDataFromYAML,
+	"gantt":    ganttDataFromYAML,
+	"shapes":   shapesDataFromYAML,
+	"process":  processDataFromYAML,
+	"orgchart": orgChartDataFromYAML,
+	"matrix":   matrixDataFromYAML,
+	"funnel":   funnelDataFromYAML,
 }
 
 func (p *mdParser) codeBlock(it *mdItem, path string) any {

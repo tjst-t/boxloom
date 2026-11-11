@@ -241,6 +241,11 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 					c.checkShapes(data, bp+"/data", ids, tm)
 				}
 			}
+			if bm["type"] == "subsystem" && bm["subsystem"] == "matrix" {
+				if data, ok := bm["data"].(map[string]any); ok {
+					c.checkMatrix(data, bp+"/data")
+				}
+			}
 		}
 	}
 
@@ -512,6 +517,24 @@ func (c *checker) checkShapes(data map[string]any, ptr string, docIDs map[string
 	}
 }
 
+// checkMatrix は matrix の各行のセルの数が列の数と同じかを見る(matrix-cells)。
+func (c *checker) checkMatrix(data map[string]any, ptr string) {
+	cols, ok := data["columns"].([]any)
+	if !ok {
+		return
+	}
+	rows, _ := data["rows"].([]any)
+	for i, r := range rows {
+		rm, _ := r.(map[string]any)
+		cells, ok := rm["cells"].([]any)
+		if !ok || len(cells) == len(cols) {
+			continue
+		}
+		c.add(fmt.Sprintf("%s/rows/%d/cells", ptr, i),
+			fmt.Sprintf("row has %d cells but there are %d columns (one cell per column)", len(cells), len(cols)), "matrix-cells")
+	}
+}
+
 func dateAt(m map[string]any, k string) (time.Time, error) {
 	s, ok := m[k].(string)
 	if !ok {
@@ -572,7 +595,7 @@ var locPartRe = regexp.MustCompile(`([A-Za-z]+)|\[([0-9]+)\]`)
 func locationToPointer(msg string) string {
 	ptr := ""
 	for _, seg := range strings.Split(msg, ": ") {
-		if seg == "gantt" || seg == "shapes" {
+		if seg == "gantt" || seg == "shapes" || contains(figureKinds, seg) {
 			ptr += "/data"
 			continue
 		}
@@ -607,7 +630,25 @@ var warnShapeItemRe = regexp.MustCompile(`^shapes: items\[([0-9]+)\]`)
 
 var warnGanttSegRe = regexp.MustCompile(`^gantt: groups\[([0-9]+)\]\.rows\[([0-9]+)\]\.segments\[([0-9]+)\]`)
 
+// warnFigureRe は図のサブシステム(process・orgchart・matrix・funnel)の警告の
+// 頭の場所(steps[2]・units[0].members[1]・rows[1].cells[2] など)。
+var warnFigureRe = regexp.MustCompile(`^(?:process|orgchart|matrix|funnel): ([a-z]+(?:\[[0-9]+\])?(?:\.[a-z]+(?:\[[0-9]+\])?)*)`)
+
 var warnRuleNames = map[string]string{"SUBSYSTEM": "subsystem-min", "ROLE": "theme-role"}
+
+// figureWarnPointer は警告の頭の場所(units[0].members[1])を JSON Pointer
+// (/units/0/members/1)にする。
+func figureWarnPointer(loc string) string {
+	ptr := ""
+	for _, m := range locPartRe.FindAllStringSubmatch(loc, -1) {
+		if m[1] != "" {
+			ptr += "/" + m[1]
+		} else {
+			ptr += "/" + m[2]
+		}
+	}
+	return ptr
+}
 
 func warningIssue(file, w string) Issue {
 	m := warnRe.FindStringSubmatch(w)
@@ -631,6 +672,17 @@ func warningIssue(file, w string) Issue {
 	if shapes && strings.Contains(m[3], "text does not fit") {
 		rule = "shapes-text-overflow" // shapes の図形の文が収まらない
 	}
+	inBlock := m[3] // 本文の中の場所(body[2]: …)を除いた文
+	if bm := warnBlockRe.FindStringSubmatch(inBlock); bm != nil {
+		inBlock = bm[2]
+	}
+	figure := m[2] == "SUBSYSTEM" && warnFigureRe.MatchString(inBlock)
+	if figure && strings.Contains(m[3], "text does not fit") {
+		rule = "figure-text-overflow" // 図のサブシステムの箱・セルの文が収まらない
+	}
+	if figure && strings.Contains(m[3], "a funnel is for values that decrease") {
+		rule = "funnel-increase" // funnel の数が前の段より増えた
+	}
 	if rule == "" {
 		rule = strings.ToLower(m[2])
 	}
@@ -645,6 +697,10 @@ func warningIssue(file, w string) Issue {
 		// Gantt の区間の文の警告は、その区間まで指す。
 		if gm := warnGanttSegRe.FindStringSubmatch(msg); gm != nil {
 			path += "/data/groups/" + gm[1] + "/rows/" + gm[2] + "/segments/" + gm[3]
+		}
+		// 図のサブシステムの警告は、名指しした要素まで指す。
+		if fm := warnFigureRe.FindStringSubmatch(msg); fm != nil {
+			path += "/data" + figureWarnPointer(fm[1])
 		}
 	}
 	return Issue{File: file, Path: path, Message: msg, Code: rule}
