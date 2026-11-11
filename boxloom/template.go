@@ -319,7 +319,7 @@ func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
 				warnings = append(warnings, w)
 			}
 		}
-		warnings = append(warnings, lintSubsystemMin(b.Root)...)
+		warnings = append(warnings, lintSubsystems(b.Root)...)
 
 		p := NewPPTXBuilder(v.PageW, v.PageH)
 		roles := newCheckedRoles(t.Theme)

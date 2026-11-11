@@ -12,6 +12,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"strings"
 	"time"
 )
 
@@ -162,9 +164,17 @@ const (
 	groupGap     = 8.0
 	minRowH      = 17.0
 
-	annBoxW    = 176.0
+	annBoxW    = 176.0 // 手で置いた注釈(Direction が up/down)の箱の大きさ(固定)
 	annBoxH    = 38.0
 	annLaneGap = 8.0
+
+	// 自動の注釈の箱は文の長さに合わせる。幅はこの範囲に収め、収まらない文は
+	// 折り返して高さで受ける。
+	annBoxMinW = 96.0
+	annBoxMaxW = 240.0
+	annPadX    = 8.0 // 箱の中の左右の余白
+	annPadY    = 6.0 // 箱の中の上下の余白
+	annTextPt  = typeNano + 0.5
 
 	typeMicro = 9.0
 	typeNano  = 8.0
@@ -283,19 +293,13 @@ type ganttMetrics struct {
 // 横の重なりで変わるため)。
 func ganttMetricsFor(chart *GanttChart, boxWidth float64) ganttMetrics {
 	var m ganttMetrics
-	hasUp, hasDown := false, false
+	// レーンの高さは、そのレーンに置く箱のうち一番高いもの + 隙間。
 	for _, pl := range planAnnotations(chart, spaceMD, boxWidth-2*spaceMD) {
 		if pl.up {
-			hasUp = true
+			m.annTopH = math.Max(m.annTopH, pl.h+annLaneGap)
 		} else {
-			hasDown = true
+			m.annBottomH = math.Max(m.annBottomH, pl.h+annLaneGap)
 		}
-	}
-	if hasUp {
-		m.annTopH = annBoxH + annLaneGap
-	}
-	if hasDown {
-		m.annBottomH = annBoxH + annLaneGap
 	}
 	if len(chart.Milestones) > 0 {
 		m.milestoneH = milestoneH0 + 4
@@ -489,10 +493,11 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles) {
 		p.AddTextBoxNoWrap(LBox{X: ex0, Y: ey - 15, Width: (x0 + w) - ex0, Height: 13}, chart.ExtNoteLabel, typeNano, c(chart.ExtNoteRole), true, "left", "top")
 	}
 
-	// --- 注釈(置き場所は planAnnotations が決める) ---
+	// --- 注釈(置き場所と大きさは planAnnotations が決める) ---
 	downY := bodyTop + bodyH + annLaneGap
 	plan := planAnnotations(chart, x0, w)
 	for i, ann := range chart.Annotations {
+		pl := plan[i]
 		ax := sx(ann.AnchorDate)
 		ay := bodyTop + ann.AnchorYFrac*bodyH
 		if ann.Direction == "" {
@@ -505,31 +510,57 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles) {
 		}
 		p.AddDot(ax, ay, 3.0, annColor)
 
-		bx := plan[i].bx
+		// 上のレーンは箱の下端を揃え(チャートに近い側)、下のレーンは上端を揃える。
 		by := downY
-		if plan[i].up {
-			by = upY
+		if pl.up {
+			by = upY + (annTopH - annLaneGap) - pl.h
 		}
 
-		p.AddRectFull(LBox{X: bx, Y: by, Width: annBoxW, Height: annBoxH}, c("card_alt"), 8, annColor, "", 1.25)
-		p.AddTextBox(LBox{X: bx + 8, Y: by + 4, Width: annBoxW - 16, Height: annBoxH - 8}, ann.Text, typeNano+0.5, c("text_primary"), false, "left", "top")
+		p.AddRectFull(LBox{X: pl.bx, Y: by, Width: pl.w, Height: pl.h}, c("card_alt"), 8, annColor, "", 1.25)
+		if ann.Direction != "" {
+			// 手で置いた注釈は従来どおりの余白。
+			p.AddTextBox(LBox{X: pl.bx + 8, Y: by + 4, Width: pl.w - 16, Height: pl.h - 8}, ann.Text, annTextPt, c("text_primary"), false, "left", "top")
+		} else {
+			p.AddTextBox(LBox{X: pl.bx + annPadX, Y: by + annPadY, Width: pl.w - 2*annPadX, Height: pl.h - 2*annPadY}, ann.Text, annTextPt, c("text_primary"), false, "left", "top")
+		}
 		connY := by
 		if by < ay {
-			connY = by + annBoxH
+			connY = by + pl.h
 		}
-		p.AddLine(ax, ay, bx+annBoxW/2, connY, 1.0, annColor, "dash")
+		p.AddLine(ax, ay, pl.bx+pl.w/2, connY, 1.0, annColor, "dash")
 	}
 }
 
-// annPlacement は1つの注釈の置き場所: 上のレーンか下のレーンか、と箱の左端。
+// annPlacement は1つの注釈の置き場所と大きさ: 上のレーンか下のレーンか、
+// 箱の左端と幅・高さ。overlap は、空いた場所が見つからず、ほかの箱に重ねて
+// 置いたこと(警告の対象)。
 type annPlacement struct {
-	up bool
-	bx float64
+	up      bool
+	bx      float64
+	w, h    float64
+	overlap bool
+}
+
+// annBoxSize は注釈の箱の大きさ。手で置いた注釈は従来の固定の大きさ。
+// 自動の注釈は、文の一番長い行が収まる幅(annBoxMinW〜annBoxMaxW)にし、
+// 収まらなければ折り返して、その行数ぶんの高さにする。
+func annBoxSize(ann Annotation) (w, h float64) {
+	if ann.Direction != "" {
+		return annBoxW, annBoxH
+	}
+	textW := 0.0
+	for _, line := range strings.Split(ann.Text, "\n") {
+		textW = math.Max(textW, runWidthPt(line, annTextPt, false))
+	}
+	inner := clamp(textW, annBoxMinW-2*annPadX, annBoxMaxW-2*annPadX)
+	h = measureTextHeight(ann.Text, annTextPt, inner, false) + 2*annPadY
+	return inner + 2*annPadX, h
 }
 
 // planAnnotations は注釈の置き場所を決める。x0・w はチャートの内側の左端と幅
 // (Measure と renderGantt で同じ幅を渡すので、申告した高さと描いた結果が
-// ずれない)。
+// ずれない)。重なりは同じレーンの中の横の重なりだけを見る(箱の高さが
+// 違っても、同じレーンの箱は縦の帯を共有するため)。
 //
 //   - 手で決めた注釈(Direction が "up"/"down"): そのレーンで、日付の真上に
 //     置き、ほかの箱と重なれば右へずらす(従来どおり)。
@@ -537,18 +568,16 @@ type annPlacement struct {
 //     下半分(か真ん中)なら下のレーンを先に試す。日付の真上に置けなければ
 //     もう一方のレーンの真上、それも駄目なら左右に少しずつずらして、最初に
 //     空いた場所に置く。
+//
+// どちらも、空いた場所が見つからなければ最初の候補に重ねて置き、overlap を
+// 立てる(GanttSubsystem.Lint が警告にする)。
 func planAnnotations(chart *GanttChart, x0, w float64) []annPlacement {
 	gutterW := gutterGroupW + gutterSubW + gutterLabelW
 	chartX0, chartW := x0+gutterW, w-gutterW
-	step := annBoxW + 8
-	type laid struct {
-		up bool
-		x  float64
-	}
-	var placed []laid
-	free := func(up bool, bx float64) bool {
+	var placed []annPlacement
+	free := func(up bool, bx, bw float64) bool {
 		for _, pb := range placed {
-			if pb.up == up && rectsOverlap(placedBox{bx, 0, annBoxW, annBoxH}, placedBox{pb.x, 0, annBoxW, annBoxH}, 4.0) {
+			if pb.up == up && rectsOverlap(placedBox{bx, 0, bw, 1}, placedBox{pb.bx, 0, pb.w, 1}, 4.0) {
 				return false
 			}
 		}
@@ -556,17 +585,21 @@ func planAnnotations(chart *GanttChart, x0, w float64) []annPlacement {
 	}
 	out := make([]annPlacement, len(chart.Annotations))
 	for i, ann := range chart.Annotations {
+		bw, bh := annBoxSize(ann)
+		step := bw + 8
 		ax := chart.Scale.X(ann.AnchorDate, chartX0, chartW)
-		center := clamp(ax-annBoxW/2, x0, x0+w-annBoxW)
-		var pl annPlacement
+		center := clamp(ax-bw/2, x0, x0+w-bw)
+		pl := annPlacement{w: bw, h: bh}
 		if ann.Direction != "" {
-			pl = annPlacement{up: ann.Direction == "up", bx: center}
-			for tries := 0; tries < 6 && !free(pl.up, pl.bx); tries++ {
-				pl.bx = clamp(pl.bx+step, x0, x0+w-annBoxW)
+			pl.up, pl.bx = ann.Direction == "up", center
+			tries := 0
+			for ; tries < 6 && !free(pl.up, pl.bx, bw); tries++ {
+				pl.bx = clamp(pl.bx+step, x0, x0+w-bw)
 			}
+			pl.overlap = !free(pl.up, pl.bx, bw)
 		} else {
 			prefUp := annAnchorFrac(chart, ann) < 0.5
-			pl = annPlacement{up: prefUp, bx: center}
+			pl.up, pl.bx = prefUp, center
 			found := false
 			for k := 0; k <= 6 && !found; k++ {
 				offsets := []float64{0}
@@ -575,9 +608,9 @@ func planAnnotations(chart *GanttChart, x0, w float64) []annPlacement {
 				}
 				for _, off := range offsets {
 					for _, up := range []bool{prefUp, !prefUp} {
-						bx := clamp(center+off, x0, x0+w-annBoxW)
-						if free(up, bx) {
-							pl, found = annPlacement{up: up, bx: bx}, true
+						bx := clamp(center+off, x0, x0+w-bw)
+						if free(up, bx, bw) {
+							pl.up, pl.bx, found = up, bx, true
 							break
 						}
 					}
@@ -586,9 +619,25 @@ func planAnnotations(chart *GanttChart, x0, w float64) []annPlacement {
 					}
 				}
 			}
+			pl.overlap = !found
 		}
-		placed = append(placed, laid{pl.up, pl.bx})
+		placed = append(placed, pl)
 		out[i] = pl
+	}
+	return out
+}
+
+// Lint は描く前の検査(SubsystemLinter)。割り当てられた矩形で注釈の置き場所を
+// 計画し、重ねて置くしかなかった注釈を警告にする。
+func (g *GanttSubsystem) Lint(box LBox) []string {
+	var out []string
+	plan := planAnnotations(g.Chart, box.X+spaceMD, box.Width-2*spaceMD)
+	for i, pl := range plan {
+		if !pl.overlap {
+			continue
+		}
+		first := strings.SplitN(g.Chart.Annotations[i].Text, "\n", 2)[0]
+		out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] gantt: annotation %d (%q) has no free place and overlaps another annotation", i, first))
 	}
 	return out
 }

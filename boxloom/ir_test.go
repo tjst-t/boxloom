@@ -132,11 +132,14 @@ func TestAutoAnnotationsDoNotOverlap(t *testing.T) {
 	x0, w := 40.0, 880.0
 	plan := planAnnotations(c, x0, w)
 	for i := range plan {
-		if plan[i].bx < x0-1e-9 || plan[i].bx+annBoxW > x0+w+1e-9 {
+		if plan[i].overlap {
+			t.Errorf("annotation %d marked as overlapping", i)
+		}
+		if plan[i].bx < x0-1e-9 || plan[i].bx+plan[i].w > x0+w+1e-9 {
 			t.Errorf("annotation %d outside the chart: bx=%v", i, plan[i].bx)
 		}
 		for j := i + 1; j < len(plan); j++ {
-			if plan[i].up == plan[j].up && rectsOverlap(placedBox{plan[i].bx, 0, annBoxW, annBoxH}, placedBox{plan[j].bx, 0, annBoxW, annBoxH}, 4) {
+			if plan[i].up == plan[j].up && rectsOverlap(placedBox{plan[i].bx, 0, plan[i].w, 1}, placedBox{plan[j].bx, 0, plan[j].w, 1}, 4) {
 				t.Errorf("annotations %d and %d overlap in the same lane", i, j)
 			}
 		}

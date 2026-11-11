@@ -13,7 +13,7 @@ go run .                                                      # 従来の Go で
 - テンプレートは `-template` > IR の `template` > `light` の順で決まる。
 - 誤りは IR の中の場所を添えて止まる(例 `slides[2]: body[0]: gantt: ticks[0].status:
   unknown status "text_primary"`)。`examples/ir/invalid/` の9件は全部ここで断られる。
-- 警告(本文の埋まり具合・サブシステムの最小の大きさ・テーマに無い役割名)は
+- 警告(本文の埋まり具合・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名)は
   標準出力と、そのスライドのノートに書く。
 
 ## 流れ
@@ -28,7 +28,7 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 | `ir.go` | IR を読む。知らないキーは断る(Schema と同じ方針)。インライン・行の配列・箇条の入れ子を Go の型にする |
 | `template.go` | テンプレート(値の表・骨組み・部品)。表紙と本文のスライド、ブロック(段落・箇条・比較・注記・サブシステム)を Spec に組む |
 | `gantt_ir.go` | Gantt の `data` から `GanttChart` を組む(軸の圧縮・目盛りの文字・注釈の指す先) |
-| `gantt.go` | 注釈の置き場所を決める(`planAnnotations`)。確定していない区間を破線で描く |
+| `gantt.go` | 注釈の置き場所と箱の大きさを決める(`planAnnotations`)。置けない注釈は警告(`Lint`)。確定していない区間を破線で描く |
 | `pptx.go` | 複数枚の書き出し(`SaveDeck`)と、装飾つきの文字(`AddRichTextBox`) |
 
 ## テンプレートが決めていること(dark / light)
