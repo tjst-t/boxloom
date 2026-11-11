@@ -5,6 +5,9 @@
     python3 tools/validate_ir.py FILE.json ...   # 検査する。誤りは JSON で標準出力に出す
     python3 tools/validate_ir.py --self-test     # 例の正しいものが通り、断られるべきものが断られるか
 
+Schema で書けない検査(id の一意性・target の指す先・日付の前後など)は
+Go の `go run . check deck.json`(boxloom/check.go)がする。
+
 要るもの: pip install jsonschema (4.18 以降。referencing を使う)
 
 誤りは「ファイル・IR の中の場所(JSON Pointer)・何が問題か」の形で返す。
@@ -70,6 +73,14 @@ def self_test(validator):
     for path in sorted((ROOT / "examples" / "ir").glob("*.json")):
         errs = check(validator, path)
         print(f"{'PASS' if not errs else 'FAIL'}  valid    {path.relative_to(ROOT)}")
+        for e in errs:
+            print("      ", json.dumps(e, ensure_ascii=False))
+        ok &= not errs
+    # Schema では通り、意味の検査(boxloom check)で断るもの。Schema が誤って
+    # 断るようになっていないかを見る(断るのは Go の試験 check_test.go)。
+    for path in sorted((ROOT / "examples" / "ir" / "check-invalid").glob("*.json")):
+        errs = check(validator, path)
+        print(f"{'PASS' if not errs else 'FAIL'}  schema-ok {path.relative_to(ROOT)}  (boxloom check rejects)")
         for e in errs:
             print("      ", json.dumps(e, ensure_ascii=False))
         ok &= not errs

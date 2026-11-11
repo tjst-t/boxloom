@@ -163,6 +163,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     (dark / light)で Box の木に組み、PPTX に書く道。`go run . build
     ../examples/ir/demo-deck.json` → `out/demo-deck.pptx`。Gantt の注釈の
     置き場所はサブシステムが決める。詳細は `docs/build.md`
+  - `check.go` = `go run . check deck.json`。Schema で書けない IR の検査
+    (id の一意性・target の指す先・日付の前後と範囲・variant)と組み立ての
+    警告を、`validate_ir.py` と同じ形の JSON で出す(`docs/ir.md`)
   - `main.go` = デモコンテンツとfill-ratioリンター(本物の
     `content_fill_ratio()`/`lint_fill_ratio()`の移植)。`go build .` →
     `./boxloom` で `out/` 配下に `boxloom_dark.pptx`/`boxloom_light.pptx`
