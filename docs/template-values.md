@@ -299,6 +299,12 @@ dark / light は書いていない。図の字の大きさはファイルに持�
 注釈に書いた。最小・自然・上限の3つ組(`minBoxHeight`・`naturalBoxHeight`・
 `maxBoxHeight` など)は Measure の Min・Natural・Max になる。
 
+process・orgchart・funnel の状態の凡例(`docs/subsystem.md` の11節)の寸法も各ファイルに
+ある:`legendGap`(図と凡例の間)・`legendItemGap`(項目の間)・`legendSwatchWidth`・
+`legendSwatchHeight`(見本の箱)・`legendSwatchGap`(見本と文の間)。funnel の `rateGap` は
+帯の列と転換率の列の間。matrix の `emphasisLineWidth` は推す列の枠線の太さで、
+`naturalRowHeight` 36・`maxRowHeight` 44 は1行の文のセルが間延びしない高さ。
+
 ### subsystems.chart(任意)
 
 同じく、書くとこのテンプレートのグラフだけがその寸法になる。全部のキーが要り、`padding`
@@ -335,6 +341,7 @@ dark / light は書いていない。図の字の大きさはファイルに持�
 | `annotationLaneGap` | 注釈のレーンとチャートの間 |
 | `annotationText` | 注釈の字の大きさ |
 | `labelText` `smallText` | 凡例・行の名前・目盛りの字、グループ名・区間の文字・節目の字 |
+| `dateFormat` | IR から作った Gantt の目盛りと節目の日付の書き方(文字列)。`YYYY`・`YY`・`MM`・`M` を年と月に置き換え、ほかの文字はそのまま。既定 `YYYY/M`(`2026/12`)。月(`M` か `MM`)を含まない・年を `YYYY`/`YY` 以外で書いたものは誤り。Go で組んだ従来のデモの目盛りは手で書いた文字のまま |
 
 ## subsystems/shapes.json の形
 

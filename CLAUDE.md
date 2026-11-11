@@ -211,7 +211,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `process.go` / `orgchart.go` / `matrix.go` / `funnel.go`(共通は `figures.go`、
     Markdown は `md_figures.go`)= 箱と線の図のサブシステム。作者は文・状態・強調だけを
     書き、置き場所・色はサブシステムが決める。線は箱に繋がった本物のコネクタ(組織図は
-    曲がる線)。check の誤り `matrix-cells`、警告 `figure-text-overflow`・`funnel-increase`。
+    曲がる線)。check の誤り `matrix-cells`・`matrix-emphasis`、警告 `figure-text-overflow`・`funnel-increase`・`figure-legend`。状態の凡例(legend)は4つの図すべて、funnel は段の間の転換率を描き、matrix は推す列(emphasis)を持つ。
     詳細は `docs/subsystem.md` の11節
   - `chart.go` / `chartxml.go` / `md_chart.go` = 数値のグラフ(chart)。比べ方から形を
     選び(item→横棒・timeSeries→縦棒か折れ線・component→円・frequency→ヒストグラム・

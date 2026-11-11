@@ -22,6 +22,7 @@
 | `shapes-unknown-role.json` | shapes の図形の塗りを、テーマに無い役割名にした | `role-exists` |
 | `quote-empty-source.json` | 引用の出どころを空白だけにした | `empty-text` |
 | `matrix-cells.json` | matrix の2行目のセルを1つ減らした(列は3つ) | `matrix-cells` |
+| `matrix-emphasis.json` | matrix の推す列(emphasis)に、見出しに無い名前を書いた | `matrix-emphasis` |
 | `table-shape.json` | 表の2行目のセルを1つ減らした(見出しは4つ) | `table-shape` |
 | `image-missing.json` | 画像の src を、無いファイルにした | `image-missing` |
 | `image-format.json` | 画像の src を、画像でないファイル(`README.md`)にした | `image-format` |

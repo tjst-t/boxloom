@@ -255,8 +255,9 @@ groups: …
   `target-exists`)で返す。例は `examples/md/shapes.bx.md`(↔ `examples/ir/shapes.json`)。
 - **```process**・**```orgchart**・**```matrix**・**```funnel**(箱と線の図。
   `docs/subsystem.md` の11節)も同じ作り。中身は IR の `data` と同じキーで、書けるのは
-  文と状態(`status`)と強調(`emphasis`)だけ(座標・色・字の大きさは書けない)。
-  funnel の `value` は引用しない数なら数、それ以外は文字列。
+  文と状態(`status`)と強調(`emphasis`)と、状態の意味の凡例(`legend`)だけ(座標・色・
+  字の大きさは書けない)。matrix の推す列は `emphasis: <列の見出しの文>`。funnel の
+  `value` は引用しない数なら数、それ以外は文字列。
 
   ````
   ```process
@@ -268,8 +269,9 @@ groups: …
   ````
 
   パーサーが断るのは形の誤り(知らないキー・知らない状態の名前・型)だけ。matrix の
-  行のセルの数が列の数と違うことは `boxloom check` が `matrix-cells`(その行の行つき)で
-  返す。例は `examples/md/figures.bx.md`(↔ `examples/ir/figures.json`)。
+  行のセルの数が列の数と違うこと・`emphasis` が見出しに無いことは `boxloom check` が
+  `matrix-cells`・`matrix-emphasis`(その行の行つき)で返す。`status` を使ったのに
+  `legend` に文が無いと警告 `figure-legend`。例は `examples/md/figures.bx.md`(↔ `examples/ir/figures.json`)。
 - **```chart**(数値のグラフ。`docs/subsystem.md` の12節)も同じ作り。書くのは比べ方
   `compare`(item・timeSeries・component・frequency・correlation)と、項目・系列・値・
   単位・強調だけで、グラフの形・色・大きさは書けない(形は比べ方とデータの数から

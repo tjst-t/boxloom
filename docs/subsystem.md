@@ -136,7 +136,7 @@ Gantt の Factory は `ganttFromIR`(`gantt_ir.go`)で読み、`GanttChart` を
 | IR に無いもの | Gantt が決めること |
 |---|---|
 | 軸の圧縮の制御点 | 目盛り(と軸を切る日付)で区切った区間に、日数の平方根に比べた幅を割り当てる |
-| 目盛りの文字 | `at` から `29/12` の形を作る。範囲の両端に目盛りが無ければ日付だけの目盛りを足す |
+| 目盛りの文字 | `at` を値の表(`subsystems/gantt.json`)の `dateFormat` で書く(既定 `YYYY/M` → `2029/12`。`YY/M`・`YYYY年M月`・`YYYY-MM` なども書ける。年は YYYY か YY、月は M か MM で、月は必須)。節目の文字の頭の日付も同じ。範囲の両端に目盛りが無ければ日付だけの目盛りを足す |
 | 状態の無い目盛りの色 | `text_primary`(両端に足したものは `text_muted`) |
 | 節目の文字 | `28/5 ライセンス更新` のように日付を前に付ける |
 | 注釈の上下と横のずらし | 下の「注釈の置き場所」 |
@@ -456,6 +456,16 @@ shapes で手で置いていた形(箱を矢印で並べる・親と子の箱・
   繋ぐ(PowerPoint で箱を動かすと線が付いてくる)。曲がる線は `bentConnector3` を
   90° 回して「縦 → 横 → 縦」にしたもの(`AddElbowConnector`)。横にずれていなければ
   直線(`straightConnector1`)にする。
+- **状態の凡例**:状態の枠線の色が何を意味するかは図ごとに違うので、作者の言葉で
+  `legend: {conditional: 増員が要る, …}`(状態の名前 → 文)に書く。process・orgchart・
+  funnel は、使った状態のうち `legend` に文のあるものを、図の下(内側の左端から)に
+  「箱と同じ形の見本(地の塗り+状態の色の枠線)+文」で並べる(幅を越えたら次の行)。
+  使ったのに文の無い状態は凡例に出さず、警告 `[SUBSYSTEM WARNING] process: legend:
+  status "conditional" is used but has no legend text …` を出す(check の `figure-legend`、
+  path は `…/data/legend`、.md なら legend の行か図の行)。強調(`emphasis`)は「ここを見て」
+  の印なので凡例に出さない。matrix は評価の既定の文があるので、文が無くても既定の文で
+  凡例を出す(下の matrix)。凡例の寸法は各図の値の表の `legendGap`・`legendItemGap`・
+  `legendSwatchWidth`・`legendSwatchHeight`・`legendSwatchGap`、文は `small`。
 - **文は黙って削らない**:箱の中の文は幅で折り返し、そのぶん箱を高くする。折り返せない
   語(長い英単語など)が箱より広い、または割り当てられた高さが足りないときは
   `[SUBSYSTEM WARNING] process: steps[2] ("…"): text does not fit (…)` を出す。check は
@@ -471,6 +481,7 @@ steps:
   - {title: 申し込み, detail: [窓口で受付, 1営業日]}
   - {title: 導入, detail: 平均5営業日, emphasis: true}
   - {title: 本番, status: support}
+legend: {support: 保守の係に引き継ぐ}      # status を使ったら書く(共通の決まり)
 ```
 
 - 段階は左から右へ角丸の箱で並べ、右の辺の真ん中から次の箱の左の辺の真ん中へ、矢印の
@@ -494,6 +505,7 @@ units:
       - {title: 基盤, detail: 4名}
       - {title: 画面, detail: 3名, status: conditional}
   - title: 営業                        # members は任意
+legend: {conditional: 2名を増やす}
 ```
 
 - 3段まで(root・units・members)。親の下の辺の真ん中から子の上の辺の真ん中へ、
@@ -519,6 +531,7 @@ rows:
       - {status: conditional, text: 中(3日)}
       - {status: danger}                      # text は任意(丸だけ)
 legend: {support: 良い, danger: 悪い}          # 任意
+emphasis: コンテナ                             # 任意。推す列(列の見出しの文)
 ```
 
 - 列の見出しは列の真ん中に、行の見出しは左に揃えて行の縦の真ん中に置く(shapes の
@@ -529,6 +542,13 @@ legend: {support: 良い, danger: 悪い}          # 任意
 - **凡例は自動**:使った状態を support・conditional・none・danger の順に、セルの1列目の
   左端から並べる。文は `legend` に書いたもの、無ければ既定の「対応・条件つき・非対応・
   問題あり」。`legend` に書いても使っていない状態は出さない。
+- **推す列**:`emphasis` に列の見出しの文(文中の記法を除いた文字)を書くと、その列の
+  見出しを太字のアクセントの色にし、見出しから最後の行までをアクセントの色の枠
+  (塗らない。太さ `emphasisLineWidth`、セルとセルの間の真ん中)で囲む。見出しに無い
+  名前は読み込みの誤りで、check は `matrix-emphasis`(path は `…/data/emphasis`)。
+- **行の高さ**:1行の文に見合う高さで止める(`naturalRowHeight` 36・`maxRowHeight` 44。
+  文が折り返せばその高さ)。上限より大きい枠は余りを空きとして残す(9節)。前は上限が
+  64pt で、1行の文のセルが間延びしていた。
 - 各行の `cells` の数は `columns` の数と同じ(Schema では書けないので check の
   `matrix-cells`。path は `…/rows/N/cells`)。セルの `status` は必須(評価の無い表は
   第1層の `table`。`docs/patterns.md` の2.1・R6)。
@@ -542,6 +562,7 @@ stages:
   - {label: 環境の確認, value: 60}
   - {label: 契約, value: 10, emphasis: true}
   - {label: 見込み, value: 約 5}               # 値は文字列でもよい
+legend: {conditional: 人手で詰まる段}          # status を使ったら書く
 ```
 
 - **帯の幅は値に比例させない**:一番上を帯の列の幅いっぱい、一番下を
@@ -551,6 +572,11 @@ stages:
   (`chart`、`docs/patterns.md` の R4)。
 - 帯は中の文が収まる幅より狭くせず、上の帯より広くもしない。帯は帯の列の真ん中に置く。
 - `note` は帯の右の列(内側の幅の 36%)に、その段の縦の真ん中に揃えて左揃えで置く。
+- **段の間の転換率**:前後の段の値が数で、前が 0 より大きく後が前を越えないとき、
+  前の段に対する割合を `↓ 45%` の形で、帯の列の右の細い列(帯との間 `rateGap`)に、
+  2つの帯の境目の高さに揃えて書く(10% 以上は整数、それより小さければ小数1桁。字は
+  `subPoint` の太字、色は `text_muted`)。作者の数から一つに決まる値なので図が書き足す
+  (作者が note に転換率を書かなくてよい)。値が文字列の段の前後には書かない。
 - 数の値が前の段より増えたら警告 `funnel-increase`(funnel は減っていく段階に使う。
   減らない手順は `process`)。
 
@@ -576,9 +602,8 @@ stages:
   勧める)。
 - orgchart は3段まで。members が多くて箱が狭くなりすぎるとき、縦に積む形に組み替えない
   (文を折り返して高くなるだけ。語が収まらなければ警告)。
-- matrix の状態は色の丸だけで見分ける(形や印での区別は無い)。列の強調(推す案)は無い。
-- 状態の色を凡例で説明するのは matrix だけ。process・orgchart・funnel の状態の枠線の
-  意味は、作者が注記などで書く。
+- matrix の状態は色の丸だけで見分ける(形や印での区別は無い)。推す列は1つだけ(行の強調は無い)。
+- funnel の転換率は前の段に対する割合だけ(最初の段に対する累計の割合は出さない)。
 - 図の寸法の数(箱の高さの最小・自然・上限など)は目安で決めた値。
 
 ## 12. 数値のグラフ(chart)

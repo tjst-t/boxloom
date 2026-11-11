@@ -164,7 +164,7 @@ Go からは、サブシステムの Schema を登録簿の `Declare`(`Subsystem
 | デモの構造体にあるもの | IR では | 理由 |
 |---|---|---|
 | `Scale`(軸の圧縮の制御点) | 持たない。`axisBreakBefore`(軸を切る日付)だけ | 圧縮の具合は見た目の調整。サブシステムが目盛りから決める(変種で選べるようにしてよい) |
-| `Tick.MainLabel`(`"29/12"`) | 持たない。`at` から作る | 日付の書式はテンプレートが決める |
+| `Tick.MainLabel`(`"2029/12"`) | 持たない。`at` から作る | 日付の書式はテンプレートが決める(値の表の `dateFormat`) |
 | `Tick.Role = "text_primary"` | 持たない。`status` は省けば「普通」 | `text_primary` はデザイン側の役割名 |
 | `Annotation.AnchorYFrac`・`Direction` | 持たない。`target`(グループか行の id)と `emphasis` | 位置と上下は、サブシステムが重なりを避けて決める |
 | 状態 `support`/`conditional`/`none`/`danger` | `status`(enum) | Gantt サブシステムが名乗る意味役割名 |
@@ -265,6 +265,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `connector-self` | shapes のコネクタの `from` と `to` が同じ図形 |
 | `empty-text` | 区切りの `title`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label` に、見える文字がある(Schema は `""` や空白だけを通す) |
 | `matrix-cells` | matrix の各行の `cells` の数が `columns` の数と同じ(path はその行の `cells`) |
+| `matrix-emphasis` | matrix の `emphasis`(推す列)が `columns` の見出しのどれか(文中の記法を除いた文字)と同じ(path は `…/data/emphasis`) |
 | `table-shape` | 表の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R`) |
 | `image-path` | 画像の `src` が文書からの相対パス(URL・絶対パス・`..`・`\` は断る) |
 | `image-missing` | 画像のファイルが読める(`CheckOptions.Assets` から。コマンドは文書のフォルダ) |
@@ -289,6 +290,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `shapes-connector-angle` | shapes のコネクタが、どの辺の組でも辺と 30°未満の浅い角度でしか繋げない(角で終わったように見える)。path はそのコネクタ |
 | `figure-text-overflow` | process・orgchart・matrix・funnel の箱・セル・注記の文が収まらない(折り返せない語が箱より広い・高さが足りない)。path はその要素(`…/data/steps/2` など) |
 | `funnel-increase` | funnel の数の値が前の段より増えた。path はその段の `value` |
+| `figure-legend` | process・orgchart・funnel で `status` を使ったのに、その状態の文が `legend` に無い(読み手は枠線の色の意味が分からない)。path は `…/data/legend` |
 | `chart-labels` | chart の項目の名前が、アプリが置く場所(縦の形は1項目の幅、横棒は枠の幅の30%)に2行で収まらない(アプリが斜めにする・間引く)。path は最初の項目(`…/data/categories/N`)、文に残りの数 |
 | `theme-role` | テーマに値の無い役割名をサブシステムが使った |
 
