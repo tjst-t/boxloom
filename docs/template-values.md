@@ -92,8 +92,8 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 
 | 種類 | values | subsystems/gantt.json | subsystems/shapes.json |
 |---|---|---|---|
-| 余白 | `pagePadding` `coverPadding` `sectionGap` `blockGap` `itemGap` `cardPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
-| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
+| 余白 | `pagePadding` `coverPadding` `sectionGap` `blockGap` `itemGap` `cardPadding` `statementInset` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
+| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` `sectionTitle` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
 ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率は段階に載せない
 (図の寸法で、刻みに合わせても読みやすさは変わらないため)。
@@ -105,9 +105,11 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
   ときは既定のファイル(`subsystems/gantt.json` など)の値を見る。段を狭めた
   テンプレートは、既定の Gantt の字が段から外れれば読み込みで断られる。
 - dark / light は `spacingUnit` 4、`typeSizes` [8, 10, 12, 14, 16, 24, 36] の7段。
-  段の役割はおおむね 36 表紙の題・24 スライドの題・16 小見出し(表紙の副題・
-  比較の選択肢の名前)・14 本文・12 従の文(入れ子の箇条・利点と欠点・表紙の作者)・
-  10 注(注記・フッター・Gantt の目盛りと行の名前)・8 図の中の細かい字。
+  段の役割はおおむね 36 表紙の題・区切りの題・主張の1文・統計強調の数・引用の印、
+  24 スライドの題、16 小見出し(表紙の副題・比較の選択肢の名前・結論・引用の言葉・
+  数の単位)、14 本文、12 従の文(入れ子の箇条・利点と欠点・表紙の作者・数の説明・
+  引用の出どころ)、10 注(注記・フッター・Gantt の目盛りと行の名前)、8 図の中の細かい字。
+  文字のパターン(#17〜#19)のために段は足していない(36 を数と主張に使う)。
 
 **段階に寄せたとき(Backlog #29)に変えた値**(dark / light 共通):
 
@@ -153,16 +155,24 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 | `subPoint` | 入れ子の箇条 |
 | `optionLabel` `optionItem` | 比較の選択肢の名前、利点・欠点 |
 | `small` | 注記・フッター |
+| `sectionTitle` | 区切り(section)の章の題 |
+| `statementText` | 主張(statement)の1文 |
+| `takeawayText` | 結論(takeaway)の1文 |
+| `statValue` `statUnit` `statLabel` | 統計強調(stat)の数・単位・説明 |
+| `quoteText` `quoteMark` `quoteSource` | 引用(quote)の言葉・頭の印・出どころ |
 | `pointIndentEm` | 入れ子の箇条の字下げ。親の字の大きさに掛ける倍率 |
 | `cardPadding` `cardRadius` | 比較のカード |
 | `subsystemRadius` | サブシステムを載せるカードの角 |
-| `coverRuleWidth` `coverRuleHeight` | 表紙の題の下の線 |
+| `coverRuleWidth` `coverRuleHeight` | 表紙の題の下の線。区切りの題・主張の1文の上の線にも使う |
+| `statementInset` | 主張のスライドの文を、本文のスライドの外周(`pagePadding`)よりさらに内へ下げる幅 |
+| `accentBarWidth` | 結論(takeaway)の左のアクセントの帯の幅 |
 | `fillRatioMin` | 本文の埋まりがこの割合(0〜1)未満なら `fill-ratio` の警告 |
 
 ### marks(印の文字)
 
 箇条(`point`、入れ子は `subPoint`)、比較の利点(`pro`)・欠点(`con`)の頭に置く
-文字。後ろの空きも含めて書く。
+文字、引用の言葉の頭(`quote`)と出どころの頭(`quoteSource`)、統計強調の数と単位の
+間(`statUnit`。dark / light は半角の空白1つ)。後ろの空きも含めて書く。
 
 ### fonts(字体)
 
