@@ -13,12 +13,16 @@ if err != nil {
 }
 f, _ := os.Create("deck.pptx")
 defer f.Close()
-res, err := boxloom.Build(f, deck, boxloom.BuildOptions{Template: "dark"})
+res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
+	Template: "dark",
+	Assets:   os.DirFS("."), // 画像(image・gallery の src)を読む口。根は文書のフォルダ
+})
 // res.Warnings は本文の埋まり具合・はみ出しなどの警告。書き出しは止めない
 ```
 
 - ライブラリはファイルを読み書きしない。名前(誤りの場所に添える)と中身の
-  バイト列を受け取り、PPTX は `io.Writer` に書く。
+  バイト列を受け取り、PPTX は `io.Writer` に書く。画像だけは文書の外にあるので、
+  呼ぶ側が `fs.FS` を渡す(下の「画像」)。
 - 依存は標準ライブラリだけ。テンプレート・字体の寸法・Schema はパッケージに
   埋め込んである。
 - 同じプロセスの中で `Build`・`Check` を並行して呼ばない。文字を測る字体を
@@ -44,10 +48,10 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{Template: "dark"})
 | `IRDeck` | 読んだ IR(`docs/ir.md`)。中の欄は IR の形のまま |
 | `Issue` | 誤りと警告の1件(`docs/content-syntax.md` の5章の形。`File`・`Line`・`Column`・`Path`・`Code`・`Message`・`Expected`・`Hint`)。`String()` で1行の文 |
 | `MarkdownErrors` | `[]Issue` の error。`errors.As` で取り出す |
-| `CheckOptions` | `Template`(IR の template より優先)・`Strict`(警告も誤り扱い) |
+| `CheckOptions` | `Template`(IR の template より優先)・`Strict`(警告も誤り扱い)・`Assets`(画像を読む `fs.FS`) |
 | `CheckResult` | `OK`・`Errors`・`Warnings`・`Capacity`。JSON にすると `boxloom check -format json` と同じ形(切れ端は nil にならない) |
 | `SlideCapacity` | 本文を持つスライドごとの容量(`docs/ir.md` の「容量の計測」) |
-| `BuildOptions` | `Template`(空なら IR の template、それも無ければ light) |
+| `BuildOptions` | `Template`(空なら IR の template、それも無ければ light)・`Assets`(画像を読む `fs.FS`) |
 | `BuildResult` | `Template`(使った名前)・`Slides`(枚数)・`Warnings`(`"slide 2: [FILL-RATIO WARNING] …"` の文) |
 | `ErrUnknownTemplate` | テンプレートの名前が無いとき。`Build`・`Schema` の誤りを `errors.Is` で見分ける |
 
@@ -56,6 +60,23 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{Template: "dark"})
 - 警告を `Issue` の形で欲しいときは `Check` を使う。`Check` は誤りが無ければ組み立てまで
   通すので、`Build` の警告と同じものが code つきで返る。
 - `Check` は file の拡張子で読み方を選ぶ。`.md` なら誤りと警告に Markdown の行が付く。
+
+## 画像(Assets)
+
+`image`・`gallery` の `src` は文書のファイルからの相対パス(`docs/content-syntax.md` の
+3.8)。ライブラリはファイルを開かず、`BuildOptions.Assets`・`CheckOptions.Assets` に
+渡された `fs.FS` から `src` を読む。
+
+- **根は文書のフォルダ**。コマンドは `os.DirFS(filepath.Dir(文書のパス))` を渡す。
+  メモリの中の画像なら `fstest.MapFS` や `embed.FS` でもよい。
+- `src` は `path.Clean` してから `fs.ReadFile` で読む。`fs.FS` の決まり
+  (`fs.ValidPath`)により、`..` や絶対パスは読まれない。そのうえで、URL・絶対パス・
+  `..`・`\` は読む前に `image-path` で断る。
+- `Assets` が nil なら、画像を使う文書は `Check` が `image-missing` を返し、`Build` は
+  誤りを返す(画像を使わない文書には要らない)。
+- 形式は中身で見る(`image.DecodeConfig`。PNG と JPEG だけ)。画素の大きさから縦横比を
+  取り、PPTX の `ppt/media/` に入れる(同じ中身の画像は1つにまとめる)。
+- `FontCheck.Assets` も同じ(`boxloom fonts` が文書ごとに入れる)。
 
 ## 安定させない入口(コマンドのため)
 

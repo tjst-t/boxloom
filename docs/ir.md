@@ -20,6 +20,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `examples/ir/demo-deck.json` | お題3枚を IR で書いた例 |
 | `examples/ir/gantt-full.json` | デモの Gantt 全体(3グループ・9行・注釈4つ)を IR で書いた例 |
 | `examples/ir/shapes.json` | shapes で描いた架空のシステム構成図の例 |
+| `examples/ir/blocks.json` | 並列のまとまり・表・画像・画像の並びの例(画像は `examples/ir/images/`。`tools/gen_example_images.go` で作った架空の図) |
 | `examples/ir/invalid/` | 断られるべき例(色・位置・見た目の装飾などを1か所だけ足したもの) |
 | `tools/validate_ir.py` | 検査のコマンド |
 
@@ -49,7 +50,10 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 文書   { boxloom: "0.1", template?, meta?, slides: [スライド] }
 スライド  { type: "cover",   variant?, title?, subtitle?, author?, notes? }
          { type: "content", variant?, title, body: [ブロック], notes? }
-ブロック  paragraph | points | compare | note | subsystem   (どれも type で選ぶ)
+ブロック  paragraph | points | compare | note | columns | table | image | gallery | subsystem   (どれも type で選ぶ)
+並列     { type: "columns", columns: [{ title?, role?: "main", body: [paragraph|points|note|table|image] }] }  (2〜3個)
+表       { type: "table", header: [セル], rows: [[セル]], caption? }   (セルはインライン。どの行も見出しと同じ数)
+画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
 サブシステム { type: "subsystem", subsystem: "gantt" | "shapes", variant?, data: {…} }
 ```
@@ -169,6 +173,20 @@ IR は座標・色を持たない(設計判断1)が、shapes サブシステム�
 (`docs/subsystem.md` の8節)。範囲(和が 1 以下)・役割名・コネクタの指す先は、
 Schema では書けないので `boxloom check` が見る。
 
+### 9. 並列のまとまり・表・画像(#20・#21・#22)
+
+- **並列のまとまり**の幅の比は数で持たない。主のまとまりに `role: "main"` を付ける
+  (意味)と、テンプレートが広く取る。2個以上の `main` は Schema(`maxContains`)と
+  Go の読み込みが断る。中のブロックの種類は `columnBlock` に限る(`columns` の入れ子は断る)。
+- **表**は見出しの行(`header`)を必須にした(GFM の表がいつも持つため)。列の配置・幅は
+  持たない。行のセルの数が見出しと違うのは Schema では書けないので `boxloom check` の
+  `table-shape`。
+- **画像**の `src` は文書のファイルからの相対パス(区切りは `/`)。URL・絶対パス・
+  文書のフォルダの外(`..`)・`\` は Schema の `pattern` と `boxloom check` の
+  `image-path` が断る。IR に画像の中身(base64 など)は持たない(意味の木を軽く保ち、
+  差分で読めるように)。代わりの文 `alt` は必須で、空白だけも不可。
+  `caption` は画像の下に出す説明の文(インライン)。
+
 ## 意味の検査(boxloom check)
 
 JSON Schema では書けない検査は Go の `boxloom check` がする。
@@ -214,6 +232,11 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `shape-bounds` | shapes の座標・大きさ・線の点が 0〜1 にあり、`x+w`・`y+h` が 1 以下(path は和が越えた `w`・`h`) |
 | `role-exists` | shapes の色(`fill`・`line`・`textColor`・`color`)の役割名が、そのテンプレートのテーマにある |
 | `connector-self` | shapes のコネクタの `from` と `to` が同じ図形 |
+| `table-shape` | 表の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R`) |
+| `image-path` | 画像の `src` が文書からの相対パス(URL・絶対パス・`..`・`\` は断る) |
+| `image-missing` | 画像のファイルが読める(`CheckOptions.Assets` から。コマンドは文書のフォルダ) |
+| `image-format` | 画像が PNG か JPEG(中身で見る。SVG・GIF などは断る) |
+| `image-alt` | 画像の代わりの文 `alt` が空白だけでない |
 | `schema` / `build` | Go の IR の読み込み・組み立てが断ったもの(知らないキー・知らない状態など。形の誤り。`schema` は Markdown のパーサー・`validate_ir.py` と同じ code) |
 
 警告(誤りではない。`-strict` のときだけ exit 1):
@@ -221,7 +244,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | code | 見ること |
 |---|---|
 | `fill-ratio` | 本文の箱のうち 65% より少なくしか使っていない(テンプレートの方針) |
-| `layout-overflow` | 本文のブロックが本文の領域に収まらない。はみ出したブロックごとに1件で、`path` はそのブロック(`/slides/S/body/N`)、文にはみ出した高さ(pt)を書く(下の節) |
+| `layout-overflow` | 本文のブロックが本文の領域に収まらない。はみ出したブロックごとに1件で、`path` はそのブロック(`/slides/S/body/N`)、文にはみ出した高さ(pt)を書く(下の節)。並列のまとまりは、まとまりの中のはみ出したブロック(`/slides/S/body/N/columns/C/body/K`) |
 | `subsystem-min` | サブシステムに割り当てた大きさが、自己申告の最小を下回った(サブシステムの警告の path は、そのブロック `/slides/S/body/N`) |
 | `annotation-overlap` | Gantt の注釈に空いた置き場所が無く、ほかの注釈に重ねて置いた |
 | `shapes-overlap` | shapes の図形どうしが重なった。path は後から置いた図形(`…/data/items/N`) |
@@ -238,6 +261,12 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 - **ブロックが要る高さ** = 並べた幅で文字を折り返した高さ。サブシステムは自己申告の
   最小の高さ(`Min`)まで縮めてよいので、`Min` で測る(自然な高さより縮んでも、
   `Min` が収まればはみ出しにしない)。
+- 表は縮めない(行の高さはセルの文を折り返した高さ)。画像は縦横比を保って
+  `imageMinHeight`(値の表)まで縮めてよいので、その高さで測る。
+- **並列のまとまり**は、まとまりごとに題と中のブロックを積んで測り、一番高いまとまりが
+  ブロックの要る高さになる。はみ出しの警告は、まとまりの中で下端を越えたブロックごとに
+  1件で、path は `/slides/S/body/N/columns/C/body/K`(例
+  `examples/ir/check-warnings/columns-overflow.json`)。
 - ブロックを上から gap を挟んで積み、領域の下端を越えたブロックごとに1件出す。
   越えた高さは、下端をまたぐブロックなら下端より下の分、丸ごと下に落ちたブロックなら
   要る高さ全部。0.5pt 未満は丸めの誤差として見ない。
@@ -295,6 +324,11 @@ check でも断られるもの。
 }]
 ```
 
+- **並列のまとまり**のブロックには `columns` が付く(まとまりごとに `path`
+  (`…/columns/C`)・`need`・`lines`・`top`・`bottom`・`overflow` と、中のブロックの
+  `blocks`(path は `…/columns/C/body/K`))。ブロックの `need`・`lines` は一番高い
+  まとまりのもの。
+- 表の `lines` は行ごとの一番多いセルの行の数の和(と説明の文の行)、画像は説明の文の行。
 - **使い方の目安**:箇条を1項目足せるかは `remainingBodyLines`(1項目が1行なら
   その数まで)。新しいブロックを足すなら `remaining − blockGap` に入るか。
   `remaining` が負なら、`overflow` が 0 でない最初のブロックの前でスライドを
@@ -311,7 +345,7 @@ check でも断られるもの。
   JSON Schema の検査器を持たないので、形の誤りは Go の IR の読み込みが代わりに
   断る(場所は分かるが、文は Schema より粗い。Gantt の中の知らないキーは
   `data` までしか指さない)。
-- **画像・表・コード片・図の引用**など、お題3枚に無いブロック。
+- **コード片・図の引用**など、お題3枚に無いブロック(表・画像は #21・#22 で入った)。
 - **スライドの骨組みの枠**(title / body / aside …)をコンテンツから指すか。いまの
   IR は `body` の1つだけ。
 - **デモの Gantt の再現**:注釈の置き場所は Gantt サブシステムが決める

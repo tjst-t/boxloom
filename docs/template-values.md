@@ -65,8 +65,8 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 
 | 種類 | values | subsystems/gantt.json | subsystems/shapes.json |
 |---|---|---|---|
-| 余白 | `pagePadding` `coverPadding` `sectionGap` `blockGap` `itemGap` `cardPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
-| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
+| 余白 | `pagePadding` `coverPadding` `sectionGap` `blockGap` `itemGap` `cardPadding` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
+| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
 ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率は段階に載せない
 (図の寸法で、刻みに合わせても読みやすさは変わらないため)。
@@ -131,6 +131,14 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 | `subsystemRadius` | サブシステムを載せるカードの角 |
 | `coverRuleWidth` `coverRuleHeight` | 表紙の題の下の線 |
 | `fillRatioMin` | 本文の埋まりがこの割合(0〜1)未満なら `fill-ratio` の警告 |
+| `columnTitle` | 並列のまとまりの題(dark / light は 16) |
+| `columnGap` | 並列のまとまりの間(32) |
+| `columnMainWeight` | 主のまとまり(`role: main`)の幅の比。ほかのまとまりは 1(2。倍率なので段階に載せない) |
+| `tableText` | 表のセルの字(12。見出しの行は太字) |
+| `tableCellPaddingX` `tableCellPaddingY` | セルの左右・上下の余白(8・4) |
+| `tableRuleWidth` | 表の行の間の線の太さ(1。線の色は役割名 `grid`、見出しの行の塗りは `card_alt`、本体は `card`) |
+| `imageMinHeight` | 画像を縮めてよい下限の高さ(96。はみ出しの検査はこの高さで測る) |
+| `captionGap` | 表・画像と説明の文の間(4。説明の文の字は `small`、色は `text_muted`) |
 
 ### marks(印の文字)
 

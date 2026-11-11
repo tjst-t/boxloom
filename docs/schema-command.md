@@ -58,7 +58,7 @@ go run ./cmd/boxloom schema -template dark     # そのテンプレートが名�
 | `name` | 囲みの名前(`:::name`) |
 | `label` / `labelRequired` | 名前の後ろに書く文の意味と、それが必須か(無ければ書けない) |
 | `inside` | 置ける場所(親の囲み)。無ければ本文に置く |
-| `contains` | 中に書けるもの。囲みの名前か、`本文`・`箇条` |
+| `contains` | 中に書けるもの。囲みの名前か、`本文`・`段落`・`箇条`・`表`・`画像(1枚)` |
 | `minChildren` | `contains` の囲みが最低いくつ要るか |
 | `attributes` | `{名前=値}` で書ける属性 |
 | `meaning` / `ir` | 意味と、できる IR の場所 |

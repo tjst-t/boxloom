@@ -14,7 +14,13 @@ go run ./cmd/boxloom                                                      # 従�
 
 - テンプレートは `-template` > IR の `template` > `light` の順で決まる。
 - 誤りは IR の中の場所を添えて止まる(例 `slides[2]: body[0]: gantt: ticks[0].status:
-  unknown status "text_primary"`)。`examples/ir/invalid/` の9件は全部ここで断られる。
+  unknown status "text_primary"`)。`examples/ir/invalid/` の18件は全部ここで断られる。
+- 画像(`image`・`gallery`)は、文書のファイルのフォルダから `src` の相対パスで読む
+  (ライブラリには `BuildOptions.Assets` で渡す。`docs/library.md` の「画像」)。PPTX では
+  本物の画像(`p:pic`、`ppt/media/`)になり、代わりの文は画像の `descr` に入る。
+- 表(`table`)は本物の表(`p:graphicFrame` の `a:tbl`)になり、PowerPoint・LibreOffice で
+  表として編集できる。セルの文は折り返さずに書き、折り返しはアプリに任せる(測った幅には
+  字体の余裕が入っている)。
 - 警告(本文の埋まり具合・本文のはみ出し・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名)は
   標準出力にだけ書く。スライドのノートには入れない(ノートは作者の文だけ)。
 - 題はスライドのレイアウトのプレースホルダーとして書く。表紙の題と副題は
@@ -98,11 +104,13 @@ python3 tools/validate_pptx.py --self-test    # examples を dark/light で作�
 - **別の実装で読めるか**:`--python-pptx` で python-pptx で開き直して全部の文字を読み、
   `--soffice` で LibreOffice で PDF に変換してページの数がスライドの数と合うかを見る。
   `--self-test` は python-pptx があれば必ず使う。
-- **自分の試験**:examples の IR・Markdown(警告の例も含む)を dark/light で作った22個と、
-  従来のデモ2枚が全部通ること。それを壊した15通り(XML の誤り・Schema 外の要素と値・
+- **自分の試験**:examples の IR・Markdown(警告の例も含む)を dark/light で作った32個と、
+  従来のデモ2枚が全部通ること。それを壊した19通り(XML の誤り・Schema 外の要素と値・
   部品の削除・内容の種類の抜けと余り・関係の無い r:id・図形の id の重複・コネクタの
   指す先・スライドの id の重複・レイアウトの無いスライド・種類違いの関係・
-  `[Content_Types].xml` の削除・ノートの雛形の抜け)が、それぞれ決めた code で断られること。
+  `[Content_Types].xml` の削除・ノートの雛形の抜け・画像の部品の削除・png の Default の
+  抜け・画像の関係の無い r:embed・表のセルの Schema 外の要素)が、それぞれ決めた code で
+  断られること。
 - **限り**:XSD と参照の整合は見るが、PowerPoint 自身が開けるかは見ていない
   (PowerPoint だけが嫌う形は捕まらない)。
 

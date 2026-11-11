@@ -156,6 +156,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
    - Go 版だけの追加(その2): サブシステムは上限(Max)も申告でき、grow は
      そこで止まる。列の中の入れ子の箱の高さは、中の文字の折り返しまで含めて
      測る(`heightForWidth`)。どちらも従来のデモの出力を変えない。
+   - Go 版だけの追加(その3): テンプレートが印(`nestedSlack`)を付けた入れ子の箱
+     (並列のまとまり)は、Phase3a で中のサブシステム(画像など)の縮められる分を
+     先に返す。印の無い箱は従来どおり(既存の出力は変わらない)。
 2. **inner canvas sub-engine**: サブシステムの葉(`Subsystem` interface。
    Python 版では grow=1, basis=0 で領域確保のみの `canvas`)の中に、Gantt専用の座標スケール(`TimeScale`: 日付→x座標の
    区分線形補間、区間圧縮に対応)でチャートを描画する(`render_gantt()` /
@@ -196,6 +199,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     `connector-self`、警告 `shapes-overlap`・`shapes-text-overflow`
   - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
     `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
+  - `blocks.go` / `image.go` / `pptx_blocks.go` / `md_blocks.go` = 第1層のブロックの
+    並列のまとまり(`columns`)・表(`table`、本物の `a:tbl`)・画像(`image`・`gallery`、
+    本物の `p:pic`)。表と画像は Subsystem の約束で測って描く葉(登録簿には載せない)。
+    画像はライブラリに渡す `fs.FS`(`BuildOptions.Assets`)から読む(`docs/library.md`)
   - `fit.go` = 図と枠の橋渡し。`FixedAspect` の図・Max を越える枠は図の大きさまで
     切り詰め、余りは `Spec.Place` の側に置く(拡大縮小はしない。`docs/subsystem.md` の9節)
   - `subsystem_test.go` = 差し込み口とレイアウトの試験(`go test ./...`)
