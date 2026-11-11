@@ -667,7 +667,7 @@
       "number": 29,
       "kind": "task",
       "title": "値の表を段階に載せ、読み込みで強制する(余白の刻み・字の大きさの段)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -677,9 +677,14 @@
       "doneWhen": "段から外れた値は読み込みで誤りになり(試験あり)、docs/template-values.md に段が書いてあり、dark/light の前後の画像がある",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "36a094d5-90a6-40cd-a657-a41278757959"
+        }
+      ],
       "createdAt": "2026-11-11T02:02:59.028Z",
-      "updatedAt": "2026-11-11T02:02:59.028Z",
+      "updatedAt": "2026-11-11T02:59:20.001Z",
       "closedAt": null,
       "extra": {}
     },
