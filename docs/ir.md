@@ -16,11 +16,13 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `schema/core.schema.json` | コア:文書・スライド・ブロック・インライン・サブシステムの差し込み口 |
 | `schema/subsystems/gantt.schema.json` | Gantt サブシステムのブロック |
 | `schema/subsystems/shapes.schema.json` | shapes サブシステム(生の図形への逃げ道。`docs/subsystem.md` の8節)のブロック |
+| `schema/subsystems/process.schema.json`・`orgchart`・`matrix`・`funnel` | 箱と線の図のサブシステム(`docs/subsystem.md` の11節)のブロック |
 | `schema/boxloom-ir.schema.json` | 検査の入口。コアに同梱のサブシステムを差し込んだもの |
 | `examples/ir/demo-deck.json` | お題3枚を IR で書いた例 |
 | `examples/ir/gantt-full.json` | デモの Gantt 全体(3グループ・9行・注釈4つ)を IR で書いた例 |
 | `examples/ir/shapes.json` | shapes で描いた架空のシステム構成図の例 |
 | `examples/ir/text-patterns.json` | 文字のパターン(区切り・主張・結論・統計強調・引用)の例(`examples/md/text-patterns.bx.md` の IR) |
+| `examples/ir/figures.json` | process・orgchart・matrix・funnel の例(`examples/md/figures.bx.md` と同じ IR) |
 | `examples/ir/invalid/` | 断られるべき例(色・位置・見た目の装飾などを1か所だけ足したもの) |
 | `tools/validate_ir.py` | 検査のコマンド |
 
@@ -57,7 +59,7 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
          stat     { items: [{ value: "3 → 12", unit?: "機種", label }] }   1〜4個
          quote    { content, source }                             出どころは必須
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
-サブシステム { type: "subsystem", subsystem: "gantt" | "shapes", variant?, data: {…} }
+サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel", variant?, data: {…} }
 ```
 
 `notes` は発表者ノート。文字だけの文字列で、改行(`\n`)が段落の区切り。PPTX では
@@ -241,6 +243,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `role-exists` | shapes の色(`fill`・`line`・`textColor`・`color`)の役割名が、そのテンプレートのテーマにある |
 | `connector-self` | shapes のコネクタの `from` と `to` が同じ図形 |
 | `empty-text` | 区切りの `title`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label` に、見える文字がある(Schema は `""` や空白だけを通す) |
+| `matrix-cells` | matrix の各行の `cells` の数が `columns` の数と同じ(path はその行の `cells`) |
 | `schema` / `build` | Go の IR の読み込み・組み立てが断ったもの(知らないキー・知らない状態など。形の誤り。`schema` は Markdown のパーサー・`validate_ir.py` と同じ code) |
 
 警告(誤りではない。`-strict` のときだけ exit 1):
@@ -254,6 +257,8 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `gantt-segment-label` | Gantt の区間の文が、帯が狭すぎて置けない(描かなかった)。path はその区間(`…/data/groups/G/rows/R/segments/S`)。折り返して収まる文は警告にならない(`docs/subsystem.md` の11節) |
 | `shapes-overlap` | shapes の図形どうしが重なった。path は後から置いた図形(`…/data/items/N`) |
 | `shapes-text-overflow` | shapes の図形の文が、割り当てられた大きさに収まらない。path はその図形 |
+| `figure-text-overflow` | process・orgchart・matrix・funnel の箱・セル・注記の文が収まらない(折り返せない語が箱より広い・高さが足りない)。path はその要素(`…/data/steps/2` など) |
+| `funnel-increase` | funnel の数の値が前の段より増えた。path はその段の `value` |
 | `theme-role` | テーマに値の無い役割名をサブシステムが使った |
 
 ### はみ出し(layout-overflow)の測り方

@@ -259,6 +259,23 @@ groups: …
   段)だけ。`x+w` が 1 を超える・テーマに無い役割名・無い id へのコネクタは
   `boxloom check` が、図形やキーの行と code(`shape-bounds`・`role-exists`・
   `target-exists`)で返す。例は `examples/md/shapes.bx.md`(↔ `examples/ir/shapes.json`)。
+- **```process**・**```orgchart**・**```matrix**・**```funnel**(箱と線の図。
+  `docs/subsystem.md` の11節)も同じ作り。中身は IR の `data` と同じキーで、書けるのは
+  文と状態(`status`)と強調(`emphasis`)だけ(座標・色・字の大きさは書けない)。
+  funnel の `value` は引用しない数なら数、それ以外は文字列。
+
+  ````
+  ```process
+  steps:
+    - {title: 申請, detail: 申請者が書く}
+    - {title: 審査, detail: [平均3営業日, "**ここが詰まる**"], emphasis: true}
+    - {title: 承認, status: support}
+  ```
+  ````
+
+  パーサーが断るのは形の誤り(知らないキー・知らない状態の名前・型)だけ。matrix の
+  行のセルの数が列の数と違うことは `boxloom check` が `matrix-cells`(その行の行つき)で
+  返す。例は `examples/md/figures.bx.md`(↔ `examples/ir/figures.json`)。
 - サブシステムの名前でないコードブロック(` ```go ` など)と言語名の無い
   コードブロックは、**いまは誤り(予定)**。IR 第一版にコードのブロックが無いため
   (冒頭の「食い違ったら IR を正とする」)。IR にコードのブロックが入ったら、
@@ -456,8 +473,8 @@ go run ./cmd/boxloom build ../examples/md/demo-deck.bx.md            # .md も�
   書けないもの。例 `:::option` を `:::compare` の外に書いた)・`unknown-key`・
   `missing-key`・`invalid-value`(YAML と文書の頭の値)・`yaml`(YAML の部分集合の外)・
   `schema`(できた IR が通らない。ふつうは起きない)。
-- shapes のコードブロックは、YAML の形の検査だけをする(サブシステム自身には読ませない。
-  意味の誤りは `boxloom check` が図形の行つきで返す)。
+- shapes と図(process・orgchart・matrix・funnel)のコードブロックは、YAML の形の検査
+  だけをする(サブシステム自身には読ませない。意味の誤りは `boxloom check` が行つきで返す)。
 - Gantt のコードブロックは、YAML の検査が通ったあと Gantt サブシステム自身にも
   読ませる。Schema では書けない誤り(`target` の行き先が無い・id の重複・範囲の
   前後)もここで見つかる(このときの `line` はコードブロックの開きの行)。

@@ -53,7 +53,8 @@ go run ./cmd/boxloom schema -template ./my.json  # 外の値の表(docs/template
          "markdown": ["日付は YYYY-MM か …", …],   // Schema に書けない Markdown の約束事
          "schema": "/irSchema/$defs/gantt",         // 下の irSchema の中の場所(JSON Pointer)
          "schemaId": "https://boxloom.invalid/schema/ir/0.1/subsystems/gantt.schema.json"},
-        {"name": "shapes", "fence": "```shapes", …}   // 生の図形への逃げ道(最後の手段)
+        {"name": "shapes", "fence": "```shapes", …},  // 生の図形への逃げ道(最後の手段)
+        {"name": "process", "fence": "```process", …}  // ほかに orgchart・matrix・funnel(docs/subsystem.md の11節)
       ]
     }
   ],

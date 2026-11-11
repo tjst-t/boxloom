@@ -73,11 +73,14 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
    内側の 0〜1 の相対、色は役割名だけ、字の大きさはテンプレートの段の名前
    (`small`・`subPoint`・`optionItem`・`body`・`optionLabel`)。図形の重なりは
    check の警告(`shapes-overlap`)。詳細は `docs/subsystem.md` の8節。
+   箱を矢印で並べる・親と子の箱・格子に評価・減っていく帯は、shapes ではなく
+   **process・orgchart・matrix・funnel** のサブシステムで書く(意味だけを書く。
+   `docs/subsystem.md` の11節)。
 
 **データとコードの混ぜ方(合意済み)**: 値の表・スタイル規則・骨組みはデータ
 (宣言ファイル)で書き、部品とサブシステムはコードで書く。いまデータに
 なっているのは値の表(色・大きさ・印の文字・字体、Gantt の寸法)で、
-`boxloom/templates/<名前>.json` と `boxloom/subsystems/gantt.json`・`shapes.json`(同梱。
+`boxloom/templates/<名前>.json` と `boxloom/subsystems/gantt.json`・`shapes.json` ほか(同梱。
 知らないキー・欠けたキーは誤り)。骨組みはまだコード。詳細は
 `docs/template-values.md`。字体はテンプレートが選び、字体ごとの寸法
 (`boxloom/fonts/*.json`)で測る。置き換わったときの余裕は `docs/fonts.md`。
@@ -194,6 +197,11 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     図形・文字・線・矢印・コネクタ(PPTX では `a:stCxn`/`a:endCxn` で図形に繋がった
     本物のコネクタ)。check の誤り `shape-bounds`・`role-exists`・`target-exists`・
     `connector-self`、警告 `shapes-overlap`・`shapes-text-overflow`
+  - `process.go` / `orgchart.go` / `matrix.go` / `funnel.go`(共通は `figures.go`、
+    Markdown は `md_figures.go`)= 箱と線の図のサブシステム。作者は文・状態・強調だけを
+    書き、置き場所・色はサブシステムが決める。線は箱に繋がった本物のコネクタ(組織図は
+    曲がる線)。check の誤り `matrix-cells`、警告 `figure-text-overflow`・`funnel-increase`。
+    詳細は `docs/subsystem.md` の11節
   - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
     `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
   - `fit.go` = 図と枠の橋渡し。`FixedAspect` の図・Max を越える枠は図の大きさまで

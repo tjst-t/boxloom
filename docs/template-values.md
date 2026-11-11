@@ -11,6 +11,7 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 | `boxloom/templates/<名前>.json` | テンプレート1つ(`dark.json`・`light.json`)。名前はファイル名 |
 | `boxloom/subsystems/gantt.json` | Gantt の既定の寸法。テンプレートが差し替えなければこれ |
 | `boxloom/subsystems/shapes.json` | shapes(生の図形への逃げ道)の既定の寸法 |
+| `boxloom/subsystems/process.json`・`orgchart.json`・`matrix.json`・`funnel.json` | 箱と線の図(`docs/subsystem.md` の11節)の既定の寸法 |
 | `boxloom/values.go` | 読み込みと検査 |
 
 どちらも `go:embed` でバイナリに同梱する。テンプレートの一覧はこのフォルダの
@@ -200,6 +201,17 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 shapes の文字の大きさは、作者が `textStyle` に書く段の名前で values から引く:
 `small`・`subPoint`・`optionItem`・`body`・`optionLabel`(`docs/subsystem.md` の8節)。
 テーマに無い役割名を shapes が使うと、このテンプレートの組み立てが断る。
+
+### subsystems.process・orgchart・matrix・funnel(任意)
+
+同じく、書くとこのテンプレートのその図だけがその寸法になる。全部のキーが要り、`padding`・
+間隔・文字の余白(Go の json タグに `scale:"space"` の付いたもの)は段階の刻みに載って
+いなければ誤り。差し替えないときは既定のファイルの値を、そのテンプレートの段階で見る。
+dark / light は書いていない。図の字の大きさはファイルに持たず、values の `body`(題)・
+`subPoint`(2段目・セル・注記)・`small`(補足・説明・凡例)から引く。キーの意味は
+各ファイルと Go の型(`ProcessValues`・`OrgChartValues`・`MatrixValues`・`FunnelValues`)の
+注釈に書いた。最小・自然・上限の3つ組(`minBoxHeight`・`naturalBoxHeight`・
+`maxBoxHeight` など)は Measure の Min・Natural・Max になる。
 
 ## subsystems/gantt.json の形
 
