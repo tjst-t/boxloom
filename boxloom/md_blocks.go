@@ -324,13 +324,16 @@ func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
 		}
 		var allowed []*mdItem
 		for _, sub := range c.items {
-			ok := sub.kind == mdPara || sub.kind == mdList || sub.kind == mdTable || (sub.kind == mdFence && sub.fence.name == "note")
+			ok := sub.kind == mdPara || sub.kind == mdList || sub.kind == mdTable || (sub.kind == mdFence && sub.fence.name == "note") ||
+				(sub.kind == mdCode && contains(columnSubsystems, codeLang(sub.info)))
 			if !ok {
 				what := "コードブロック"
 				if sub.kind == mdFence {
 					what = ":::" + sub.fence.name
+				} else if l := codeLang(sub.info); l != "" {
+					what = "```" + l
 				}
-				p.fail(sub.line, 1, cp, codeMisplaced, fmt.Sprintf(":::column の中に %s は書けません", what), []string{"段落", "箇条", "表", "画像", "note"}, "")
+				p.fail(sub.line, 1, cp, codeMisplaced, fmt.Sprintf(":::column の中に %s は書けません", what), []string{"段落", "箇条", "表", "画像", "note", "```chart"}, "")
 				continue
 			}
 			allowed = append(allowed, sub)
@@ -358,4 +361,12 @@ func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
 	}
 	b.set("columns", cols)
 	return b
+}
+
+// codeLang はコードブロックの情報の行の言語名(属性 {…} の前まで)。
+func codeLang(info string) string {
+	if k := strings.IndexAny(info, " \t{"); k >= 0 {
+		return info[:k]
+	}
+	return info
 }

@@ -199,32 +199,54 @@
       "title": "問い合わせの半分近くは操作の質問",
       "body": [
         {
-          "type": "subsystem",
-          "subsystem": "chart",
-          "data": {
-            "compare": "component",
-            "unit": "%",
-            "categories": [
-              "操作",
-              "契約",
-              "障害",
-              "その他"
-            ],
-            "emphasis": [
-              "操作"
-            ],
-            "series": [
-              {
-                "name": "問い合わせの内訳",
-                "values": [
-                  46,
-                  27,
-                  18,
-                  9
-                ]
-              }
-            ]
-          }
+          "type": "columns",
+          "columns": [
+            {
+              "body": [
+                {
+                  "type": "subsystem",
+                  "subsystem": "chart",
+                  "data": {
+                    "compare": "component",
+                    "unit": "%",
+                    "categories": [
+                      "操作",
+                      "契約",
+                      "障害",
+                      "その他"
+                    ],
+                    "emphasis": [
+                      "操作"
+                    ],
+                    "series": [
+                      {
+                        "name": "問い合わせの内訳",
+                        "values": [
+                          46,
+                          27,
+                          18,
+                          9
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "読み取り",
+              "body": [
+                {
+                  "type": "points",
+                  "items": [
+                    "操作の質問が 46% で、契約(27%)の倍に近い",
+                    "障害は 18% で、操作と契約を合わせた 73% が手引きで減らせる側",
+                    "次の期は操作の手引きを先に直す"
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ],
       "notes": "割合は 2026 年 4〜9 月の架空の集計。"

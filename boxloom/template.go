@@ -594,6 +594,8 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 			// 横の余りは並べたままの Box で測る(measureBody が Box を並べ直す前に)。
 			spare := bodySpareWidths(b.Body)
 			warnings = append(warnings, spareWidthWarnings(b.Body, spare, kinds)...)
+			colSpare := columnSpareWidths(b.Body)
+			warnings = append(warnings, columnSpareWarnings(b.Body, colSpare)...)
 			warnings = append(warnings, keepLineWarnings(b.Body)...)
 			// 警告と容量は同じ測り値から作る(数字が食い違わないように)。
 			if blocks, area, need, ok := measureBody(b.Root, b.Body); ok {
@@ -602,6 +604,14 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 				for j := range sc.Blocks {
 					if w, ok := spare[j]; ok {
 						sc.Blocks[j].RemainingWidth = round1(w)
+					}
+					for ci := range sc.Blocks[j].Columns {
+						cc := &sc.Blocks[j].Columns[ci]
+						for k := range cc.Blocks {
+							if w, ok := colSpare[spareKey{j, ci, k}]; ok {
+								cc.Blocks[k].RemainingWidth = round1(w)
+							}
+						}
 					}
 				}
 				caps = append(caps, sc)

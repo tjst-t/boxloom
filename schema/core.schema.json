@@ -1022,7 +1022,7 @@
       "additionalProperties": false
     },
     "columnBlock": {
-      "description": "まとまりの中に置けるブロック。columns・compare・gallery・サブシステムは置けない。",
+      "description": "まとまりの中に置けるブロック。columns・compare・gallery は置けない。サブシステムはグラフ(chart)だけ(グラフの横に読み取りを置く形)。",
       "type": "object",
       "properties": {
         "type": {
@@ -1031,7 +1031,8 @@
             "points",
             "note",
             "table",
-            "image"
+            "image",
+            "subsystem"
           ]
         }
       },
@@ -1112,6 +1113,28 @@
           },
           "then": {
             "$ref": "#/$defs/image"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "subsystem"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$dynamicRef": "#subsystem",
+            "properties": {
+              "subsystem": {
+                "enum": [
+                  "chart"
+                ]
+              }
+            }
           }
         }
       ]

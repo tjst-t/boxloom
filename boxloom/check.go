@@ -268,11 +268,6 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 					c.checkMatrix(data, bp+"/data")
 				}
 			}
-			if bm["type"] == "subsystem" && bm["subsystem"] == "chart" {
-				if data, ok := bm["data"].(map[string]any); ok {
-					c.checkChart(data, bp+"/data")
-				}
-			}
 		}
 	}
 
@@ -325,6 +320,13 @@ func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
 		}
 	}
 	switch bm["type"] {
+	case "subsystem":
+		// グラフは本文にも並列のまとまりの中にも置ける。
+		if bm["subsystem"] == "chart" {
+			if data, ok := bm["data"].(map[string]any); ok {
+				c.checkChart(data, bp+"/data")
+			}
+		}
 	case "table":
 		header, _ := bm["header"].([]any)
 		rows, _ := bm["rows"].([]any)

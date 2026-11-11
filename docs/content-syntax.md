@@ -162,7 +162,7 @@ IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭�
 | `quote 出どころ` | 段落1つ(引用した言葉) | 他人の言葉。見出しの文が出どころ(必須) | `quote`(`content`・`source`) |
 | `notes` | 段落・箇条 | 発表者ノート(スライドには出ない)。3.6 | スライドの `notes` |
 | `columns` | `column` だけ(2つか3つ) | 並列のまとまり(段組みの指定ではなく「並列」という意味)。3.9 | `columns` |
-| `column 題` | 段落・箇条・表・画像(1枚)・`note` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
+| `column 題` | 段落・箇条・表・画像(1枚)・`note`・```` ```chart ```` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
 
 ```
 :::takeaway
@@ -457,8 +457,11 @@ GFM の表で書く。1行目が見出しの行、2行目が区切りの行、3�
   (1つの `columns` に1つまで)。どれだけ広くするかはテンプレートが決める
   (dark / light は値の表の `columnMainWeight` = 2、ほかは 1)。付けなければ同じ幅。
   `width` などの属性は無い(`unknown-attribute`)。
-- 中に書けるのは段落・箇条・表・画像(1枚)・`:::note`。`columns` の入れ子・`compare`・
-  画像の並び・サブシステムは書けない(`misplaced-content`)。
+- 中に書けるのは段落・箇条・表・画像(1枚)・`:::note`・グラフ(```` ```chart ````)。
+  `columns` の入れ子・`compare`・画像の並び・グラフ以外のサブシステムは書けない
+  (`misplaced-content`)。グラフの横に読み取りの文を置く(左にグラフ・右に読み取り)のが
+  この形の主な使い道。円グラフは高さで直径が決まるので、まとまりの幅を使い切らないと
+  `spare-width` になる(グラフのまとまりに `role=main` を付けない・文を足して縦を使う)。
 - はみ出しはまとまりごとに測る(一番高いまとまりがブロックの高さを決める)。
   `layout-overflow` は、まとまりの中のはみ出したブロックを
   `/slides/S/body/N/columns/C/body/K` で指す。

@@ -145,7 +145,7 @@ Available now (check `boxloom schema` — more may have been added):
 | A parent with children (and grandchildren): team set-up, ownership | ```` ```orgchart ```` | `root: {title, detail?}`, `units: [{title, detail?, members: [{title, detail?}]}]`. 3 levels max. A `status` on a box needs `legend: {conditional: Two more people needed}` — the legend under the chart explains it; do not explain outline colors in a `:::note`. Not for unrelated teams side by side |
 | Stages whose count shrinks (visits → sign-ups → paid) | ```` ```funnel ```` | `stages: [{label, value, note?}]`, optional `unit`. `value` is a number or text; bar widths are stepped, not proportional. Stage-to-stage conversion rates (↓ 45%) are drawn for you from numeric values — do not write them in `note`; use `note` for why a stage drops. `status` needs `legend`. Values that grow are warned (`funnel-increase`) — use `process` for plain steps |
 | A dated plan, periods, deadlines, statuses over time | ```` ```gantt ```` | States are `support`, `conditional`, `none`, `danger` (roles, not colors). Hardware/support-risk periods are a group `risk: A .. B`. Annotations point at a group/row `id` via `target`; the subsystem places them |
-| 2–3 parallel groups read side by side ("this year / next year / not doing") | `::::columns` → `:::column Group title` (2 or 3) | Each group holds paragraphs, bullets, one table, one image or `:::note`. No nested columns, compare, gallery or figures. Widths are not numbers: mark the one main group `{role=main}` (the others support it) or leave all equal. 4+ one-line groups → bullets. Not for one argument split in two |
+| 2–3 parallel groups read side by side ("this year / next year / not doing") | `::::columns` → `:::column Group title` (2 or 3) | Each group holds paragraphs, bullets, one table, one image, one ```` ```chart ```` or `:::note`. No nested columns, compare, gallery or other figures. Chart + its reading side by side: chart in one group, the takeaways as bullets in the other. Widths are not numbers: mark the one main group `{role=main}` (the others support it) or leave all equal. 4+ one-line groups → bullets. Not for one argument split in two |
 | An image that shows the point (screenshot, photo, drawing) | a paragraph containing only `![alt text](images/x.png "caption")` | Alt text is required (`image-alt`). Path is relative to the deck file; no URLs, absolute paths or `..` (`image-path`). PNG or JPEG only (`image-format`). Kept in proportion, never cropped. Image + text side by side → `::::columns` with the image in one group |
 | 2–6 images compared or in sequence | one paragraph with 2–6 `![alt](path "caption")` | Becomes a gallery (one row for 2–3, a grid for 4–6). 7+ is an error: split the slide |
 | Parallel points | bullets | 2 levels max |
@@ -374,7 +374,10 @@ Targets that read well (not hard limits):
 - `spare-width` warns when a figure or image keeps its aspect ratio and leaves ≥ 20%
   of the width empty beside it (`remainingWidth` in `capacity`). Put the figure in
   `columns` with its explanation in the other column, or cut text on the slide so the
-  figure gets more height (and therefore more width).
+  figure gets more height (and therefore more width). A pie chart is as wide as it is
+  tall: alone on a slide it always leaves the side empty, so put it in `columns` with its
+  reading. Inside `columns` the warning points at `/columns/C/body/K`: do not mark the
+  chart's group `role=main` (mark the text group instead, or none).
 - These warnings measure amount, not quality. Boxloom does not judge whether a title
   is a conclusion or the argument holds; that is your job (§6).
 
@@ -427,7 +430,7 @@ Fixes by code:
 | `chart-emphasis` | `chart`: `emphasis` must name existing categories and needs a single series; with several series mark one series `emphasis: true` instead |
 | `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently. Inside `columns` the path ends in `/columns/C/body/K`: shorten that group or move it to its own slide |
 | `fill-ratio` (warning) | Slide is mostly empty. Always fix (§4): merge with the neighbour the `hint` names, add the missing evidence or figure, or turn a one-message slide into `{type=statement}` |
-| `spare-width` (warning) | A figure/image leaves the side empty: put it in `columns` with text beside it, or give it more height by cutting text on that slide |
+| `spare-width` (warning) | A figure/image leaves the side empty: put it in `columns` with text beside it (images and charts can go in a column), or give it more height by cutting text on that slide. In a column: remove `role=main` from the chart's group |
 | `milestone-overlap` (warning) | Milestones are too close in time: merge them into one milestone, turn one into an `annotation`, or narrow the `span` so the dates spread out |
 | `stat-value` (warning) | A `stat` value and its unit do not fit on one line of the card (neither is ever broken in the middle, so the unit drops to a second line or the value runs past the card): shorten the value (round it, use a bigger unit), move the qualifier to the label, or show fewer numbers so each card is wider. Do not shrink the text |
 | `gantt-segment-label` (warning) | A Gantt bar is too narrow for its label: shorten the label, or move the explanation to an `annotation` / row `note` and leave the segment label short or empty |

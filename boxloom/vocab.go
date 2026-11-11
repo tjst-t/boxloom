@@ -56,11 +56,11 @@ type BlockDecl struct {
 func defaultBlocks() []BlockDecl {
 	return []BlockDecl{
 		{Name: "column", Label: "まとまりの題(任意)", Inside: []string{"columns"},
-			Contains: []string{"段落", "箇条", "表", "画像(1枚)", "note"}, Attributes: []string{"role"},
+			Contains: []string{"段落", "箇条", "表", "画像(1枚)", "note", "```chart"}, Attributes: []string{"role"},
 			Meaning: "並列のまとまりの1つ。role=main は主のまとまり(ほかがそれを補う。テンプレートが広く取る)。幅を数で書く口は無い",
 			IR:      "columns.columns[](title・role・body)"},
 		{Name: "columns", Contains: []string{"column"}, MinChildren: 2, Attributes: []string{"variant"},
-			Meaning: "2〜3個のまとまりを並べて読ませる(段組みの指定ではなく「並列」という意味)。画像と文を横に並べるのもこれ",
+			Meaning: "2〜3個のまとまりを並べて読ませる(段組みの指定ではなく「並列」という意味)。画像やグラフと文(読み取り)を横に並べるのもこれ",
 			IR:      "columns"},
 		{Name: "compare", Contains: []string{"option"}, MinChildren: 2, Attributes: []string{"variant"},
 			Meaning: "選択肢の比較", IR: "compare"},

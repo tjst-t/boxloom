@@ -21,7 +21,9 @@ const (
 		"1つの主張だけを見せたいなら主張のスライド(type=statement)にする、のどれかで直してください。" +
 		"空きを埋めるために字や図を大きくしたり、同じことを言い換えて足したりはしないでください"
 	spareWidthHint = "図・画像は縦横比(または横の上限)を保つので、横が空きます。columns に入れて図の横に" +
-		"説明の文を置くか、図を縦に大きく見せられるよう同じスライドの文を減らしてください"
+		"説明の文を置くか(画像と chart はまとまりの中に置けます)、図を縦に大きく見せられるよう同じスライドの文を減らしてください"
+	spareColumnHint = "図(円グラフ・画像)がまとまりの幅を使い切らず、横が空きます。図のまとまりの role=main を外す" +
+		"(文のまとまりを main にする)か、図のまとまりに文を足して縦を使ってください。字や図を大きくはしません"
 	statValueHint = "数と単位はそれぞれ途中で折らないので、カードの幅に入らないと単位が次の行に落ちるか、数がカードからはみ出します。" +
 		"値を短くする(桁を丸める・大きな単位にする)・" +
 		"単位や補足は label に移す・同じ stat の数を減らしてカードを広くする、のどれかで直してください。字は小さくしません"
@@ -60,6 +62,9 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 		case "spare-width":
 			if w.Hint == "" {
 				w.Hint = spareWidthHint
+				if strings.Contains(w.Path, "/columns/") {
+					w.Hint = spareColumnHint
+				}
 			}
 		case "fill-ratio":
 			var s int

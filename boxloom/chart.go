@@ -319,6 +319,11 @@ func (s *ChartSubsystem) geom(width float64) chartGeom {
 		g.min = v.MinPlotHeight + extra
 	}
 	g.nat = math.Max(g.min, width*v.NaturalAspect)
+	if s.Form() == ChartPie {
+		// 円は幅いっぱいの直径(左右に扇の外の名前と値を残す)を自然な高さにする。
+		// 細い枠(並列のまとまりの中)でも円が小さくなりすぎない。
+		g.nat = math.Max(g.min, width-s.pieSide()+2*v.Padding+4*lh)
+	}
 	return g
 }
 
@@ -339,7 +344,38 @@ func (s *ChartSubsystem) Measure(c Constraint) Measurement {
 	if f := s.Form(); f == ChartBar || f == ChartStackedBar {
 		m.Max = Size{Height: g.max}
 	}
+	if s.Form() == ChartPie && c.Height > 0 {
+		// 円は高さで直径が決まり、横には扇の外の名前と値の分しか要らない。
+		// その幅を横の上限にする(余りは切り詰めて Place の側に残し、spare-width で知らせる)。
+		m.Max = Size{Width: s.pieWidth(c.Height)}
+	}
 	return m
+}
+
+// pieWidth は高さ h の枠で円グラフが使う幅:直径(高さから上下の名前と値の2行ずつと
+// 余白を引いたもの)+左右の扇の外の名前・値の幅+余白。円より広い枠は横が空くだけなので、
+// これを横の上限として申告する。
+func (s *ChartSubsystem) pieWidth(h float64) float64 {
+	v, lh := s.vals(), s.lineH()
+	d := math.Max(h-2*v.Padding-4*lh, v.MinPlotHeight)
+	return math.Max(d+s.pieSide(), v.MinWidth)
+}
+
+// pieSide は円の左右に要る幅の合計:扇の外の名前・値(一番広いもの)と引き出しの
+// 隙間を左右に1つずつ+内側の余白。
+func (s *ChartSubsystem) pieSide() float64 {
+	v, lh, fs := s.vals(), s.lineH(), s.fontSize()
+	dec := chartDecimals(s.allValues())
+	lw := 0.0
+	for i, c := range s.Data.Categories {
+		lw = math.Max(lw, runsNaturalWidth(plainRuns(c), fs))
+		for _, se := range s.Data.Series {
+			if i < len(se.Values) {
+				lw = math.Max(lw, runsNaturalWidth(plainRuns(chartFormat(se.Values[i], dec, s.Data.Unit)), fs))
+			}
+		}
+	}
+	return 2*(lw+lh) + 2*v.Padding
 }
 
 // --- 描く ---

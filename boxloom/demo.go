@@ -56,7 +56,12 @@ func renderSpec(ctx RenderContext, s *Spec) {
 		if s.HasRadius {
 			radius = s.Radius
 		}
-		p.AddRect(s.Box, s.Background, radius)
+		bg := s.Box
+		if s.Kind == KindSubsystem && s.Subsystem != nil {
+			// 図の地(カード)は図が使う矩形に合わせる。横・縦の余りは地の外に白く残る。
+			bg = subsystemDrawBox(s)
+		}
+		p.AddRect(bg, s.Background, radius)
 	}
 	switch s.Kind {
 	case KindText:

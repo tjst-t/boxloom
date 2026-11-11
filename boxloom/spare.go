@@ -85,3 +85,61 @@ func spareWidthWarnings(body *Spec, spare map[int]float64, kinds []string) []str
 	}
 	return out
 }
+
+// spareKey は並列のまとまりの中のブロック(本文のブロック・まとまり・まとまりの中のブロック)。
+type spareKey struct{ block, column, inner int }
+
+// columnSpareWidths は並列のまとまり(columns)の中のブロックごとの横の余り。
+// まとまりの中のブロックの幅はまとまりの幅なので、図(グラフ)がまとまりの幅を
+// 使い切らないときの空きになる(余りの無いブロックは入れない)。
+func columnSpareWidths(body *Spec) map[spareKey]float64 {
+	out := map[spareKey]float64{}
+	if body == nil {
+		return out
+	}
+	for i, b := range body.Children {
+		if b.columns == nil {
+			continue
+		}
+		for ci, c := range b.columns.cols {
+			if c.body == nil {
+				continue
+			}
+			for k, inner := range c.body.Children {
+				if w := blockSpareWidth(inner); w > 0 {
+					out[spareKey{i, ci, k}] = w
+				}
+			}
+		}
+	}
+	return out
+}
+
+// columnSpareWarnings は、まとまりの中のブロックの横の余りが、そのブロック(=まとまり)の
+// 幅の spareWidthWarnRatio 以上のものごとに警告の文を1つ作る。
+func columnSpareWarnings(body *Spec, spare map[spareKey]float64) []string {
+	var out []string
+	for i, b := range body.Children {
+		if b.columns == nil {
+			continue
+		}
+		for ci, c := range b.columns.cols {
+			if c.body == nil {
+				continue
+			}
+			for k, inner := range c.body.Children {
+				w, ok := spare[spareKey{i, ci, k}]
+				if !ok || inner.Box.Width <= 0 || w/inner.Box.Width < spareWidthWarnRatio-1e-9 {
+					continue
+				}
+				kind := ""
+				if inner.irType != "" {
+					kind = " (" + inner.irType + ")"
+				}
+				out = append(out, fmt.Sprintf("[SPARE-WIDTH WARNING] body[%d]: columns[%d]: body[%d]: the figure in block%s leaves %.1fpt (%.0f%%) of the column width empty beside it (column width %.1fpt)",
+					i, ci, k, kind, w, 100*w/inner.Box.Width, inner.Box.Width))
+			}
+		}
+	}
+	return out
+}

@@ -575,8 +575,12 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// columnBlockTypes はまとまり(column)の中に置けるブロックの種類。
-var columnBlockTypes = []string{"paragraph", "points", "note", "table", "image"}
+// columnBlockTypes はまとまり(column)の中に置けるブロックの種類。サブシステムは
+// columnSubsystems のものだけ(グラフの横に読み取りを置く形)。
+var columnBlockTypes = []string{"paragraph", "points", "note", "table", "image", "subsystem"}
+
+// columnSubsystems はまとまりの中に置けるサブシステム。
+var columnSubsystems = []string{"chart"}
 
 func (c *IRColumn) UnmarshalJSON(b []byte) error {
 	var v struct {
@@ -601,6 +605,9 @@ func (c *IRColumn) UnmarshalJSON(b []byte) error {
 		}
 		if !contains(columnBlockTypes, blk.Type) {
 			return fmt.Errorf("body[%d]: a column cannot hold a %s block (allowed: %s)", i, blk.Type, strings.Join(columnBlockTypes, ", "))
+		}
+		if blk.Type == "subsystem" && !contains(columnSubsystems, blk.Subsystem) {
+			return fmt.Errorf("body[%d]: a column cannot hold the %s subsystem (allowed: %s)", i, blk.Subsystem, strings.Join(columnSubsystems, ", "))
 		}
 		out.Body = append(out.Body, blk)
 	}
