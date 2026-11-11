@@ -224,10 +224,9 @@ func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, erro
 		}
 		blocks = append(blocks, b)
 	}
-	body := Col(blocks, WithGap(v.BlockGap), WithGrow(1))
 	// 本文の図が自然な大きさのままだとページに入らないとき、題・リード文・出典・
 	// フッターを縮めず、先に本文の図のゆとり(自然〜最小)から返させる。
-	body.nestedSlack = true
+	body := Col(blocks, WithGap(v.BlockGap), WithGrow(1), nestedSlack())
 
 	title := t.text(s.Title, v.SlideTitle, th.c("text_primary"), true, WithPlaceholder("title"))
 	head := title
@@ -383,7 +382,7 @@ func (t *Template) buildBlock(b *IRBlock) (*Spec, error) {
 	}
 	s, err := t.components.build(componentContext{t: t}, b)
 	if s != nil {
-		s.irType = b.Type
+		apply(s, []SpecOpt{markIRType(b.Type)})
 	}
 	return s, err
 }
@@ -406,8 +405,7 @@ func (t *Template) points(items []IRPointItem, depth int) *Spec {
 			kids = append(kids, Row([]*Spec{Col(nil, WithWidth(size*v.PointIndentEm)), t.points(it.Items, depth+1)}))
 		}
 	}
-	col := Col(kids, WithGap(v.ItemGap))
-	col.List = true
+	col := Col(kids, WithGap(v.ItemGap), asList())
 	if depth > 0 {
 		col.Grow, col.Basis = 1, new(float64)
 	}
@@ -429,13 +427,10 @@ func (t *Template) compare(opts []IRCompareOption) *Spec {
 			kids = append(kids, RichTextNode(runs, WithFontSize(v.OptionItem)))
 		}
 		card := Col(kids, WithGap(v.ItemGap), WithPadding(v.CardPadding),
-			WithBackground(th.c("card")), WithRadius(v.CardRadius), WithGrow(1), WithBasis(0))
-		card.card = true
+			WithBackground(th.c("card")), WithRadius(v.CardRadius), WithGrow(1), WithBasis(0), asCard())
 		cards = append(cards, card)
 	}
-	row := Row(cards, WithGap(v.BlockGap))
-	row.cards = "options"
-	return row
+	return Row(cards, WithGap(v.BlockGap), measureCardRow("options"))
 }
 
 // takeaway は本文の中の結論の1文。左にアクセントの帯を置き、カードの色の上に
@@ -444,8 +439,7 @@ func (t *Template) takeaway(in Inline) *Spec {
 	v, th := t.Values, t.Theme
 	// 帯は別の図形のまま(片側だけの枠は DrawingML に無い)。
 	card := Col([]*Spec{t.prose(in, v.TakeawayText, th.c("text_primary"), true)},
-		WithPadding(v.CardPadding), WithBackground(th.c("card")), WithGrow(1), WithBasis(0))
-	card.card = true
+		WithPadding(v.CardPadding), WithBackground(th.c("card")), WithGrow(1), WithBasis(0), asCard())
 	return Row([]*Spec{
 		Col(nil, WithWidth(v.AccentBarWidth), WithBackground(th.c("accent"))),
 		card,
@@ -468,19 +462,15 @@ func (t *Template) stat(items []IRStatItem) *Spec {
 		if it.Unit != "" {
 			num = append(num, TextRun{Text: t.Marks.Unit + it.Unit, Color: th.c("text_primary"), Bold: true, Size: v.StatUnit, Keep: true})
 		}
-		value := RichTextNode(num, WithFontSize(v.StatValue))
-		value.keepLine = fmt.Sprintf("stat: items[%d]", i)
+		value := RichTextNode(num, WithFontSize(v.StatValue), keepLine(fmt.Sprintf("stat: items[%d]", i)))
 		card := Col([]*Spec{
 			value,
 			t.text(it.Label, v.StatLabel, th.c("text_muted"), false),
 		}, WithGap(v.ItemGap), WithPadding(v.CardPadding), WithBackground(th.c("card")), WithRadius(v.CardRadius),
-			WithGrow(1), WithBasis(0))
-		card.card = true
+			WithGrow(1), WithBasis(0), asCard())
 		cards = append(cards, card)
 	}
-	row := Row(cards, WithGap(v.BlockGap))
-	row.cards = "items"
-	return row
+	return Row(cards, WithGap(v.BlockGap), measureCardRow("items"))
 }
 
 // quote は他人の言葉と出どころ。頭に大きなアクセントの色の引用の印を置き、

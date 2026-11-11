@@ -147,6 +147,33 @@ func WithAnchor(v string) SpecOpt          { return func(s *Spec) { s.Anchor = v
 func WithPlace(x, y PlaceAlign) SpecOpt    { return func(s *Spec) { s.Place = Place{X: x, Y: y} } }
 func WithPlaceholder(v string) SpecOpt     { return func(s *Spec) { s.Placeholder = v } }
 
+// --- 計測と書き出しの印(配置の段の語彙。docs/layers.md の2.1) ---
+//
+// 部品はこの語彙だけで印を付け、はみ出しの警告・容量・keepline・PPTX の書き出しは
+// 印を読むだけにする。当面は package の中だけ(公開は後で決める)。
+
+// markIRType は、はみ出しの警告に出す IR のブロックの種類。
+func markIRType(t string) SpecOpt { return func(s *Spec) { s.irType = t } }
+
+// measureColumnGroups は測る単位の印: 並列のまとまりの行で、まとまりごとにはみ出しを測る。
+func measureColumnGroups(info *columnsInfo) SpecOpt { return func(s *Spec) { s.columns = info } }
+
+// measureCardRow は測る単位の印: 横に同じ幅のカードを並べる行で、カードごとの高さを
+// 容量に出す。name は IR の並びの名前("options"・"items")。
+func measureCardRow(name string) SpecOpt { return func(s *Spec) { s.cards = name } }
+
+// keepLine は文字の葉の属性: 1行に収めたい文字。name は警告の文に使う名前。
+func keepLine(name string) SpecOpt { return func(s *Spec) { s.keepLine = name } }
+
+// nestedSlack は箱の属性: 列の中で足りないとき、中の図を文字より先に縮める。
+func nestedSlack() SpecOpt { return func(s *Spec) { s.nestedSlack = true } }
+
+// asList は箱の種類: 箇条(PPTX では項目を1つの文字の枠の段落として書く)。
+func asList() SpecOpt { return func(s *Spec) { s.List = true } }
+
+// asCard は箱の種類: カード(PPTX では地と中の文字を1つの図形として書く)。
+func asCard() SpecOpt { return func(s *Spec) { s.card = true } }
+
 func apply(s *Spec, opts []SpecOpt) *Spec {
 	for _, o := range opts {
 		o(s)

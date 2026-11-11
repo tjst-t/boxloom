@@ -495,8 +495,7 @@ func (t *Template) columns(b *IRBlock) (*Spec, error) {
 			}
 			blocks = append(blocks, s)
 		}
-		body := Col(blocks, WithGap(v.BlockGap), WithGrow(1))
-		body.nestedSlack = true
+		body := Col(blocks, WithGap(v.BlockGap), WithGrow(1), nestedSlack())
 		col := columnInfo{body: body}
 		kids := []*Spec{body}
 		if c.Title != nil {
@@ -511,8 +510,5 @@ func (t *Template) columns(b *IRBlock) (*Spec, error) {
 		info.cols = append(info.cols, col)
 		cols = append(cols, col.spec)
 	}
-	row := Row(cols, WithGap(v.ColumnGap))
-	row.columns = info
-	row.nestedSlack = true
-	return row, nil
+	return Row(cols, WithGap(v.ColumnGap), measureColumnGroups(info), nestedSlack()), nil
 }

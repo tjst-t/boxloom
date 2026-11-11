@@ -211,6 +211,14 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
    部品ごと・check の JSON・schema を記録した sha256 と比べる。
    `boxloom/testdata/outputs-golden.json`)で確かめる。
 2. **計測の印を公開の語彙にする**(2.1 の表)。これも出力は変えない。
+   **済み(#63)。** 印は `boxloom/layout.go` の `SpecOpt` の語彙になった:
+   `markIRType`(はみ出しの警告に出す IR の種類)、測る単位の `measureColumnGroups`
+   (columns のまとまり)・`measureCardRow`(カードの並び。IR の並びの名前つき)、
+   文字の葉の `keepLine`、箱の属性の `nestedSlack`、箱の種類の `asList`・`asCard`。
+   標準の部品はこの語彙だけで印を付け、overflow.go・capacity.go・keepline.go・
+   pptx の書き出しは印を読むだけ(`TestMarksOnlyThroughVocabulary` が layout.go の外で
+   欄に直接書いていないことを確かめる)。当面は package の中だけで、公開はしていない。
+   出力が変わらないことは `TestOutputsGolden` で確かめる(記録は変えていない)。
 3. **最初の追加の部品として `pairs` を作る。** 代わりの組み方つき。どのテンプレートに
    置くか(標準の dark/light か、新しいテンプレートか)は別に決める。
 4. 配置の段をトークンのまま持つ形(値を後で解決する)に替える。
