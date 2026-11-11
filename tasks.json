@@ -648,6 +648,27 @@
       "extra": {}
     },
     {
+      "id": "subsystem-chart",
+      "number": 38,
+      "kind": "task",
+      "title": "数値のグラフ(chart):出し方を決める(本物の c:chart か、図形で描くか)",
+      "status": "backlog",
+      "parent": "canvas-patterns",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "docs/patterns.md の5章の1。Zelazny の5分類(構成比・項目比較・時系列・度数分布・相関)を受ける。案 A:PowerPoint の本物のグラフ(c:chart+埋め込み xlsx。編集できるが、xlsx を依存ゼロで書く手間と、アプリごとの描画の差)。案 B:図形で描く(寸法を制御でき、はみ出しも測れるが、グラフとして編集できない)。推しは A を主に。人が決める。",
+      "doneWhen": "出し方が決まり Memory にあり、LibreOffice と(できれば)Google Slides で試作を開いた見た目を確かめている",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T03:02:37.916Z",
+      "updatedAt": "2026-11-11T03:02:37.916Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "tokens-template",
       "number": 5,
       "kind": "story",
