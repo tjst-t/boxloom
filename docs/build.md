@@ -73,6 +73,77 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 - どちらも、従来の Go で組んだデモ(`go run .`)の出力を変えない(展開して `diff -r` で
   同じことを確かめた)。
 
+## PPTX の検査(tools/validate_pptx.py)
+
+PowerPoint が「修復が必要です」と言う種類の誤りを、人が開く前に機械で捕まえる。
+依存ゼロの Go の本体には入れず、tools/ の Python の道具にした。
+
+```
+python3 tools/fetch_ooxml_schemas.py          # 初回だけ。XSD を tools/.ooxml-schemas/ に取ってくる
+python3 tools/validate_pptx.py out/deck.pptx  # 検査。誤りは5章の形(`--format json` も)
+python3 tools/validate_pptx.py --self-test    # examples を dark/light で作って全部通り、壊したものを断るか
+```
+
+- **XSD**:ECMA-376 の公式の Schema を使う。PowerPoint が書く名前空間
+  (`schemas.openxmlformats.org`)は Transitional なので Part 4(5th edition)の
+  Transitional の XSD、パッケージ(`[Content_Types].xml`・`.rels`)は Part 2 の OPC の
+  XSD。リポジトリには入れず、`fetch_ooxml_schemas.py` が sha256 を確かめて取ってくる
+  (`.gitignore` 済み)。lxml でそのまま読める。`docProps/core.xml` だけは Dublin Core の
+  Schema が要るので、XSD ではなく形を手で見る。
+- **XSD のほかに見ること**:内容の種類の抜け・余り、関係の指す部品の有無と種類、
+  部品の中の `r:id` が関係にあるか、スライドにレイアウトが1つあるかなど要る関係、
+  1つの部品の中の図形の id の重複、コネクタの `a:stCxn`・`a:endCxn` の指す先、
+  `sldId`・`sldMasterId`・`sldLayoutId` の重複と範囲。code の一覧は道具の頭の説明。
+- **別の実装で読めるか**:`--python-pptx` で python-pptx で開き直して全部の文字を読み、
+  `--soffice` で LibreOffice で PDF に変換してページの数がスライドの数と合うかを見る。
+  `--self-test` は python-pptx があれば必ず使う。
+- **自分の試験**:examples の IR・Markdown(警告の例も含む)を dark/light で作った22個と、
+  従来のデモ2枚が全部通ること。それを壊した15通り(XML の誤り・Schema 外の要素と値・
+  部品の削除・内容の種類の抜けと余り・関係の無い r:id・図形の id の重複・コネクタの
+  指す先・スライドの id の重複・レイアウトの無いスライド・種類違いの関係・
+  `[Content_Types].xml` の削除・ノートの雛形の抜け)が、それぞれ決めた code で断られること。
+- **限り**:XSD と参照の整合は見るが、PowerPoint 自身が開けるかは見ていない
+  (PowerPoint だけが嫌う形は捕まらない)。
+
+## CI と検査の道具
+
+手順は `tools/ci.sh` に1つにまとめ、GitHub Actions(`.github/workflows/ci.yml`)も
+ローカルもこれを流す。
+
+```
+sh tools/ci.sh            # go python pptx terms
+sh tools/ci.sh readers    # LibreOffice で読めるか(重いので既定では流さない。CI では別の job)
+```
+
+| 手順 | 中身 |
+|---|---|
+| `go` | `gofmt -l` が空・`go vet`・`go test` |
+| `python` | `validate_ir.py --self-test` と、`boxloom schema` の出力での `--bundle --self-test` |
+| `pptx` | `validate_pptx.py --self-test` |
+| `readers` | `validate_pptx.py --self-test --soffice` |
+| `terms` | `check_terms.py --history`:書いてはいけない語(業務に関わる固有名など) |
+
+**書いてはいけない語**:一覧そのものはリポジトリに書かない。環境変数
+`BOXLOOM_FORBIDDEN_TERMS`(1行1語)で渡し、CI では GitHub の秘密
+`BOXLOOM_FORBIDDEN_TERMS` から渡す。英数字だけの語は単語の境目で、ほかは部分一致で
+照らす。git が追う全部の文字のファイル、PPTX の中の XML、`--history` で全部の
+コミットの文と差分、履歴にある全部の版の PPTX の中まで見る。PNG などの画像の中は
+見ない(圧縮したバイト列が偶然当たるため。実際に以前の PNG で起きた)。当たった語は
+ログに出さず、一覧の何番目かで示す。push のときは一覧が空なら落とし
+(`BOXLOOM_REQUIRE_TERMS=1`)、外からの pull request(秘密が渡らない)では飛ばす。
+
+**入れる道具**(ローカルで流すとき):
+
+```
+# Go 1.24(PATH に go)
+pip install "jsonschema>=4.18" lxml python-pptx
+sudo apt-get install -y libreoffice-impress fonts-noto-cjk   # readers のときだけ
+```
+
+**まだ確かめていないこと**:リモートのリポジトリが無いので、workflow が GitHub の上で
+実際に緑になるかは確かめていない。ローカルで `sh tools/ci.sh go python pptx terms` と
+`readers` が通ることだけ確かめた。
+
 ## まだやっていないこと
 
 - 押せるリンク、`code` の等幅の字体。

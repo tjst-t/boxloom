@@ -123,6 +123,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
 - **意味の中間表現(IR)**:どの記法も JSON の IR に落とし、テンプレートは IR だけを
   見る。Schema は `schema/`(入口 `boxloom-ir.schema.json`)、設計は `docs/ir.md`、
   検査は `python3 tools/validate_ir.py`。
+  できた PPTX の OOXML としての検査は `python3 tools/validate_pptx.py`(ECMA-376 の XSD と
+  参照の整合)。CI の手順は `sh tools/ci.sh`(`.github/workflows/ci.yml` も同じ)。書いては
+  いけない語の検査 `tools/check_terms.py` の一覧はリポジトリに書かず、環境変数・CI の秘密で
+  渡す。詳細は `docs/build.md` の「PPTX の検査」「CI と検査の道具」。
 - **AI に渡す一覧**:`go run . schema [-template 名前]` が、テンプレートが名乗る囲み・
   属性・サブシステムの Schema と、IR の Schema(外を参照しない1つの文書)を1つの
   JSON で出す(`docs/schema-command.md`)。囲みは `Template.Blocks`、サブシステムは

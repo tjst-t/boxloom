@@ -1,0 +1,82 @@
+# Boxloom の CI。中の手順は tools/ci.sh と同じで、ローカルでも `sh tools/ci.sh` で流せる。
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 固有名の検査が履歴全体を見る
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: boxloom/go.mod
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python の道具
+        run: pip install "jsonschema>=4.18" lxml python-pptx
+
+      - name: OOXML の XSD をキャッシュ
+        uses: actions/cache@v4
+        with:
+          path: tools/.ooxml-schemas
+          key: ooxml-schemas-${{ hashFiles('tools/fetch_ooxml_schemas.py') }}
+
+      - name: go(gofmt・vet・test)
+        run: sh tools/ci.sh go
+
+      - name: IR の Schema(validate_ir.py)
+        run: sh tools/ci.sh python
+
+      - name: PPTX の検査(validate_pptx.py)
+        run: sh tools/ci.sh pptx
+
+      - name: 書いてはいけない語
+        # 一覧はリポジトリに書かず、秘密 BOXLOOM_FORBIDDEN_TERMS(1行1語)から渡す。
+        # 外からの pull request には秘密が渡らないので、そのときは一覧が空でも落とさない。
+        env:
+          BOXLOOM_FORBIDDEN_TERMS: ${{ secrets.BOXLOOM_FORBIDDEN_TERMS }}
+          BOXLOOM_REQUIRE_TERMS: ${{ github.event_name == 'push' && '1' || '' }}
+        run: sh tools/ci.sh terms
+
+  readers:
+    # LibreOffice で開けるか(PDF に変換してページの数を比べる)。重いので別の job にする
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: boxloom/go.mod
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 道具
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-impress fonts-noto-cjk
+          pip install lxml python-pptx
+
+      - name: OOXML の XSD をキャッシュ
+        uses: actions/cache@v4
+        with:
+          path: tools/.ooxml-schemas
+          key: ooxml-schemas-${{ hashFiles('tools/fetch_ooxml_schemas.py') }}
+
+      - name: LibreOffice で読めるか
+        run: sh tools/ci.sh readers
