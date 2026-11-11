@@ -1024,7 +1024,7 @@
       "number": 60,
       "kind": "task",
       "title": "Gantt の『枠+上に重ねた文字』の対(群の名前・注釈の箱・注記の箱)を、文字を持つ1つの図形にする",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -1036,7 +1036,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T08:55:52.789Z",
-      "updatedAt": "2026-11-11T08:55:52.789Z",
+      "updatedAt": "2026-11-11T09:11:31.082Z",
       "closedAt": null,
       "extra": {}
     },
