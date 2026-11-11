@@ -156,7 +156,7 @@ func generate(outPath string, th Theme, subtitle string) {
 		fmt.Printf("[%s] content fill ratio: %.1f%%  OK\n", outPath, ratio*100)
 	}
 
-	warnings := lintSubsystemMin(spec)
+	warnings := lintSubsystems(spec)
 	if warning != "" {
 		warnings = append([]string{warning}, warnings...)
 	}

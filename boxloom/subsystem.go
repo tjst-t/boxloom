@@ -172,6 +172,32 @@ func (c *checkedRoles) Missing() []string {
 	return ks
 }
 
+// SubsystemLinter は、描く前に自分の中身を検査できるサブシステムが満たす
+// (任意の interface。満たさなければ検査しない)。box は割り当てられた矩形で、
+// 返す文は警告としてスライドのノートと標準出力に出る。
+type SubsystemLinter interface {
+	Lint(box LBox) []string
+}
+
+// lintSubsystems は、最小の大きさの検査と、各サブシステム自身の検査
+// (SubsystemLinter)をまとめて行う。
+func lintSubsystems(root *Spec) []string {
+	out := lintSubsystemMin(root)
+	var walk func(s *Spec)
+	walk = func(s *Spec) {
+		if s.Kind == KindSubsystem && s.Subsystem != nil {
+			if l, ok := s.Subsystem.(SubsystemLinter); ok {
+				out = append(out, l.Lint(s.Box)...)
+			}
+		}
+		for _, c := range s.Children {
+			walk(c)
+		}
+	}
+	walk(root)
+	return out
+}
+
 // --- 最小の大きさの検査 ---
 
 // lintSubsystemMin は、サブシステムに割り当てた矩形が自己申告の最小の大きさを
