@@ -1258,6 +1258,27 @@
       "updatedAt": "2026-11-11T07:08:10.050Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "chart-component-spare-width",
+      "number": 53,
+      "kind": "bug",
+      "title": "chart:円グラフ(component)で枠の右が大きく空いても spare-width が出ない",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "見本 ai-society(#50)の12枚目。component の円グラフは LibreOffice で枠の左寄りに描かれ、右4割ほどが空く。chart は FixedAspect ではないので spare-width の対象になっていない。円は縦横比が実質固定なので、Measure で自然な幅(円+凡例)を申告して余りを測るか、枠の幅を円に合わせる。PowerPoint では凡例の置き方が違う可能性がある。",
+      "doneWhen": "円グラフの横の余りが spare-width・capacity の remainingWidth に出る(または枠が円に合う)。試験・docs を更新。ci.sh go python pptx が通る。LibreOffice の絵で確かめる。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T07:08:10.143Z",
+      "updatedAt": "2026-11-11T07:08:10.143Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
