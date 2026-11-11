@@ -777,7 +777,7 @@
       "number": 32,
       "kind": "task",
       "title": "方向性の文書をリポジトリに置く(docs/vision.md)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "oss-release-prep",
       "dependsOn": [],
       "milestone": null,
@@ -785,7 +785,7 @@
       "labels": [],
       "body": "出発点(AI の PPT の3種類のひどさ)・トークン・密度の計測・3層の構想・立ち位置・リスクを書く。それぞれに「いまどこまで実装したか」を付ける。業務に関わる固有名は書かない(利用者の例は「SaaS にデータを送れない企業」と一般化する)。他社の製品名は公開情報の範囲でよい。",
       "doneWhen": "docs/vision.md があり、CLAUDE.md から辿れ、固有名の grep に当たらない",
-      "resolution": null,
+      "resolution": "docs/vision.md を書き、CLAUDE.md から辿れるようにした。業務の固有名は git grep で0件。e1713c1。",
       "refs": [],
       "threads": [
         {
@@ -794,8 +794,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:59.118Z",
-      "updatedAt": "2026-11-11T02:59:20.039Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T03:02:37.824Z",
+      "closedAt": "2026-11-11T03:02:37.824Z",
       "extra": {}
     },
     {
