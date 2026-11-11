@@ -146,7 +146,7 @@ Design documents are written in Japanese.
 | [`docs/patterns.md`](docs/patterns.md) | The pattern vocabulary and the rules for choosing one |
 | [`docs/content-syntax.md`](docs/content-syntax.md) | The Markdown dialect |
 | [`docs/ir.md`](docs/ir.md), [`schema/`](schema) | The JSON IR and its JSON Schema |
-| [`docs/subsystem.md`](docs/subsystem.md) | The subsystem interface (Gantt, shapes) |
+| [`docs/subsystem.md`](docs/subsystem.md) | The subsystem interface (Gantt, shapes, process, orgchart, matrix, funnel) |
 | [`docs/template-values.md`](docs/template-values.md), [`docs/fonts.md`](docs/fonts.md) | Templates, scales, fonts and metrics |
 | [`docs/build.md`](docs/build.md), [`docs/library.md`](docs/library.md) | Building PPTX, the Go API |
 | [`CLAUDE.md`](CLAUDE.md) | Design principles in short form |

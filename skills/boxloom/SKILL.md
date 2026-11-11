@@ -129,23 +129,28 @@ Available now (check `boxloom schema` — more may have been added):
 | 1–4 numbers to show strongly, with no series to compare | `::::stat` → `:::value 3 → 12 {unit=models}` + one-line label inside | 5+ numbers or a time series is a chart/table, not stat. The value is written as-is and must contain a digit |
 | Someone else's words | `:::quote Source text` + the words inside | The source (heading text) is required. Never quote your own conclusion |
 | One sentence to emphasise inside a normal slide | `:::takeaway` + one sentence | At most one per slide, usually last |
-| Two or more options, each with pros and cons | `:::compare` → `:::option` → `:::pros` / `:::cons` | If 3+ shared criteria apply to every option, a matrix/table fits better (see below) |
+| Rows × columns where every cell is a rating (supported / conditional / not / risk) | ```` ```matrix ```` | `columns: [A, B]`, `rows: [{label, cells: [{status, text?}]}]`, optional `legend: {support: Good}`. One cell per column (`matrix-cells`). Cells that are plain text or numbers are a table, not a matrix |
+| 3–7 steps without dates, in a direction (the output of one is the input of the next) | ```` ```process ```` | `steps: [{title, detail?, status?, emphasis?}]`, optional `caption`. Numbers (1. 2. …) and arrows are added for you; long processes wrap to a second row |
+| Two or more options, each with pros and cons | `:::compare` → `:::option` → `:::pros` / `:::cons` | If 3+ shared criteria apply to every option, a matrix fits better (above) |
+| A parent with children (and grandchildren): team set-up, ownership | ```` ```orgchart ```` | `root: {title, detail?}`, `units: [{title, detail?, members: [{title, detail?}]}]`. 3 levels max. Not for unrelated teams side by side |
+| Stages whose count shrinks (visits → sign-ups → paid) | ```` ```funnel ```` | `stages: [{label, value, note?}]`, optional `unit`. `value` is a number or text; bar widths are stepped, not proportional. Values that grow are warned (`funnel-increase`) — use `process` for plain steps |
 | A dated plan, periods, deadlines, statuses over time | ```` ```gantt ```` | States are `support`, `conditional`, `none`, `danger` (roles, not colors). Hardware/support-risk periods are a group `risk: A .. B`. Annotations point at a group/row `id` via `target`; the subsystem places them |
 | Parallel points | bullets | 2 levels max |
 | Connected prose | paragraph | 2–3 sentences |
 | A caveat / footnote-like remark | `:::note` | One short line |
 | A diagram whose positions/links carry meaning and none of the above fits | ```` ```shapes ```` | **Last resort**, see §3.1 |
 
+In all four figures above you write only text, `status` (`support`, `conditional`,
+`none`, `danger`) and `emphasis: true`; position, size and colour come from the template.
+
 Patterns described in `docs/patterns.md` but **not in the schema yet** (columns,
-table, image, process, orgchart, matrix, funnel, chart) are errors until `boxloom schema` lists them. When the schema lists
+table, image, chart) are errors until `boxloom schema` lists them. When the schema lists
 them, prefer them in the order of `docs/patterns.md` §4 (R1–R14).
 
 Until then:
 
 - A short number series → bullets with the numbers, or a `gantt` if the values are
   dated periods. Do not draw charts with `shapes`.
-- Steps without dates → numbered bullets (`1. `) unless the flow between steps is the
-  point, in which case `shapes` is allowed (§3.1).
 
 Example of the text patterns (full deck: `examples/md/text-patterns.bx.md`):
 
@@ -283,7 +288,7 @@ Targets that read well (not hard limits):
 - One message per slide; the title states it.
 - 3–6 bullets per list, each ≤ 1 line (≤ ~40 CJK / ~70 Latin characters is comfortable).
 - `compare`: 2–3 options, 1–3 pros and 1–3 cons each, each ≤ 1 column line.
-- A slide with a figure (`gantt`, `shapes`) gets at most 1–2 short lines of text
+- A slide with a figure (`gantt`, `process`, `orgchart`, `matrix`, `funnel`, `shapes`) gets at most 1–2 short lines of text
   besides the figure.
 - `fill-ratio` warns when less than 65% of the body is used. A slide with only text
   needs about 13 lines to pass, so **short text slides (3–6 bullets, one `compare`)
@@ -333,10 +338,13 @@ Fixes by code:
 | `target-exists`, `unique-id` | `target`/connector ends must name an existing `id`; ids are unique across the whole deck |
 | `template-values` | The custom template file (`-template ./my.json`) is invalid: the `file`/`line`/`path` point into that file, not your deck. Fix the template or use a bundled one |
 | `shape-bounds`, `role-exists`, `connector-self` | `shapes`: keep within 0–1, use theme role names, connect two different shapes |
+| `matrix-cells` | `matrix`: give every row exactly one cell per column |
 | `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently |
 | `fill-ratio` (warning) | Slide is mostly empty: merge with a neighbour, add the missing figure or evidence, or keep it if it is a deliberate one-line message |
 | `gantt-segment-label` (warning) | A Gantt bar is too narrow for its label: shorten the label, or move the explanation to an `annotation` / row `note` and leave the segment label short or empty |
 | `shapes-overlap`, `shapes-text-overflow`, `annotation-overlap`, `subsystem-min` (warnings) | Move/enlarge shapes, shorten text, or give the figure its own slide |
+| `figure-text-overflow` (warning) | A `process`/`orgchart`/`matrix`/`funnel` box cannot hold its text (an unbreakable word is too wide, or the figure got too little height): shorten the text or give the figure its own slide |
+| `funnel-increase` (warning) | A funnel value grows: check the numbers, or use `process` if the stages do not shrink |
 
 ### Splitting an overflowing slide
 
