@@ -131,7 +131,8 @@ type orgGeom struct {
 	rootX, rootW float64
 	unitX, unitW []float64
 	memberX      [][]float64
-	memberW      float64
+	memberW      float64   // 3段目の箱のもとの幅(全部の列で同じ)
+	memberWs     []float64 // 列ごとの3段目の箱の幅(泣き別れを避けて広げた後)
 	needRoot     float64
 	needUnit     float64
 	needMember   float64
@@ -171,16 +172,35 @@ func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
 	margin := math.Max(0, inner-used) / float64(U) / 2
 	x := x0
 	g.unitX, g.unitW, g.memberX = make([]float64, U), make([]float64, U), make([][]float64, U)
+	g.memberWs = make([]float64, U)
 	for i, u := range s.Data.Units {
 		x += margin
 		g.unitW[i] = math.Min(colW[i], v.MaxUnitW)
+		// 題が泣き別れ(「欧州 AI 委員 / 会」)になるなら、列の両側の余りの中で箱を広げる
+		// (上限は maxUnitWidth。隣の列との間は unitGap のまま)。
+		limit := math.Min(colW[i]+2*margin, v.MaxUnitW)
+		g.unitW[i] = nodeComfortWidth(&u.FigureNode, tx.Title, tx.Sub, g.unitW[i], limit, s.boxValues("rect"))
 		g.unitX[i] = x + (colW[i]-g.unitW[i])/2
-		for j := range u.Members {
-			g.memberX[i] = append(g.memberX[i], x+float64(j)*(g.memberW+v.MemberGap))
+		// 3段目も同じ。列の箱は揃えて同じ幅にし、列の余りを箱の数で分けた分まで広げる
+		// (maxMemberWidth を越えてよいのはこのときだけ)。列の真ん中は動かさない。
+		mw := g.memberW
+		if k := float64(len(u.Members)); k > 0 {
+			limit := g.memberW + 2*margin/k
+			for j := range u.Members {
+				mw = math.Max(mw, nodeComfortWidth(&u.Members[j], tx.Sub, tx.Detail, g.memberW, limit, s.boxValues("roundRect")))
+			}
+			span := k*mw + (k-1)*v.MemberGap
+			start := x + (colW[i]-span)/2
+			for j := range u.Members {
+				g.memberX[i] = append(g.memberX[i], start+float64(j)*(mw+v.MemberGap))
+			}
 		}
+		g.memberWs[i] = mw
 		x += colW[i] + margin + v.UnitGap
 	}
 	g.rootW = math.Min(inner, v.MaxRootW)
+	// root も泣き別れなら内側の幅まで広げる(同じ段にほかの箱は無い)。
+	g.rootW = nodeComfortWidth(&s.Data.Root, tx.Title, tx.Sub, g.rootW, inner, s.boxValues("rect"))
 	g.rootX = x0 + (inner-g.rootW)/2
 
 	_, g.needRoot = nodeTextSize(&s.Data.Root, tx.Title, tx.Sub, g.rootW, s.boxValues("rect"))
@@ -189,7 +209,7 @@ func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
 		_, h := nodeTextSize(&u.FigureNode, tx.Title, tx.Sub, g.unitW[i], s.boxValues("rect"))
 		g.needUnit = math.Max(g.needUnit, h)
 		for j := range u.Members {
-			_, h := nodeTextSize(&u.Members[j], tx.Sub, tx.Detail, g.memberW, s.boxValues("roundRect"))
+			_, h := nodeTextSize(&u.Members[j], tx.Sub, tx.Detail, g.memberWs[i], s.boxValues("roundRect"))
 			g.needMember = math.Max(g.needMember, h)
 		}
 	}
@@ -250,7 +270,7 @@ func (s *OrgChartSubsystem) place(box LBox) *orgPlaced {
 		pl.units = append(pl.units, LBox{X: box.X + g.unitX[i], Y: y[orgPartUnit], Width: g.unitW[i], Height: sizes[orgPartUnit]})
 		var ms []LBox
 		for j := range u.Members {
-			ms = append(ms, LBox{X: box.X + g.memberX[i][j], Y: y[orgPartMem], Width: g.memberW, Height: sizes[orgPartMem]})
+			ms = append(ms, LBox{X: box.X + g.memberX[i][j], Y: y[orgPartMem], Width: g.memberWs[i], Height: sizes[orgPartMem]})
 		}
 		pl.members = append(pl.members, ms)
 	}

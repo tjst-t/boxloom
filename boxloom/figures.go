@@ -196,6 +196,65 @@ func nodeNaturalWidth(n *FigureNode, titleSize, detailSize float64, fv figureBox
 	return w + 2*fv.insetX
 }
 
+// orphanRunes は、折り返した段落の最後の行がこの文字数(空白を除く)以下なら
+// 泣き別れ(「欧州 AI 委員 / 会」の「会」)とみなす数。
+const orphanRunes = 2
+
+// nodeOrphans は箱の幅 w で折り返したとき、題と補足の段落のうち最後の行が
+// 泣き別れになるものの数。
+func nodeOrphans(n *FigureNode, titleSize, detailSize, w float64, fv figureBoxValues) int {
+	inner := w - 2*fv.insetX
+	count := func(in Inline, size float64) int {
+		if len(in) == 0 {
+			return 0
+		}
+		orphans := 0
+		// 段落("\n" で分けたもの)ごとに、2行以上に折り返して最後の行が短いかを見る。
+		var paras [][]string
+		if plain := in.Plain(); !strings.Contains(plain, "\n") {
+			var lines []string // 太字も文字ごとに測る
+			for _, l := range wrapRuns(itemRuns(in, "", nil), size, math.Max(inner, 0)) {
+				lines = append(lines, runsText(l))
+			}
+			paras = [][]string{lines}
+		} else {
+			for _, p := range strings.Split(plain, "\n") {
+				paras = append(paras, wrapText(p, size, math.Max(inner, 0), false))
+			}
+		}
+		for _, lines := range paras {
+			if len(lines) < 2 {
+				continue
+			}
+			last := []rune(strings.TrimSpace(lines[len(lines)-1]))
+			k := 0
+			for _, r := range last {
+				if r != ' ' && r != '\t' {
+					k++
+				}
+			}
+			if k <= orphanRunes {
+				orphans++
+			}
+		}
+		return orphans
+	}
+	return count(n.Title, titleSize) + count(n.Detail, detailSize)
+}
+
+// nodeComfortWidth は箱の幅を w から limit までの間で広げ、泣き別れの段落が
+// 一番少なくなる一番狭い幅を返す(1pt 刻み)。泣き別れが無ければ w のまま。
+// 隣の箱と重ならない幅(limit)は呼ぶ側が決める。
+func nodeComfortWidth(n *FigureNode, titleSize, detailSize, w, limit float64, fv figureBoxValues) float64 {
+	best, bestN := w, nodeOrphans(n, titleSize, detailSize, w, fv)
+	for x := math.Floor(w) + 1; bestN > 0 && x <= limit; x++ {
+		if k := nodeOrphans(n, titleSize, detailSize, x, fv); k < bestN {
+			best, bestN = x, k
+		}
+	}
+	return best
+}
+
 // nodeMinWidth は箱の文の一番長い語が収まる箱の幅。
 func nodeMinWidth(n *FigureNode, titleSize, detailSize float64, fv figureBoxValues) float64 {
 	w := runsMinWidth(itemRuns(n.Title, "", nil), titleSize)
