@@ -518,7 +518,7 @@ func SaveDeck(path string, slides []*PPTXBuilder, title string) error {
 	if hasNotes {
 		notesMaster := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:notesMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>` + notesMasterPlaceholders(p.WidthPt, p.HeightPt) + `</p:spTree></p:cSld>
 <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
 </p:notesMaster>`
 		notesMasterRels := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -576,13 +576,14 @@ func writeSlide(write func(name, content string) error, num int, p *PPTXBuilder)
 <p:notes xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
 <p:cSld><p:spTree>
 <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>
+<p:sp><p:nvSpPr><p:cNvPr id="3" name="Slide Image Placeholder"/><p:cNvSpPr><a:spLocks noGrp="1" noRot="1" noChangeAspect="1"/></p:cNvSpPr><p:nvPr><p:ph type="sldImg"/></p:nvPr></p:nvSpPr><p:spPr/></p:sp>
 <p:sp><p:nvSpPr><p:cNvPr id="2" name="Notes Placeholder"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
 <p:spPr/>
-<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>%s</a:t></a:r></a:p></p:txBody>
+<p:txBody><a:bodyPr/><a:lstStyle/>%s</p:txBody>
 </p:sp>
 </p:spTree></p:cSld>
 <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
-</p:notes>`, escapeXML(p.Notes))
+</p:notes>`, notesParagraphs(p.Notes))
 	notesSlideRels := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster" Target="../notesMasters/notesMaster1.xml"/>
@@ -593,4 +594,34 @@ func writeSlide(write func(name, content string) error, num int, p *PPTXBuilder)
 		return err
 	}
 	return write(fmt.Sprintf("ppt/notesSlides/_rels/notesSlide%d.xml.rels", num), notesSlideRels)
+}
+
+// notesParagraphs はノートの文を改行ごとに1段落にする(空の行は空の段落)。
+func notesParagraphs(text string) string {
+	var b strings.Builder
+	for _, line := range strings.Split(text, "\n") {
+		if line == "" {
+			b.WriteString(`<a:p><a:endParaRPr lang="ja-JP"/></a:p>`)
+			continue
+		}
+		b.WriteString(`<a:p><a:r><a:t>` + escapeXML(line) + `</a:t></a:r></a:p>`)
+	}
+	return b.String()
+}
+
+// notesMasterPlaceholders はノートのページ(縦長。幅=スライドの高さ、高さ=スライドの幅)
+// に、上にスライドの縮図・下にノートの文の置き場を置く。これが無いと LibreOffice の
+// ノートのページに何も出ない。
+func notesMasterPlaceholders(slideW, slideH float64) string {
+	pageW, pageH := slideH, slideW
+	imgW := pageW * 0.84
+	imgH := imgW * slideH / slideW
+	x := (pageW - imgW) / 2
+	y := pageH * 0.07
+	bodyY := y + imgH + pageH*0.04
+	bodyH := pageH*0.95 - bodyY
+	return fmt.Sprintf(`<p:sp><p:nvSpPr><p:cNvPr id="2" name="Slide Image Placeholder"/><p:cNvSpPr><a:spLocks noGrp="1" noRot="1" noChangeAspect="1"/></p:cNvSpPr><p:nvPr><p:ph type="sldImg"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:sp>`+
+		`<p:sp><p:nvSpPr><p:cNvPr id="3" name="Notes Placeholder"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="body" sz="quarter" idx="1"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="ja-JP"/></a:p></p:txBody></p:sp>`,
+		ptToEMU(x), ptToEMU(y), ptToEMU(imgW), ptToEMU(imgH),
+		ptToEMU(x), ptToEMU(bodyY), ptToEMU(imgW), ptToEMU(bodyH))
 }

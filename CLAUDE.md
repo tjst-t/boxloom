@@ -172,7 +172,8 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     `Issue`(`docs/content-syntax.md` の5章。IR を直接検査したときは行と列を省く)
   - `markdown.go` / `md_gantt.go` / `yaml.go` = Boxloom Markdown → IR の
     パーサー(YAML の部分集合も自前)。`go run . parse deck.bx.md`、`build` は
-    `.md` もそのまま受け取る。詳細は `docs/content-syntax.md` の8章
+    `.md` もそのまま受け取る。詳細は `docs/content-syntax.md` の8章。
+    発表者ノートは `:::notes`(`md_notes.go`、3.6)→ IR の `notes` → PPTX のノート
   - `main.go` = デモコンテンツとfill-ratioリンター(本物の
     `content_fill_ratio()`/`lint_fill_ratio()`の移植)。`go build .` →
     `./boxloom` で `out/` 配下に `boxloom_dark.pptx`/`boxloom_light.pptx`

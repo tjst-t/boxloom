@@ -380,7 +380,7 @@
       "additionalProperties": false
     },
     "notes": {
-      "description": "発表者ノート(スライドには出ない)。",
+      "description": "発表者ノート(スライドには出ない)。文字だけの文字列で、改行が段落の区切り。",
       "type": "string"
     },
     "block": {

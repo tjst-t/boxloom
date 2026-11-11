@@ -1,7 +1,9 @@
 package main
 
 import (
+	"archive/zip"
 	"encoding/json"
+	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -39,6 +41,7 @@ func TestMarkdownExamplesMatchIR(t *testing.T) {
 	pairs := [][2]string{
 		{"../examples/md/demo-deck.bx.md", "../examples/ir/demo-deck.json"},
 		{"../examples/md/gantt-full.bx.md", "../examples/ir/gantt-full.json"},
+		{"../examples/md/speaker-notes.bx.md", "../examples/ir/speaker-notes.json"},
 	}
 	for _, pr := range pairs {
 		src, err := os.ReadFile(pr[0])
@@ -168,6 +171,14 @@ func TestMarkdownErrors(t *testing.T) {
 		{"fm yes", "---\ntitle: T\ncover: yes\n---\n# A\n", codeInvalidValue, 3},
 		{"note two paras", "# A\n:::note\na\n\nb\n:::\n", codeMisplaced, 5},
 		{"no slides", "\n", codeMisplaced, 1},
+		{"notes twice", "# A\n:::notes\na\n:::\n:::notes\nb\n:::\n", codeMisplaced, 5},
+		{"notes nested", "# A\n::::note\n:::notes\na\n:::\n::::\n", codeMisplaced, 3},
+		{"notes empty", "# A\n:::notes\n:::\n", codeMisplaced, 2},
+		{"notes label", "# A\n:::notes 話すこと\na\n:::\n", codeMisplaced, 2},
+		{"notes attr", "# A\n:::notes {variant=x}\na\n:::\n", codeUnknownAttribute, 2},
+		{"notes code", "# A\n:::notes\n```gantt\nspan: 2026-01 .. 2027-01\n```\n:::\n", codeMisplaced, 3},
+		{"notes html", "# A\n:::notes\n<b>x</b>\n:::\n", codeRawHTML, 3},
+		{"cover notes no cover", ":::notes\na\n:::\n# A\n", codeMisplaced, 1},
 	}
 	for _, c := range cases {
 		_, errs := ParseMarkdown([]byte(c.src), "t.bx.md")
@@ -276,5 +287,75 @@ func TestSpecExampleIsTheExampleFile(t *testing.T) {
 	}
 	if ex != string(md) {
 		t.Fatal("the spec example and examples/md/demo-deck.bx.md differ")
+	}
+}
+
+// :::notes はスライドの notes(文字だけ)になり、本文には入らない。
+func TestSpeakerNotes(t *testing.T) {
+	src := "---\ntitle: T\n---\n:::notes\n表紙で話す\n:::\n# A\n本文\n\n:::notes\n**強調** と `x`\\\n次の行\n\n- 項目\n  - 子\n:::\n"
+	v, errs := mdToAny(t, src)
+	if len(errs) > 0 {
+		t.Fatal(MarkdownErrors(errs))
+	}
+	slides := v.(map[string]any)["slides"].([]any)
+	if got := slides[0].(map[string]any)["notes"]; got != "表紙で話す" {
+		t.Errorf("cover notes = %q", got)
+	}
+	s1 := slides[1].(map[string]any)
+	if got, want := s1["notes"], "強調 と x\n次の行\n- 項目\n  - 子"; got != want {
+		t.Errorf("notes = %q, want %q", got, want)
+	}
+	if n := len(s1["body"].([]any)); n != 1 {
+		t.Errorf("body has %d blocks, want 1", n)
+	}
+	_, _, lines := ParseMarkdownWithMap([]byte(src), "t.bx.md")
+	if l := lines.Line("/slides/1/notes"); l != 10 {
+		t.Errorf("notes line = %d, want 10", l)
+	}
+}
+
+// ノートは1行ずつ段落になり、ノートのページにはスライドの縮図と文の置き場がある。
+func TestSpeakerNotesPPTX(t *testing.T) {
+	d, err := readDeck("../examples/md/speaker-notes.bx.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tm, err := LookupTemplate(d.Template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := t.TempDir() + "/n.pptx"
+	if _, err := tm.RenderDeck(d, out); err != nil {
+		t.Fatal(err)
+	}
+	zr, err := zip.OpenReader(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer zr.Close()
+	read := func(name string) string {
+		for _, f := range zr.File {
+			if f.Name == name {
+				r, _ := f.Open()
+				b, _ := io.ReadAll(r)
+				r.Close()
+				return string(b)
+			}
+		}
+		t.Fatalf("%s not found", name)
+		return ""
+	}
+	ns := read("ppt/notesSlides/notesSlide2.xml")
+	for _, want := range []string{"<a:t>第1段階の「5 人」は目安。</a:t>", "<a:t>  - 見た目より流れを確かめる</a:t>"} {
+		if !strings.Contains(ns, want) {
+			t.Errorf("notesSlide2 lacks %s", want)
+		}
+	}
+	if !strings.Contains(read("ppt/notesSlides/notesSlide1.xml"), "挨拶のあと") {
+		t.Error("cover notes missing")
+	}
+	nm := read("ppt/notesMasters/notesMaster1.xml")
+	if !strings.Contains(nm, `type="sldImg"`) || !strings.Contains(nm, `type="body"`) {
+		t.Error("notes master lacks placeholders")
 	}
 }

@@ -190,8 +190,9 @@ type mdSlide struct {
 }
 
 type mdDoc struct {
-	fm     *yNode
-	slides []*mdSlide
+	fm         *yNode
+	slides     []*mdSlide
+	coverNotes []*mdFenceBlk // 最初のスライドより前の :::notes(表紙のノート)
 }
 
 // --- 行ごとの読み取り ---
@@ -253,7 +254,7 @@ var (
 
 // 囲みの名前。
 var (
-	knownFences   = []string{"compare", "cons", "note", "option", "pros"}
+	knownFences   = []string{"compare", "cons", "note", "notes", "option", "pros"}
 	plannedFences = map[string]bool{"takeaway": true, "columns": true, "column": true}
 )
 
@@ -358,6 +359,10 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 	}
 	add := func(it *mdItem) {
 		c := container()
+		if c == nil && it.kind == mdFence && it.fence.name == "notes" {
+			doc.coverNotes = append(doc.coverNotes, it.fence)
+			return
+		}
 		if c == nil {
 			if !orphanReported {
 				p.fail(it.line, 1, "", codeMisplaced, "最初のスライド(# 題)より前に本文があります", nil, "本文の前に「# 題」の行を置いてください")
@@ -955,7 +960,13 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 	var slides []any
 	if cover && meta != nil {
 		p.mark("/slides/0", doc.fm.line)
-		slides = append(slides, obj("type", "cover"))
+		c := obj("type", "cover")
+		if n, ok := p.notesText(doc.coverNotes, "/slides/0/notes"); ok {
+			c.set("notes", n)
+		}
+		slides = append(slides, c)
+	} else if len(doc.coverNotes) > 0 {
+		p.fail(doc.coverNotes[0].line, 1, "", codeMisplaced, "最初のスライド(# 題)より前の :::notes は表紙のノートですが、表紙がありません", nil, "スライドのノートなら「# 題」の行の後ろに置いてください")
 	}
 	for _, s := range doc.slides {
 		path := fmt.Sprintf("/slides/%d", len(slides))
@@ -968,7 +979,11 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 			}
 		}
 		sl.set("title", p.parseInline(s.title, path+"/title"))
-		sl.set("body", p.blocks(s.items, path+"/body"))
+		body, notes := splitNotes(s.items)
+		sl.set("body", p.blocks(body, path+"/body"))
+		if n, ok := p.notesText(notes, path+"/notes"); ok {
+			sl.set("notes", n)
+		}
 		slides = append(slides, sl)
 	}
 	if len(slides) == 0 {
@@ -1162,6 +1177,9 @@ func (p *mdParser) fenceBlock(f *mdFenceBlk, path string) any {
 		}
 		b.set("content", p.parseInline(para.text.trimBR(), path+"/content"))
 		return b
+	case f.name == "notes":
+		p.fail(f.line, 1, path, codeMisplaced, "発表者ノート(:::notes)はスライドの一番外側にだけ書けます", nil, "ほかの囲みの外に出してください")
+		return nil
 	case f.name == "option" || f.name == "pros" || f.name == "cons":
 		where := ":::compare の中の :::option"
 		if f.name == "option" {

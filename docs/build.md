@@ -15,7 +15,10 @@ go run .                                                      # 従来の Go で
 - 誤りは IR の中の場所を添えて止まる(例 `slides[2]: body[0]: gantt: ticks[0].status:
   unknown status "text_primary"`)。`examples/ir/invalid/` の9件は全部ここで断られる。
 - 警告(本文の埋まり具合・本文のはみ出し・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名)は
-  標準出力と、そのスライドのノートに書く。
+  標準出力と、そのスライドのノートに書く(IR の `notes` があればその後ろに続ける)。
+- IR の `notes`(発表者ノート)は、改行ごとに1段落でそのスライドのノートに入る。
+  ノートのページにはスライドの縮図と文の置き場を置く(LibreOffice のノートの
+  ページでも見える)。
 - 書き出さずに検査だけするなら `go run . check deck.json`(`.bx.md` も可。誤りと
   警告を `docs/content-syntax.md` の5章の形で出す。`-format json` で JSON。
   `docs/ir.md` の「意味の検査」)。
