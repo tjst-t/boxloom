@@ -166,6 +166,8 @@ func DefaultSubsystems() *SubsystemRegistry {
 	r := NewSubsystemRegistry()
 	must(r.Register("gantt", NewGanttSubsystem))
 	must(r.Declare("gantt", ganttDecl()))
+	must(r.Register("shapes", NewShapesSubsystem))
+	must(r.Declare("shapes", shapesDecl()))
 	return r
 }
 

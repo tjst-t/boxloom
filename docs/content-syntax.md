@@ -175,6 +175,25 @@ groups: …
   文字列(`|` `>`)は誤り。値の中に「: 」を書くときは `"…"` で囲む。
 - コードブロックの言語名の後ろに `{variant=名前}` を書ける(IR のサブシステムの
   `variant`)。
+- **```shapes**(生の図形への逃げ道。既存のパターンで表せない図のときだけ使う最後の手段。
+  `docs/subsystem.md` の8節)も同じ作り。中身は IR の shapes の `data` と同じキー。
+  座標と大きさは引用しない数(0〜1)、線の点は流れの書き方の列(`from: [0.1, 0.5]`)、
+  色は役割名、文字の大きさは `textStyle` の段の名前で書く。
+
+  ````
+  ```shapes
+  aspect: 2.6
+  items:
+    - {id: web, kind: roundRect, x: 0.22, y: 0.38, w: 0.15, h: 0.24, text: Web 層, line: accent}
+    - {id: api, kind: rect, x: 0.44, y: 0.38, w: 0.15, h: 0.24, text: API 層, fill: accent, textColor: on_conditional}
+    - {kind: connector, from: web, to: api, arrow: true}
+  ```
+  ````
+
+  パーサーが断るのは形の誤り(知らないキー・0〜1 の外・引用した数・16進の色・知らない
+  段)だけ。`x+w` が 1 を超える・テーマに無い役割名・無い id へのコネクタは
+  `boxloom check` が、図形やキーの行と code(`shape-bounds`・`role-exists`・
+  `target-exists`)で返す。例は `examples/md/shapes.bx.md`(↔ `examples/ir/shapes.json`)。
 - サブシステムの名前でないコードブロック(` ```go ` など)と言語名の無い
   コードブロックは、**いまは誤り(予定)**。IR 第一版にコードのブロックが無いため
   (冒頭の「食い違ったら IR を正とする」)。IR にコードのブロックが入ったら、
@@ -363,6 +382,8 @@ go run . build ../examples/md/demo-deck.bx.md            # .md もそのまま P
   書けないもの。例 `:::option` を `:::compare` の外に書いた)・`unknown-key`・
   `missing-key`・`invalid-value`(YAML と文書の頭の値)・`yaml`(YAML の部分集合の外)・
   `schema`(できた IR が通らない。ふつうは起きない)。
+- shapes のコードブロックは、YAML の形の検査だけをする(サブシステム自身には読ませない。
+  意味の誤りは `boxloom check` が図形の行つきで返す)。
 - Gantt のコードブロックは、YAML の検査が通ったあと Gantt サブシステム自身にも
   読ませる。Schema では書けない誤り(`target` の行き先が無い・id の重複・範囲の
   前後)もここで見つかる(このときの `line` はコードブロックの開きの行)。

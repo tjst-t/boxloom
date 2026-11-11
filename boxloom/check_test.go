@@ -38,13 +38,16 @@ func TestCheckReportsBuildWarnings(t *testing.T) {
 // check-invalid/ の例は、ファイルごとに決まった rule の誤りがちょうど1件出る。
 func TestCheckInvalidSemanticExamples(t *testing.T) {
 	want := map[string]struct{ rule, at string }{
-		"date-order.json":       {"date-order", "/slides/2/body/0/data/groups/0/rows/1/segments/0"},
-		"duplicate-id.json":     {"unique-id", "/slides/0/body/0/data/groups/1/rows/1/id"},
-		"not-a-real-date.json":  {"date-valid", "/slides/2/body/0/data/milestones/0/at"},
-		"outside-span.json":     {"within-span", "/slides/2/body/0/data/milestones/0/at"},
-		"unknown-target.json":   {"target-exists", "/slides/2/body/0/data/annotations/0/target"},
-		"unknown-template.json": {"template-exists", "/template"},
-		"unknown-variant.json":  {"variant-exists", "/slides/1/variant"},
+		"date-order.json":               {"date-order", "/slides/2/body/0/data/groups/0/rows/1/segments/0"},
+		"duplicate-id.json":             {"unique-id", "/slides/0/body/0/data/groups/1/rows/1/id"},
+		"not-a-real-date.json":          {"date-valid", "/slides/2/body/0/data/milestones/0/at"},
+		"outside-span.json":             {"within-span", "/slides/2/body/0/data/milestones/0/at"},
+		"shapes-out-of-frame.json":      {"shape-bounds", "/slides/1/body/1/data/items/6/w"},
+		"shapes-unknown-connector.json": {"target-exists", "/slides/1/body/1/data/items/12/to"},
+		"shapes-unknown-role.json":      {"role-exists", "/slides/1/body/1/data/items/7/fill"},
+		"unknown-target.json":           {"target-exists", "/slides/2/body/0/data/annotations/0/target"},
+		"unknown-template.json":         {"template-exists", "/template"},
+		"unknown-variant.json":          {"variant-exists", "/slides/1/variant"},
 	}
 	files, _ := filepath.Glob("../examples/ir/check-invalid/*.json")
 	if len(files) != len(want) {

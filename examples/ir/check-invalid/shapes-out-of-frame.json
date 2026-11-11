@@ -1,0 +1,193 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "図形の逃げ道(shapes)の例",
+    "subtitle": "既存のパターンで表せない図だけを、枠の中で描く",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "架空のシステム構成",
+      "body": [
+        {
+          "type": "paragraph",
+          "content": [
+            "要求は ",
+            {
+              "type": "em",
+              "content": "Web 層"
+            },
+            " から API 層に入り、認証・データベース・集計ジョブへ分かれる。"
+          ]
+        },
+        {
+          "type": "subsystem",
+          "subsystem": "shapes",
+          "data": {
+            "aspect": 2.6,
+            "items": [
+              {
+                "kind": "text",
+                "x": 0,
+                "y": 0,
+                "w": 0.4,
+                "h": 0.1,
+                "text": "架空の構成(説明用)",
+                "color": "text_muted"
+              },
+              {
+                "kind": "text",
+                "x": 0.7,
+                "y": 0,
+                "w": 0.3,
+                "h": 0.1,
+                "text": "内部のサービス",
+                "color": "text_muted"
+              },
+              {
+                "kind": "line",
+                "from": [
+                  0.665,
+                  0.02
+                ],
+                "to": [
+                  0.665,
+                  0.98
+                ],
+                "color": "grid"
+              },
+              {
+                "id": "client",
+                "kind": "roundRect",
+                "x": 0,
+                "y": 0.38,
+                "w": 0.15,
+                "h": 0.24,
+                "text": "利用者の端末",
+                "textStyle": "body",
+                "line": "grid"
+              },
+              {
+                "id": "web",
+                "kind": "roundRect",
+                "x": 0.22,
+                "y": 0.38,
+                "w": 0.15,
+                "h": 0.24,
+                "text": "Web 層",
+                "textStyle": "body",
+                "line": "accent"
+              },
+              {
+                "id": "api",
+                "kind": "rect",
+                "x": 0.44,
+                "y": 0.38,
+                "w": 0.15,
+                "h": 0.24,
+                "text": "API 層",
+                "textStyle": "body",
+                "fill": "accent",
+                "textColor": "on_conditional"
+              },
+              {
+                "id": "auth",
+                "kind": "rect",
+                "x": 0.72,
+                "y": 0.12,
+                "w": 0.3,
+                "h": 0.2,
+                "text": "認証サービス",
+                "line": "grid"
+              },
+              {
+                "id": "db",
+                "kind": "ellipse",
+                "x": 0.72,
+                "y": 0.4,
+                "w": 0.18,
+                "h": 0.2,
+                "text": "データベース",
+                "line": "grid"
+              },
+              {
+                "id": "jobs",
+                "kind": "rect",
+                "x": 0.72,
+                "y": 0.68,
+                "w": 0.18,
+                "h": 0.2,
+                "text": [
+                  "集計ジョブ",
+                  {
+                    "type": "br"
+                  },
+                  "(夜間に1回)"
+                ],
+                "line": "grid"
+              },
+              {
+                "kind": "connector",
+                "from": "client",
+                "to": "web",
+                "arrow": true
+              },
+              {
+                "kind": "connector",
+                "from": "web",
+                "to": "api",
+                "arrow": true,
+                "color": "accent"
+              },
+              {
+                "kind": "connector",
+                "from": "api",
+                "to": "auth",
+                "arrow": true
+              },
+              {
+                "kind": "connector",
+                "from": "api",
+                "to": "db",
+                "arrow": true
+              },
+              {
+                "kind": "connector",
+                "from": "jobs",
+                "to": "db",
+                "arrow": true
+              },
+              {
+                "kind": "arrow",
+                "from": [
+                  0,
+                  0.92
+                ],
+                "to": [
+                  0.59,
+                  0.92
+                ],
+                "color": "text_muted"
+              },
+              {
+                "kind": "text",
+                "x": 0,
+                "y": 0.8,
+                "w": 0.3,
+                "h": 0.1,
+                "text": "要求の流れ",
+                "textStyle": "small",
+                "color": "text_muted"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

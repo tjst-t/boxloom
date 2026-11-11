@@ -106,6 +106,23 @@ func ganttDecl() SubsystemDecl {
 	}
 }
 
+// shapesDecl は shapes サブシステムが名乗るもの。
+func shapesDecl() SubsystemDecl {
+	return SubsystemDecl{
+		Schema: embeddedSchema("subsystems/shapes.schema.json"),
+		Markdown: []string{
+			"既存のパターン(箇条・比較・Gantt)で表せない図のときだけ使う最後の手段",
+			"中身は YAML で、キーは IR の data と同じ。知らないキーは誤り",
+			"座標と大きさは枠の内側に対する 0〜1 の数(引用しない)。x+w・y+h は 1 以下",
+			"線の点は流れの書き方の列で書く: from: [0.1, 0.5]",
+			"色はテーマの役割名だけ(fill・line・textColor・color)。16進の色は書けない",
+			"文字の大きさは textStyle に段の名前(small・subPoint・optionItem・body・optionLabel)。数は書けない",
+			"connector の from・to は図形の id。重なった図形は boxloom check が shapes-overlap の警告にする",
+			"文の値(text)は本文と同じ文中の記法で読む。YAML の列で書くと各行を意味のある改行でつなぐ",
+		},
+	}
+}
+
 // frontMatterKey は文書の頭のキー(docs/content-syntax.md の3.1)。
 type frontMatterKey struct {
 	Key      string `json:"key"`

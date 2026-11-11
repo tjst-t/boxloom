@@ -14,6 +14,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
 // Template は名前のついた方針の一式。
@@ -266,6 +267,25 @@ func bodyFillRatio(body *Spec) float64 {
 	return (bottom - body.Box.Y) / body.Box.Height
 }
 
+// lintBlockSubsystems はサブシステムの検査(lintSubsystems)を本文のブロックごとに
+// 行い、警告の文に本文の中の場所(body[N]: …)を付ける。check はこれで警告の
+// path をそのブロックにし、.md なら行を添える。本文の無いスライドは丸ごと見る。
+func lintBlockSubsystems(b *BuiltSlide) []string {
+	if b.Body == nil {
+		return lintSubsystems(b.Root)
+	}
+	var out []string
+	for n, c := range b.Body.Children {
+		for _, w := range lintSubsystems(c) {
+			if k := strings.Index(w, "] "); strings.HasPrefix(w, "[") && k >= 0 {
+				w = fmt.Sprintf("%s] body[%d]: %s", w[:k], n, w[k+2:])
+			}
+			out = append(out, w)
+		}
+	}
+	return out
+}
+
 // --- 書き出し ---
 
 // RenderDeck は IR を組み、並べ、描いて pptx に書く。警告(本文の埋まり具合・
@@ -289,7 +309,7 @@ func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
 				warnings = append(warnings, w)
 			}
 		}
-		warnings = append(warnings, lintSubsystems(b.Root)...)
+		warnings = append(warnings, lintBlockSubsystems(b)...)
 
 		p := NewPPTXBuilder(v.PageW, v.PageH)
 		roles := newCheckedRoles(t.Theme)

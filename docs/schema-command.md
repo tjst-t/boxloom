@@ -42,7 +42,8 @@ go run . schema -template dark     # そのテンプレートが名乗るもの�
         {"name": "gantt", "fence": "```gantt", "attributes": ["variant"],
          "markdown": ["日付は YYYY-MM か …", …],   // Schema に書けない Markdown の約束事
          "schema": "/irSchema/$defs/gantt",         // 下の irSchema の中の場所(JSON Pointer)
-         "schemaId": "https://boxloom.invalid/schema/ir/0.1/subsystems/gantt.schema.json"}
+         "schemaId": "https://boxloom.invalid/schema/ir/0.1/subsystems/gantt.schema.json"},
+        {"name": "shapes", "fence": "```shapes", …}   // 生の図形への逃げ道(最後の手段)
       ]
     }
   ],

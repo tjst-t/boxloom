@@ -103,7 +103,7 @@ CSS の min-content / max-content と同じ考え方を、PPT のスライドの
 
 ## 4. テンプレートによる差し替え(SubsystemRegistry)
 
-- コアは既定の表(`DefaultSubsystems()`:いまは `gantt` だけ)を持ちます。
+- コアは既定の表(`DefaultSubsystems()`:いまは `gantt` と `shapes`)を持ちます。
 - テンプレートは `Clone()` した表に `Override` で自分の描き方を入れます。
   コンテンツのデータ(`GanttChart`)は変わらず、描き方だけが変わります。
 - 種類は `Declare(kind, SubsystemDecl{Schema, Markdown})` で、作者に見せるもの
@@ -176,7 +176,9 @@ type SubsystemLinter interface {
 
 レイアウトのあと、描く前に `lintSubsystems` が木をたどり、最小の大きさの検査と
 一緒に `Lint` を呼ぶ。返った文は、ほかの警告と同じく標準出力(check・build の出力)に
-出る。スライドのノートには入れない。Gantt は、注釈を重ねて置くしかなかったとき
+出る。スライドのノートには入れない。本文のスライドでは本文のブロックごとに呼び、文に
+`body[N]: ` を付ける(`lintBlockSubsystems`)ので、check はその警告の path をブロック
+(`/slides/S/body/N`)にし、.md ならブロックの行を添える。Gantt は、注釈を重ねて置くしかなかったとき
 `[SUBSYSTEM WARNING] gantt: annotation 3 ("…") has no free place and overlaps another annotation`
 を返す。
 
@@ -187,6 +189,110 @@ type SubsystemLinter interface {
 Render の中で警告を返す形も考えたが、描く処理に副作用以外の出口を作ると、
 Render を呼ばずに検査だけしたい道具(将来の `boxloom check`)が使えないので
 採らなかった。
+
+## 8. shapes — 生の図形への逃げ道(最後の手段)
+
+**既存のパターン(箇条・比較・注記・Gantt …)で表せないときだけ使う最後の手段。**
+架空のシステム構成図のように、意味の部品がまだ無い図を、サブシステムの枠
+(キャンバス)の中だけで図形を並べて描く。実装は `boxloom/shapes.go`
+(Markdown は `md_shapes.go`、Schema は `schema/subsystems/shapes.schema.json`、
+寸法は `boxloom/subsystems/shapes.json`)。例は `examples/ir/shapes.json` と
+`examples/md/shapes.bx.md`(同じ IR になる)、絵は
+`verification-screenshots/shapes_light.png`・`shapes_dark.png`。
+
+自由に置ける代わりに、分離が崩れないよう次のように絞った(人が決めた方針)。
+
+| 決まり | 中身 | 破ったとき |
+|---|---|---|
+| 枠の中だけ | 図形はサブシステムの枠の中にだけ置ける。スライドのほかの場所には出せない | — |
+| 座標は 0〜1 の相対 | `x`・`y`・`w`・`h`・線の点 `[x, y]` は、枠の内側(`padding` を除いた矩形)に対する割合。`x+w`・`y+h` も 1 以下 | Schema が 0〜1 の外を断り、`boxloom check` が `shape-bounds`(和が 1 を超えるものも) |
+| 色は役割名だけ | `fill`・`line`・`textColor`(図形)、`color`(text・線)にテーマの役割名(13個)を書く。16進は書けない | 16進は Schema が断る。テーマに無い名前は check の `role-exists`(build はテンプレートの Factory が断る) |
+| 字の大きさは段の名前 | `textStyle` にテンプレートの values のキーを書く。数は書けない | Schema の enum |
+| 重なりは警告 | 図形どうしが重なると `shapes-overlap` の警告(誤りにはしない) | — |
+
+### IR の形
+
+```json
+{"type": "subsystem", "subsystem": "shapes", "data": {
+  "aspect": 2.6,
+  "items": [
+    {"id": "web", "kind": "roundRect", "x": 0.22, "y": 0.38, "w": 0.15, "h": 0.24,
+     "text": "Web 層", "textStyle": "body", "line": "accent"},
+    {"id": "api", "kind": "rect", "x": 0.44, "y": 0.38, "w": 0.15, "h": 0.24,
+     "text": "API 層", "fill": "accent", "textColor": "on_conditional"},
+    {"kind": "text", "x": 0, "y": 0, "w": 0.4, "h": 0.1, "text": "架空の構成", "color": "text_muted"},
+    {"kind": "arrow", "from": [0, 0.92], "to": [0.59, 0.92]},
+    {"kind": "connector", "from": "web", "to": "api", "arrow": true, "color": "accent"}
+  ]}}
+```
+
+| kind | 書けるキー(太字は必須) | 省いたとき |
+|---|---|---|
+| `rect`・`roundRect`・`ellipse` | `id` **`x` `y` `w` `h`** `fill` `line` `text` `textStyle` `textColor` | 塗り `card_alt`、枠線なし、文字 `text_primary` |
+| `text` | `id` **`x` `y` `w` `h` `text`** `textStyle` `color` | 文字 `text_primary` |
+| `line`・`arrow` | **`from` `to`**(点 `[x, y]`)`color` | `text_muted`。`arrow` は `to` の端に矢印 |
+| `connector` | **`from` `to`**(図形の id)`arrow` `color` | `text_muted`、矢印なし |
+
+- `aspect`(任意)は枠の内側の 幅÷高さ。
+- `id` は図形(`rect`・`roundRect`・`ellipse`・`text`)にだけ付けられる。文書の中で一意
+  (check の `unique-id`)。
+- `text` は本文と同じインライン(強調・コード・リンク・改行)。強調はテンプレートの部品と
+  同じくアクセントの色の太字。
+
+### 字の段(textStyle)
+
+`small`・`subPoint`・`optionItem`・`body`・`optionLabel`(小さい順。dark / light では
+10.5・12.5・13・14・15pt)。省くと `small`。テンプレートの values のうち、本文の部品が
+使う段だけを許した。表紙・題の段(`coverTitle`・`slideTitle` …)は、図の中の文字が
+スライドの題と競うので許さない。大きさはテンプレートが values から入れる(登録簿の
+`Override`)ので、テンプレートが values を変えれば図の文字も変わる。
+
+### 描き方
+
+- 枠の矩形から `padding` を除いた内側に、相対座標を掛けて置く。書いた順に重ね、
+  **コネクタは最後に(図形の上に)描く**(PPTX のコネクタは繋ぐ図形の id を指すので、
+  図形を先に書く)。
+- 図形の中の文字は図形の中央に置く(図形が文字の枠なので、端を揃える相手が無い。
+  テンプレートの「中央揃え禁止」は Box の並べ方の規則で、図の中の札には当てない)。
+  幅で事前に折り返す(楕円は内接する矩形の幅)。`text` は左上から置く。
+- **コネクタは本物**:PPTX では `p:cxnSp`(`straightConnector1`)で、`a:stCxn`・
+  `a:endCxn` で両端の図形の接続点に繋ぐ。PowerPoint で図形を動かすと線が付いてくる。
+  使う辺は、2つの図形が横に離れているほうが大きければ左右、そうでなければ上下で、
+  辺の真ん中どうしを直線で結ぶ(接続点の番号は、矩形・角丸は上0・左1・下2・右3、
+  楕円は上0・左2・下4・右6)。矢印は `a:tailEnd`(終点)。曲がる線(elbow)は無い。
+- `line`・`arrow` も `p:cxnSp` で書くが、図形には繋がない。
+
+### 自己申告(Measure)
+
+- 自然な大きさ:幅は分かっていればそれ(無ければ `naturalWidth`)。高さは内側の縦横比が
+  `aspect`(省けば `defaultAspect`)になる高さ。
+- 最小:`minHeight` と「どの図形の文も収まる高さ」(図形の高さは内側の高さに比例するので、
+  文が要る高さ ÷ 相対の高さ)の大きいほう。
+- 上限:`aspect` を書いたときだけ自然な高さ(作者が決めた形を縦に崩さない。余りは
+  空きとして残り、本文の埋まり具合の検査が見る)。書かなければ上限なしで、余りの高さを
+  grow で受け取る。
+
+### 検査
+
+| 段階 | code | 見ること |
+|---|---|---|
+| Schema | `schema` | キー・型・0〜1・16進でないこと・字の段の enum |
+| check(誤り) | `shape-bounds` | 座標が 0〜1 にあり、`x+w`・`y+h` が 1 以下 |
+| check(誤り) | `role-exists` | 役割名がそのテンプレートのテーマにある(`expected` に役割名の一覧) |
+| check(誤り) | `target-exists` | コネクタの `from`・`to` が、同じ図の図形の id を指す |
+| check(誤り) | `connector-self` | コネクタの両端が同じ図形 |
+| check(誤り) | `unique-id` | id の重複(既存の規則) |
+| 警告(Lint) | `shapes-overlap` | 図形どうし(`rect`・`roundRect`・`ellipse`・`text`)の矩形が面積を持って重なる。辺が接するだけなら重ならない。線・矢印・コネクタは見ない。図形の `text` は図形の中身なので重なりではない |
+| 警告(Lint) | `shapes-text-overflow` | 図形・`text` の文が、割り当てられた大きさで折り返しても収まらない |
+
+警告の文は `[SUBSYSTEM WARNING] shapes: items[7] ("db") overlaps items[6] ("auth")` の
+形で、check はその path を後から置いた図形(`/slides/1/body/1/data/items/7`)にする。
+.md なら、その図形を書いた行が付く。
+
+Markdown のパーサーは、Gantt と違って shapes をサブシステム自身に読ませない。枠の外・
+知らない役割名・無い id を `parse` の `invalid-value`(コードブロックの開きの行)で
+断ると、check が図形ごとの行と決まった code(`shape-bounds` など)で返せなくなるため。
+`build` は組み立てのときに同じものを断る。
 
 ## 確かめたこと
 
@@ -217,3 +323,9 @@ Render を呼ばずに検査だけしたい道具(将来の `boxloom check`)が�
   文ははみ出す。
 - 区間を平方根で縮める軸は、目盛りの文字が重ならないことを保証しない
   (目盛りの間が 64pt より狭くなると重なる)。
+- shapes: コネクタは辺の真ん中を結ぶ直線だけ(曲がる線・接続点の指定は無い)。線や
+  コネクタが図形の上を横切っても警告しない(重なりの判定は図形どうしだけ)。
+  破線・線の太さ・文字の揃えは作者が選べない(太さは `subsystems/shapes.json`)。
+  `variant` は名前を受け取るだけで、dark / light は変種を持たない。
+- shapes の LibreOffice での見た目は確かめた(`verification-screenshots/shapes_*.png`)が、
+  PowerPoint で開いて図形を動かしたときにコネクタが付いてくることは確かめていない。

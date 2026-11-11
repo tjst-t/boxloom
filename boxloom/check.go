@@ -159,6 +159,11 @@ func (c *checker) add(at, msg, rule string) {
 	c.errs = append(c.errs, Issue{File: c.file, Path: at, Message: msg, Code: rule})
 }
 
+func (c *checker) addIssue(is Issue) {
+	is.File = c.file
+	c.errs = append(c.errs, is)
+}
+
 // --- 文書の歩き方 ---
 
 func (c *checker) walkDoc(doc any, tm *Template) {
@@ -193,6 +198,11 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 			if bm["type"] == "subsystem" && bm["subsystem"] == "gantt" {
 				if data, ok := bm["data"].(map[string]any); ok {
 					c.checkGantt(data, bp+"/data", ids)
+				}
+			}
+			if bm["type"] == "subsystem" && bm["subsystem"] == "shapes" {
+				if data, ok := bm["data"].(map[string]any); ok {
+					c.checkShapes(data, bp+"/data", ids, tm)
 				}
 			}
 		}
@@ -342,6 +352,95 @@ func (c *checker) checkGantt(data map[string]any, ptr string, docIDs map[string]
 	}
 }
 
+// checkShapes は shapes の data の意味を見る: 座標が枠の中にあるか(shape-bounds)、
+// 役割名がテーマにあるか(role-exists)、コネクタの from・to がこの図の図形を
+// 指すか(target-exists・connector-self)。id の重複は walkDoc が見る(unique-id)。
+func (c *checker) checkShapes(data map[string]any, ptr string, docIDs map[string]string, tm *Template) {
+	items, _ := data["items"].([]any)
+	local := map[string]bool{} // この図の中の、図形(矩形の場所を持つもの)の id
+	for _, x := range items {
+		xm, _ := x.(map[string]any)
+		if k, _ := xm["kind"].(string); contains(shapeBoxedKinds, k) {
+			if id, ok := xm["id"].(string); ok {
+				local[id] = true
+			}
+		}
+	}
+	num := func(m map[string]any, k string) (float64, bool) {
+		f, ok := m[k].(float64)
+		return f, ok
+	}
+	const eps = 1e-9
+	for i, x := range items {
+		xm, _ := x.(map[string]any)
+		ip := fmt.Sprintf("%s/items/%d", ptr, i)
+		kind, _ := xm["kind"].(string)
+
+		// 座標: 1つずつ 0〜1、x+w・y+h も 1 以下。
+		for _, k := range []string{"x", "y", "w", "h"} {
+			if f, ok := num(xm, k); ok && (f < 0 || f > 1) {
+				c.add(ip+"/"+k, fmt.Sprintf("%s = %v is outside 0..1 (coordinates are relative to the frame)", k, f), "shape-bounds")
+			}
+		}
+		for _, pr := range [][2]string{{"x", "w"}, {"y", "h"}} {
+			p0, ok1 := num(xm, pr[0])
+			sz, ok2 := num(xm, pr[1])
+			if ok1 && ok2 && p0 >= 0 && sz <= 1 && p0+sz > 1+eps {
+				c.add(ip+"/"+pr[1], fmt.Sprintf("%s+%s = %.6g goes beyond the frame (must be at most 1)", pr[0], pr[1], p0+sz), "shape-bounds")
+			}
+		}
+		if kind == "line" || kind == "arrow" {
+			for _, k := range []string{"from", "to"} {
+				pt, _ := xm[k].([]any)
+				for j, v := range pt {
+					if f, ok := v.(float64); ok && (f < 0 || f > 1) {
+						c.add(fmt.Sprintf("%s/%s/%d", ip, k, j), fmt.Sprintf("%v is outside 0..1 (points are relative to the frame)", f), "shape-bounds")
+					}
+				}
+			}
+		}
+
+		// 役割名: このテンプレートのテーマにあるもの。
+		if tm != nil {
+			for _, k := range shapeRoleKeys {
+				r, ok := xm[k].(string)
+				if !ok {
+					continue
+				}
+				if _, known := tm.Theme[r]; !known {
+					msg := fmt.Sprintf("template %q has no role %q", tm.Name, r)
+					if hexColorLikeRe.MatchString(r) || !roleNameRe.MatchString(r) {
+						msg = fmt.Sprintf("%q is not a role name (colors are written as theme role names)", r)
+					}
+					c.addIssue(Issue{Path: ip + "/" + k, Code: "role-exists",
+						Message:  msg,
+						Expected: sortedKeys(tm.Theme), Hint: "色はテーマの役割名で書きます"})
+				}
+			}
+		}
+
+		// コネクタの指す先。
+		if kind != "connector" {
+			continue
+		}
+		from, _ := xm["from"].(string)
+		for _, k := range []string{"from", "to"} {
+			id, ok := xm[k].(string)
+			if !ok || local[id] {
+				continue
+			}
+			if where, elsewhere := docIDs[id]; elsewhere {
+				c.add(ip+"/"+k, fmt.Sprintf("%s %q is not a shape of this canvas (it is at %s)", k, id, where), "target-exists")
+			} else {
+				c.add(ip+"/"+k, fmt.Sprintf("no shape has id %q", id), "target-exists")
+			}
+		}
+		if to, _ := xm["to"].(string); to != "" && to == from && local[to] {
+			c.add(ip+"/to", fmt.Sprintf("a connector must join two different shapes (both ends are %q)", to), "connector-self")
+		}
+	}
+}
+
 func dateAt(m map[string]any, k string) (time.Time, error) {
 	s, ok := m[k].(string)
 	if !ok {
@@ -402,7 +501,7 @@ var locPartRe = regexp.MustCompile(`([A-Za-z]+)|\[([0-9]+)\]`)
 func locationToPointer(msg string) string {
 	ptr := ""
 	for _, seg := range strings.Split(msg, ": ") {
-		if seg == "gantt" {
+		if seg == "gantt" || seg == "shapes" {
 			ptr += "/data"
 			continue
 		}
@@ -433,6 +532,8 @@ var warnRe = regexp.MustCompile(`^slide ([0-9]+): \[([A-Z-]+) WARNING\] (.*)$`)
 
 var warnBlockRe = regexp.MustCompile(`^body\[([0-9]+)\]: (.*)$`)
 
+var warnShapeItemRe = regexp.MustCompile(`^shapes: items\[([0-9]+)\]`)
+
 var warnRuleNames = map[string]string{"SUBSYSTEM": "subsystem-min", "ROLE": "theme-role"}
 
 func warningIssue(file, w string) Issue {
@@ -446,6 +547,13 @@ func warningIssue(file, w string) Issue {
 		// Gantt の注釈の置き場所が無かった(lintSubsystems が拾う SubsystemLinter の警告)
 		rule = "annotation-overlap"
 	}
+	shapes := m[2] == "SUBSYSTEM" && strings.Contains(m[3], "shapes: items[")
+	if shapes && strings.Contains(m[3], ") overlaps items[") {
+		rule = "shapes-overlap" // shapes の図形どうしが重なった
+	}
+	if shapes && strings.Contains(m[3], "text does not fit") {
+		rule = "shapes-text-overflow" // shapes の図形の文が収まらない
+	}
 	if rule == "" {
 		rule = strings.ToLower(m[2])
 	}
@@ -453,6 +561,10 @@ func warningIssue(file, w string) Issue {
 	// 文の頭に本文の中の場所(body[2]: ...)があれば、そのブロックまで指す。
 	if bm := warnBlockRe.FindStringSubmatch(msg); bm != nil {
 		path, msg = path+"/body/"+bm[1], bm[2]
+		// shapes の警告は、最初に名指しした図形まで指す。
+		if im := warnShapeItemRe.FindStringSubmatch(msg); im != nil {
+			path += "/data/items/" + im[1]
+		}
 	}
 	return Issue{File: file, Path: path, Message: msg, Code: rule}
 }

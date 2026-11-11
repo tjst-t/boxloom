@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/shapes.schema.json",
+  "title": "Boxloom IR: shapes subsystem (0.1)",
+  "description": "生の図形への逃げ道。既存のパターン(箇条・比較・Gantt …)で表せない図のときだけ使う最後の手段。図形はサブシステムの枠(キャンバス)の中にだけ置け、座標と大きさは枠の内側に対する 0〜1 の相対、色はテーマの役割名、文字の大きさはテンプレートの字の段の名前で書く。x+w・y+h が 1 を超えないこと・役割名がテーマにあること・コネクタの指す id があることは boxloom check が見る。",
+  "type": "object",
+  "properties": {
+    "type": { "const": "subsystem" },
+    "subsystem": { "const": "shapes" },
+    "variant": { "$ref": "../core.schema.json#/$defs/variant" },
+    "data": { "$ref": "#/$defs/canvas" }
+  },
+  "required": ["type", "subsystem", "data"],
+  "additionalProperties": false,
+
+  "$defs": {
+    "inline": { "$ref": "../core.schema.json#/$defs/inline" },
+    "id": { "$ref": "../core.schema.json#/$defs/id" },
+
+    "frac": {
+      "description": "枠の内側に対する相対の位置(0 が左端・上端、1 が右端・下端)。",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "extent": {
+      "description": "枠の内側に対する相対の大きさ。x+w・y+h は 1 以下(boxloom check が見る)。",
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 1
+    },
+    "point": {
+      "description": "相対の点 [x, y]。",
+      "type": "array",
+      "prefixItems": [{ "$ref": "#/$defs/frac" }, { "$ref": "#/$defs/frac" }],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "role": {
+      "description": "色はテーマの役割名(例 card_alt・accent・text_muted)。16進の色は書けない。名前がテーマにあるかは boxloom check が見る。",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "not": { "pattern": "^#?[0-9A-Fa-f]{6}$" }
+    },
+    "textStyle": {
+      "description": "文字の大きさの段。テンプレートの値の表(values)のキーで、数は書けない。省くと small。",
+      "enum": ["small", "subPoint", "optionItem", "body", "optionLabel"]
+    },
+
+    "canvas": {
+      "type": "object",
+      "properties": {
+        "aspect": {
+          "description": "自然な縦横比(枠の内側の 幅÷高さ)。書くと枠はこの形より縦に伸びない。省くとテンプレートの既定の比で、余りの高さを受け取る。",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "items": {
+          "description": "図形と線。書いた順に重ねる(コネクタは図形の上に描く)。",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/item" }
+        }
+      },
+      "required": ["items"],
+      "additionalProperties": false
+    },
+
+    "item": {
+      "type": "object",
+      "properties": {
+        "kind": { "enum": ["rect", "roundRect", "ellipse", "text", "line", "arrow", "connector"] }
+      },
+      "required": ["kind"],
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "enum": ["rect", "roundRect", "ellipse"] } }, "required": ["kind"] },
+          "then": { "$ref": "#/$defs/shape" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "text" } }, "required": ["kind"] },
+          "then": { "$ref": "#/$defs/text" }
+        },
+        {
+          "if": { "properties": { "kind": { "enum": ["line", "arrow"] } }, "required": ["kind"] },
+          "then": { "$ref": "#/$defs/line" }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "connector" } }, "required": ["kind"] },
+          "then": { "$ref": "#/$defs/connector" }
+        }
+      ]
+    },
+    "shape": {
+      "description": "矩形・角丸の矩形・楕円。text を書くと図形の中に文字を入れる(重なりにはならない)。",
+      "type": "object",
+      "properties": {
+        "id": { "description": "コネクタが指すための名前。文書の中で一意。", "$ref": "#/$defs/id" },
+        "kind": { "enum": ["rect", "roundRect", "ellipse"] },
+        "x": { "$ref": "#/$defs/frac" },
+        "y": { "$ref": "#/$defs/frac" },
+        "w": { "$ref": "#/$defs/extent" },
+        "h": { "$ref": "#/$defs/extent" },
+        "fill": { "description": "塗り。省くと card_alt。", "$ref": "#/$defs/role" },
+        "line": { "description": "枠線。省くと枠線なし。", "$ref": "#/$defs/role" },
+        "text": { "$ref": "#/$defs/inline" },
+        "textStyle": { "$ref": "#/$defs/textStyle" },
+        "textColor": { "description": "文字の色。省くと text_primary。", "$ref": "#/$defs/role" }
+      },
+      "required": ["kind", "x", "y", "w", "h"],
+      "additionalProperties": false
+    },
+    "text": {
+      "description": "枠の無い文字。矩形の中で折り返し、左上から置く。",
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "const": "text" },
+        "x": { "$ref": "#/$defs/frac" },
+        "y": { "$ref": "#/$defs/frac" },
+        "w": { "$ref": "#/$defs/extent" },
+        "h": { "$ref": "#/$defs/extent" },
+        "text": { "$ref": "#/$defs/inline" },
+        "textStyle": { "$ref": "#/$defs/textStyle" },
+        "color": { "description": "文字の色。省くと text_primary。", "$ref": "#/$defs/role" }
+      },
+      "required": ["kind", "x", "y", "w", "h", "text"],
+      "additionalProperties": false
+    },
+    "line": {
+      "description": "2点を結ぶ線(arrow は to の端に矢印)。図形には繋がない。",
+      "type": "object",
+      "properties": {
+        "kind": { "enum": ["line", "arrow"] },
+        "from": { "$ref": "#/$defs/point" },
+        "to": { "$ref": "#/$defs/point" },
+        "color": { "description": "省くと text_muted。", "$ref": "#/$defs/role" }
+      },
+      "required": ["kind", "from", "to"],
+      "additionalProperties": false
+    },
+    "connector": {
+      "description": "2つの図形(id)を繋ぐ線。辺の真ん中どうしを結び、PPTX では図形に繋がったコネクタになる。",
+      "type": "object",
+      "properties": {
+        "kind": { "const": "connector" },
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "arrow": { "description": "to の端に矢印を付ける(既定 false)。", "type": "boolean" },
+        "color": { "description": "省くと text_muted。", "$ref": "#/$defs/role" }
+      },
+      "required": ["kind", "from", "to"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -10,6 +10,7 @@ package main
 import (
 	"archive/zip"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 )
@@ -22,6 +23,8 @@ const (
 	skOval
 	skText
 	skLine
+	skShape     // 図形(矩形・角丸・楕円)。枠線と中の文字を持てる(shapes サブシステム)
+	skConnector // 矢印を付けられる線。図形の接続点に繋げられる(shapes サブシステム)
 )
 
 type shape struct {
@@ -51,6 +54,16 @@ type shape struct {
 	lineColor      string
 	lineWidthPt    float64
 	dash           string // "" | "dash"
+
+	// skShape
+	prst   string  // rect | roundRect | ellipse
+	insetX float64 // 文字の枠の内側の余白
+	insetY float64
+
+	// skConnector
+	arrowEnd      bool // to の端に矢印(a:tailEnd)
+	stID, stIdx   int  // 始点を繋ぐ図形の id と接続点の番号(id 0 は繋がない)
+	endID, endIdx int  // 終点を繋ぐ図形の id と接続点の番号
 }
 
 // PPTXBuilder は1枚のスライドを表す。Canvas(box_engine.pyのcanvas葉ノード)の
@@ -132,6 +145,45 @@ func (p *PPTXBuilder) AddLine(x1, y1, x2, y2, widthPt float64, color, dash strin
 	p.Shapes = append(p.Shapes, shape{
 		id: p.allocID(), kind: skLine,
 		x1: x1, y1: y1, x2: x2, y2: y2, lineColor: color, lineWidthPt: widthPt, dash: dash,
+	})
+}
+
+// ShapeOpts は AddShape の指定。Fill・Outline が "" なら塗り・枠線なし。
+type ShapeOpts struct {
+	Prst           string // rect | roundRect | ellipse
+	Fill           string
+	Outline        string
+	OutlineWidthPt float64
+	Radius         float64 // roundRect の角
+	Runs           []TextRun
+	FontSize       float64
+	InsetX, InsetY float64 // 文字の枠(楕円なら内接する矩形)の内側の余白
+}
+
+// AddShape は図形を足し、その id(コネクタの接続に使う)を返す。中の文字は
+// 図形の文字の枠の幅で事前に折り返し、中央に置く。
+func (p *PPTXBuilder) AddShape(box LBox, o ShapeOpts) int {
+	id := p.allocID()
+	p.Shapes = append(p.Shapes, shape{
+		id: id, kind: skShape, box: box, prst: o.Prst, fill: o.Fill, radius: o.Radius,
+		hasOutline: o.Outline != "", outlineColor: o.Outline, outlineWidthPt: o.OutlineWidthPt,
+		runs: o.Runs, text: runsText(o.Runs), fontSize: o.FontSize, insetX: o.InsetX, insetY: o.InsetY,
+		align: "center", anchor: "middle",
+	})
+	return id
+}
+
+// ConnectorEnd は線の端を図形の接続点に繋ぐ指定(ShapeID 0 は繋がない)。
+type ConnectorEnd struct{ ShapeID, Site int }
+
+// AddConnector は本物のコネクタ(p:cxnSp)を足す。st・end を渡すと a:stCxn・
+// a:endCxn で図形に繋ぐので、PowerPoint で図形を動かすと線が付いてくる。
+// arrowEnd なら終点に矢印(a:tailEnd)を付ける。
+func (p *PPTXBuilder) AddConnector(x1, y1, x2, y2, widthPt float64, color string, arrowEnd bool, st, end ConnectorEnd) {
+	p.Shapes = append(p.Shapes, shape{
+		id: p.allocID(), kind: skConnector,
+		x1: x1, y1: y1, x2: x2, y2: y2, lineColor: color, lineWidthPt: widthPt,
+		arrowEnd: arrowEnd, stID: st.ShapeID, stIdx: st.Site, endID: end.ShapeID, endIdx: end.Site,
 	})
 }
 
@@ -251,23 +303,7 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 				lines = append(lines, []TextRun{{Text: l, Color: s.color, Bold: s.bold}})
 			}
 		}
-		var paras strings.Builder
-		szHundredths := int(s.fontSize * 100)
-		for _, line := range lines {
-			if len(line) == 0 {
-				line = []TextRun{{Color: s.color, Bold: s.bold}}
-			}
-			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"/>`, alignAttr(s.align)))
-			for _, r := range line {
-				boldAttr := ""
-				if r.Bold {
-					boldAttr = ` b="1"`
-				}
-				paras.WriteString(fmt.Sprintf(`<a:r><a:rPr lang="ja-JP" sz="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr><a:t>%s</a:t></a:r>`,
-					szHundredths, boldAttr, hexColor(r.Color), escapeXML(r.Text)))
-			}
-			paras.WriteString(`</a:p>`)
-		}
+		paras := parasXML(s, lines)
 		return fmt.Sprintf(`<p:sp>
 <p:nvSpPr><p:cNvPr id="%d" name="TextBox %d"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
 <p:spPr>
@@ -277,7 +313,7 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 </p:spPr>
 <p:txBody><a:bodyPr wrap="none" anchor="%s" lIns="0" tIns="0" rIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>%s</p:txBody>
 </p:sp>
-`, s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), anchorAttr(s.anchor), paras.String())
+`, s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), anchorAttr(s.anchor), paras)
 
 	case skLine:
 		dashXML := ""
@@ -311,8 +347,124 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 </p:spPr>
 </p:cxnSp>
 `, s.id, s.id, flipH, flipV, ptToEMU(x0), ptToEMU(y0), ptToEMU(w), ptToEMU(h), ptToEMU(s.lineWidthPt), hexColor(s.lineColor), dashXML)
+
+	case skShape:
+		return shapeWithTextXML(s)
+
+	case skConnector:
+		return connectorXML(s)
 	}
 	return ""
+}
+
+// parasXML は折り返し済みの行を段落(a:p)にする。
+func parasXML(s *shape, lines [][]TextRun) string {
+	var paras strings.Builder
+	szHundredths := int(s.fontSize * 100)
+	for _, line := range lines {
+		if len(line) == 0 {
+			line = []TextRun{{Color: s.color, Bold: s.bold}}
+		}
+		paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"/>`, alignAttr(s.align)))
+		for _, r := range line {
+			boldAttr := ""
+			if r.Bold {
+				boldAttr = ` b="1"`
+			}
+			paras.WriteString(fmt.Sprintf(`<a:r><a:rPr lang="ja-JP" sz="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr><a:t>%s</a:t></a:r>`,
+				szHundredths, boldAttr, hexColor(r.Color), escapeXML(r.Text)))
+		}
+		paras.WriteString(`</a:p>`)
+	}
+	return paras.String()
+}
+
+// shapeTextRect は図形の文字の枠(prstGeom の文字の矩形)。楕円は内接する矩形。
+func shapeTextRect(prst string, box LBox) LBox {
+	if prst != "ellipse" {
+		return box
+	}
+	const k = 0.70710678 // cos 45°
+	w, h := box.Width*k, box.Height*k
+	return LBox{X: box.X + (box.Width-w)/2, Y: box.Y + (box.Height-h)/2, Width: w, Height: h}
+}
+
+// shapeWithTextXML は塗り・枠線・中の文字を持つ図形(skShape)。
+func shapeWithTextXML(s *shape) string {
+	adj := "<a:avLst/>"
+	if s.prst == "roundRect" {
+		minSide := s.box.Width
+		if s.box.Height < minSide {
+			minSide = s.box.Height
+		}
+		ratio := 0.0
+		if minSide > 0 {
+			ratio = s.radius / minSide
+			if ratio > 0.5 {
+				ratio = 0.5
+			}
+		}
+		adj = fmt.Sprintf(`<a:avLst><a:gd name="adj" fmla="val %d"/></a:avLst>`, int(ratio*100000))
+	}
+	fillXML := "<a:noFill/>"
+	if s.fill != "" {
+		fillXML = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, hexColor(s.fill))
+	}
+	lnXML := "<a:ln><a:noFill/></a:ln>"
+	if s.hasOutline {
+		lnXML = fmt.Sprintf(`<a:ln w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:ln>`,
+			ptToEMU(s.outlineWidthPt), hexColor(s.outlineColor))
+	}
+	paras := "<a:p/>"
+	if len(s.runs) > 0 {
+		tr := shapeTextRect(s.prst, s.box)
+		paras = parasXML(s, wrapRuns(s.runs, s.fontSize, tr.Width-2*s.insetX))
+	}
+	return fmt.Sprintf(`<p:sp>
+<p:nvSpPr><p:cNvPr id="%d" name="Shape %d"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+<p:spPr>
+<a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm>
+<a:prstGeom prst="%s">%s</a:prstGeom>
+%s
+%s
+</p:spPr>
+<p:txBody><a:bodyPr wrap="none" anchor="%s" lIns="%d" tIns="%d" rIns="%d" bIns="%d"><a:noAutofit/></a:bodyPr><a:lstStyle/>%s</p:txBody>
+</p:sp>
+`, s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), s.prst, adj, fillXML, lnXML,
+		anchorAttr(s.anchor), ptToEMU(s.insetX), ptToEMU(s.insetY), ptToEMU(s.insetX), ptToEMU(s.insetY), paras)
+}
+
+// connectorXML は本物のコネクタ(p:cxnSp)。図形に繋ぐなら a:stCxn・a:endCxn を書く。
+func connectorXML(s *shape) string {
+	x0, y0 := math.Min(s.x1, s.x2), math.Min(s.y1, s.y2)
+	w, h := math.Abs(s.x2-s.x1), math.Abs(s.y2-s.y1)
+	flip := ""
+	if s.x2 < s.x1 {
+		flip += ` flipH="1"`
+	}
+	if s.y2 < s.y1 {
+		flip += ` flipV="1"`
+	}
+	cxn := ""
+	if s.stID > 0 {
+		cxn += fmt.Sprintf(`<a:stCxn id="%d" idx="%d"/>`, s.stID, s.stIdx)
+	}
+	if s.endID > 0 {
+		cxn += fmt.Sprintf(`<a:endCxn id="%d" idx="%d"/>`, s.endID, s.endIdx)
+	}
+	tail := ""
+	if s.arrowEnd {
+		tail = `<a:tailEnd type="triangle" w="med" len="med"/>`
+	}
+	return fmt.Sprintf(`<p:cxnSp>
+<p:nvCxnSpPr><p:cNvPr id="%d" name="Connector %d"/><p:cNvCxnSpPr>%s</p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr>
+<p:spPr>
+<a:xfrm%s><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm>
+<a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom>
+<a:ln w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill>%s</a:ln>
+</p:spPr>
+</p:cxnSp>
+`, s.id, s.id, cxn, flip, ptToEMU(x0), ptToEMU(y0), ptToEMU(w), ptToEMU(h), ptToEMU(s.lineWidthPt), hexColor(s.lineColor), tail)
 }
 
 // Save はこの1枚だけの pptx を書き出す。

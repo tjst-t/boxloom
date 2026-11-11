@@ -15,9 +15,11 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 |---|---|
 | `schema/core.schema.json` | コア:文書・スライド・ブロック・インライン・サブシステムの差し込み口 |
 | `schema/subsystems/gantt.schema.json` | Gantt サブシステムのブロック |
+| `schema/subsystems/shapes.schema.json` | shapes サブシステム(生の図形への逃げ道。`docs/subsystem.md` の8節)のブロック |
 | `schema/boxloom-ir.schema.json` | 検査の入口。コアに同梱のサブシステムを差し込んだもの |
 | `examples/ir/demo-deck.json` | お題3枚を IR で書いた例 |
 | `examples/ir/gantt-full.json` | デモの Gantt 全体(3グループ・9行・注釈4つ)を IR で書いた例 |
+| `examples/ir/shapes.json` | shapes で描いた架空のシステム構成図の例 |
 | `examples/ir/invalid/` | 断られるべき例(色・位置・見た目の装飾などを1か所だけ足したもの) |
 | `tools/validate_ir.py` | 検査のコマンド |
 
@@ -49,7 +51,7 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
          { type: "content", variant?, title, body: [ブロック], notes? }
 ブロック  paragraph | points | compare | note | subsystem   (どれも type で選ぶ)
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
-サブシステム { type: "subsystem", subsystem: "gantt", variant?, data: {…} }
+サブシステム { type: "subsystem", subsystem: "gantt" | "shapes", variant?, data: {…} }
 ```
 
 `notes` は発表者ノート。文字だけの文字列で、改行(`\n`)が段落の区切り。PPTX では
@@ -159,6 +161,14 @@ Go からは、サブシステムの Schema を登録簿の `Declare`(`Subsystem
 増やしたい場面が出たら、チャートの中で状態を宣言する形にするか、テンプレートが
 状態の一覧を持つ形にするかを決める。
 
+### 8. shapes は座標を持つが、枠の中の相対だけ
+
+IR は座標・色を持たない(設計判断1)が、shapes サブシステムだけは例外として、
+**サブシステムの枠の中の 0〜1 の相対座標** と **テーマの役割名の色** を持つ。既存の
+パターンで表せない図のための最後の手段で、スライドの上の位置や16進の色は書けない
+(`docs/subsystem.md` の8節)。範囲(和が 1 以下)・役割名・コネクタの指す先は、
+Schema では書けないので `boxloom check` が見る。
+
 ## 意味の検査(boxloom check)
 
 JSON Schema では書けない検査は Go の `boxloom check` がする。
@@ -192,12 +202,15 @@ go run . check -template dark deck.json                  # IR の template の�
 | code | 見ること |
 |---|---|
 | `unique-id` | id は文書全体で一意(スライドやチャートをまたいでも重ならない) |
-| `target-exists` | 注釈の `target` が、同じチャートのグループか行の id を指す(別のチャートの id なら、その場所を添えて断る) |
+| `target-exists` | 注釈の `target` が、同じチャートのグループか行の id を指す。shapes のコネクタの `from`・`to` が、同じ図の図形の id を指す(別のチャート・図の id なら、その場所を添えて断る) |
 | `date-order` | `from` が `to` より前(同じ日も断る。長さ0の区間は描けない) |
 | `date-valid` | 日付が暦の上で実在する(Schema の正規表現は 2028-02-30 を通す) |
 | `within-span` | Gantt の区間・リスク・注記・目盛り・節目・注釈・軸を切る日付が、`span` の中にある(外の日付は軸の端に押し込まれて、誤った絵になるため) |
 | `template-exists` | `template` の名前のテンプレートがある |
 | `variant-exists` | `variant` の名前が、そのテンプレートにある(デモのテンプレートは変種を1つも持たない) |
+| `shape-bounds` | shapes の座標・大きさ・線の点が 0〜1 にあり、`x+w`・`y+h` が 1 以下(path は和が越えた `w`・`h`) |
+| `role-exists` | shapes の色(`fill`・`line`・`textColor`・`color`)の役割名が、そのテンプレートのテーマにある |
+| `connector-self` | shapes のコネクタの `from` と `to` が同じ図形 |
 | `schema` / `build` | Go の IR の読み込み・組み立てが断ったもの(知らないキー・知らない状態など。形の誤り。`schema` は Markdown のパーサー・`validate_ir.py` と同じ code) |
 
 警告(誤りではない。`-strict` のときだけ exit 1):
@@ -206,8 +219,10 @@ go run . check -template dark deck.json                  # IR の template の�
 |---|---|
 | `fill-ratio` | 本文の箱のうち 65% より少なくしか使っていない(テンプレートの方針) |
 | `layout-overflow` | 本文のブロックが本文の領域に収まらない。はみ出したブロックごとに1件で、`path` はそのブロック(`/slides/S/body/N`)、文にはみ出した高さ(pt)を書く(下の節) |
-| `subsystem-min` | サブシステムに割り当てた大きさが、自己申告の最小を下回った |
+| `subsystem-min` | サブシステムに割り当てた大きさが、自己申告の最小を下回った(サブシステムの警告の path は、そのブロック `/slides/S/body/N`) |
 | `annotation-overlap` | Gantt の注釈に空いた置き場所が無く、ほかの注釈に重ねて置いた |
+| `shapes-overlap` | shapes の図形どうしが重なった。path は後から置いた図形(`…/data/items/N`) |
+| `shapes-text-overflow` | shapes の図形の文が、割り当てられた大きさに収まらない。path はその図形 |
 | `theme-role` | テーマに値の無い役割名をサブシステムが使った |
 
 ### はみ出し(layout-overflow)の測り方

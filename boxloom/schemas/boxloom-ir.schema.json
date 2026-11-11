@@ -12,7 +12,8 @@
       "properties": {
         "subsystem": {
           "enum": [
-            "gantt"
+            "gantt",
+            "shapes"
           ]
         }
       },
@@ -33,6 +34,21 @@
           },
           "then": {
             "$ref": "subsystems/gantt.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subsystem": {
+                "const": "shapes"
+              }
+            },
+            "required": [
+              "subsystem"
+            ]
+          },
+          "then": {
+            "$ref": "subsystems/shapes.schema.json"
           }
         }
       ]

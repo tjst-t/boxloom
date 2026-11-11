@@ -104,6 +104,21 @@ type GanttValues struct {
 	SmallText float64 `json:"smallText"` // グループ名・区間の文字・節目
 }
 
+// ShapesValues は shapes サブシステムの寸法(pt。DefaultAspect は幅÷高さ)。
+// 既定は subsystems/shapes.json。
+type ShapesValues struct {
+	Padding       float64 `json:"padding"`       // 枠の内側の余白(相対座標の 0〜1 はその内側)
+	NaturalWidth  float64 `json:"naturalWidth"`  // 幅が分からないときの自然な幅
+	DefaultAspect float64 `json:"defaultAspect"` // aspect を省いたときの内側の縦横比
+	MinWidth      float64 `json:"minWidth"`
+	MinHeight     float64 `json:"minHeight"`
+	TextInsetX    float64 `json:"textInsetX"` // 図形の中の文字の余白
+	TextInsetY    float64 `json:"textInsetY"`
+	LineWidth     float64 `json:"lineWidth"`    // line・arrow・connector の太さ
+	OutlineWidth  float64 `json:"outlineWidth"` // 図形の枠線の太さ
+	CornerRadius  float64 `json:"cornerRadius"` // roundRect の角
+}
+
 // templateFile は templates/<名前>.json の形。
 type templateFile struct {
 	Name     string            `json:"name"`
@@ -116,7 +131,8 @@ type templateFile struct {
 }
 
 type templateSubsystems struct {
-	Gantt *GanttValues `json:"gantt,omitempty"`
+	Gantt  *GanttValues  `json:"gantt,omitempty"`
+	Shapes *ShapesValues `json:"shapes,omitempty"`
 }
 
 // themeRoles はテーマが持たなければならない役割名(コア・デモのテンプレートの
@@ -253,6 +269,28 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 			return s, nil
 		}))
 	}
+	// shapes は字の段をこのテンプレートの values から引き、役割名をこのテーマで確かめる。
+	var sv *ShapesValues
+	if f.Subsystems != nil && f.Subsystems.Shapes != nil {
+		v := *f.Subsystems.Shapes
+		if err := checkPositive("subsystems.shapes", v); err != nil {
+			return nil, err
+		}
+		sv = &v
+	}
+	sizes, theme := shapeTextSizes(f.Values), t.Theme
+	must(t.Subsystems.Override("shapes", func(data any) (Subsystem, error) {
+		s, err := NewShapesSubsystem(data)
+		if err != nil {
+			return nil, err
+		}
+		ss := s.(*ShapesSubsystem)
+		ss.V, ss.TextSizes = sv, sizes
+		if err := ss.checkRoles(theme); err != nil {
+			return nil, err
+		}
+		return ss, nil
+	}))
 	return t, nil
 }
 
@@ -362,4 +400,27 @@ func defaultGanttValues() *GanttValues {
 	})
 	gv := ganttDefaults
 	return &gv
+}
+
+var (
+	shapesDefaultsOnce sync.Once
+	shapesDefaults     ShapesValues
+)
+
+// defaultShapesValues は subsystems/shapes.json(shapes の既定の寸法)の写し。
+func defaultShapesValues() *ShapesValues {
+	shapesDefaultsOnce.Do(func() {
+		data, err := valueFiles.ReadFile("subsystems/shapes.json")
+		if err == nil {
+			err = decodeStrict(data, &shapesDefaults)
+		}
+		if err == nil {
+			err = checkPositive("shapes", shapesDefaults)
+		}
+		if err != nil {
+			panic(fmt.Errorf("subsystems/shapes.json: %w", err))
+		}
+	})
+	sv := shapesDefaults
+	return &sv
 }

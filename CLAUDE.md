@@ -63,11 +63,16 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
    Box の木。コンテンツは枠の名前だけを指す。
 4. **部品**: 意味ブロック(比較・箇条など)を Box の部分木に組み立てる。
 5. **サブシステム**: Gantt のような独立した図の描き手。
+   **shapes**(生の図形への逃げ道)もサブシステムの1つで、既存のパターンで表せない
+   図のときだけ使う最後の手段。図形はサブシステムの枠の中にだけ置け、座標は枠の
+   内側の 0〜1 の相対、色は役割名だけ、字の大きさはテンプレートの段の名前
+   (`small`・`subPoint`・`optionItem`・`body`・`optionLabel`)。図形の重なりは
+   check の警告(`shapes-overlap`)。詳細は `docs/subsystem.md` の8節。
 
 **データとコードの混ぜ方(合意済み)**: 値の表・スタイル規則・骨組みはデータ
 (宣言ファイル)で書き、部品とサブシステムはコードで書く。いまデータに
 なっているのは値の表(色・大きさ・印の文字、Gantt の寸法)で、
-`boxloom/templates/<名前>.json` と `boxloom/subsystems/gantt.json`(同梱。
+`boxloom/templates/<名前>.json` と `boxloom/subsystems/gantt.json`・`shapes.json`(同梱。
 知らないキー・欠けたキーは誤り)。骨組みはまだコード。詳細は
 `docs/template-values.md`。
 
@@ -165,6 +170,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     生成)
   - `gantt.go` = inner canvas sub-engineの移植(render_gantt()相当)。
     `GanttSubsystem` として `Subsystem` interface を満たす
+  - `shapes.go` / `md_shapes.go` = shapes サブシステム(生の図形への逃げ道)。
+    図形・文字・線・矢印・コネクタ(PPTX では `a:stCxn`/`a:endCxn` で図形に繋がった
+    本物のコネクタ)。check の誤り `shape-bounds`・`role-exists`・`target-exists`・
+    `connector-self`、警告 `shapes-overlap`・`shapes-text-overflow`
   - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
     `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
   - `subsystem_test.go` = 差し込み口とレイアウトの試験(`go test ./...`)

@@ -1270,7 +1270,8 @@ func (p *mdParser) compareBlock(f *mdFenceBlk, path string) any {
 
 // mdSubsystems はコードブロックの言語名 → IR の data を作るもの。
 var mdSubsystems = map[string]func(p *mdParser, n *yNode, path string) any{
-	"gantt": ganttDataFromYAML,
+	"gantt":  ganttDataFromYAML,
+	"shapes": shapesDataFromYAML,
 }
 
 func (p *mdParser) codeBlock(it *mdItem, path string) any {
@@ -1318,6 +1319,8 @@ func (p *mdParser) codeBlock(it *mdItem, path string) any {
 		// サブシステム自身にも読ませ、Schema では書けない誤り(id の重複・
 		// target の行き先・日付の前後)をここで見つける。
 		raw, _ := marshalNoEscape(data)
+		// shapes は読ませない。範囲の外・無い id・知らない役割名は boxloom check が
+		// 図形ごとの行と決まった code(shape-bounds など)で返す。
 		if lang == "gantt" {
 			if _, err := ganttFromIR(raw); err != nil {
 				p.fail(it.line, 1, path+"/data", codeInvalidValue, err.Error(), nil, "")

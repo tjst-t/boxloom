@@ -10,6 +10,7 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 |---|---|
 | `boxloom/templates/<名前>.json` | テンプレート1つ(`dark.json`・`light.json`)。名前はファイル名 |
 | `boxloom/subsystems/gantt.json` | Gantt の既定の寸法。テンプレートが差し替えなければこれ |
+| `boxloom/subsystems/shapes.json` | shapes(生の図形への逃げ道)の既定の寸法 |
 | `boxloom/values.go` | 読み込みと検査 |
 
 どちらも `go:embed` でバイナリに同梱する(外のファイルを指定して読む口はまだ無い)。
@@ -88,6 +89,15 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 (登録簿の `Override` で差し替える。既定の表は変わらない)。形は次の節と同じで、
 全部のキーが要る。dark / light は書いていない(既定を使う)。
 
+### subsystems.shapes(任意)
+
+`subsystems.gantt` と同じく、書くとこのテンプレートの shapes だけがその寸法になる。
+形は下の「subsystems/shapes.json の形」で、全部のキーが要る。dark / light は書いていない。
+
+shapes の文字の大きさは、作者が `textStyle` に書く段の名前で values から引く:
+`small`・`subPoint`・`optionItem`・`body`・`optionLabel`(`docs/subsystem.md` の8節)。
+テーマに無い役割名を shapes が使うと、このテンプレートの組み立てが断る。
+
 ## subsystems/gantt.json の形
 
 | キー | 意味 |
@@ -105,6 +115,19 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 | `annotationLaneGap` | 注釈のレーンとチャートの間 |
 | `annotationText` | 注釈の字の大きさ |
 | `labelText` `smallText` | 凡例・行の名前・目盛りの字、グループ名・区間の文字・節目の字 |
+
+## subsystems/shapes.json の形
+
+| キー | 意味 |
+|---|---|
+| `padding` | 枠の内側の余白。相対座標の 0〜1 はその内側を指す |
+| `naturalWidth` | 幅が分からないときの自然な幅 |
+| `defaultAspect` | `aspect` を省いたときの内側の縦横比(幅÷高さ) |
+| `minWidth` `minHeight` | 最小の大きさ(高さは、図形の文が収まる高さとの大きいほう) |
+| `textInsetX` `textInsetY` | 図形の中の文字の余白 |
+| `lineWidth` | line・arrow・connector の太さ |
+| `outlineWidth` | 図形の枠線の太さ |
+| `cornerRadius` | roundRect の角 |
 
 描く処理の中の細かい数(バーと行の間の 3pt、凡例の色見本の大きさなど)は、
 描き方の一部としてコード(`gantt.go`)に残した。

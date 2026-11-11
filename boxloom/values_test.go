@@ -121,3 +121,40 @@ func TestTemplateOverridesGanttValues(t *testing.T) {
 		t.Errorf("default gantt values were modified")
 	}
 }
+
+// subsystems.shapes を書くと、そのテンプレートの shapes だけがその寸法になる。
+// 字の段はテンプレートの values から引く。
+func TestTemplateOverridesShapesValues(t *testing.T) {
+	data := mutate(t, func(m map[string]any) {
+		var sv map[string]any
+		raw, _ := valueFiles.ReadFile("subsystems/shapes.json")
+		_ = json.Unmarshal(raw, &sv)
+		sv["defaultAspect"] = 1.2
+		m["subsystems"] = map[string]any{"shapes": sv}
+		m["values"].(map[string]any)["small"] = 9
+	})
+	tp, err := parseTemplateFile("light", data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := json.RawMessage(`{"items": [{"kind": "rect", "x": 0, "y": 0, "w": 0.5, "h": 0.5}]}`)
+	custom, err := tp.Subsystems.Build("shapes", raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain, err := mustTemplate("light").Subsystems.Build("shapes", raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hc := custom.Measure(Constraint{Width: 600}).Natural.Height
+	hp := plain.Measure(Constraint{Width: 600}).Natural.Height
+	if hc <= hp {
+		t.Errorf("natural height custom=%v plain=%v", hc, hp)
+	}
+	if got := custom.(*ShapesSubsystem).textSize("small"); got != 9 {
+		t.Errorf("small = %v, want 9", got)
+	}
+	if defaultShapesValues().DefaultAspect != 2.4 {
+		t.Errorf("default shapes values were modified")
+	}
+}
