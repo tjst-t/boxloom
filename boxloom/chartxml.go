@@ -123,10 +123,17 @@ func solidFill(hex string) string {
 }
 
 // txPr は字の大きさ・色・字体を持つ文字の書式(c:txPr)。
-func (d *ChartData) txPr() string {
+func (d *ChartData) txPr() string { return d.txPrBody(`<a:bodyPr/>`) }
+
+// labelTxPr は値のラベルの書式。折り返さない(wrap="none")。アプリは値のラベルの
+// 幅を自分で決めて折り返すので(LibreOffice は「2,859 億ド/ル」のように単位の途中で
+// 折る)、数と単位を1行に保つ。
+func (d *ChartData) labelTxPr() string { return d.txPrBody(`<a:bodyPr wrap="none"/>`) }
+
+func (d *ChartData) txPrBody(bodyPr string) string {
 	font := d.fontRefs()
-	return fmt.Sprintf(`<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="%d" b="0">%s%s</a:defRPr></a:pPr><a:endParaRPr lang="ja-JP"/></a:p></c:txPr>`,
-		int(math.Round(d.FontSize*100)), solidFill(d.TextColor), font)
+	return fmt.Sprintf(`<c:txPr>%s<a:lstStyle/><a:p><a:pPr><a:defRPr sz="%d" b="0">%s%s</a:defRPr></a:pPr><a:endParaRPr lang="ja-JP"/></a:p></c:txPr>`,
+		bodyPr, int(math.Round(d.FontSize*100)), solidFill(d.TextColor), font)
 }
 
 func lineProps(hex string, wPt float64) string {
@@ -269,7 +276,7 @@ func (d *ChartData) dLbls() string {
 	if cat == "1" {
 		sep = "<c:separator>\n</c:separator>" // 項目の名前と値を2行に
 	}
-	return `<c:dLbls><c:numFmt formatCode="` + escapeXML(d.numFmt()) + `" sourceLinked="0"/><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>` + d.txPr() + pos +
+	return `<c:dLbls><c:numFmt formatCode="` + escapeXML(d.numFmt()) + `" sourceLinked="0"/><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>` + d.labelTxPr() + pos +
 		`<c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="` + cat + `"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/>` + sep + `</c:dLbls>`
 }
 

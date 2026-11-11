@@ -234,3 +234,17 @@ func TestChartYAMLErrors(t *testing.T) {
 		t.Errorf("check: %+v", res.Errors)
 	}
 }
+
+// 値のラベルは折り返さない(#52)。アプリが決めるラベルの幅で「2,859 億ド/ル」の
+// ように単位の途中で折れないよう、dLbls の文字の書式に wrap="none" を付ける。
+// 目盛り・凡例の書式は今までどおり(アプリの折り返しに任せる)。
+func TestChartDataLabelsDoNotWrap(t *testing.T) {
+	cd := &ChartData{Kind: ChartBar, DataLabels: true, FontSize: 10, TextColor: "000000", NumFmt: `#,##0"億ドル"`}
+	dl := cd.dLbls()
+	if !strings.Contains(dl, `<c:txPr><a:bodyPr wrap="none"/>`) {
+		t.Fatalf("data labels must not wrap: %s", dl)
+	}
+	if strings.Contains(cd.txPr(), "wrap=") {
+		t.Fatalf("axis/legend text keeps the app's wrapping: %s", cd.txPr())
+	}
+}
