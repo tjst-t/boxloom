@@ -32,7 +32,7 @@
       "number": 13,
       "kind": "task",
       "title": "字体の方針を決めて実装する(測る字体と開く環境の字体を揃える)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "verify-hypothesis",
       "dependsOn": [],
       "milestone": null,
@@ -40,7 +40,7 @@
       "labels": [],
       "body": "いまは Noto Sans CJK JP を指定し、その字体の寸法で測っている。案は3つ。\n(a) どこにでもある字体に寄せ、その寸法を持つ(Windows の游ゴシック・メイリオと macOS のヒラギノで幅が違う)。\n(b) テンプレートの値の表で字体を選び、字体ごとの寸法を持つ。\n(c) 字体を PPTX に埋め込む。PowerPoint は埋め込み字体に制約がある。\n置き換わったときに、測った幅との差を見込んだ余裕を持つかも決める。",
       "doneWhen": "docs に方針があり、テンプレートの値の表で字体が決まり、その字体の寸法で測っている。最悪の置き換えで折り返しがいくつ変わるかの数字がある",
-      "resolution": null,
+      "resolution": "main 25c6b8b。値の表の fonts(latin・eastAsian・fallbackFonts・widthMargin・fixedLineSpacing)と字体ごとの寸法(boxloom/fonts/*.json、6字体)、テーマに a:ea を書く、go run . fonts で置き換わりを測る。数字と推奨値は docs/fonts.md。既定を推奨値に変えるかは別のタスク(font-defaults)で人の判断待ち。",
       "refs": [],
       "threads": [
         {
@@ -49,8 +49,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:58.763Z",
-      "updatedAt": "2026-11-11T02:26:34.874Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T02:48:30.795Z",
+      "closedAt": "2026-11-11T02:48:30.795Z",
       "extra": {}
     },
     {
