@@ -68,6 +68,7 @@ type Spec struct {
 	Anchor   string // "top" | "middle" | "bottom"
 
 	Subsystem Subsystem // KindSubsystem のときだけ
+	Place     Place     // KindSubsystem: 割り当てが図より大きいときの置き方(既定は左上)
 
 	Box LBox // compute_layout()実行後に確定する
 }
@@ -92,6 +93,7 @@ func WithColor(v string) SpecOpt           { return func(s *Spec) { s.Color = v 
 func WithBold(v bool) SpecOpt              { return func(s *Spec) { s.Bold = v } }
 func WithAlign(v string) SpecOpt           { return func(s *Spec) { s.Align = v } }
 func WithAnchor(v string) SpecOpt          { return func(s *Spec) { s.Anchor = v } }
+func WithPlace(x, y PlaceAlign) SpecOpt    { return func(s *Spec) { s.Place = Place{X: x, Y: y} } }
 
 func apply(s *Spec, opts []SpecOpt) *Spec {
 	for _, o := range opts {

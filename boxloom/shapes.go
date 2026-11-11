@@ -304,6 +304,7 @@ func (s *ShapesSubsystem) Measure(c Constraint) Measurement {
 	}
 	if s.Data.Aspect > 0 {
 		m.Max = Size{Width: w, Height: natH}
+		m.FixedAspect = true
 	}
 	return m
 }

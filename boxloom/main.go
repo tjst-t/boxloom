@@ -68,7 +68,7 @@ func renderSpec(ctx RenderContext, s *Spec) {
 		return
 	case KindSubsystem:
 		if s.Subsystem != nil {
-			s.Subsystem.Render(ctx, s.Box)
+			s.Subsystem.Render(ctx, subsystemDrawBox(s))
 		}
 		return
 	}

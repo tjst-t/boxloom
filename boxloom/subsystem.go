@@ -39,10 +39,21 @@ type Constraint struct {
 //     回す(回す先が無ければ空きのまま残す)。
 //
 // Constraint で分かっている軸は、その値をそのまま返してよい。
+//
+// 幅から高さが決まる図(組織図など)は、Constraint{Width: w} を受けたときの
+// Natural.Height を「その幅での高さ」として返す(高さを受けたときは
+// Natural.Width を「その高さでの幅」として)。レイアウトはこれで幅に合わせた
+// 高さを渡す(heightForWidth)。
+//
+//   - FixedAspect: 形(縦横比)を保つ図。割り当てられた矩形が、分かっている
+//     片方の軸から決まる大きさより大きいとき、コアは Natural の大きさまで
+//     切り詰めた矩形を Render に渡し、余りは Spec.Place で置く(拡大縮小は
+//     しない。文字の大きさがテンプレートの段から外れないように)。
 type Measurement struct {
-	Natural Size
-	Min     Size
-	Max     Size
+	Natural     Size
+	Min         Size
+	Max         Size
+	FixedAspect bool
 }
 
 // Roles は役割名 → 実際の値を引く解決器。テンプレート(テーマ)が実装する。
@@ -222,7 +233,7 @@ func lintSubsystems(root *Spec) []string {
 	walk = func(s *Spec) {
 		if s.Kind == KindSubsystem && s.Subsystem != nil {
 			if l, ok := s.Subsystem.(SubsystemLinter); ok {
-				out = append(out, l.Lint(s.Box)...)
+				out = append(out, l.Lint(subsystemDrawBox(s))...)
 			}
 		}
 		for _, c := range s.Children {
