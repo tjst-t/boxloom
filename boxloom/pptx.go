@@ -64,10 +64,16 @@ type shape struct {
 	insetX float64 // 文字の枠の内側の余白
 	insetY float64
 
+	// skShape の2つ目以降の段落(題の下の補足など)と、その字の大きさ
+	paras     [][]TextRun
+	paraSizes []float64
+
 	// skConnector
-	arrowEnd      bool // to の端に矢印(a:tailEnd)
-	stID, stIdx   int  // 始点を繋ぐ図形の id と接続点の番号(id 0 は繋がない)
-	endID, endIdx int  // 終点を繋ぐ図形の id と接続点の番号
+	elbow         bool    // 縦に出て横に曲がり、縦に入る線(bentConnector3)
+	elbowAdj      float64 // 曲がる位置(始点からの縦の割合。0 なら 0.5)
+	arrowEnd      bool    // to の端に矢印(a:tailEnd)
+	stID, stIdx   int     // 始点を繋ぐ図形の id と接続点の番号(id 0 は繋がない)
+	endID, endIdx int     // 終点を繋ぐ図形の id と接続点の番号
 }
 
 // PPTXBuilder は1枚のスライドを表す。Canvas(box_engine.pyのcanvas葉ノード)の
@@ -165,17 +171,33 @@ type ShapeOpts struct {
 	Runs           []TextRun
 	FontSize       float64
 	InsetX, InsetY float64 // 文字の枠(楕円なら内接する矩形)の内側の余白
+	// Align・Anchor は文字の横・縦の置き方("" なら中央)。
+	Align, Anchor string
+	// Paras は Runs の後ろに続ける段落で、ParaSizes はその字の大きさ。
+	Paras     [][]TextRun
+	ParaSizes []float64
 }
 
 // AddShape は図形を足し、その id(コネクタの接続に使う)を返す。中の文字は
-// 図形の文字の枠の幅で事前に折り返し、中央に置く。
+// 図形の文字の枠の幅で事前に折り返し、既定では中央に置く。
 func (p *PPTXBuilder) AddShape(box LBox, o ShapeOpts) int {
 	id := p.allocID()
+	align, anchor := o.Align, o.Anchor
+	if align == "" {
+		align = "center"
+	}
+	if anchor == "" {
+		anchor = "middle"
+	}
+	text := runsText(o.Runs)
+	for _, r := range o.Paras {
+		text += "\n" + runsText(r)
+	}
 	p.Shapes = append(p.Shapes, shape{
 		id: id, kind: skShape, box: box, prst: o.Prst, fill: o.Fill, radius: o.Radius,
 		hasOutline: o.Outline != "", outlineColor: o.Outline, outlineWidthPt: o.OutlineWidthPt,
-		runs: o.Runs, text: runsText(o.Runs), fontSize: o.FontSize, insetX: o.InsetX, insetY: o.InsetY,
-		align: "center", anchor: "middle",
+		runs: o.Runs, text: text, fontSize: o.FontSize, insetX: o.InsetX, insetY: o.InsetY,
+		align: align, anchor: anchor, paras: o.Paras, paraSizes: o.ParaSizes,
 	})
 	return id
 }
@@ -192,6 +214,17 @@ func (p *PPTXBuilder) AddConnector(x1, y1, x2, y2, widthPt float64, color string
 		x1: x1, y1: y1, x2: x2, y2: y2, lineColor: color, lineWidthPt: widthPt,
 		arrowEnd: arrowEnd, stID: st.ShapeID, stIdx: st.Site, endID: end.ShapeID, endIdx: end.Site,
 	})
+}
+
+// AddElbowConnector は、始点から縦に出て、adj(始点からの縦の割合)の高さで横に
+// 曲がり、終点へ縦に入るコネクタ(bentConnector3)を足す。終点は始点より下に
+// あること(組織図の親の下の辺 → 子の上の辺)。横にずれていなければ直線にする。
+func (p *PPTXBuilder) AddElbowConnector(x1, y1, x2, y2, widthPt float64, color string, arrowEnd bool, st, end ConnectorEnd, adj float64) {
+	p.AddConnector(x1, y1, x2, y2, widthPt, color, arrowEnd, st, end)
+	if math.Abs(x2-x1) >= 0.5 && y2 > y1 {
+		s := &p.Shapes[len(p.Shapes)-1]
+		s.elbow, s.elbowAdj = true, adj
+	}
 }
 
 func (p *PPTXBuilder) SetNotes(text string) { p.Notes = text }
@@ -377,6 +410,10 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 // parasXML は折り返し済みの行を段落(a:p)にする。fonts.fixedLineSpacing なら
 // 行の送りを測ったとおり(字の大きさ×lineHeightMult)に pt で書く。
 func (p *PPTXBuilder) parasXML(s *shape, lines [][]TextRun) string {
+	return p.parasXMLSized(s, lines, s.fontSize)
+}
+
+func (p *PPTXBuilder) parasXMLSized(s *shape, lines [][]TextRun, fontSize float64) string {
 	var paras strings.Builder
 	for _, line := range lines {
 		if len(line) == 0 {
@@ -384,7 +421,7 @@ func (p *PPTXBuilder) parasXML(s *shape, lines [][]TextRun) string {
 		}
 		if p.Fonts != nil && p.Fonts.FixedLineSpacing {
 			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"><a:lnSpc><a:spcPts val="%d"/></a:lnSpc></a:pPr>`,
-				alignAttr(s.align), int(math.Round(s.fontSize*lineHeightMult*100))))
+				alignAttr(s.align), int(math.Round(fontSize*lineHeightMult*100))))
 		} else {
 			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"/>`, alignAttr(s.align)))
 		}
@@ -394,7 +431,7 @@ func (p *PPTXBuilder) parasXML(s *shape, lines [][]TextRun) string {
 				boldAttr = ` b="1"`
 			}
 			paras.WriteString(fmt.Sprintf(`<a:r><a:rPr lang="ja-JP" sz="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr><a:t>%s</a:t></a:r>`,
-				int(runSize(r, s.fontSize)*100), boldAttr, hexColor(r.Color), escapeXML(r.Text)))
+				int(runSize(r, fontSize)*100), boldAttr, hexColor(r.Color), escapeXML(r.Text)))
 		}
 		paras.WriteString(`</a:p>`)
 	}
@@ -483,8 +520,12 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 			restore = useFonts(p.Fonts)
 		}
 		lines := wrapRuns(s.runs, s.fontSize, tr.Width-2*s.insetX)
+		var extra []string
+		for i, r := range s.paras {
+			extra = append(extra, p.parasXMLSized(s, wrapRuns(r, s.paraSizes[i], tr.Width-2*s.insetX), s.paraSizes[i]))
+		}
 		restore()
-		paras = p.parasXML(s, lines)
+		paras = p.parasXML(s, lines) + strings.Join(extra, "")
 	}
 	return fmt.Sprintf(`<p:sp>
 <p:nvSpPr><p:cNvPr id="%d" name="Shape %d"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
@@ -502,6 +543,9 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 
 // connectorXML は本物のコネクタ(p:cxnSp)。図形に繋ぐなら a:stCxn・a:endCxn を書く。
 func connectorXML(s *shape) string {
+	if s.elbow {
+		return elbowConnectorXML(s)
+	}
 	x0, y0 := math.Min(s.x1, s.x2), math.Min(s.y1, s.y2)
 	w, h := math.Abs(s.x2-s.x1), math.Abs(s.y2-s.y1)
 	flip := ""
@@ -531,6 +575,45 @@ func connectorXML(s *shape) string {
 </p:spPr>
 </p:cxnSp>
 `, s.id, s.id, cxn, flip, ptToEMU(x0), ptToEMU(y0), ptToEMU(w), ptToEMU(h), ptToEMU(s.lineWidthPt), hexColor(s.lineColor), tail)
+}
+
+// elbowConnectorXML は縦に出て縦に入る曲がったコネクタ。bentConnector3 の道筋は
+// 「横 → 縦 → 横」なので、図形を 90°回して「縦 → 横 → 縦」にする。回す前の
+// 枠は幅が縦のずれ・高さが横のずれで、中心は両端の中点。終点が右にあるときは
+// 回す前に上下を返す(flipV)。
+func elbowConnectorXML(s *shape) string {
+	dx, dy := s.x2-s.x1, s.y2-s.y1
+	cx, cy := (s.x1+s.x2)/2, (s.y1+s.y2)/2
+	w, h := dy, math.Abs(dx)
+	flip := ""
+	if dx > 0 {
+		flip = ` flipV="1"`
+	}
+	adj := s.elbowAdj
+	if adj == 0 {
+		adj = 0.5
+	}
+	cxn := ""
+	if s.stID > 0 {
+		cxn += fmt.Sprintf(`<a:stCxn id="%d" idx="%d"/>`, s.stID, s.stIdx)
+	}
+	if s.endID > 0 {
+		cxn += fmt.Sprintf(`<a:endCxn id="%d" idx="%d"/>`, s.endID, s.endIdx)
+	}
+	tail := ""
+	if s.arrowEnd {
+		tail = `<a:tailEnd type="triangle" w="med" len="med"/>`
+	}
+	return fmt.Sprintf(`<p:cxnSp>
+<p:nvCxnSpPr><p:cNvPr id="%d" name="Connector %d"/><p:cNvCxnSpPr>%s</p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr>
+<p:spPr>
+<a:xfrm rot="5400000"%s><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm>
+<a:prstGeom prst="bentConnector3"><a:avLst><a:gd name="adj1" fmla="val %d"/></a:avLst></a:prstGeom>
+<a:ln w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill>%s</a:ln>
+</p:spPr>
+</p:cxnSp>
+`, s.id, s.id, cxn, flip, ptToEMU(cx-w/2), ptToEMU(cy-h/2), ptToEMU(w), ptToEMU(h),
+		int(math.Round(adj*100000)), ptToEMU(s.lineWidthPt), hexColor(s.lineColor), tail)
 }
 
 // WriteDeck は複数枚のスライドを1つの pptx(zipコンテナ)として w に書く。
