@@ -1045,7 +1045,7 @@
       "number": 61,
       "kind": "task",
       "title": "マトリクス(matrix)の状態の丸を、セルの図形の中の段落の印(色付きの ●)にする",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -1057,7 +1057,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T08:55:52.789Z",
-      "updatedAt": "2026-11-11T09:04:11.171Z",
+      "updatedAt": "2026-11-11T09:12:27.536Z",
       "closedAt": null,
       "extra": {}
     },
