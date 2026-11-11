@@ -126,6 +126,31 @@
       "updatedAt": "2026-11-11T02:00:01.846Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "oss-release-prep",
+      "number": 6,
+      "kind": "story",
+      "title": "OSS として出す準備",
+      "status": "backlog",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "low",
+      "labels": [
+        "vision",
+        "oss",
+        "m3"
+      ],
+      "body": "## なぜ\n立ち位置は「セルフホストでき、AI エージェントから直接呼べる生成エンジン」。消費者向けの Web エディタとは競わない。\n\n## いまの状態\n- README・LICENSE が無い。\n- リモートのリポジトリも CI も無い。\n- 文書は日本語だけ。\n- 方向性(出発点の分析・3層の構想・立ち位置・リスク)がリポジトリの文書になっていない。\n\n## 公開前に必ずすること\n業務に関わる固有名(社名・製品・チーム名)が、履歴を含めて無いことを確かめる。\n\n## メモにあるリスク\n- **レンダリングの忠実性:** 1つ目のストーリーで扱う。\n- **パターンの審美眼:** 少人数の taste owner が持つ必要がある。貢献の方針に書く。\n- **取り込まれること:** 機能ではなく立ち位置で差をつける、と割り切る。",
+      "doneWhen": "方向性の文書・README(英語)・LICENSE・貢献の方針・CI があり、固有名の検査を通っている(公開そのものは人が決める)",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T02:00:01.926Z",
+      "updatedAt": "2026-11-11T02:00:01.926Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
