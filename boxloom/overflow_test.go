@@ -92,6 +92,37 @@ func TestCheckLayoutOverflowExample(t *testing.T) {
 	}
 }
 
+// 並列のまとまりのはみ出しは、まとまりの中のはみ出したブロックを指す
+// (一番高いまとまりがブロックの高さを決める)。
+func TestColumnsOverflowWarning(t *testing.T) {
+	for _, f := range []string{"../examples/ir/check-warnings/columns-overflow.json", "../examples/md/warnings/columns-overflow.bx.md"} {
+		errs, warns, caps := CheckFileCapacity(f, "")
+		if len(errs) > 0 {
+			t.Fatalf("%s: %+v", f, errs)
+		}
+		if len(warns) != 1 || warns[0].Code != "layout-overflow" || warns[0].Path != "/slides/1/body/1/columns/1/body/0" {
+			t.Fatalf("%s: warnings %+v", f, warns)
+		}
+		if strings.HasSuffix(f, ".md") && warns[0].Line != 17 {
+			t.Errorf("%s: line %d, want 17", f, warns[0].Line)
+		}
+		b := caps[0].Blocks[1]
+		if b.Type != "columns" || len(b.Columns) != 2 || b.Columns[0].Overflow != 0 || b.Columns[1].Overflow <= 0 {
+			t.Fatalf("%s: capacity %+v", f, b)
+		}
+		// ブロックの need は一番高いまとまりの need、行の数も一番多いまとまり。
+		if b.Need != b.Columns[1].Need || b.Lines != b.Columns[1].Lines || b.Overflow != b.Columns[1].Overflow {
+			t.Errorf("%s: block %+v vs column %+v", f, b, b.Columns[1])
+		}
+		if got := b.Columns[1].Blocks[0].Path; got != "/slides/1/body/1/columns/1/body/0" {
+			t.Errorf("%s: inner path %s", f, got)
+		}
+		if strings.HasSuffix(f, ".md") && b.Columns[1].Line != 16 {
+			t.Errorf("%s: column line %d, want 16", f, b.Columns[1].Line)
+		}
+	}
+}
+
 // 正しい例(examples/ir と examples/md)は はみ出さない。
 func TestExamplesDoNotOverflow(t *testing.T) {
 	files, _ := filepath.Glob("../examples/ir/*.json")

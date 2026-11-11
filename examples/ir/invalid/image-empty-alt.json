@@ -1,0 +1,26 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "並列・表・画像のブロック",
+    "subtitle": "columns・table・image・gallery の例(架空のデータ)",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "新しい受付の画面は一覧と集計を1枚に収める",
+      "body": [
+        {
+          "type": "image",
+          "src": "images/screen-wide.png",
+          "alt": "",
+          "caption": "試作の画面(架空)。左の欄が窓口、右が週ごとの件数"
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 # 断られるべき IR の例
 
-どれも `../demo-deck.json`(`shapes-*.json` は `../shapes.json`)を1か所だけ変えたもの。`tools/validate_ir.py --self-test` は、これらが全部断られることを確かめる。
+どれも `../demo-deck.json`(`shapes-*.json` は `../shapes.json`)を1か所だけ変えたもの。
+表・画像・並列のまとまりの例(`table-*`・`image-*`・`column*`)は、`../blocks.json` の
+表紙とスライド1枚だけを取り出して1か所変えたもの。`tools/validate_ir.py --self-test` は、これらが全部断られることを確かめる。
 
 | ファイル | 変えたところ |
 |---|---|
@@ -16,3 +18,9 @@
 | `shapes-coordinate-out-of-range.json` | shapes の図形の x を 1.2(0〜1 の外)にした |
 | `shapes-font-size.json` | shapes の字の段(textStyle)に数を書いた |
 | `shapes-hex-fill.json` | shapes の図形の塗りに役割名ではなく16進の色を書いた |
+| `table-align.json` | 表に列の揃えの指定(`align`)を足した |
+| `column-width.json` | 並列のまとまりに数の幅(`width: 2`)を足した |
+| `columns-two-mains.json` | 並列のまとまりの2つに `role: main` を付けた |
+| `columns-nested.json` | まとまりの中に `columns` を入れ子にした |
+| `image-url.json` | 画像の `src` を URL にした(`boxloom check` は `image-path`) |
+| `image-empty-alt.json` | 画像の代わりの文を空にした(`boxloom check` は `image-alt`。このフォルダに画像は無いので `image-missing` も出る) |

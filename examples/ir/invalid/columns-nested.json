@@ -1,0 +1,92 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "並列・表・画像のブロック",
+    "subtitle": "columns・table・image・gallery の例(架空のデータ)",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "今期は3つに絞り、残りは来期に回す",
+      "body": [
+        {
+          "type": "columns",
+          "columns": [
+            {
+              "title": "今期やること",
+              "body": [
+                {
+                  "type": "points",
+                  "items": [
+                    "受付の画面を1つにまとめる",
+                    "問い合わせの分類を自動にする",
+                    "週次の報告を短くする"
+                  ]
+                },
+                {
+                  "type": "columns",
+                  "columns": [
+                    {
+                      "title": "今期やること",
+                      "body": [
+                        {
+                          "type": "points",
+                          "items": [
+                            "受付の画面を1つにまとめる",
+                            "問い合わせの分類を自動にする",
+                            "週次の報告を短くする"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "title": "来期やること",
+                      "body": [
+                        {
+                          "type": "points",
+                          "items": [
+                            "外部の窓口との連携",
+                            "古い端末の入れ替え"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "来期やること",
+              "body": [
+                {
+                  "type": "points",
+                  "items": [
+                    "外部の窓口との連携",
+                    "古い端末の入れ替え"
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "やらないこと",
+              "body": [
+                {
+                  "type": "points",
+                  "items": [
+                    "独自の帳票の作り直し",
+                    "夜間の窓口の常設"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

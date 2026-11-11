@@ -1,0 +1,75 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "並列・表・画像のブロック",
+    "subtitle": "columns・table・image・gallery の例(架空のデータ)",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "受付の一本化が効果の大半を占める",
+      "body": [
+        {
+          "type": "columns",
+          "columns": [
+            {
+              "title": "受付の一本化",
+              "role": "main",
+              "body": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    "窓口ごとに分かれていた受付の画面を1つにまとめる。入力の重複が無くなり、",
+                    {
+                      "type": "em",
+                      "content": "受付の時間は半分"
+                    },
+                    " になる見込み。"
+                  ]
+                },
+                {
+                  "type": "points",
+                  "items": [
+                    "画面の数:4 → 1",
+                    "入力の項目:38 → 21"
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "補足",
+              "body": [
+                {
+                  "type": "table",
+                  "header": [
+                    "項目",
+                    "今",
+                    "後"
+                  ],
+                  "rows": [
+                    [
+                      "受付の時間",
+                      "6分",
+                      "3分"
+                    ],
+                    [
+                      "転記の件数",
+                      "120件",
+                      "0件"
+                    ]
+                  ]
+                }
+              ],
+              "role": "main"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

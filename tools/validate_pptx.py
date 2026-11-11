@@ -11,7 +11,7 @@ PowerPoint が「修復が必要です」と言う種類の誤り(Schema に合�
     --python-pptx  別の実装(python-pptx)で開き直し、全部の図形の文字を読めるか確かめる
     --soffice      LibreOffice で PDF に変換でき、ページの数がスライドの数と合うか確かめる
     --self-test    examples から dark/light で PPTX を作って全部が通ること、
-                   それを壊したもの(15 通り)がそれぞれ決まった code で断られることを確かめる。
+                   それを壊したもの(19 通り)がそれぞれ決まった code で断られることを確かめる。
                    Go(PATH に go)が要る
 
 検査すること(code):
@@ -413,12 +413,16 @@ def first_match(data, name, pattern):
     return m.group(0)
 
 
-def mutations(shapes, notes):
-    """(名前, 元の PPTX, 変え方, 期待する code)。"""
+def mutations(shapes, notes, blocks):
+    """(名前, 元の PPTX, 変え方, 期待する code)。blocks は表と画像を持つ文書(examples/ir/blocks.json)。"""
     s2 = "ppt/slides/slide2.xml"
     first_id = first_match(shapes, s2, r'<p:cNvPr id="\d+"')
     other_id = re.findall(r'<p:cNvPr id="(\d+)"', zipfile.ZipFile(io.BytesIO(shapes)).read(s2).decode())[1]
     stcxn = first_match(shapes, s2, r'<a:stCxn id="\d+"')
+    pic = next(n for n in zipfile.ZipFile(io.BytesIO(blocks)).namelist() if n.startswith("ppt/slides/slide") and "<p:pic>" in zipfile.ZipFile(io.BytesIO(blocks)).read(n).decode())
+    tbl = next(n for n in zipfile.ZipFile(io.BytesIO(blocks)).namelist() if n.startswith("ppt/slides/slide") and "<a:tbl>" in zipfile.ZipFile(io.BytesIO(blocks)).read(n).decode())
+    media = next(n for n in zipfile.ZipFile(io.BytesIO(blocks)).namelist() if n.startswith("ppt/media/") and n.endswith(".png"))
+    embed = first_match(blocks, pic, r'r:embed="[^"]+"')
     return [
         ("malformed XML", shapes, sub(s2, "</p:sld>", "</p:sldx>"), "xml-malformed"),
         ("unknown element in a shape tree", shapes, sub(s2, "</p:spTree>", "<p:bogus/></p:spTree>"), "schema"),
@@ -435,6 +439,10 @@ def mutations(shapes, notes):
         ("relationship to the wrong kind of part", shapes, sub("ppt/slides/_rels/slide2.xml.rels", first_match(shapes, "ppt/slides/_rels/slide2.xml.rels", r"\.\./slideLayouts/slideLayout\d+\.xml"), "../theme/theme1.xml"), "rel-target-type"),
         ("Content_Types removed", notes, lambda f: f.__setitem__("[Content_Types].xml", None), "package"),
         ("notes slide pointing to a missing master", notes, sub("ppt/notesSlides/_rels/notesSlide1.xml.rels", "notesMaster1.xml", "notesMaster9.xml"), "rel-target-missing"),
+        ("picture's media part removed", blocks, lambda f: f.__setitem__(media, None), "rel-target-missing"),
+        ("Default for .png removed", blocks, lambda f: sub("[Content_Types].xml", '<Default Extension="png" ContentType="image/png"/>', "")(f), "content-type-missing"),
+        ("picture r:embed without relationship", blocks, sub(pic, embed, 'r:embed="rId99"'), "rid-missing"),
+        ("unknown element in a table cell", blocks, sub(tbl, "<a:tcPr", "<a:bogus/><a:tcPr"), "schema"),
     ]
 
 
@@ -482,7 +490,8 @@ def self_test(soffice):
             ok &= not issues
         shapes = next(p for p in decks if p.name == "ir-shapes.json-light.pptx").read_bytes()
         notes = next(p for p in decks if p.name == "ir-speaker-notes.json-light.pptx").read_bytes()
-        for name, base, edit, code in mutations(shapes, notes):
+        blocks = next(p for p in decks if p.name == "ir-blocks.json-light.pptx").read_bytes()
+        for name, base, edit, code in mutations(shapes, notes, blocks):
             issues = check_file(None, data=rewrite(base, edit), name=name)
             codes = {i["code"] for i in issues}
             hit = code in codes
