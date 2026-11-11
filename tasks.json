@@ -315,6 +315,27 @@
       "extra": {}
     },
     {
+      "id": "fill-ratio-hint-capacity-skill",
+      "number": 49,
+      "kind": "task",
+      "title": "fill-ratio への対応を促す:隣の薄いページ・画像の横の余りを hint と capacity に出し、SKILL に直し方を書く",
+      "status": "ready",
+      "parent": "agent-entry",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "デモのレビュー(.tmp-sc/review.md の P5)から。デモは fill-ratio の警告7件を残したまま同梱されていた。Boxloom は内容の良し悪しを判定しないが、量で測れることは知らせ、対応は SKILL で作者に促す。\n- fill-ratio の hint に、隣り合う薄いページの組と、統合したときの見込みの割合。\n- capacity に FixedAspect の図・画像の横の余り(remainingWidth)を出し、columns で文を横に置ける旨の hint。\n- compare・stat のカード・matrix のセルが Max まで伸びて間延びする所は「余計に伸ばさない」側に揃えるか検討(自動で埋めない方針は変えない)。\n- SKILL.md:fill-ratio の警告が出たら、統合する・根拠を足す・columns で横に置く、のどれかで必ず対応する。数字を出すページには出典を書く。\n- examples の同梱デモは fill-ratio を含め警告0件を目標に(デモの書き直しは別の仕事)。",
+      "doneWhen": "hint と capacity の新しい欄が試験・docs/ir.md つきで入り、SKILL.md に警告ごとの対応が書かれ、ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T05:56:03.162Z",
+      "updatedAt": "2026-11-11T05:56:03.162Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "slide-patterns",
       "number": 3,
       "kind": "story",
