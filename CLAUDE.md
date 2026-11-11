@@ -127,7 +127,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   参照の整合)。CI の手順は `sh tools/ci.sh`(`.github/workflows/ci.yml` も同じ)。書いては
   いけない語の検査 `tools/check_terms.py` の一覧はリポジトリに書かず、環境変数・CI の秘密で
   渡す。詳細は `docs/build.md` の「PPTX の検査」「CI と検査の道具」。
-- **AI に渡す一覧**:`go run . schema [-template 名前]` が、テンプレートが名乗る囲み・
+- **AI に渡す一覧**:`go run ./cmd/boxloom schema [-template 名前]` が、テンプレートが名乗る囲み・
   属性・サブシステムの Schema と、IR の Schema(外を参照しない1つの文書)を1つの
   JSON で出す(`docs/schema-command.md`)。囲みは `Template.Blocks`、サブシステムは
   登録簿の `Declare` で名乗る。Go は `schema/` の写し `boxloom/schemas/` を埋め込む
@@ -174,12 +174,20 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
 - **Go移植版**: `boxloom/`(標準ライブラリのみ、サードパーティ依存ゼロ、
   モジュール名`boxloom`)。`go list -m all` で自モジュールのみであることを
   確認済み。
+  - **ライブラリとコマンドに分けてある**:`boxloom/` の直下が `package boxloom`
+    (import path `boxloom`。埋め込みのデータと試験もここ)、コマンドは
+    `boxloom/cmd/boxloom`(ライブラリの公開した入口だけを使う)。`boxloom/` から
+    `go run ./cmd/boxloom <cmd>`。安定させる入口(`ParseMarkdown`・`ReadIR`・
+    `ReadDeck`・`Check`・`Build`・`Schema`・`Templates`・`Issue` など)は
+    `docs/library.md`。ライブラリはファイルを読み書きしない(バイト列と
+    `io.Writer`)。別のモジュールから使う例は `boxloom/examples/libuse/`
+    (`TestExternalModule` がネットワークなしでビルドして確かめる)
   - `layout.go` = outer engineの移植(box_engine.py相当)
   - `text.go` = テキスト計測(Pillowの代わりに、事前計測した「1emあたりの
     グリフ幅」を使う。字体ごとに `boxloom/fonts/<slug>.json`、
     `tools/export_font_metrics.py` で作る。どの字体で測るかはテンプレートの
     値の表の `fonts`、`fonts.go`)
-  - `fontcheck.go` = `go run . fonts`:字体が置き換わったときのはみ出しを測る
+  - `fontcheck.go` = `go run ./cmd/boxloom fonts`:字体が置き換わったときのはみ出しを測る
   - `gantt.go` = inner canvas sub-engineの移植(render_gantt()相当)。
     `GanttSubsystem` として `Subsystem` interface を満たす
   - `shapes.go` / `md_shapes.go` = shapes サブシステム(生の図形への逃げ道)。
@@ -195,10 +203,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     ライター(`archive/zip`のみ使用。無料で成熟したGo製pptxライブラリが
     存在しないため — `unidoc/unioffice`は商用ライセンス)
   - `ir.go` / `template.go` / `gantt_ir.go` = IR(JSON)を読み、テンプレート
-    (dark / light)で Box の木に組み、PPTX に書く道。`go run . build
+    (dark / light)で Box の木に組み、PPTX に書く道。`go run ./cmd/boxloom build
     ../examples/ir/demo-deck.json` → `out/demo-deck.pptx`。Gantt の注釈の
     置き場所はサブシステムが決める。詳細は `docs/build.md`
-  - `check.go` = `go run . check deck.json|deck.bx.md`。Schema で書けない IR の
+  - `check.go` = `go run ./cmd/boxloom check deck.json|deck.bx.md`。Schema で書けない IR の
     検査(id の一意性・target の指す先・日付の前後と範囲・variant)と組み立ての
     警告(はみ出しの `layout-overflow` は `overflow.go`)を出す(`docs/ir.md`)。
     `-format json` には本文の容量 `capacity`(`capacity.go`。はみ出しと同じ測り値
@@ -211,15 +219,17 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     「Title Slide」、本文は `title` で「Title Only」、題の無いスライドは「Blank」)。
     位置と字の大きさは図形の側に書いたままなので、見た目は変わらない(`docs/build.md`)
   - `markdown.go` / `md_gantt.go` / `yaml.go` = Boxloom Markdown → IR の
-    パーサー(YAML の部分集合も自前)。`go run . parse deck.bx.md`、`build` は
+    パーサー(YAML の部分集合も自前)。`go run ./cmd/boxloom parse deck.bx.md`、`build` は
     `.md` もそのまま受け取る。詳細は `docs/content-syntax.md` の8章。
     発表者ノートは `:::notes`(`md_notes.go`、3.6)→ IR の `notes` → PPTX のノート
-  - `vocab.go` / `schema_cmd.go` = `go run . schema`。名乗る囲み・文書の頭の
+  - `vocab.go` / `schema_cmd.go` = `go run ./cmd/boxloom schema`。名乗る囲み・文書の頭の
     キー・記法の約束事の表と、それを1つの JSON に組むコマンド
-  - `main.go` = デモコンテンツとfill-ratioリンター(本物の
-    `content_fill_ratio()`/`lint_fill_ratio()`の移植)。`go build .` →
-    `./boxloom` で `out/` 配下に `boxloom_dark.pptx`/`boxloom_light.pptx`
-    を生成する。出力パスは相対パス(`out/`)にしてあるので、リポジトリの
+  - `api.go` / `doc.go` = ライブラリの入口とパッケージの説明(`docs/library.md`)
+  - `cmd/boxloom/main.go` = コマンド(フラグ・ファイルの読み書き・終了コード)
+  - `demo.go` = デモコンテンツとfill-ratioリンター(本物の
+    `content_fill_ratio()`/`lint_fill_ratio()`の移植。`WriteDemo`)。
+    `go build ./cmd/boxloom` → `./boxloom`(引数なし)で `out/` 配下に
+    `boxloom_dark.pptx`/`boxloom_light.pptx` を生成する。出力パスは相対パス(`out/`)にしてあるので、リポジトリの
     どこに置いても動く。
 
 ### 検証済み事項

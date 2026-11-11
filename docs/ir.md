@@ -6,8 +6,8 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 
 > 状態: 第一版の下書き(版 `0.1`)。`docs/content-syntax-comparison.md` の共通の
 > お題3枚(表紙・論点と比較・Gantt)をすべて表せる範囲で作った。Go 版は
-> IR を読んで PPTX を書ける(`go run . build`、`docs/build.md`)。Boxloom Markdown
-> から IR へのパーサーもある(`go run . parse`、`docs/content-syntax.md` の8章)。
+> IR を読んで PPTX を書ける(`go run ./cmd/boxloom build`、`docs/build.md`)。Boxloom Markdown
+> から IR へのパーサーもある(`go run ./cmd/boxloom parse`、`docs/content-syntax.md` の8章)。
 
 ## ファイル
 
@@ -175,11 +175,11 @@ JSON Schema では書けない検査は Go の `boxloom check` がする。
 
 ```sh
 cd boxloom
-go run . check ../examples/ir/demo-deck.json            # 誤りが無ければ exit 0
-go run . check ../examples/md/demo-deck.bx.md            # Markdown もそのまま検査する
-go run . check -format json deck.json                    # 機械が読む形(既定は1件1行の text)
-go run . check -strict deck.json                         # 警告も exit 1 にする
-go run . check -template dark deck.json                  # IR の template の代わりに
+go run ./cmd/boxloom check ../examples/ir/demo-deck.json            # 誤りが無ければ exit 0
+go run ./cmd/boxloom check ../examples/md/demo-deck.bx.md            # Markdown もそのまま検査する
+go run ./cmd/boxloom check -format json deck.json                    # 機械が読む形(既定は1件1行の text)
+go run ./cmd/boxloom check -strict deck.json                         # 警告も exit 1 にする
+go run ./cmd/boxloom check -template dark deck.json                  # IR の template の代わりに
 ```
 
 誤りと警告は `docs/content-syntax.md` の5章の形(`file`・`line`・`column`・`path`・
@@ -307,7 +307,7 @@ check でも断られるもの。
 - **`$id` のドメイン**:いまは `https://boxloom.invalid/…`(使えないことが
   分かる仮の名前)。OSS で公開するときに決める。
 - **Schema の検査と意味の検査を1つのコマンドにするか**:いまは2つ
-  (`tools/validate_ir.py` が形、`go run . check` が意味)。Go は依存ゼロの方針で
+  (`tools/validate_ir.py` が形、`go run ./cmd/boxloom check` が意味)。Go は依存ゼロの方針で
   JSON Schema の検査器を持たないので、形の誤りは Go の IR の読み込みが代わりに
   断る(場所は分かるが、文は Schema より粗い。Gantt の中の知らないキーは
   `data` までしか指さない)。

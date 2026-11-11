@@ -6,8 +6,8 @@ AI に文書を書かせるときは、これをそのまま渡す。
 
 ```sh
 cd boxloom
-go run . schema                    # 全部のテンプレート(dark・light)
-go run . schema -template dark     # そのテンプレートが名乗るものだけ
+go run ./cmd/boxloom schema                    # 全部のテンプレート(dark・light)
+go run ./cmd/boxloom schema -template dark     # そのテンプレートが名乗るものだけ
 ```
 
 - 知らないテンプレートの名前は誤り(終了コード 1)。引数の誤りは 2。

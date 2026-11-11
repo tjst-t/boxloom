@@ -372,9 +372,9 @@ annotations:
 
 ```sh
 cd boxloom
-go run . parse ../examples/md/demo-deck.bx.md            # IR(JSON)を標準出力に書く
-go run . parse -format json deck.bx.md                   # 誤りを {"ok": false, "errors": [...]} で出す
-go run . build ../examples/md/demo-deck.bx.md            # .md もそのまま PPTX にする
+go run ./cmd/boxloom parse ../examples/md/demo-deck.bx.md            # IR(JSON)を標準出力に書く
+go run ./cmd/boxloom parse -format json deck.bx.md                   # 誤りを {"ok": false, "errors": [...]} で出す
+go run ./cmd/boxloom build ../examples/md/demo-deck.bx.md            # .md もそのまま PPTX にする
 ```
 
 - 拡張子が `.md`(`.bx.md` を含む)なら Markdown として、それ以外は IR の JSON として読む。

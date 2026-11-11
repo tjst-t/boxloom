@@ -1,6 +1,6 @@
 # 誤りは無いが、boxloom check が警告を出す IR の例
 
-形も意味も正しいので `tools/validate_ir.py` も `go run . check` も通す(誤り0件・
+形も意味も正しいので `tools/validate_ir.py` も `go run ./cmd/boxloom check` も通す(誤り0件・
 終了コード 0)。組み立てると警告が出る(`-strict` なら終了コード 1)。
 `boxloom/overflow_test.go`・`boxloom/shapes_test.go` が、決まった code の警告が決まった場所に出ることを確かめる。
 
@@ -10,4 +10,4 @@
 | `shapes-overlap.json` | `../shapes.json` のデータベースの楕円を上にずらし、認証サービスの矩形に重ねた | `shapes-overlap` を `/slides/1/body/1/data/items/7`(後から置いた楕円)に |
 
 `layout-overflow.json` は `../../md/warnings/layout-overflow.bx.md` を
-`go run . parse` したもの(.md を check すると、同じ警告に Markdown の行が付く)。
+`go run ./cmd/boxloom parse` したもの(.md を check すると、同じ警告に Markdown の行が付く)。

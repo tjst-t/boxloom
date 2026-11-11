@@ -85,10 +85,10 @@ python3 tools/export_font_metrics.py --family "字体の名前" \
 
 ## 4. 測った数字
 
-道具:`go run . fonts [-v] [-against "欧文/和文;…"] deck…`。組んだスライドの文字の
+道具:`go run ./cmd/boxloom fonts [-v] [-against "欧文/和文;…"] deck…`。組んだスライドの文字の
 図形を1つずつ、置き換わり得る字体の寸法で測り直す。さらに `widthMargin` を
 0.01 刻みで変えて組み直し、右へのはみ出しが無くなる最小の値を探す。
-`go run . fonts -list` で寸法を持つ字体の一覧が出る。
+`go run ./cmd/boxloom fonts -list` で寸法を持つ字体の一覧が出る。
 
 対象:`examples/ir/` の demo-deck・gantt-full・speaker-notes・
 check-warnings/layout-overflow(文字の図形 136、行 154)。
@@ -165,7 +165,7 @@ check-warnings/layout-overflow(文字の図形 136、行 154)。
 
 変わる画素は1枚あたり 1〜4.5%。**dark・light の既定はこの推奨の値にした**
 (人が決めた。Backlog #36)。そのため dark・light で作る PPTX は、それ以前とは
-変わっている。従来の Go のデモ `go run .` は字体の既定の一式を使うので変わらない。
+変わっている。従来の Go のデモ `go run ./cmd/boxloom` は字体の既定の一式を使うので変わらない。
 
 ## 6. 確かめていないこと
 
