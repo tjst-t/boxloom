@@ -1066,7 +1066,7 @@
       "number": 62,
       "kind": "task",
       "title": "部品の登録簿:buildBlockSpec の switch を ComponentRegistry に移す(出力は変えない)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -1078,7 +1078,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T13:58:39.286Z",
-      "updatedAt": "2026-11-11T13:58:39.286Z",
+      "updatedAt": "2026-11-11T14:51:46.777Z",
       "closedAt": null,
       "extra": {}
     },
