@@ -44,6 +44,7 @@ path は PPTX の中の部品の名前。部品の中の行は message に書く
     LibreOffice の soffice     (--soffice のときだけ)
 手順は docs/build.md の「PPTX の検査」。
 """
+import copy
 import io
 import json
 import os
@@ -185,6 +186,23 @@ class Checker:
             path = self.prefix + path
         self.issues.append({"file": self.file, "path": path, "code": code, "message": message})
 
+    def office_forms(self, name, doc):
+        """PowerPoint が書き、LibreOffice が読む形のうち、手元の XSD(ISO/IEC 29500 の
+        transitional)が受け付けないものを、範囲を見てから ISO の形に直した写しを返す。
+        a:buSzPct の val は ISO では "79%"、PowerPoint と ECMA-376 第1版では 1000 分の 1 %
+        の整数(25000〜400000)。LibreOffice は ISO の形を読まないので、Boxloom は整数で書く。"""
+        if not any(re.fullmatch(r"\d+", e.get("val", "")) for e in doc.iterfind(".//a:buSzPct", NS)):
+            return doc
+        doc = copy.deepcopy(doc)
+        for e in doc.iterfind(".//a:buSzPct", NS):
+            v = e.get("val", "")
+            if not re.fullmatch(r"\d+", v):
+                continue
+            if not 25000 <= int(v) <= 400000:
+                self.err(name, "schema", f"a:buSzPct val {v} is outside 25000..400000")
+            e.set("val", f"{min(400, max(25, round(int(v) / 1000)))}%")
+        return doc
+
     def parse(self, z, name):
         try:
             return etree.fromstring(z.read(name))
@@ -194,6 +212,7 @@ class Checker:
 
     def validate(self, name, doc, key):
         s = schemas()[key]
+        doc = self.office_forms(name, doc)
         if not s.validate(doc):
             for e in list(s.error_log)[:5]:
                 self.err(name, "schema", f"line {e.line}: {e.message}")
@@ -463,6 +482,7 @@ def mutations(shapes, notes, blocks, charts):
         ("malformed XML", shapes, sub(s2, "</p:sld>", "</p:sldx>"), "xml-malformed"),
         ("unknown element in a shape tree", shapes, sub(s2, "</p:spTree>", "<p:bogus/></p:spTree>"), "schema"),
         ("bad attribute value", shapes, sub(s2, 'prst="', 'prst="notAShape', 1), "schema"),
+        ("bullet size out of range (PowerPoint's integer form)", shapes, sub(s2, "</a:lnSpc></a:pPr>", '</a:lnSpc><a:buSzPct val="500000"/></a:pPr>'), "schema"),
         ("slide part removed", shapes, lambda f: f.__setitem__(s2, None), "rel-target-missing"),
         ("Default for .rels removed", shapes, lambda f: sub("[Content_Types].xml", first_match(shapes, "[Content_Types].xml", r'<Default Extension="rels"[^>]*/>'), "")(f), "content-type-missing"),
         ("Override removed (slide falls back to application/xml)", shapes, sub("[Content_Types].xml", '<Override PartName="/ppt/slides/slide2.xml"', '<Override PartName="/ppt/slides/slide2.xmlx"'), "rel-target-type"),

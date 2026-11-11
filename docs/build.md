@@ -136,6 +136,10 @@ python3 tools/validate_pptx.py --self-test    # examples を dark/light で作�
   XSD。リポジトリには入れず、`fetch_ooxml_schemas.py` が sha256 を確かめて取ってくる
   (`.gitignore` 済み)。lxml でそのまま読める。`docProps/core.xml` だけは Dublin Core の
   Schema が要るので、XSD ではなく形を手で見る。
+- **PowerPoint の形を通すもの**:`a:buSzPct`(箇条の印の大きさ)の `val` は、ISO の XSD
+  では `"79%"` の形だけだが、PowerPoint は 1000 分の 1 % の整数(`79365`。ECMA-376 第1版の
+  形)で書き、LibreOffice はこちらしか読まない。Boxloom は整数で書くので、検査は
+  25000〜400000 の範囲を見てから ISO の形に直して XSD に通す(範囲の外は `schema`)。
 - **XSD のほかに見ること**:内容の種類の抜け・余り、関係の指す部品の有無と種類、
   部品の中の `r:id` が関係にあるか、スライドにレイアウトが1つあるかなど要る関係、
   1つの部品の中の図形の id の重複、コネクタの `a:stCxn`・`a:endCxn` の指す先、
@@ -144,7 +148,7 @@ python3 tools/validate_pptx.py --self-test    # examples を dark/light で作�
   `--soffice` で LibreOffice で PDF に変換してページの数がスライドの数と合うかを見る。
   `--self-test` は python-pptx があれば必ず使う。
 - **自分の試験**:examples の IR・Markdown(警告の例も含む)を dark/light で作った46個と、
-  従来のデモ2枚が全部通ること。それを壊した19通り(XML の誤り・Schema 外の要素と値・
+  従来のデモ2枚が全部通ること。それを壊したもの(XML の誤り・Schema 外の要素と値・箇条の印の大きさの範囲外・
   部品の削除・内容の種類の抜けと余り・関係の無い r:id・図形の id の重複・コネクタの
   指す先・スライドの id の重複・レイアウトの無いスライド・種類違いの関係・
   `[Content_Types].xml` の削除・ノートの雛形の抜け・画像の部品の削除・png の Default の

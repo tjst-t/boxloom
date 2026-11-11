@@ -741,7 +741,10 @@ func (p *PPTXBuilder) bulletXML(mark []TextRun, fontSize, base float64) (bullet,
 	var b strings.Builder
 	fmt.Fprintf(&b, `<a:buClr><a:srgbClr val="%s"/></a:buClr>`, hexColor(mark[0].Color))
 	if sz := runSize(mark[0], fontSize); sz != fontSize {
-		fmt.Fprintf(&b, `<a:buSzPts val="%d"/>`, int(sz*100))
+		// 字の大きさに対する割合(a:buSzPct)で書く。LibreOffice は a:buSzPts を読まない。
+		// 値は PowerPoint が書く形(1000 分の 1 %、25000〜400000)。LibreOffice は ISO の
+		// 形("79%")を読まない。tools/validate_pptx.py はこの形も範囲を見て通す。
+		fmt.Fprintf(&b, `<a:buSzPct val="%d"/>`, int(math.Max(25000, math.Min(400000, math.Round(sz/fontSize*100000)))))
 	}
 	fmt.Fprintf(&b, `<a:buFont typeface="%s"/>`, escapeXML(font))
 	fmt.Fprintf(&b, `<a:buChar char="%s"/>`, escapeXML(ch))

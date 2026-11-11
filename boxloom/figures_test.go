@@ -2,6 +2,7 @@ package boxloom
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -491,6 +492,54 @@ func TestFunnelRates(t *testing.T) {
 		if !strings.Contains(x, ">"+s+"<") {
 			t.Errorf("funnel lacks the rate %q", s)
 		}
+	}
+}
+
+// matrix の状態の丸はセルの図形の段落の印(● の a:buChar、a:buClr に状態の色)で、
+// セルの上に別の丸を重ねない(セルを動かすと丸も付いてくる)。文の無いセルは ●
+// だけを真ん中に置く。丸の図形は凡例の分だけ。
+func TestMatrixDotIsBullet(t *testing.T) {
+	sub := figureFromIR(t, "light", "matrix", `{"columns": ["A", "B"],
+	  "rows": [{"label": "x", "cells": [{"status": "support", "text": "ok"}, {"status": "none"}]}]}`).(*MatrixSubsystem)
+	leaf := SubsystemNode(sub, WithGrow(1))
+	p := figureSlide(t, "light", leaf, "matrix-dot-light")
+	th := mustTemplate("light").Theme
+	var cells []*shape
+	ellipses := 0
+	for i := range p.Shapes {
+		s := &p.Shapes[i]
+		switch {
+		case s.kind == skOval:
+			ellipses++
+		case s.prst == "roundRect" && s.fill == th.c("card_alt"):
+			cells = append(cells, s)
+		}
+	}
+	if ellipses != len(sub.legend()) {
+		t.Errorf("ellipses = %d, want only the %d legend dots", ellipses, len(sub.legend()))
+	}
+	if len(cells) != 2 {
+		t.Fatalf("cell shapes = %d, want 2", len(cells))
+	}
+	for i, want := range []string{"support", "none"} {
+		r := cells[i].runs
+		if len(r) == 0 || !r[0].Mark || r[0].Text != matrixDot || r[0].Color != th.c(want) {
+			t.Errorf("cell %d runs = %+v, want a %s ● mark first", i, r, want)
+		}
+	}
+	pl := sub.place(subsystemDrawBox(leaf))
+	if b := pl.cells[0][1]; math.Abs(cells[1].insetX-(b.Width-sub.vals().DotSize)/2) > 0.01 {
+		t.Errorf("empty cell inset %.2f does not centre the dot in width %.2f", cells[1].insetX, b.Width)
+	}
+	var xml strings.Builder
+	for _, c := range cells {
+		xml.WriteString(p.shapeXML(c))
+	}
+	if n := strings.Count(xml.String(), `<a:buChar char="●"/>`); n != 2 {
+		t.Errorf("a:buChar ● = %d, want 2", n)
+	}
+	if !strings.Contains(xml.String(), `<a:buClr><a:srgbClr val="`+hexColor(th.c("support"))+`"/></a:buClr>`) {
+		t.Error("the mark lacks the status colour")
 	}
 }
 

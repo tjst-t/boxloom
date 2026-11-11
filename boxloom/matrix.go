@@ -158,6 +158,26 @@ func (s *MatrixSubsystem) cellTextWidth(colW float64) float64 {
 	return colW - 2*v.TextInsetX - v.DotSize - v.DotGap
 }
 
+// matrixDot は状態の丸の字。
+const matrixDot = "●"
+
+// matrixDotInk は ● の字の大きさに対する丸の直径の割合(和文の字体のおおよそ)。
+const matrixDotInk = 0.9
+
+// dotMark はセルの文の頭の印(● と、丸と文の間の空き)。● の字の大きさは、
+// 丸の直径が DotSize になる大きさ。印の幅は丸と空きの和
+// (DotSize+DotGap)になるように、空きの字の大きさで合わせる。PPTX では段落の
+// 箇条の印になり、文は印の幅だけ字下げした位置から始まる。
+func (s *MatrixSubsystem) dotMark(color string) []TextRun {
+	v := s.vals()
+	sz := v.DotSize / matrixDotInk
+	mark := []TextRun{{Text: matrixDot, Color: color, Size: sz, Mark: true}}
+	if gap := v.DotSize + v.DotGap - charEmWidth([]rune(matrixDot)[0], false)*sz; gap > 0 {
+		mark = append(mark, TextRun{Text: " ", Color: color, Size: gap / charEmWidth(' ', false), Mark: true})
+	}
+	return mark
+}
+
 func (s *MatrixSubsystem) legendItemW(li LegendItem) float64 {
 	v, tx := s.vals(), s.text()
 	return v.LegendDotSize + v.DotGap/2 + runWidthPt(li.Label, tx.Small, false)
@@ -280,17 +300,21 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 	for i, r := range s.Data.Rows {
 		header(pl.heads[i], itemRuns(r.Label, "text_primary", ctx.Roles), "left")
 		for j, c := range r.Cells {
-			b := pl.cells[i][j]
+			// 状態の丸は文の段落の印(a:buChar ●、a:buClr に状態の色)。文が無いセルは
+			// ● だけを真ん中に置く。丸はセルの図形の中にあるので、セルと一緒に動く。
 			o := ShapeOpts{Prst: "roundRect", Fill: ctx.Roles.Color("card_alt"), Radius: v.CellCornerRadi, FontSize: tx.Sub,
-				InsetX: v.TextInsetX + v.DotSize + v.DotGap, InsetY: v.TextInsetY, Align: "left"}
-			dotX := b.X + v.TextInsetX
+				InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: "left"}
+			b := pl.cells[i][j]
+			color := ctx.Roles.Color(c.Status)
 			if len(c.Text) > 0 {
-				o.Runs = itemRuns(c.Text, "text_primary", ctx.Roles)
+				o.Runs = append(s.dotMark(color), itemRuns(c.Text, "text_primary", ctx.Roles)...)
 			} else {
-				dotX = b.X + (b.Width-v.DotSize)/2
+				// 印は文のある段落にしか出ないので、幅の無い文字(U+200B)を置き、
+				// 丸が真ん中に来るように左の余白を取る。
+				o.Runs = append(s.dotMark(color)[:1], TextRun{Text: "\u200b", Color: color})
+				o.InsetX = math.Max(0, (b.Width-v.DotSize)/2)
 			}
 			p.AddShape(b, o)
-			p.AddDot(dotX+v.DotSize/2, b.Y+b.Height/2, v.DotSize/2, ctx.Roles.Color(c.Status))
 		}
 	}
 	// 推す列: 見出しから最後の行までを、アクセントの色の枠で囲む(塗らない)。
