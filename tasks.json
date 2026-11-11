@@ -149,7 +149,7 @@
       "parent": "agent-entry",
       "dependsOn": [],
       "milestone": null,
-      "priority": "normal",
+      "priority": "high",
       "labels": [],
       "body": "Zelazny の内容の型(比較・推移・構成比・順位・相関・因果)と Minto のピラミッドを下敷きに、Boxloom が持つ型を決める。各型について:層(第1層のパターン/第3層の図)・いまあるか・IR の名前の案・優先度。表・画像をブロックにするかサブシステムにするかもここで決める(content-syntax.md 7章の未決を閉じる)。",
       "doneWhen": "docs/patterns.md に型の一覧と線引きがあり、content-syntax.md の7章の表・画像の未決が閉じている",
@@ -157,7 +157,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:00:29.883Z",
-      "updatedAt": "2026-11-11T02:00:29.883Z",
+      "updatedAt": "2026-11-11T02:03:05.387Z",
       "closedAt": null,
       "extra": {}
     },
