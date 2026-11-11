@@ -105,6 +105,11 @@ Run them from `boxloom/` as `go run ./cmd/boxloom <command>`:
 | `parse FILE.bx.md` | Markdown → IR (JSON). |
 | `check [-format json] [-capacity] FILE` | Validates syntax and meaning, runs layout, and reports warnings and per-slide capacity. |
 | `build [-o OUT.pptx] [-template NAME] FILE` | Builds the PPTX from `.bx.md` or `.json`. |
+
+`-template` takes a bundled template name (`light`, `dark`) or a path to your own value
+table, e.g. `-template ./my.json` (see [`examples/templates/forest.json`](examples/templates/forest.json)
+and [`docs/template-values.md`](docs/template-values.md)). `schema`, `check` and `fonts`
+accept it too.
 | `fonts` | Lists the font metrics shipped with Boxloom and checks font-substitution margins. |
 
 ## Using it from an AI agent

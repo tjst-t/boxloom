@@ -34,6 +34,12 @@ truth; if this file and the schema disagree, **the schema wins**.
   `markdown` (their extra rules) and `schema` (a JSON Pointer into `irSchema`
   giving every allowed key).
 - Anything not listed is an error. Do not invent block names, attributes or keys.
+- Templates are chosen by name (`template: light` in the front matter, or
+  `-template dark`). A custom template is a value table file passed by path:
+  `-template ./my.json` (works for `schema`, `check`, `build`, `fonts`; example
+  `examples/templates/forest.json`). When the deck will be built with a custom
+  template, run `schema` and `check` with the same `-template` — role names and
+  text styles come from that file.
 - `variant` (`# Title {variant=…}`) exists in the syntax, but the current templates
   declare no variants (`templates[].variants` is empty), so do not use it.
 
@@ -179,6 +185,10 @@ annotations:                             # placed automatically next to the targ
   (drawn dashed). A row may have `note: {from, to, text}` instead of segments.
 - Use `ticks` for dates readers should orient by; `milestones` for events.
 - Ids are unique across the whole deck.
+- Segment labels wrap inside the bar (up to 3 lines; the row grows). If a bar is too
+  narrow even for that, the label is not drawn and `check` warns `gantt-segment-label`.
+  Keep segment labels to a few words; put longer explanations in an `annotation` or a
+  row `note`.
 
 ### 3.2 `shapes` (raw shapes, last resort)
 
@@ -291,9 +301,11 @@ Fixes by code:
 | `missing-key`, `invalid-value`, `schema` | Compare with the subsystem schema in `irSchema` |
 | `date-order`, `date-valid`, `within-span` | Gantt dates: `from` before `to`, real dates, inside `span` |
 | `target-exists`, `unique-id` | `target`/connector ends must name an existing `id`; ids are unique across the whole deck |
+| `template-values` | The custom template file (`-template ./my.json`) is invalid: the `file`/`line`/`path` point into that file, not your deck. Fix the template or use a bundled one |
 | `shape-bounds`, `role-exists`, `connector-self` | `shapes`: keep within 0–1, use theme role names, connect two different shapes |
 | `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently |
 | `fill-ratio` (warning) | Slide is mostly empty: merge with a neighbour, add the missing figure or evidence, or keep it if it is a deliberate one-line message |
+| `gantt-segment-label` (warning) | A Gantt bar is too narrow for its label: shorten the label, or move the explanation to an `annotation` / row `note` and leave the segment label short or empty |
 | `shapes-overlap`, `shapes-text-overflow`, `annotation-overlap`, `subsystem-min` (warnings) | Move/enlarge shapes, shorten text, or give the figure its own slide |
 
 ### Splitting an overflowing slide
