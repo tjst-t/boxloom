@@ -1032,6 +1032,27 @@
       "updatedAt": "2026-11-11T04:51:30.725Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "pptx-theme1-xml",
+      "number": 43,
+      "kind": "bug",
+      "title": "PPTX の theme1.xml がテンプレートの色を持たず固定の色のまま",
+      "status": "backlog",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "#31 の Fork が気づいた。スライドの図形には値の表の色が入るが、theme1.xml の配色(a:clrScheme)は固定のまま。PowerPoint で新しい図形を足したときやテーマの色を選んだときに、テンプレートと違う色になる。値の表の役割名をテーマの配色(dk1/lt1/accent1…)へどう写すかを決めて書く。",
+      "doneWhen": "dark・light・examples/templates/forest.json で作った PPTX の theme1.xml の配色がそれぞれの値の表から作られていることを試験で確かめ、写し方を docs に書く",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T04:54:36.567Z",
+      "updatedAt": "2026-11-11T04:54:36.567Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
