@@ -849,7 +849,7 @@
       "number": 33,
       "kind": "task",
       "title": "README(英語)・LICENSE・貢献の方針(審美の決め手を含む)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "oss-release-prep",
       "dependsOn": [
         "vision-doc"
@@ -861,9 +861,14 @@
       "doneWhen": "README.md・LICENSE・CONTRIBUTING.md がある",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "50702a3d-7a0b-41cc-be4c-3c3dc17690cb"
+        }
+      ],
       "createdAt": "2026-11-11T02:02:59.118Z",
-      "updatedAt": "2026-11-11T02:02:59.118Z",
+      "updatedAt": "2026-11-11T04:51:15.794Z",
       "closedAt": null,
       "extra": {}
     },
