@@ -849,7 +849,7 @@
       "number": 33,
       "kind": "task",
       "title": "README(英語)・LICENSE・貢献の方針(審美の決め手を含む)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "oss-release-prep",
       "dependsOn": [
         "vision-doc"
@@ -859,7 +859,7 @@
       "labels": [],
       "body": "LICENSE の種類(MIT/Apache-2.0 など)は人が決める。貢献の方針には、コードは広く受け、パターンとテンプレートの見た目は少人数の taste owner が決める、と書く。",
       "doneWhen": "README.md・LICENSE・CONTRIBUTING.md がある",
-      "resolution": null,
+      "resolution": "README.md(英語)・CONTRIBUTING.md(コードは広く受け、パターンとテンプレートの見た目は taste owner が決める)・LICENSE(Apache-2.0、人が決めた)。コミット 724a22f・609ddc4。",
       "refs": [],
       "threads": [
         {
@@ -868,8 +868,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:59.118Z",
-      "updatedAt": "2026-11-11T04:51:15.794Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:12:01.134Z",
+      "closedAt": "2026-11-11T05:12:01.134Z",
       "extra": {}
     },
     {
