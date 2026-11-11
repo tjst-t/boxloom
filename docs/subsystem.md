@@ -245,7 +245,7 @@ Render を呼ばずに検査だけしたい道具(将来の `boxloom check`)が�
 ### 字の段(textStyle)
 
 `small`・`subPoint`・`optionItem`・`body`・`optionLabel`(小さい順。dark / light では
-10.5・12.5・13・14・15pt)。省くと `small`。テンプレートの values のうち、本文の部品が
+10・12・14・16pt。値の段階 `scale` に載る)。省くと `small`。テンプレートの values のうち、本文の部品が
 使う段だけを許した。表紙・題の段(`coverTitle`・`slideTitle` …)は、図の中の文字が
 スライドの題と競うので許さない。大きさはテンプレートが values から入れる(登録簿の
 `Override`)ので、テンプレートが values を変えれば図の文字も変わる。
