@@ -990,6 +990,27 @@
       "updatedAt": "2026-11-11T04:51:30.541Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "shapes",
+      "number": 41,
+      "kind": "bug",
+      "title": "shapes のコネクタが箱の辺の中点でなく角で終わって見えることがある",
+      "status": "backlog",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "SKILL.md の試験で見つかった。右の箱に入るコネクタが、左辺の中点ではなく角で終わるように見えた。図形の位置関係による(別の例では中点に入っていた)。辺の選び方(cxnSp の idx)か描き手(LibreOffice)の解釈かを切り分ける。",
+      "doneWhen": "再現する例で原因を特定し、選ぶ辺と端点の座標が一致することを試験で確かめる",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T04:51:30.633Z",
+      "updatedAt": "2026-11-11T04:51:30.633Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
