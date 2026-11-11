@@ -579,20 +579,25 @@
       "id": "primitive-escape-hatch",
       "number": 28,
       "kind": "task",
-      "title": "生の図形への逃げ道を持つか決める(持つなら形と制約)",
-      "status": "ready",
+      "title": "生の図形への逃げ道(キャンバスの中だけ・相対座標・役割名・重なりの警告)",
+      "status": "in-progress",
       "parent": "canvas-patterns",
       "dependsOn": [],
       "milestone": null,
       "priority": "normal",
       "labels": [],
       "body": "既存のパターンで表せないとき、図形・矢印・コネクタまで降りる層。持つと、一貫性と「構造的に重ならない」保証が崩れやすい。持たないと、表せないものが残る。中間の案:キャンバスの中だけ。相対の座標(0〜1)。色は役割名だけ。check が重なりを警告する。人が決める。",
-      "doneWhen": "決定が Memory と docs にあり、持つなら形と検査が実装されている",
+      "doneWhen": "IR・Schema・Markdown で書け、0〜1 の外の座標と役割名でない色は誤り、重なりは check の警告、docs と試験と画像での確かめがある",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "0d5c04a5-6a7a-4131-bbd1-1943cc5d46a4"
+        }
+      ],
       "createdAt": "2026-11-11T02:02:58.942Z",
-      "updatedAt": "2026-11-11T02:02:58.942Z",
+      "updatedAt": "2026-11-11T02:26:34.791Z",
       "closedAt": null,
       "extra": {}
     },
