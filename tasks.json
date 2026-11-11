@@ -367,7 +367,7 @@
       "number": 18,
       "kind": "task",
       "title": "統計強調のパターン(大きな数と説明を1〜4個)",
-      "status": "ready",
+      "status": "done",
       "parent": "slide-patterns",
       "dependsOn": [
         "pattern-vocabulary"
@@ -377,12 +377,12 @@
       "labels": [],
       "body": "数と単位と短い説明の組。数の字の大きさは値の表の段から選ぶ。個数で並べ方をテンプレートが決める。",
       "doneWhen": "IR・Schema・Markdown・dark/light の描き方・試験・例が揃い、画像で確かめている",
-      "resolution": null,
+      "resolution": "stat(::::stat + :::value 値 {unit=…}、1〜4個、数は36pt)を実装。main 5245819。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:02:58.852Z",
-      "updatedAt": "2026-11-11T02:02:58.852Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:02:32.809Z",
+      "closedAt": "2026-11-11T05:02:32.809Z",
       "extra": {}
     },
     {
