@@ -975,7 +975,7 @@
       "number": 40,
       "kind": "bug",
       "title": "Gantt の目盛りの文字が注釈の引き出し線の真下に来て一部隠れる",
-      "status": "backlog",
+      "status": "ready",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -987,7 +987,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T04:51:30.541Z",
-      "updatedAt": "2026-11-11T04:51:30.541Z",
+      "updatedAt": "2026-11-11T05:16:29.843Z",
       "closedAt": null,
       "extra": {}
     },
