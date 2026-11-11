@@ -72,11 +72,15 @@ NS = {
     "dcterms": "http://purl.org/dc/terms/",
     "xsi": "http://www.w3.org/2001/XMLSchema-instance",
     "ep": "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties",
+    "c": "http://schemas.openxmlformats.org/drawingml/2006/chart",
+    "s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
 }
 
 CT = "application/vnd.openxmlformats-officedocument."
 PML = CT + "presentationml."
 REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
+SML = CT + "spreadsheetml."
+XLSX = SML + "sheet"
 
 # 内容の種類 → (Schema の名前, 根の要素)
 CONTENT = {
@@ -91,6 +95,11 @@ CONTENT = {
     PML + "tableStyles+xml": ("dml", "{%s}tblStyleLst" % NS["a"]),
     CT + "theme+xml": ("dml", "{%s}theme" % NS["a"]),
     CT + "extended-properties+xml": ("ext", "{%s}Properties" % NS["ep"]),
+    CT + "drawingml.chart+xml": ("chart", "{%s}chartSpace" % NS["c"]),
+    # 埋め込みの xlsx の中の部品(グラフの値の表)
+    SML + "sheet.main+xml": ("sml", "{%s}workbook" % NS["s"]),
+    SML + "worksheet+xml": ("sml", "{%s}worksheet" % NS["s"]),
+    SML + "styles+xml": ("sml", "{%s}styleSheet" % NS["s"]),
     "application/vnd.openxmlformats-package.core-properties+xml": (None, "{%s}coreProperties" % NS["cp"]),
 }
 
@@ -107,6 +116,10 @@ REL_TARGET = {
     REL + "viewProps": PML + "viewProps+xml",
     REL + "tableStyles": PML + "tableStyles+xml",
     REL + "extended-properties": CT + "extended-properties+xml",
+    REL + "chart": CT + "drawingml.chart+xml",
+    REL + "package": XLSX,
+    REL + "worksheet": SML + "worksheet+xml",
+    REL + "styles": SML + "styles+xml",
     "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties":
         "application/vnd.openxmlformats-package.core-properties+xml",
 }
@@ -119,6 +132,7 @@ REL_REQUIRED = {
     PML + "notesSlide+xml": [(REL + "notesMaster", 1, 1), (REL + "slide", 1, 1)],
     PML + "notesMaster+xml": [(REL + "theme", 1, 1)],
     PML + "presentation.main+xml": [(REL + "slideMaster", 1, None), (REL + "theme", 1, 1)],
+    CT + "drawingml.chart+xml": [(REL + "package", 1, 1)],
 }
 
 SHAPE_PARTS = {PML + t for t in ("slide+xml", "slideLayout+xml", "slideMaster+xml", "notesSlide+xml", "notesMaster+xml")}
@@ -137,6 +151,8 @@ def schemas():
             "pml": load(t / "pml.xsd"),
             "dml": load(t / "dml-main.xsd"),
             "ext": load(t / "shared-documentPropertiesExtended.xsd"),
+            "chart": load(t / "dml-chart.xsd"),
+            "sml": load(t / "sml.xsd"),
             "ct": load(o / "opc-contentTypes.xsd"),
             "rels": load(o / "opc-relationships.xsd"),
         }
@@ -155,12 +171,19 @@ def resolve(source, target):
 
 
 class Checker:
-    def __init__(self, file):
+    def __init__(self, file, main=None, prefix=""):
         self.file = file
         self.issues = []
+        # main は officeDocument が指す部品の種類(PPTX は presentation、埋め込みの
+        # xlsx は workbook)。prefix は埋め込みの中の部品の名前の頭(外の部品の名前+"!")。
+        self.main = main or PML + "presentation.main+xml"
+        self.prefix = prefix
 
     def err(self, part, code, message):
-        self.issues.append({"file": self.file, "path": "/" + part if part else "", "code": code, "message": message})
+        path = "/" + part if part else ""
+        if self.prefix:
+            path = self.prefix + path
+        self.issues.append({"file": self.file, "path": path, "code": code, "message": message})
 
     def parse(self, z, name):
         try:
@@ -236,7 +259,7 @@ class Checker:
                 if full not in parts:
                     self.err(p, "rel-target-missing", f"relationship {rid} points to /{full}, which does not exist")
                     continue
-                want = REL_TARGET.get(typ)
+                want = self.main if typ == REL + "officeDocument" else REL_TARGET.get(typ)
                 got = ctype.get(full)
                 if typ == REL + "image":
                     if got and not got.startswith("image/"):
@@ -278,6 +301,11 @@ class Checker:
                 self.check_shapes(p, doc)
             if t == PML + "presentation.main+xml":
                 self.check_presentation(p, doc, z, parts, rels, ctype)
+        # 埋め込みの xlsx(グラフの値の表)も同じ規則で中を見る。
+        for p in sorted(parts):
+            if ctype.get(p) == XLSX:
+                inner = Checker(self.file, main=SML + "sheet.main+xml", prefix=(self.prefix or "") + "/" + p + "!")
+                self.issues.extend(inner.run(z.read(p)))
         return self.issues
 
     def check_shapes(self, p, doc):
@@ -405,6 +433,13 @@ def sub(name, old, new, count=1):
     return f
 
 
+def sub_embedded(name, inner, old, new):
+    """埋め込みの部品(xlsx)の中の部品 inner を書き換える。"""
+    def f(files):
+        files[name] = rewrite(files[name], sub(inner, old, new))
+    return f
+
+
 def first_match(data, name, pattern):
     s = zipfile.ZipFile(io.BytesIO(data)).read(name).decode()
     m = re.search(pattern, s)
@@ -413,8 +448,9 @@ def first_match(data, name, pattern):
     return m.group(0)
 
 
-def mutations(shapes, notes, blocks):
-    """(名前, 元の PPTX, 変え方, 期待する code)。blocks は表と画像を持つ文書(examples/ir/blocks.json)。"""
+def mutations(shapes, notes, blocks, charts):
+    """(名前, 元の PPTX, 変え方, 期待する code)。blocks は表と画像を持つ文書(examples/ir/blocks.json)、charts はグラフを持つ文書(examples/ir/charts.json)。"""
+    xlsx = "ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx"
     s2 = "ppt/slides/slide2.xml"
     first_id = first_match(shapes, s2, r'<p:cNvPr id="\d+"')
     other_id = re.findall(r'<p:cNvPr id="(\d+)"', zipfile.ZipFile(io.BytesIO(shapes)).read(s2).decode())[1]
@@ -443,6 +479,10 @@ def mutations(shapes, notes, blocks):
         ("Default for .png removed", blocks, lambda f: sub("[Content_Types].xml", '<Default Extension="png" ContentType="image/png"/>', "")(f), "content-type-missing"),
         ("picture r:embed without relationship", blocks, sub(pic, embed, 'r:embed="rId99"'), "rid-missing"),
         ("unknown element in a table cell", blocks, sub(tbl, "<a:tcPr", "<a:bogus/><a:tcPr"), "schema"),
+        ("unknown element in a chart", charts, sub("ppt/charts/chart1.xml", "</c:plotArea>", "<c:bogus/></c:plotArea>"), "schema"),
+        ("chart without its workbook", charts, sub("ppt/charts/_rels/chart1.xml.rels", "relationships/package", "relationships/notAType"), "rel-required"),
+        ("embedded workbook removed", charts, lambda f: f.__setitem__(xlsx, None), "rel-target-missing"),
+        ("unknown element in the embedded sheet", charts, sub_embedded(xlsx, "xl/worksheets/sheet1.xml", "</sheetData>", "</sheetData><bogus/>"), "schema"),
     ]
 
 
@@ -490,8 +530,9 @@ def self_test(soffice):
             ok &= not issues
         shapes = next(p for p in decks if p.name == "ir-shapes.json-light.pptx").read_bytes()
         notes = next(p for p in decks if p.name == "ir-speaker-notes.json-light.pptx").read_bytes()
+        charts = next(p for p in decks if p.name == "ir-charts.json-light.pptx").read_bytes()
         blocks = next(p for p in decks if p.name == "ir-blocks.json-light.pptx").read_bytes()
-        for name, base, edit, code in mutations(shapes, notes, blocks):
+        for name, base, edit, code in mutations(shapes, notes, blocks, charts):
             issues = check_file(None, data=rewrite(base, edit), name=name)
             codes = {i["code"] for i in issues}
             hit = code in codes

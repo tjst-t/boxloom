@@ -263,6 +263,11 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 					c.checkMatrix(data, bp+"/data")
 				}
 			}
+			if bm["type"] == "subsystem" && bm["subsystem"] == "chart" {
+				if data, ok := bm["data"].(map[string]any); ok {
+					c.checkChart(data, bp+"/data")
+				}
+			}
 		}
 	}
 
@@ -613,6 +618,23 @@ func (c *checker) checkMatrix(data map[string]any, ptr string) {
 	}
 }
 
+// checkChart は比べ方とデータの組み合わせを見る(chart-values・chart-emphasis)。
+// 中身は chart.go の chartProblems(組み立ての読み込みと同じもの)。形が Schema に
+// 合わないもの(型の違い)はここでは見ず、読み込み(schema)に任せる。
+func (c *checker) checkChart(data map[string]any, ptr string) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+	var in chartIR
+	if json.Unmarshal(b, &in) != nil {
+		return
+	}
+	for _, pr := range chartProblems(&in) {
+		c.add(ptr+pr.at, pr.msg, pr.code)
+	}
+}
+
 func dateAt(m map[string]any, k string) (time.Time, error) {
 	s, ok := m[k].(string)
 	if !ok {
@@ -712,7 +734,9 @@ var warnGanttSegRe = regexp.MustCompile(`^gantt: groups\[([0-9]+)\]\.rows\[([0-9
 
 // warnFigureRe は図のサブシステム(process・orgchart・matrix・funnel)の警告の
 // 頭の場所(steps[2]・units[0].members[1]・rows[1].cells[2] など)。
-var warnFigureRe = regexp.MustCompile(`^(?:process|orgchart|matrix|funnel): ([a-z]+(?:\[[0-9]+\])?(?:\.[a-z]+(?:\[[0-9]+\])?)*)`)
+// 場所のあとは「:」か「 (」が続く(「chart: needs at least …」のような最小の大きさの
+// 警告は場所を持たないので、ブロックを指す)。
+var warnFigureRe = regexp.MustCompile(`^(?:process|orgchart|matrix|funnel|chart): ([a-z]+(?:\[[0-9]+\])?(?:\.[a-z]+(?:\[[0-9]+\])?)*)(?::| \()`)
 
 var warnRuleNames = map[string]string{"SUBSYSTEM": "subsystem-min", "ROLE": "theme-role"}
 
@@ -762,6 +786,9 @@ func warningIssue(file, w string) Issue {
 	figure := m[2] == "SUBSYSTEM" && warnFigureRe.MatchString(inBlock)
 	if figure && strings.Contains(m[3], "text does not fit") {
 		rule = "figure-text-overflow" // 図のサブシステムの箱・セルの文が収まらない
+	}
+	if figure && strings.Contains(m[3], "label does not fit its place on the category axis") {
+		rule = "chart-labels" // グラフの項目の名前がアプリの置く場所に入りきらない
 	}
 	if figure && strings.Contains(m[3], "a funnel is for values that decrease") {
 		rule = "funnel-increase" // funnel の数が前の段より増えた

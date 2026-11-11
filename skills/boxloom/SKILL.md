@@ -128,6 +128,7 @@ Available now (check `boxloom schema` — more may have been added):
 | A chapter break | `# Part 2: How we migrate {type=section}` | Heading text is the chapter title; nothing but `:::notes` may follow. Not a table of contents |
 | The slide says exactly one sentence; the evidence is on other slides | `# Migration must move two years earlier {type=statement}` | Heading text is the sentence; nothing but `:::notes` may follow. If you would add reasons, use a normal slide with the conclusion as title |
 | 1–4 numbers to show strongly, with no series to compare | `::::stat` → `:::value 3 → 12 {unit=models}` + one-line label inside | 5+ numbers or a time series is a chart/table, not stat. The value is written as-is and must contain a digit |
+| A series of numbers (3+ points): ranking, change over time, share of a whole, distribution, relation of two quantities | ```` ```chart ```` | `compare:` `item` / `timeSeries` / `component` / `frequency` / `correlation` — the chart type is chosen for you (never write bar/line/pie). `categories: [...]`, `series: [{name, values: [...]}]` (one value per category, unquoted numbers, max 3 series), optional `unit`, `emphasis: [category]` (one series) or `emphasis: true` on one series, `stacked: true` when series are parts of a total. `correlation` uses `xAxis: {title, unit?}`, `yAxis` and `points: [[x, y], …]` instead of categories. `component` (share) has 1 series and ≤ 6 parts — merge small parts into "Other" |
 | Someone else's words | `:::quote Source text` + the words inside | The source (heading text) is required. Never quote your own conclusion |
 | One sentence to emphasise inside a normal slide | `:::takeaway` + one sentence | At most one per slide, usually last |
 | Rows × columns of plain text or numbers | GFM table: `\| A \| B \|` + `\| --- \| --- \|` + rows | First row is the header; every row has one cell per column (`table-shape`). **No alignment markers** (`:--`, `--:` are errors); numeric columns are right-aligned for you. Cells are inline only. A line `: caption` right after the table is its caption. Ratings in cells → `matrix` (below) |
@@ -147,15 +148,24 @@ Available now (check `boxloom schema` — more may have been added):
 
 In all four figures above you write only text, `status` (`support`, `conditional`,
 `none`, `danger`) and `emphasis: true`; position, size and colour come from the template.
+In `chart` you write only what is compared and the numbers; the chart is a real
+PowerPoint chart whose values stay editable. Emphasize the one point the title makes:
 
-Patterns described in `docs/patterns.md` but **not in the schema yet** (chart) are
-errors until `boxloom schema` lists them. When the schema lists them, prefer them in the
-order of `docs/patterns.md` §4 (R1–R14).
+```chart
+compare: timeSeries
+unit: " sign-ups"
+categories: [Apr, May, Jun, Jul, Aug, Sep]
+emphasis: [Sep]
+series:
+  - name: Sign-ups
+    values: [120, 150, 170, 210, 260, 340]
+```
 
-Until then:
+(Full deck with all five comparisons: `examples/md/charts.bx.md`.)
 
-- A short number series → a `table` (or bullets with the numbers), or a `gantt` if the
-  values are dated periods. Do not draw charts with `shapes`.
+Prefer the patterns in the order of `docs/patterns.md` §4 (R1–R14). A number series
+(3+ points) is a `chart`; use a `table` only when the reader must look up exact values,
+and a `gantt` when the values are dated periods. Never draw charts with `shapes`.
 
 Example of the text patterns (full deck: `examples/md/text-patterns.bx.md`):
 
@@ -317,7 +327,7 @@ Targets that read well (not hard limits):
 - One message per slide; the title states it.
 - 3–6 bullets per list, each ≤ 1 line (≤ ~40 CJK / ~70 Latin characters is comfortable).
 - `compare`: 2–3 options, 1–3 pros and 1–3 cons each, each ≤ 1 column line.
-- A slide with a figure (`gantt`, `process`, `orgchart`, `matrix`, `funnel`, `shapes`) gets at most 1–2 short lines of text
+- A slide with a figure (`gantt`, `process`, `orgchart`, `matrix`, `funnel`, `chart`, `shapes`) gets at most 1–2 short lines of text
   besides the figure.
 - `fill-ratio` warns when less than 65% of the body is used. A slide with only text
   needs about 13 lines to pass, so **short text slides (3–6 bullets, one `compare`)
@@ -370,6 +380,8 @@ Fixes by code:
 | `template-values` | The custom template file (`-template ./my.json`) is invalid: the `file`/`line`/`path` point into that file, not your deck. Fix the template or use a bundled one |
 | `shape-bounds`, `role-exists`, `connector-self` | `shapes`: keep within 0–1, use theme role names, connect two different shapes |
 | `matrix-cells` | `matrix`: give every row exactly one cell per column |
+| `chart-values` | `chart`: one value per category in every series; `component` needs one series of non-negative parts; `stacked` needs 2+ series; `correlation` needs `xAxis`, `yAxis` and `points` (no `categories`); at most 3 series |
+| `chart-emphasis` | `chart`: `emphasis` must name existing categories and needs a single series; with several series mark one series `emphasis: true` instead |
 | `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently. Inside `columns` the path ends in `/columns/C/body/K`: shorten that group or move it to its own slide |
 | `fill-ratio` (warning) | Slide is mostly empty: merge with a neighbour, add the missing figure or evidence, or keep it if it is a deliberate one-line message |
 | `gantt-segment-label` (warning) | A Gantt bar is too narrow for its label: shorten the label, or move the explanation to an `annotation` / row `note` and leave the segment label short or empty |
@@ -377,6 +389,7 @@ Fixes by code:
 | `shapes-connector-angle` (warning) | The connector can only meet a side at a shallow angle, so it looks like it ends at a corner. Move the two shapes further apart, or line them up horizontally or vertically |
 | `figure-text-overflow` (warning) | A `process`/`orgchart`/`matrix`/`funnel` box cannot hold its text (an unbreakable word is too wide, or the figure got too little height): shorten the text or give the figure its own slide |
 | `funnel-increase` (warning) | A funnel value grows: check the numbers, or use `process` if the stages do not shrink |
+| `chart-labels` (warning) | `chart` category names are too long for the space the app gives them (they would be tilted or skipped): shorten the names, use fewer categories, or use `item` (horizontal bars have room for names) |
 
 ### Splitting an overflowing slide
 

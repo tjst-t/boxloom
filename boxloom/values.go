@@ -183,6 +183,8 @@ type templateSubsystems struct {
 	OrgChart *OrgChartValues `json:"orgchart,omitempty"`
 	Matrix   *MatrixValues   `json:"matrix,omitempty"`
 	Funnel   *FunnelValues   `json:"funnel,omitempty"`
+	// 数値のグラフ(chart.go)
+	Chart *ChartValues `json:"chart,omitempty"`
 }
 
 // themeRoles はテーマが持たなければならない役割名(コア・デモのテンプレートの

@@ -1474,6 +1474,7 @@ var mdSubsystems = map[string]func(p *mdParser, n *yNode, path string) any{
 	"orgchart": orgChartDataFromYAML,
 	"matrix":   matrixDataFromYAML,
 	"funnel":   funnelDataFromYAML,
+	"chart":    chartDataFromYAML,
 }
 
 func (p *mdParser) codeBlock(it *mdItem, path string) any {

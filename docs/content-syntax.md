@@ -270,6 +270,27 @@ groups: …
   パーサーが断るのは形の誤り(知らないキー・知らない状態の名前・型)だけ。matrix の
   行のセルの数が列の数と違うことは `boxloom check` が `matrix-cells`(その行の行つき)で
   返す。例は `examples/md/figures.bx.md`(↔ `examples/ir/figures.json`)。
+- **```chart**(数値のグラフ。`docs/subsystem.md` の12節)も同じ作り。書くのは比べ方
+  `compare`(item・timeSeries・component・frequency・correlation)と、項目・系列・値・
+  単位・強調だけで、グラフの形・色・大きさは書けない(形は比べ方とデータの数から
+  サブシステムが選ぶ)。値は引用しない数(`"2"` は誤り)、散布図の点は `[x, y]`。
+
+  ````
+  ```chart
+  compare: timeSeries
+  unit: 件
+  categories: [4月, 5月, 6月, 7月, 8月, 9月]
+  emphasis: [9月]
+  series:
+    - name: 申込数
+      values: [120, 150, 170, 210, 260, 340]
+  ```
+  ````
+
+  パーサーが断るのは形の誤り(知らないキー・知らない比べ方・引用した数・点の形)だけ。
+  値の数が項目の数と違う・強調する項目が無いなどは、`boxloom check` が `chart-values`・
+  `chart-emphasis`(その欄の行つき)で返す。例は `examples/md/charts.bx.md`
+  (↔ `examples/ir/charts.json`)。
 - サブシステムの名前でないコードブロック(` ```go ` など)と言語名の無い
   コードブロックは、**いまは誤り(予定)**。IR 第一版にコードのブロックが無いため
   (冒頭の「食い違ったら IR を正とする」)。IR にコードのブロックが入ったら、
@@ -546,7 +567,7 @@ go run ./cmd/boxloom build ../examples/md/demo-deck.bx.md            # .md も�
   `table-shape`(表の行のセルの数が見出しと違う)・`image-path`(画像の path が URL・
   絶対パス・文書のフォルダの外)・`image-alt`(画像の代わりの文が無い)・
   `schema`(できた IR が通らない。ふつうは起きない)。
-- shapes と図(process・orgchart・matrix・funnel)のコードブロックは、YAML の形の検査
+- shapes と図(process・orgchart・matrix・funnel)と chart のコードブロックは、YAML の形の検査
   だけをする(サブシステム自身には読ませない。意味の誤りは `boxloom check` が行つきで返す)。
 - Gantt のコードブロックは、YAML の検査が通ったあと Gantt サブシステム自身にも
   読ませる。Schema では書けない誤り(`target` の行き先が無い・id の重複・範囲の

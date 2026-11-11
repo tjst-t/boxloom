@@ -107,7 +107,7 @@ CSS の min-content / max-content と同じ考え方を、PPT のスライドの
 ## 4. テンプレートによる差し替え(SubsystemRegistry)
 
 - コアは既定の表(`DefaultSubsystems()`:いまは `gantt`・`shapes` と、11節の図
-  `process`・`orgchart`・`matrix`・`funnel`)を持ちます。
+  `process`・`orgchart`・`matrix`・`funnel`、12節の数値のグラフ `chart`)を持ちます。
 - テンプレートは `Clone()` した表に `Override` で自分の描き方を入れます。
   コンテンツのデータ(`GanttChart`)は変わらず、描き方だけが変わります。
 - 種類は `Declare(kind, SubsystemDecl{Schema, Markdown})` で、作者に見せるもの
@@ -552,6 +552,133 @@ stages:
 - 状態の色を凡例で説明するのは matrix だけ。process・orgchart・funnel の状態の枠線の
   意味は、作者が注記などで書く。
 - 図の寸法の数(箱の高さの最小・自然・上限など)は目安で決めた値。
+
+## 12. 数値のグラフ(chart)
+
+`docs/patterns.md` の R4(数の系列)を受けるサブシステム(Backlog #38)。**PowerPoint の
+本物のグラフ**(`c:chartSpace` と、値を持つ埋め込みの xlsx)で出すので、PowerPoint で
+グラフとして値を書き換え・種類を変えられる(図形の集まりではない)。実装は
+`boxloom/chart.go`(意味・形の選び方・色・大きさ・検査)と `chartxml.go`(OOXML と
+xlsx を標準ライブラリだけで書く)、Markdown は `md_chart.go`、Schema は
+`schema/subsystems/chart.schema.json`、寸法は `boxloom/subsystems/chart.json`。例は
+`examples/md/charts.bx.md`(↔ `examples/ir/charts.json`)。見た目は
+`verification-screenshots/charts_light.png`・`charts_dark.png`(LibreOffice)。
+
+### 作者が書くもの:比べ方と数だけ
+
+```yaml
+compare: item              # 比べ方(必須)。下の表
+unit: 点                   # 任意。値の後ろに付く単位(目盛りと値のラベルに出る)
+categories: [検索, 通知, 共有, 設定, 印刷]
+emphasis: [印刷]           # 任意。目立たせる項目(1系列のとき)
+series:
+  - name: 満足度
+    values: [4.5, 4.1, 3.8, 3.2, 2.6]   # 項目ごとに1つ
+```
+
+```yaml
+compare: correlation       # 相関だけは項目を持たず、軸と点で書く
+xAxis: {title: 1件あたりの作業時間, unit: 分}
+yAxis: {title: 誤りの数, unit: 件}
+series:
+  - name: 担当者
+    points: [[1, 9], [2, 8], [3, 6]]
+```
+
+グラフの**形は書けない**。作者は Zelazny の比較の5分類(`docs/patterns.md` の3.4)の
+どれかを `compare` に書き、形はサブシステムが比べ方とデータの数から選ぶ。形は見た目で
+あって意味ではない(同じ「時系列」でも点が多ければ折れ線が読みやすい)ので、色・大きさと
+同じくテンプレートの側に置いた(Factory を差し替えれば形の選び方も変えられる)。
+
+| compare | 意味 | 形 |
+|---|---|---|
+| `item` | 項目どうしの大小(順位) | 横棒(上から書いた順)。`stacked: true` なら積み上げ横棒 |
+| `timeSeries` | 時点の順の変化 | 1系列で点が `columnMaxPoints`(8)以下なら縦棒、それ以外は折れ線。`stacked: true` なら積み上げ縦棒 |
+| `component` | 全体に占める割合 | 円(1系列・部分は6つまで) |
+| `frequency` | 区間ごとの度数の分布 | ヒストグラム(棒の間を詰めた縦棒、1系列) |
+| `correlation` | 2つの量の関係 | 散布図(軸の題に `xAxis`・`yAxis` の題と単位) |
+
+- **系列は3つまで**(色を見分けられる数。4つ以上は誤り。分けるか表にする)。
+- **強調**:1系列なら `emphasis: [項目の名前]` で項目を、複数の系列なら目立たせる系列に
+  `emphasis: true`(1つまで)。項目と系列を両方強調するのは誤り。
+- **数の書式**:値の小数の桁(2桁まで)と単位から Excel の書式を作る
+  (`#,##0.0"点"` など)。単位 `%` は割合ではなく書いた数をそのまま出す(46 → 46%)。
+  散布図の単位は軸の題に `(分)` の形で付ける。
+- **埋め込みの表**:A 列に項目、1行目に系列の名前、B 列から値(散布図は系列ごとに
+  X と Y の2列)。PowerPoint・LibreOffice の「データの編集」でこの表が開く。
+
+### 色(テーマの役割名)
+
+- 系列:強調した系列(無ければ1つ目)が `accent`、ほかは順に `text_muted`・`none`。
+- 1系列で項目を強調:強調した項目が `accent`、ほかは `none`(灰色の中の1本)。
+  強調が無ければ全部 `accent`。
+- 円:強調した扇(無ければ1つ目の扇)が `accent`、ほかは `none` と `text_muted` を交互に。
+  扇の境の線は背景の色(`bg`)。状態の色(support・danger)は意味を持つので使わない。
+- 文字は `text_muted`、目盛りの線・軸は `grid`。字の大きさは values の `subPoint`。
+  字体はテンプレートの字体(`a:latin`・`a:ea`)をグラフの文字にも書く。
+
+### 大きさ(Measure)と、はみ出しの検査の扱い
+
+**軸・目盛り・ラベル・凡例をグラフの中のどこに置くかはアプリが決める。** Boxloom は
+グラフの枠の大きさだけを決め、中の置き方は測らない。代わりに、枠の大きさの申告と、
+アプリが置けなくなる場合の警告を、字体の寸法で測って出す:
+
+- **最小(Min)**:縦の形は「値の軸の最小の長さ `minPlotHeight`(96pt)+項目の名前の行
+  (`labelMaxLines` まで)+値のラベルの行+凡例の行+内側の余白」。円は直径の最小に
+  上下のラベル2行ずつ、散布図は目盛りと軸の題の行を足す。横棒は項目の数×1項目の高さ
+  (`minBarSlot`、名前が折り返すならその高さ)。
+- **自然(Natural)**:縦の形・円・散布図は幅×`naturalAspect`(0.5)、横棒は項目の数×
+  `naturalBarSlot`。**上限(Max)**は横棒だけ(`maxBarSlot`。棒を太らせても読みやすく
+  ならない)。ほかは上限なし(大きくして困らない)。
+- この Min を使って、本文の `layout-overflow`・容量(`check -capacity`)・`subsystem-min`
+  が、ほかのブロックと同じに働く(グラフだけ特別扱いしない)。グラフを縮めて文字を
+  詰めることはしない。
+- **`chart-labels`(警告)**:項目の名前が、アプリが置く場所(縦の形は1項目の幅の 90%、
+  横棒は枠の幅の `barLabelFraction`(30%))に、`labelMaxLines`(2)行で収まらない
+  (折り返せない語が広すぎるか、行が多すぎる)とき。アプリは名前を斜めにする・間引く・
+  何行にも折るので読めなくなる。最初の1つを指し(path は `…/data/categories/N`)、
+  残りの数を文に添える。
+- 値のラベルの重なり・凡例の折り返し・目盛りの刻みはアプリまかせで、検査しない。
+
+### アプリごとの見え方(試作で確かめたこと)
+
+本実装の前に、6つの形(縦棒の強調・折れ線2系列・円・横棒・積み上げ縦棒・散布図)の
+試作を作って開いた(`verification-screenshots/chart_prototype_light.png`・`_dark.png`、
+Google Slides で PDF にしたもの `chart-prototype-light-googleslide.pdf`)。
+
+| アプリ | 結果 |
+|---|---|
+| LibreOffice 24(描画・PDF) | 6つとも正しく描く。強調の色・横棒の順と値の軸の位置・円の名前と値の2行・凡例も合う。ODP に変換すると値の表を持つ本物のグラフとして読む |
+| Google Slides(人が開いて PDF にした) | 6つとも崩れない。強調の色・横棒の向き・値のラベル・凡例も合う。字体は Google の字体に置き換わる。**円の一番小さい扇(9%)のラベルから項目の名前が落ちた**(値だけ残る) |
+| python-pptx | 種類・項目・値を読める |
+| PowerPoint | まだ確かめていない |
+
+- 円の小さい扇の名前が Google Slides で落ちることへの手当ては、まだしていない
+  (部分を6つまでにし、小さいものは「その他」にまとめる、を R4 と Skill で勧める)。
+- XSD の検査(`tools/validate_pptx.py`)はグラフの部品(`dml-chart.xsd`)と、埋め込みの
+  xlsx の中(`sml.xsd`、場所は `/ppt/embeddings/….xlsx!/xl/…`)まで見る。グラフに
+  埋め込みの表への関係(package)がちょうど1つあることも見る。
+
+### 確かめ方
+
+- `go test ./...`(`chart_test.go`):比べ方とデータの数から形が決まる/例を dark・light
+  で組んで警告が無く、グラフ・関係・xlsx が揃い、強調した項目だけが accent・横棒の順・
+  単位つきの書式・凡例の有無・積み上げ・円の境の色・ヒストグラムの間・散布図の軸の題・
+  xlsx の値/横棒の高さは項目の数で増え上限があり、ほかは幅×0.5/`chart-labels` と
+  check の code・path/意味の誤り(`chart-values`・`chart-emphasis`)を check と読み込みが
+  同じに断る/Markdown の誤りの行。
+- 目で見る:`BOXLOOM_CHART_SHOTS=<dir> go test -run TestChartsExampleBuilds .` が
+  `charts-{light,dark}.pptx` を `<dir>` に書く。
+- `tools/validate_pptx.py --self-test` が例を XSD で検査し、グラフの XML・埋め込みの
+  表を壊したもの・表への関係を消したものを見つけられることを確かめる。
+
+### まだやっていないこと
+
+- PowerPoint で開いて確かめていない(「データの編集」で表が開くことも)。
+- 値の軸の範囲・刻みはアプリまかせ(0 から始まらない軸・対数の軸・2つの値の軸は無い)。
+- 積み上げの100%(割合の積み上げ)・面グラフ・ウォーターフォール・2つの軸の組み合わせは無い。
+- 値のラベルは1系列の棒と円だけ(折れ線・積み上げには付けない)。
+- 円の小さい扇のラベルの手当て(上の表)。
 
 ## 確かめたこと
 

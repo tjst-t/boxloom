@@ -75,7 +75,11 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
    check の警告(`shapes-overlap`)。詳細は `docs/subsystem.md` の8節。
    箱を矢印で並べる・親と子の箱・格子に評価・減っていく帯は、shapes ではなく
    **process・orgchart・matrix・funnel** のサブシステムで書く(意味だけを書く。
-   `docs/subsystem.md` の11節)。
+   `docs/subsystem.md` の11節)。数の系列は **chart**(PowerPoint の本物のグラフ+
+   値を持つ埋め込みの xlsx)。作者は比べ方(Zelazny の5分類 `compare`)と項目・系列・
+   値・単位・強調だけを書き、グラフの形・色・大きさはサブシステムが選ぶ。軸・ラベルの
+   置き場所はアプリが決めるので、Boxloom は枠の Min を測ってはみ出しを判定し、
+   項目の名前が入りきらないことだけを警告する(`docs/subsystem.md` の12節)。
 
 **データとコードの混ぜ方(合意済み)**: 値の表・スタイル規則・骨組みはデータ
 (宣言ファイル)で書き、部品とサブシステムはコードで書く。いまデータに
@@ -205,6 +209,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     書き、置き場所・色はサブシステムが決める。線は箱に繋がった本物のコネクタ(組織図は
     曲がる線)。check の誤り `matrix-cells`、警告 `figure-text-overflow`・`funnel-increase`。
     詳細は `docs/subsystem.md` の11節
+  - `chart.go` / `chartxml.go` / `md_chart.go` = 数値のグラフ(chart)。比べ方から形を
+    選び(item→横棒・timeSeries→縦棒か折れ線・component→円・frequency→ヒストグラム・
+    correlation→散布図)、`c:chartSpace` と埋め込みの xlsx を書く。check の誤り
+    `chart-values`・`chart-emphasis`、警告 `chart-labels`。詳細は `docs/subsystem.md` の12節
   - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
     `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
   - `blocks.go` / `image.go` / `pptx_blocks.go` / `md_blocks.go` = 第1層のブロックの

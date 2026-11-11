@@ -1,6 +1,6 @@
 # Schema では通るが、boxloom check で断られる IR の例
 
-どれも `../demo-deck.json`・`../gantt-full.json`・`../shapes.json`・`../text-patterns.json`・`../figures.json` のどれかを1か所だけ変えたもの。
+どれも `../demo-deck.json`・`../gantt-full.json`・`../shapes.json`・`../text-patterns.json`・`../figures.json`・`../charts.json` のどれかを1か所だけ変えたもの。
 表と画像の例(`table-shape.json`・`image-*.json`)は、`../blocks.json` の表紙とスライド1枚
 だけを取り出して1か所変えたもの(画像の src はこのフォルダからの相対パス)。
 形(キー・型・enum)は正しいので `tools/validate_ir.py` は通す(`--self-test` は
@@ -25,6 +25,8 @@
 | `table-shape.json` | 表の2行目のセルを1つ減らした(見出しは4つ) | `table-shape` |
 | `image-missing.json` | 画像の src を、無いファイルにした | `image-missing` |
 | `image-format.json` | 画像の src を、画像でないファイル(`README.md`)にした | `image-format` |
+| `chart-values.json` | chart(時系列の縦棒)の系列の値を1つ減らした(項目は6つ) | `chart-values` |
+| `chart-emphasis.json` | chart(構成比の円)の強調に、項目に無い名前を書いた | `chart-emphasis` |
 
 形が誤っていて Schema で断られる例は `../invalid/` にある。それらも
 `boxloom check` は断る(Go の IR の読み込みが断る。rule は `ir-read` か `build`)。

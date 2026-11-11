@@ -1,6 +1,6 @@
 # 断られるべき IR の例
 
-どれも `../demo-deck.json`(`shapes-*.json` は `../shapes.json`、`stat-*.json`・`statement-*.json`・`quote-*.json` は `../text-patterns.json`、`figure-*.json`・`funnel-*.json` は `../figures.json`)を1か所だけ変えたもの。
+どれも `../demo-deck.json`(`shapes-*.json` は `../shapes.json`、`stat-*.json`・`statement-*.json`・`quote-*.json` は `../text-patterns.json`、`figure-*.json`・`funnel-*.json` は `../figures.json`、`chart-*.json` は `../charts.json`)を1か所だけ変えたもの。
 表・画像・並列のまとまりの例(`table-*`・`image-*`・`column*`)は、`../blocks.json` の
 表紙とスライド1枚だけを取り出して1か所変えたもの。`tools/validate_ir.py --self-test` は、これらが全部断られることを確かめる。
 
@@ -30,3 +30,5 @@
 | `columns-nested.json` | まとまりの中に `columns` を入れ子にした |
 | `image-url.json` | 画像の `src` を URL にした(`boxloom check` は `image-path`) |
 | `image-empty-alt.json` | 画像の代わりの文を空にした(`boxloom check` は `image-alt`。このフォルダに画像は無いので `image-missing` も出る) |
+| `chart-color-on-series.json` | chart の系列に色(color)を足した(色はテーマの役割名からサブシステムが決める) |
+| `chart-form-as-compare.json` | chart の比べ方(compare)にグラフの形の名前(bar)を書いた(形はサブシステムが選ぶ) |

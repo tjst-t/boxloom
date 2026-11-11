@@ -28,6 +28,7 @@ const (
 	skConnector // 矢印を付けられる線。図形の接続点に繋げられる(shapes サブシステム)
 	skPicture   // 画像(p:pic。pptx_blocks.go)
 	skTable     // 表(a:tbl。pptx_blocks.go)
+	skChart     // 本物のグラフ(p:graphicFrame → c:chartSpace + 埋め込み xlsx)
 )
 
 type shape struct {
@@ -83,6 +84,10 @@ type shape struct {
 
 	// skTable
 	table *TableDraw
+	// skChart
+	chart    *ChartData
+	chartNum int    // 文書の中の通し番号(ppt/charts/chartN.xml)。書くときに決める
+	chartRID string // スライドからグラフへの関係の Id
 }
 
 // PPTXBuilder は1枚のスライドを表す。Canvas(box_engine.pyのcanvas葉ノード)の
@@ -141,6 +146,11 @@ func (p *PPTXBuilder) AddDot(cx, cy, r float64, color string) {
 		id: p.allocID(), kind: skOval,
 		box: LBox{X: cx - r, Y: cy - r, Width: r * 2, Height: r * 2}, fill: color,
 	})
+}
+
+// AddChart は本物のグラフを box に置く。
+func (p *PPTXBuilder) AddChart(box LBox, d *ChartData) {
+	p.Shapes = append(p.Shapes, shape{id: p.allocID(), kind: skChart, box: box, chart: d})
 }
 
 // AddTextBox はテキストボックスを追加する(wrap=True相当)。テキストはこちら側で
@@ -427,6 +437,8 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 
 	case skTable:
 		return p.tableXML(s)
+	case skChart:
+		return chartFrameXML(s.id, s.box, s.chartRID)
 	}
 	return ""
 }
@@ -724,6 +736,21 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	}
 	media := assignMedia(slides)
 	var slideTypes, notesTypes, sldIDs, slideRelsList strings.Builder
+	// グラフに文書の中の通し番号と、スライドからの関係の Id を振る。
+	nCharts := 0
+	for _, sl := range slides {
+		k := 0
+		for j := range sl.Shapes {
+			if sl.Shapes[j].kind == skChart {
+				nCharts++
+				k++
+				sl.Shapes[j].chartNum = nCharts
+				sl.Shapes[j].chartRID = fmt.Sprintf("rIdChart%d", k) // 画像の rId10〜 と重ならない名前
+				slideTypes.WriteString(fmt.Sprintf(`
+<Override PartName="/ppt/charts/chart%d.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>`, nCharts))
+			}
+		}
+	}
 	for i, sl := range slides {
 		slideTypes.WriteString(fmt.Sprintf(`
 <Override PartName="/ppt/slides/slide%d.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`, i+1))
@@ -739,7 +766,7 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	contentTypes := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>` + mediaContentTypes(media) + `
+<Default Extension="xml" ContentType="application/xml"/>` + mediaContentTypes(media) + xlsxDefault(nCharts) + `
 <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
 <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
 <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
@@ -956,6 +983,16 @@ func writeSlide(write func(name, content string) error, num int, p *PPTXBuilder)
 <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide%d.xml"/>`, num)
 	}
 	slideRels += slideImageRels(p)
+	for _, s := range p.Shapes {
+		if s.kind != skChart {
+			continue
+		}
+		slideRels += fmt.Sprintf(`
+<Relationship Id="%s" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart%d.xml"/>`, s.chartRID, s.chartNum)
+		if err := writeChart(write, s.chartNum, s.chart); err != nil {
+			return err
+		}
+	}
 	slideRels += `
 </Relationships>`
 
@@ -1125,4 +1162,32 @@ func relLuminance(hex string) float64 {
 		return math.Pow((c+0.055)/1.055, 2.4)
 	}
 	return 0.2126*ch(0) + 0.7152*ch(2) + 0.0722*ch(4)
+}
+
+// xlsxDefault は埋め込みの xlsx の内容の種類(グラフがあるときだけ)。
+func xlsxDefault(nCharts int) string {
+	if nCharts == 0 {
+		return ""
+	}
+	return `
+<Default Extension="xlsx" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>`
+}
+
+// writeChart は n 番目のグラフの部品(c:chartSpace・その関係・埋め込みの xlsx)を書く。
+func writeChart(write func(name, content string) error, n int, d *ChartData) error {
+	xlsx, err := d.XLSX()
+	if err != nil {
+		return err
+	}
+	if err := write(fmt.Sprintf("ppt/charts/chart%d.xml", n), d.ChartXML("rId1")); err != nil {
+		return err
+	}
+	rels := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/package" Target="../embeddings/Microsoft_Excel_Worksheet%d.xlsx"/>
+</Relationships>`, n)
+	if err := write(fmt.Sprintf("ppt/charts/_rels/chart%d.xml.rels", n), rels); err != nil {
+		return err
+	}
+	return write(fmt.Sprintf("ppt/embeddings/Microsoft_Excel_Worksheet%d.xlsx", n), string(xlsx))
 }

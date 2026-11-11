@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/chart.schema.json",
+  "title": "Boxloom IR: chart subsystem (0.1)",
+  "description": "数の系列のグラフ(docs/patterns.md の R4)。作者は比べ方(Zelazny の比較の5分類)と項目・系列・値・単位・強調だけを書き、グラフの形(横棒・縦棒・折れ線・円・ヒストグラム・散布図)・色・大きさはサブシステムが選ぶ。PPTX には PowerPoint の本物のグラフ(値を持つ埋め込みの xlsx つき)で出る。値の数と項目の数の一致・強調する項目の有無などは boxloom check が見る(chart-values・chart-emphasis)。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "subsystem"
+    },
+    "subsystem": {
+      "const": "chart"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "data": {
+      "$ref": "#/$defs/chart"
+    }
+  },
+  "required": [
+    "type",
+    "subsystem",
+    "data"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "unit": {
+      "description": "値の後ろに付ける単位(例 件・%・時間)。% のときは値を 46 のように百分率の数で書く。\" と \\ は書けない。",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\"\\\\]+$"
+    },
+    "axis": {
+      "description": "散布図の軸が何を測ったか。",
+      "type": "object",
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/text"
+        },
+        "unit": {
+          "$ref": "#/$defs/unit"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "series": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "系列の名前(凡例と埋め込みの表の見出し)。",
+          "$ref": "#/$defs/text"
+        },
+        "values": {
+          "description": "項目ごとに1つの値(categories と同じ数・同じ順)。correlation 以外。",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "number"
+          }
+        },
+        "points": {
+          "description": "散布図の点 [x, y](correlation だけ)。",
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "emphasis": {
+          "description": "この系列を目立たせる(系列が複数のとき、1つまで)。既定 false。",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "chart": {
+      "type": "object",
+      "properties": {
+        "compare": {
+          "description": "何を比べるか(Zelazny の比較の5分類)。item=項目の比較(横棒)・timeSeries=時系列(縦棒か折れ線)・component=全体に占める割合(円)・frequency=度数分布(ヒストグラム)・correlation=2つの量の関係(散布図)。形はサブシステムが選ぶ。",
+          "enum": [
+            "item",
+            "timeSeries",
+            "component",
+            "frequency",
+            "correlation"
+          ]
+        },
+        "categories": {
+          "description": "項目の名前(item は比べる項目、timeSeries は時点の順、component は部分、frequency は区間)。correlation では書かない。",
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "series": {
+          "description": "系列(3つまで)。",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/series"
+          }
+        },
+        "stacked": {
+          "description": "系列が合計の内訳(item・timeSeries で系列が2つ以上のとき)。既定 false。",
+          "type": "boolean"
+        },
+        "unit": {
+          "$ref": "#/$defs/unit"
+        },
+        "emphasis": {
+          "description": "目立たせる項目の名前(系列が1つのとき)。",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "xAxis": {
+          "$ref": "#/$defs/axis"
+        },
+        "yAxis": {
+          "$ref": "#/$defs/axis"
+        }
+      },
+      "required": [
+        "compare",
+        "series"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "compare": {
+                "const": "correlation"
+              }
+            },
+            "required": [
+              "compare"
+            ]
+          },
+          "then": {
+            "required": [
+              "xAxis",
+              "yAxis"
+            ],
+            "properties": {
+              "series": {
+                "items": {
+                  "required": [
+                    "points"
+                  ],
+                  "not": {
+                    "required": [
+                      "values"
+                    ]
+                  }
+                }
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "categories"
+                  ]
+                },
+                {
+                  "required": [
+                    "unit"
+                  ]
+                },
+                {
+                  "required": [
+                    "emphasis"
+                  ]
+                },
+                {
+                  "required": [
+                    "stacked"
+                  ]
+                }
+              ]
+            }
+          },
+          "else": {
+            "required": [
+              "categories"
+            ],
+            "properties": {
+              "series": {
+                "items": {
+                  "required": [
+                    "values"
+                  ],
+                  "not": {
+                    "required": [
+                      "points"
+                    ]
+                  }
+                }
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "xAxis"
+                  ]
+                },
+                {
+                  "required": [
+                    "yAxis"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "compare": {
+                "enum": [
+                  "component",
+                  "frequency"
+                ]
+              }
+            },
+            "required": [
+              "compare"
+            ]
+          },
+          "then": {
+            "properties": {
+              "series": {
+                "maxItems": 1
+              },
+              "stacked": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "compare": {
+                "const": "component"
+              }
+            },
+            "required": [
+              "compare"
+            ]
+          },
+          "then": {
+            "properties": {
+              "categories": {
+                "maxItems": 6
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "naturalWidth": 640,
+  "minWidth": 240,
+  "minPlotHeight": 96,
+  "naturalAspect": 0.5,
+  "minBarSlot": 20,
+  "naturalBarSlot": 32,
+  "maxBarSlot": 48,
+  "columnMaxPoints": 8,
+  "gapWidth": 60,
+  "histogramGapWidth": 6,
+  "lineWidth": 2.25,
+  "markerSize": 5,
+  "scatterMarkerSize": 7,
+  "axisLineWidth": 0.75,
+  "gridLineWidth": 0.5,
+  "pieOutlineWidth": 1.5,
+  "labelMaxLines": 2,
+  "barLabelFraction": 0.3,
+  "padding": 8
+}

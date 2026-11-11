@@ -12,6 +12,7 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 | `boxloom/subsystems/gantt.json` | Gantt の既定の寸法。テンプレートが差し替えなければこれ |
 | `boxloom/subsystems/shapes.json` | shapes(生の図形への逃げ道)の既定の寸法 |
 | `boxloom/subsystems/process.json`・`orgchart.json`・`matrix.json`・`funnel.json` | 箱と線の図(`docs/subsystem.md` の11節)の既定の寸法 |
+| `boxloom/subsystems/chart.json` | 数値のグラフ(`docs/subsystem.md` の12節)の既定の寸法 |
 | `boxloom/values.go` | 読み込みと検査 |
 
 どちらも `go:embed` でバイナリに同梱する。テンプレートの一覧はこのフォルダの
@@ -266,6 +267,25 @@ dark / light は書いていない。図の字の大きさはファイルに持�
 各ファイルと Go の型(`ProcessValues`・`OrgChartValues`・`MatrixValues`・`FunnelValues`)の
 注釈に書いた。最小・自然・上限の3つ組(`minBoxHeight`・`naturalBoxHeight`・
 `maxBoxHeight` など)は Measure の Min・Natural・Max になる。
+
+### subsystems.chart(任意)
+
+同じく、書くとこのテンプレートのグラフだけがその寸法になる。全部のキーが要り、`padding`
+(段階の刻みに載ること)のほかは 0 より大きい数。グラフの字の大きさは values の
+`subPoint`、色はテーマの役割名(`accent`・`text_muted`・`none`・`grid`・`bg`)から引く。
+
+| キー | 意味 |
+|---|---|
+| `naturalWidth` `minWidth` | 幅が分からないときの自然な幅、最小の幅 |
+| `minPlotHeight` | 値の軸の長さ(縦の形)・円の直径の最小。Measure の Min のもと |
+| `naturalAspect` | 縦の形・円・散布図の自然な高さ(幅に対する割合) |
+| `minBarSlot` `naturalBarSlot` `maxBarSlot` | 横棒の1項目の高さ(Min・Natural・Max) |
+| `columnMaxPoints` | 時系列を縦棒で描く点の数の上限(越えたら折れ線) |
+| `gapWidth` `histogramGapWidth` | 棒の間(棒の幅に対する %)、ヒストグラムの棒の間 |
+| `lineWidth` `markerSize` `scatterMarkerSize` | 折れ線の太さ、折れ線・散布図の点の大きさ(pt) |
+| `axisLineWidth` `gridLineWidth` `pieOutlineWidth` | 項目の軸の線・目盛りの線・円の扇の境の太さ |
+| `labelMaxLines` `barLabelFraction` | 項目の名前を折り返してよい行の数、横棒の名前に使える幅の割合(`chart-labels` の基準) |
+| `padding` | アプリがグラフの内側に取る余白の見積もり(Measure と `chart-labels` に使う) |
 
 ## subsystems/gantt.json の形
 

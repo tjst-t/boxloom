@@ -108,6 +108,8 @@ AI が作る PowerPoint の質の悪さは、原因の違う3つに分けられ�
 - 3層目:Gantt と、生の図形への逃げ道 `shapes`(キャンバスの中だけ、座標は 0〜1、
   色は役割名、重なりは警告)。箱と線の図 `process`・`orgchart`・`matrix`・`funnel`
   (意味だけを書き、置き場所と色はサブシステムが決める。`docs/subsystem.md` の11節)。
+  数値のグラフ `chart`(PowerPoint の本物のグラフ。比べ方を書けば形はサブシステムが
+  選ぶ。`docs/subsystem.md` の12節)。
 
 ## 4. 立ち位置
 

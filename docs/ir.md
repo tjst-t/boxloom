@@ -17,6 +17,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `schema/subsystems/gantt.schema.json` | Gantt サブシステムのブロック |
 | `schema/subsystems/shapes.schema.json` | shapes サブシステム(生の図形への逃げ道。`docs/subsystem.md` の8節)のブロック |
 | `schema/subsystems/process.schema.json`・`orgchart`・`matrix`・`funnel` | 箱と線の図のサブシステム(`docs/subsystem.md` の11節)のブロック |
+| `schema/subsystems/chart.schema.json` | 数値のグラフ(`docs/subsystem.md` の12節)のブロック。比べ方 `compare`・項目・系列・単位・強調だけを持つ |
 | `schema/boxloom-ir.schema.json` | 検査の入口。コアに同梱のサブシステムを差し込んだもの |
 | `examples/ir/demo-deck.json` | お題3枚を IR で書いた例 |
 | `examples/ir/gantt-full.json` | デモの Gantt 全体(3グループ・9行・注釈4つ)を IR で書いた例 |
@@ -24,6 +25,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `examples/ir/text-patterns.json` | 文字のパターン(区切り・主張・結論・統計強調・引用)の例(`examples/md/text-patterns.bx.md` の IR) |
 | `examples/ir/figures.json` | process・orgchart・matrix・funnel の例(`examples/md/figures.bx.md` と同じ IR) |
 | `examples/ir/blocks.json` | 並列のまとまり・表・画像・画像の並びの例(画像は `examples/ir/images/`。`tools/gen_example_images.go` で作った架空の図) |
+| `examples/ir/charts.json` | chart の例。比べ方の5分類ごと(`examples/md/charts.bx.md` と同じ IR) |
 | `examples/ir/invalid/` | 断られるべき例(色・位置・見た目の装飾などを1か所だけ足したもの) |
 | `tools/validate_ir.py` | 検査のコマンド |
 
@@ -63,7 +65,7 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 表       { type: "table", header: [セル], rows: [[セル]], caption? }   (セルはインライン。どの行も見出しと同じ数)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
-サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel", variant?, data: {…} }
+サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel" | "chart", variant?, data: {…} }
 ```
 
 `notes` は発表者ノート。文字だけの文字列で、改行(`\n`)が段落の区切り。PPTX では
@@ -267,6 +269,8 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `image-missing` | 画像のファイルが読める(`CheckOptions.Assets` から。コマンドは文書のフォルダ) |
 | `image-format` | 画像が PNG か JPEG(中身で見る。SVG・GIF などは断る) |
 | `image-alt` | 画像の代わりの文 `alt` が空白だけでない |
+| `chart-values` | chart の比べ方とデータが合う:各系列の `values` の数が `categories` の数と同じ・構成比(component)は1系列で負の値が無く合計が正・`stacked` は item・timeSeries で系列が2つ以上・correlation は `xAxis`・`yAxis` と `points` を持ち `categories` などを持たない・系列は3つまで(path はその欄。Schema で書けるものは Schema も断る) |
+| `chart-emphasis` | chart の `emphasis` の名前が `categories` にあり、系列が1つ。系列の `emphasis: true` は1つまでで、項目の強調と一緒に使わない |
 | `schema` / `build` | Go の IR の読み込み・組み立てが断ったもの(知らないキー・知らない状態など。形の誤り。`schema` は Markdown のパーサー・`validate_ir.py` と同じ code) |
 
 警告(誤りではない。`-strict` のときだけ exit 1):
@@ -283,6 +287,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `shapes-connector-angle` | shapes のコネクタが、どの辺の組でも辺と 30°未満の浅い角度でしか繋げない(角で終わったように見える)。path はそのコネクタ |
 | `figure-text-overflow` | process・orgchart・matrix・funnel の箱・セル・注記の文が収まらない(折り返せない語が箱より広い・高さが足りない)。path はその要素(`…/data/steps/2` など) |
 | `funnel-increase` | funnel の数の値が前の段より増えた。path はその段の `value` |
+| `chart-labels` | chart の項目の名前が、アプリが置く場所(縦の形は1項目の幅、横棒は枠の幅の30%)に2行で収まらない(アプリが斜めにする・間引く)。path は最初の項目(`…/data/categories/N`)、文に残りの数 |
 | `theme-role` | テーマに値の無い役割名をサブシステムが使った |
 
 ### はみ出し(layout-overflow)の測り方
