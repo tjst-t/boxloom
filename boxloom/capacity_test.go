@@ -22,6 +22,7 @@ func TestCapacityAgreesWithOverflowWarnings(t *testing.T) {
 		"../examples/ir/gantt-full.json",
 		"../examples/ir/speaker-notes.json",
 		"../examples/ir/shapes.json",
+		"../examples/ir/text-patterns.json",
 	}
 	sawOverflow := false
 	for _, f := range files {

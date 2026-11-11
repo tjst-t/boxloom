@@ -42,6 +42,7 @@ func TestCheckInvalidSemanticExamples(t *testing.T) {
 		"duplicate-id.json":             {"unique-id", "/slides/0/body/0/data/groups/1/rows/1/id"},
 		"not-a-real-date.json":          {"date-valid", "/slides/2/body/0/data/milestones/0/at"},
 		"outside-span.json":             {"within-span", "/slides/2/body/0/data/milestones/0/at"},
+		"quote-empty-source.json":       {"empty-text", "/slides/6/body/0/source"},
 		"shapes-out-of-frame.json":      {"shape-bounds", "/slides/1/body/1/data/items/6/w"},
 		"shapes-unknown-connector.json": {"target-exists", "/slides/1/body/1/data/items/12/to"},
 		"shapes-unknown-role.json":      {"role-exists", "/slides/1/body/1/data/items/7/fill"},
