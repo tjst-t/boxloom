@@ -225,7 +225,7 @@
       "number": 9,
       "kind": "task",
       "title": "容量の計測:check がブロックごとの要る高さ・本文の残りを JSON で出す",
-      "status": "in-progress",
+      "status": "done",
       "parent": "agent-entry",
       "dependsOn": [],
       "milestone": null,
@@ -233,7 +233,7 @@
       "labels": [],
       "body": "はみ出しの検査の測り方(縮めずに要る高さ)を使い、警告が無いときも数字を出す。スライドごとに本文の領域・要る高さの合計・残り。ブロックごとに要る高さ・行の数。AI が「あと何行入るか」「どこで分けるか」を決めるため。check -format json に capacity を足すか、別のコマンドにする。",
       "doneWhen": "check -format json(か新しいコマンド)の出力に capacity があり、docs に形が書いてあり、例で数字が layout-overflow の警告と食い違わないことが試験で確かめられている",
-      "resolution": null,
+      "resolution": "check -format json に capacity を足した。スライドごとに bodyArea・need・remaining・blockGap・bodyLineHeight・remainingBodyLines、ブロックごとに need・lines・top・bottom・overflow を出す。text でも -capacity で出る。layout-overflow と同じ1回の測り値から作り、例7つで数字が警告と一致することを試験で確かめた。形は docs/ir.md の「容量の計測」。main 06546b1。",
       "refs": [],
       "threads": [
         {
@@ -242,8 +242,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:00:29.883Z",
-      "updatedAt": "2026-11-11T02:59:18.728Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T03:02:59.172Z",
+      "closedAt": "2026-11-11T03:02:59.172Z",
       "extra": {}
     },
     {
