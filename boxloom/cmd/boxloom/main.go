@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,6 +89,11 @@ func readDeck(path string) (*boxloom.IRDeck, error) {
 	return boxloom.ReadDeck(path, b)
 }
 
+// deckAssets は文書の画像を読む口:文書のフォルダ(src はそこからの相対パス)。
+func deckAssets(deckPath string) fs.FS {
+	return os.DirFS(filepath.Dir(deckPath))
+}
+
 // deckBaseName は出力の名前の元(deck.bx.md → deck)。
 func deckBaseName(path string) string {
 	b := filepath.Base(path)
@@ -120,7 +126,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	var buf bytes.Buffer
-	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: *tmpl})
+	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: *tmpl, Assets: deckAssets(in)})
 	if errors.Is(err, boxloom.ErrUnknownTemplate) {
 		fmt.Fprintln(stderr, "error:", err)
 		return 1
@@ -170,7 +176,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 			res.Errors = append(res.Errors, boxloom.Issue{File: f, Message: err.Error(), Code: "read"})
 			continue
 		}
-		r := boxloom.Check(f, b, boxloom.CheckOptions{Template: *tmpl, Strict: *strict})
+		r := boxloom.Check(f, b, boxloom.CheckOptions{Template: *tmpl, Strict: *strict, Assets: deckAssets(f)})
 		res.OK = res.OK && r.OK
 		res.Errors = append(res.Errors, r.Errors...)
 		res.Warnings = append(res.Warnings, r.Warnings...)
@@ -296,6 +302,7 @@ func runFonts(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintln(stderr, "error:", err)
 			return 1
 		}
+		fc.Assets = deckAssets(in)
 		if err := fc.Deck(stdout, in, d); err != nil {
 			fmt.Fprintln(stderr, "error:", err)
 			return 1

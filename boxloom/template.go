@@ -16,6 +16,7 @@ package boxloom
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"strings"
 )
 
@@ -33,6 +34,16 @@ type Template struct {
 	Variants map[string]bool
 	// Blocks はこのテンプレートが名乗る囲み(:::名前)。`boxloom schema` が出す。
 	Blocks []BlockDecl
+
+	// images は画像のファイルを読む口(SetAssets。1回の組み立ての中で同じ画像は
+	// 1度だけ読む)。
+	images *imageCache
+}
+
+// SetAssets は画像(image・gallery の src)を読む fs.FS を決める。根は文書の
+// フォルダ(src は文書からの相対パス)。nil なら画像は読めない(image-missing)。
+func (t *Template) SetAssets(fsys fs.FS) {
+	t.images = &imageCache{fsys: fsys}
 }
 
 // LookupTemplate は名前からテンプレートを引く(templates/<名前>.json を読む。
@@ -193,8 +204,28 @@ func (t *Template) buildBlock(b *IRBlock) (*Spec, error) {
 	if err := t.checkVariant(b.Variant); err != nil {
 		return nil, err
 	}
+	s, err := t.buildBlockSpec(b)
+	if s != nil {
+		s.irType = b.Type
+	}
+	return s, err
+}
+
+func (t *Template) buildBlockSpec(b *IRBlock) (*Spec, error) {
 	v, th := t.Values, t.Theme
 	switch b.Type {
+	case "columns":
+		return t.columns(b)
+	case "table":
+		return t.table(b), nil
+	case "image":
+		leaf, err := t.imageLeaf(b.Src, b.Alt, b.Caption)
+		if err != nil {
+			return nil, fmt.Errorf("src: %w", err)
+		}
+		return SubsystemNode(leaf, WithGrow(1)), nil
+	case "gallery":
+		return t.gallery(b)
 	case "paragraph":
 		return t.text(b.Content, v.Body, th.c("text_primary"), false), nil
 	case "note":

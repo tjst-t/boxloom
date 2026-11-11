@@ -26,6 +26,8 @@ const (
 	skLine
 	skShape     // 図形(矩形・角丸・楕円)。枠線と中の文字を持てる(shapes サブシステム)
 	skConnector // 矢印を付けられる線。図形の接続点に繋げられる(shapes サブシステム)
+	skPicture   // 画像(p:pic。pptx_blocks.go)
+	skTable     // 表(a:tbl。pptx_blocks.go)
 )
 
 type shape struct {
@@ -68,6 +70,13 @@ type shape struct {
 	arrowEnd      bool // to の端に矢印(a:tailEnd)
 	stID, stIdx   int  // 始点を繋ぐ図形の id と接続点の番号(id 0 は繋がない)
 	endID, endIdx int  // 終点を繋ぐ図形の id と接続点の番号
+
+	// skPicture(text は代わりの文)。media・rid は書き出すときに決まる
+	image      *imageAsset
+	media, rid string
+
+	// skTable
+	table *TableDraw
 }
 
 // PPTXBuilder は1枚のスライドを表す。Canvas(box_engine.pyのcanvas葉ノード)の
@@ -370,6 +379,12 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 
 	case skConnector:
 		return connectorXML(s)
+
+	case skPicture:
+		return pictureXML(s)
+
+	case skTable:
+		return p.tableXML(s)
 	}
 	return ""
 }
@@ -562,6 +577,7 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 			hasNotes = true
 		}
 	}
+	media := assignMedia(slides)
 	var slideTypes, notesTypes, sldIDs, slideRelsList strings.Builder
 	for i, sl := range slides {
 		slideTypes.WriteString(fmt.Sprintf(`
@@ -578,7 +594,7 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	contentTypes := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>
+<Default Extension="xml" ContentType="application/xml"/>` + mediaContentTypes(media) + `
 <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
 <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
 <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
@@ -752,6 +768,11 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 			return err
 		}
 	}
+	for _, m := range media {
+		if err := write("ppt/media/"+m.name, string(m.data)); err != nil {
+			return err
+		}
+	}
 
 	if hasNotes {
 		notesMaster := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -798,6 +819,7 @@ func writeSlide(write func(name, content string) error, num int, p *PPTXBuilder)
 		slideRels += fmt.Sprintf(`
 <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide%d.xml"/>`, num)
 	}
+	slideRels += slideImageRels(p)
 	slideRels += `
 </Relationships>`
 

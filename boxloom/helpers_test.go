@@ -1,6 +1,9 @@
 package boxloom
 
-import "os"
+import (
+	"os"
+	"path/filepath"
+)
 
 // 試験だけが使う、ファイルを読み書きする手伝い(ライブラリ自身はファイルを
 // 扱わない)。
@@ -17,7 +20,7 @@ func CheckFileCapacity(path, templateOverride string) (errs, warns []Issue, caps
 	if err != nil {
 		return []Issue{{File: path, Message: err.Error(), Code: "read"}}, nil, nil
 	}
-	return checkCapacity(path, b, templateOverride)
+	return checkCapacity(path, b, templateOverride, os.DirFS(filepath.Dir(path)))
 }
 
 // readDeck は path を拡張子で選んで読む。

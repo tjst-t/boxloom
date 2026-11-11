@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"path/filepath"
 	"strings"
 )
@@ -81,6 +82,10 @@ func Templates() []string {
 type BuildOptions struct {
 	// Template はテンプレートの名前。空なら IR の template、それも無ければ light。
 	Template string
+	// Assets は画像(image・gallery の src)を読む fs.FS。根は文書のフォルダで、
+	// src は文書からの相対パス(ライブラリはファイルを直接は読まない)。コマンドは
+	// os.DirFS(文書のフォルダ) を渡す。nil なら画像を使う文書は組めない。
+	Assets fs.FS
 }
 
 // BuildResult は Build の結果。
@@ -107,6 +112,7 @@ func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	t.SetAssets(opt.Assets)
 	pages, warnings, err := t.RenderPages(deck)
 	if err != nil {
 		return nil, err

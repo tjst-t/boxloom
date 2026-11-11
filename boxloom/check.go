@@ -32,6 +32,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"regexp"
 	"sort"
 	"strconv"
@@ -57,6 +58,9 @@ type CheckOptions struct {
 	Template string
 	// Strict は警告も誤りとして扱う(CheckResult.OK が false になる)。
 	Strict bool
+	// Assets は画像(image・gallery の src)を読む fs.FS。根は文書のフォルダ。
+	// nil なら画像を使う文書は image-missing になる(BuildOptions.Assets と同じ)。
+	Assets fs.FS
 }
 
 // Check は1つの文書(file の名前、data の中身)を検査する。file の拡張子が
@@ -68,7 +72,7 @@ type CheckOptions struct {
 // 返す CheckResult の切れ端は nil にならない(JSON で [] になる)。
 func Check(file string, data []byte, opt CheckOptions) *CheckResult {
 	defer useFonts(activeFonts)() // 組み立てが替えた字体を、終わったら戻す
-	errs, warns, caps := checkCapacity(file, data, opt.Template)
+	errs, warns, caps := checkCapacity(file, data, opt.Template, opt.Assets)
 	res := &CheckResult{Errors: []Issue{}, Warnings: []Issue{}, Capacity: []SlideCapacity{}}
 	res.Errors = append(res.Errors, errs...)
 	res.Warnings = append(res.Warnings, warns...)
@@ -79,15 +83,15 @@ func Check(file string, data []byte, opt CheckOptions) *CheckResult {
 
 // checkCapacity は Check の中身。.md なら容量のスライドとブロックにも
 // Markdown の行を添える。
-func checkCapacity(file string, b []byte, templateOverride string) (errs, warns []Issue, caps []SlideCapacity) {
+func checkCapacity(file string, b []byte, templateOverride string, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
 	if !isMarkdownPath(file) {
-		return CheckIRCapacity(file, b, templateOverride)
+		return checkIR(file, b, templateOverride, assets)
 	}
 	ir, mdErrs, lines := ParseMarkdownWithMap(b, file)
 	if len(mdErrs) > 0 {
 		return mdErrs, nil, nil
 	}
-	errs, warns, caps = CheckIRCapacity(file, ir, templateOverride)
+	errs, warns, caps = checkIR(file, ir, templateOverride, assets)
 	for _, list := range [][]Issue{errs, warns} {
 		for i := range list {
 			list[i].Line = lines.Line(list[i].Path)
@@ -96,7 +100,15 @@ func checkCapacity(file string, b []byte, templateOverride string) (errs, warns 
 	for i := range caps {
 		caps[i].Line = lines.Line(caps[i].Path)
 		for j := range caps[i].Blocks {
-			caps[i].Blocks[j].Line = lines.Line(caps[i].Blocks[j].Path)
+			bc := &caps[i].Blocks[j]
+			bc.Line = lines.Line(bc.Path)
+			for k := range bc.Columns {
+				cc := &bc.Columns[k]
+				cc.Line = lines.Line(cc.Path)
+				for m := range cc.Blocks {
+					cc.Blocks[m].Line = lines.Line(cc.Blocks[m].Path)
+				}
+			}
 		}
 	}
 	return errs, warns, caps
@@ -109,12 +121,18 @@ func CheckIR(file string, b []byte, templateOverride string) (errs, warns []Issu
 }
 
 // CheckIRCapacity は CheckIR に容量を足したもの。誤りがあれば容量は空。
+// 画像のファイルは読めない(画像を使う文書は image-missing。読ませるなら Check と
+// CheckOptions.Assets を使う)。
 func CheckIRCapacity(file string, b []byte, templateOverride string) (errs, warns []Issue, caps []SlideCapacity) {
+	return checkIR(file, b, templateOverride, nil)
+}
+
+func checkIR(file string, b []byte, templateOverride string, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
 	var doc any
 	if err := json.Unmarshal(b, &doc); err != nil {
 		return []Issue{{File: file, Path: "", Message: "not JSON: " + err.Error(), Code: "json"}}, nil, nil
 	}
-	c := &checker{file: file}
+	c := &checker{file: file, images: &imageCache{fsys: assets}}
 
 	// テンプレート(variant の検査と組み立てに使う)。
 	name, _ := getPath(doc, "template").(string)
@@ -139,6 +157,7 @@ func CheckIRCapacity(file string, b []byte, templateOverride string) (errs, warn
 		c.add(locationToPointer(perr.Error()), perr.Error(), "schema")
 		return c.errs, nil, nil
 	}
+	tm.images = c.images // check で読んだ画像をそのまま使う
 	pages, warnings, caps, berr := tm.renderPages(deck)
 	if berr == nil {
 		berr = WriteDeck(io.Discard, pages, "")
@@ -157,8 +176,9 @@ func CheckIRCapacity(file string, b []byte, templateOverride string) (errs, warn
 }
 
 type checker struct {
-	file string
-	errs []Issue
+	file   string
+	errs   []Issue
+	images *imageCache
 }
 
 func (c *checker) add(at, msg, rule string) {
@@ -201,6 +221,7 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 			bp := fmt.Sprintf("%s/body/%d", sp, bi)
 			bm, _ := blk.(map[string]any)
 			c.checkVariant(bm, bp, tm)
+			c.checkBlock(bm, bp, tm)
 			if bm["type"] == "subsystem" && bm["subsystem"] == "gantt" {
 				if data, ok := bm["data"].(map[string]any); ok {
 					c.checkGantt(data, bp+"/data", ids)
@@ -235,6 +256,67 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		}
 	})
 	c.checkDates(doc)
+}
+
+// checkBlock は表・画像・並列のまとまりの、Schema で書けない決まりを見る:
+// 表の行のセルの数(table-shape)、画像のファイル(image-path・image-missing・
+// image-format)、まとまりの中のブロック(同じ検査と variant)。
+func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
+	img := func(m map[string]any, p string) {
+		if alt, ok := m["alt"].(string); ok && strings.TrimSpace(alt) == "" {
+			c.addIssue(Issue{Path: p + "/alt", Code: "image-alt", Message: "the image has no alternative text (alt)",
+				Hint: "画像が何を示すかを1文で書いてください(読み上げと、画像が無いときに使います)"})
+		}
+		src, ok := m["src"].(string)
+		if !ok {
+			return
+		}
+		if _, err := c.images.get(src); err != nil {
+			code := imageCode(err)
+			if code == "" {
+				code = "image-missing"
+			}
+			hint := "画像は文書のファイルと同じフォルダ(かその下)に置き、文書からの相対パスで書きます"
+			if code == "image-format" {
+				hint = "PNG か JPEG にしてください"
+			}
+			c.addIssue(Issue{Path: p + "/src", Code: code, Message: err.Error(), Hint: hint})
+		}
+	}
+	switch bm["type"] {
+	case "table":
+		header, _ := bm["header"].([]any)
+		rows, _ := bm["rows"].([]any)
+		for ri, r := range rows {
+			cells, ok := r.([]any)
+			if ok && len(header) > 0 && len(cells) != len(header) {
+				c.add(fmt.Sprintf("%s/rows/%d", bp, ri), fmt.Sprintf("row has %d cells but the header has %d (every row has one cell per column)", len(cells), len(header)), "table-shape")
+			}
+		}
+	case "image":
+		img(bm, bp)
+	case "gallery":
+		images, _ := bm["images"].([]any)
+		for i, x := range images {
+			if m, ok := x.(map[string]any); ok {
+				img(m, fmt.Sprintf("%s/images/%d", bp, i))
+			}
+		}
+	case "columns":
+		cols, _ := bm["columns"].([]any)
+		for ci, col := range cols {
+			cm, _ := col.(map[string]any)
+			body, _ := cm["body"].([]any)
+			for k, blk := range body {
+				p := fmt.Sprintf("%s/columns/%d/body/%d", bp, ci, k)
+				m, _ := blk.(map[string]any)
+				c.checkVariant(m, p, tm)
+				if m["type"] != "columns" {
+					c.checkBlock(m, p, tm)
+				}
+			}
+		}
+	}
 }
 
 func (c *checker) checkVariant(m map[string]any, ptr string, tm *Template) {
@@ -538,6 +620,8 @@ var warnRe = regexp.MustCompile(`^slide ([0-9]+): \[([A-Z-]+) WARNING\] (.*)$`)
 
 var warnBlockRe = regexp.MustCompile(`^body\[([0-9]+)\]: (.*)$`)
 
+var warnColumnRe = regexp.MustCompile(`^columns\[([0-9]+)\]: body\[([0-9]+)\]: (.*)$`)
+
 var warnShapeItemRe = regexp.MustCompile(`^shapes: items\[([0-9]+)\]`)
 
 var warnRuleNames = map[string]string{"SUBSYSTEM": "subsystem-min", "ROLE": "theme-role"}
@@ -567,6 +651,10 @@ func warningIssue(file, w string) Issue {
 	// 文の頭に本文の中の場所(body[2]: ...)があれば、そのブロックまで指す。
 	if bm := warnBlockRe.FindStringSubmatch(msg); bm != nil {
 		path, msg = path+"/body/"+bm[1], bm[2]
+		// 並列のまとまりの中のブロック(columns[C]: body[K]: ...)。
+		if cm := warnColumnRe.FindStringSubmatch(msg); cm != nil {
+			path, msg = path+"/columns/"+cm[1]+"/body/"+cm[2], cm[3]
+		}
 		// shapes の警告は、最初に名指しした図形まで指す。
 		if im := warnShapeItemRe.FindStringSubmatch(msg); im != nil {
 			path += "/data/items/" + im[1]

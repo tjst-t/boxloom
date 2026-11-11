@@ -44,6 +44,21 @@ type BlockCapacity struct {
 	Top      float64 `json:"top"`
 	Bottom   float64 `json:"bottom"`
 	Overflow float64 `json:"overflow"` // 本文の領域の下端を越えた高さ(0 なら収まる)
+	// Columns は並列のまとまり(columns)のときだけ、まとまりごとの測り値。
+	Columns []ColumnCapacity `json:"columns,omitempty"`
+}
+
+// ColumnCapacity は並列のまとまりの1つの測り値(Top・Bottom は本文の領域の上端から)。
+// Need は題と本文のブロックを積んだ高さで、一番高いまとまりがブロックの need になる。
+type ColumnCapacity struct {
+	Line     int             `json:"line,omitempty"`
+	Path     string          `json:"path"` // /slides/S/body/N/columns/C
+	Need     float64         `json:"need"`
+	Lines    int             `json:"lines"`
+	Top      float64         `json:"top"`
+	Bottom   float64         `json:"bottom"`
+	Overflow float64         `json:"overflow"`
+	Blocks   []BlockCapacity `json:"blocks"` // まとまりの本文(path は …/columns/C/body/K)
 }
 
 func round1(v float64) float64 { return math.Round(v*10) / 10 }
@@ -69,17 +84,31 @@ func slideCapacity(blocks []BlockMeasure, area, need, gap float64, si int, types
 		if b.Index < len(types) {
 			t = types[b.Index]
 		}
-		sc.Blocks = append(sc.Blocks, BlockCapacity{
-			Path:     fmt.Sprintf("%s/body/%d", sc.Path, b.Index),
-			Type:     t,
-			Need:     round1(b.Need),
-			Lines:    b.Lines,
-			Top:      round1(b.Top),
-			Bottom:   round1(b.Bottom),
-			Overflow: round1(b.Overflow),
-		})
+		bc := blockCapacity(b, fmt.Sprintf("%s/body/%d", sc.Path, b.Index), t)
+		for _, c := range b.Columns {
+			cp := fmt.Sprintf("%s/columns/%d", bc.Path, c.Index)
+			cc := ColumnCapacity{Path: cp, Need: round1(c.Need), Lines: c.Lines, Top: round1(c.Top),
+				Bottom: round1(c.Bottom), Overflow: round1(c.Overflow), Blocks: []BlockCapacity{}}
+			for _, ib := range c.Blocks {
+				cc.Blocks = append(cc.Blocks, blockCapacity(ib, fmt.Sprintf("%s/body/%d", cp, ib.Index), ib.Type))
+			}
+			bc.Columns = append(bc.Columns, cc)
+		}
+		sc.Blocks = append(sc.Blocks, bc)
 	}
 	return sc
+}
+
+func blockCapacity(b BlockMeasure, path, typ string) BlockCapacity {
+	return BlockCapacity{
+		Path:     path,
+		Type:     typ,
+		Need:     round1(b.Need),
+		Lines:    b.Lines,
+		Top:      round1(b.Top),
+		Bottom:   round1(b.Bottom),
+		Overflow: round1(b.Overflow),
+	}
 }
 
 // String は check の text の出し方(-capacity)の1行:
@@ -97,6 +126,12 @@ func (c SlideCapacity) String() string {
 		out += fmt.Sprintf("\n  %s %s: %d lines, %.1fpt", b.Path, b.Type, b.Lines, b.Need)
 		if b.Overflow > 0 {
 			out += fmt.Sprintf(", overflows by %.1fpt", b.Overflow)
+		}
+		for _, c := range b.Columns {
+			out += fmt.Sprintf("\n    %s: %d lines, %.1fpt", c.Path, c.Lines, c.Need)
+			if c.Overflow > 0 {
+				out += fmt.Sprintf(", overflows by %.1fpt", c.Overflow)
+			}
 		}
 	}
 	return out

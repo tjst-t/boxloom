@@ -39,6 +39,23 @@ type BlockMeasure struct {
 	Top      float64 // 本文の領域の上端からの位置(gap を含めて積んだもの)
 	Bottom   float64 // Top + Need
 	Overflow float64 // 本文の領域の下端を越えた高さ(越えなければ 0)
+	Type     string  // IR の type(並列のまとまりの中のブロックだけ。本文のブロックは kinds で渡す)
+
+	// Columns は並列のまとまり(columns)のときだけ、まとまりごとの測り値。
+	// ブロックの Need は一番高いまとまりの Need。
+	Columns []ColumnMeasure
+}
+
+// ColumnMeasure は並列のまとまりの1つの測り値。Top・Bottom は本文の領域の
+// 上端から(ブロックと同じ)。
+type ColumnMeasure struct {
+	Index    int
+	Need     float64 // 題と本文のブロックを縮めずに積んだ高さ
+	Lines    int
+	Top      float64
+	Bottom   float64
+	Overflow float64
+	Blocks   []BlockMeasure // まとまりの本文のブロック(Index はまとまりの中の番号)
 }
 
 // measureBody は本文の各ブロックを縮めずに積み、本文の領域の高さ(capacity)と
@@ -80,15 +97,55 @@ func measureBody(root, body *Spec) (blocks []BlockMeasure, capacity, need float6
 		start, end := cursor, cursor+h
 		cursor = end
 		m := BlockMeasure{Index: i, Need: h, Lines: lines, Top: start, Bottom: end}
-		if end > capacity+overflowEps {
-			m.Overflow = end - capacity
-			if start > capacity {
-				m.Overflow = h
-			}
+		m.Overflow = overflowOf(start, end, capacity)
+		if b.columns != nil {
+			m.Columns = measureColumns(b.columns, start, capacity)
 		}
 		blocks = append(blocks, m)
 	}
 	return blocks, capacity, cursor, true
+}
+
+// overflowOf は start〜end に積んだものが、本文の領域(capacity)の下端を越えた高さ。
+func overflowOf(start, end, capacity float64) float64 {
+	switch {
+	case end <= capacity+overflowEps:
+		return 0
+	case start > capacity:
+		return end - start
+	}
+	return end - capacity
+}
+
+// measureColumns は並列のまとまりを1つずつ、題と本文のブロックを縮めずに積んで
+// 測る(top はブロックの上端)。まとまりの幅は requiredMeasure が並べた Box から読む。
+func measureColumns(info *columnsInfo, top, capacity float64) []ColumnMeasure {
+	var out []ColumnMeasure
+	for ci, col := range info.cols {
+		w := col.spec.Box.Width
+		cm := ColumnMeasure{Index: ci, Top: top}
+		cursor := top
+		if col.title != nil {
+			h, n := requiredMeasure(col.title, w)
+			cursor += h + col.spec.Gap
+			cm.Lines += n
+		}
+		for bi, b := range col.body.Children {
+			if bi > 0 {
+				cursor += col.body.Gap
+			}
+			h, n := requiredMeasure(b, w)
+			bm := BlockMeasure{Index: bi, Need: h, Lines: n, Top: cursor, Bottom: cursor + h, Type: b.irType}
+			bm.Overflow = overflowOf(bm.Top, bm.Bottom, capacity)
+			cm.Blocks = append(cm.Blocks, bm)
+			cm.Lines += n
+			cursor += h
+		}
+		cm.Bottom, cm.Need = cursor, cursor-top
+		cm.Overflow = overflowOf(top, cursor, capacity)
+		out = append(out, cm)
+	}
+	return out
 }
 
 // measureBodyOverflow は本文の各ブロックのはみ出しと、本文の領域の高さ・
@@ -127,6 +184,20 @@ func overflowWarnings(blocks []BlockMeasure, capacity, need float64, kinds []str
 		if o.Index < len(kinds) && kinds[o.Index] != "" {
 			kind = " (" + kinds[o.Index] + ")"
 		}
+		if len(o.Columns) > 0 {
+			// 並列のまとまりは、まとまりの中ではみ出したブロックごとに出す
+			// (一番高いまとまりがブロックの高さを決める)。
+			for _, c := range o.Columns {
+				for _, ib := range c.Blocks {
+					if ib.Overflow <= 0 {
+						continue
+					}
+					out = append(out, fmt.Sprintf("[LAYOUT-OVERFLOW WARNING] body[%d]: columns[%d]: body[%d]: block (%s) in column %d overflows the body area by %.1fpt (block needs %.1fpt; column needs %.1fpt; body area %.1fpt, all blocks need %.1fpt)",
+						o.Index, c.Index, ib.Index, ib.Type, c.Index, ib.Overflow, ib.Need, c.Need, capacity, need))
+				}
+			}
+			continue
+		}
 		out = append(out, fmt.Sprintf("[LAYOUT-OVERFLOW WARNING] body[%d]: block%s overflows the body area by %.1fpt (block needs %.1fpt; body area %.1fpt, all blocks need %.1fpt)",
 			o.Index, kind, o.Overflow, o.Need, capacity, need))
 	}
@@ -154,7 +225,11 @@ func requiredMeasure(s *Spec, width float64) (float64, int) {
 		if s.Subsystem == nil {
 			return 0, 0
 		}
-		return s.Subsystem.Measure(Constraint{Width: width}).Min.Height, 0
+		lines := 0
+		if l, ok := s.Subsystem.(textLiner); ok {
+			lines = l.textLines(width)
+		}
+		return s.Subsystem.Measure(Constraint{Width: width}).Min.Height, lines
 	}
 	if len(s.Children) == 0 {
 		return 2 * s.Padding, 0

@@ -42,7 +42,16 @@
     "subsystemRadius": 12,
     "coverRuleWidth": 64,
     "coverRuleHeight": 4,
-    "fillRatioMin": 0.65
+    "fillRatioMin": 0.65,
+    "columnTitle": 16,
+    "columnGap": 32,
+    "columnMainWeight": 2,
+    "tableText": 12,
+    "tableCellPaddingX": 8,
+    "tableCellPaddingY": 4,
+    "tableRuleWidth": 1,
+    "imageMinHeight": 96,
+    "captionGap": 4
   },
   "marks": {
     "point": "・",

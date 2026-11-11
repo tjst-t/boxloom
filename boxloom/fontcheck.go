@@ -16,6 +16,7 @@ package boxloom
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 
 	"strings"
@@ -247,6 +248,8 @@ type FontCheck struct {
 	Template string
 	// Verbose ははみ出す行を1行ずつ出す。
 	Verbose bool
+	// Assets は画像を読む fs.FS(BuildOptions.Assets と同じ)。Deck ごとに替えてよい。
+	Assets fs.FS
 
 	scenarios   []fontScenario
 	worstNeeded map[string]float64
@@ -274,6 +277,7 @@ func (fc *FontCheck) Deck(w io.Writer, file string, d *IRDeck) error {
 	if err != nil {
 		return err
 	}
+	t.SetAssets(fc.Assets)
 	pages, _, err := t.RenderPages(d)
 	if err != nil {
 		return fmt.Errorf("%s: %w", file, err)

@@ -75,6 +75,15 @@ type Spec struct {
 	Subsystem Subsystem // KindSubsystem のときだけ
 	Place     Place     // KindSubsystem: 割り当てが図より大きいときの置き方(既定は左上)
 
+	// irType は本文のブロックを作った IR の type(はみ出しの警告の文に使う)。
+	irType string
+	// columns は並列のまとまり(columns)の行が持つ、まとまりごとの部品
+	// (はみ出しをまとまりごとに測る。blocks.go)。
+	columns *columnsInfo
+	// nestedSlack は、この箱が列の中で足りないとき、中のサブシステムの縮められる
+	// 分を Phase3a で先に返すか(並列のまとまりで、画像を文字より先に縮めるため)。
+	nestedSlack bool
+
 	Box LBox // compute_layout()実行後に確定する
 }
 
@@ -374,6 +383,16 @@ func computeLayout(s *Spec, x, y, width, height float64) {
 		slack := make([]float64, n)
 		totalSlack := 0.0
 		for i, c := range children {
+			// 印を付けた入れ子の箱(並列のまとまりの行と、まとまりの本文)も、中の
+			// サブシステムが縮められる分(縮めずに要る高さとの差)を先に返す。
+			// 印の無い箱はこれまでどおり(従来の出力を変えない)。
+			if !isRow && c.nestedSlack && c.Basis == nil && c.Height == nil && hasSubsystem(c) {
+				if v := basisSizes[i] - requiredHeight(c, crossSizes[i]); v > 0 {
+					slack[i] = v
+					totalSlack += v
+				}
+				continue
+			}
 			if c.Kind != KindSubsystem || c.Subsystem == nil || c.Basis != nil {
 				continue
 			}
@@ -506,6 +525,19 @@ func computeLayout(s *Spec, x, y, width, height float64) {
 		}
 		cursor += mainSizes[i] + s.Gap + gapExtra
 	}
+}
+
+// hasSubsystem は s の下にサブシステムの葉があるか。
+func hasSubsystem(s *Spec) bool {
+	if s.Kind == KindSubsystem {
+		return s.Subsystem != nil
+	}
+	for _, c := range s.Children {
+		if hasSubsystem(c) {
+			return true
+		}
+	}
+	return false
 }
 
 func max(a, b int) int {

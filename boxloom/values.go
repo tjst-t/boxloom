@@ -66,6 +66,18 @@ type TemplateValues struct {
 	CoverRuleH float64 `json:"coverRuleHeight"`
 
 	FillRatioMin float64 `json:"fillRatioMin"` // 本文の埋まりがこれ未満なら警告
+
+	ColumnTitle      float64 `json:"columnTitle" scale:"type"` // 並列のまとまりの題
+	ColumnGap        float64 `json:"columnGap" scale:"space"`  // まとまりの間
+	ColumnMainWeight float64 `json:"columnMainWeight"`         // 主のまとまり(role: main)の幅の比(ほかは 1)
+
+	TableText      float64 `json:"tableText" scale:"type"`          // 表のセルの字
+	TableCellPadX  float64 `json:"tableCellPaddingX" scale:"space"` // セルの左右の余白
+	TableCellPadY  float64 `json:"tableCellPaddingY" scale:"space"` // セルの上下の余白
+	TableRuleWidth float64 `json:"tableRuleWidth"`                  // 行の間の線の太さ
+
+	ImageMinHeight float64 `json:"imageMinHeight"`           // 画像を縮めてよい下限の高さ
+	CaptionGap     float64 `json:"captionGap" scale:"space"` // 表・画像と説明の文の間
 }
 
 // TemplateScale は値の表の段階(見た目のトークンの刻み)。
