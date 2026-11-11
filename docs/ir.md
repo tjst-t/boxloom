@@ -21,6 +21,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `schema/boxloom-ir.schema.json` | 検査の入口。コアに同梱のサブシステムを差し込んだもの |
 | `examples/ir/demo-deck.json` | お題3枚を IR で書いた例 |
 | `examples/ir/gantt-full.json` | デモの Gantt 全体(3グループ・9行・注釈4つ)を IR で書いた例 |
+| `examples/ir/gantt-leader.json` | 注釈の引き出し線が目盛り・節目の文字を通る日付に注釈を置いた Gantt(`examples/md/gantt-leader.bx.md` の IR。`docs/subsystem.md` の6節) |
 | `examples/ir/shapes.json` | shapes で描いた架空のシステム構成図の例 |
 | `examples/ir/text-patterns.json` | 文字のパターン(区切り・主張・結論・統計強調・引用)の例(`examples/md/text-patterns.bx.md` の IR) |
 | `examples/ir/figures.json` | process・orgchart・matrix・funnel の例(`examples/md/figures.bx.md` と同じ IR) |
