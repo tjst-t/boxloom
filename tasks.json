@@ -837,7 +837,7 @@
       "number": 37,
       "kind": "bug",
       "title": "Gantt の破線の区間の文字が2行に折り返して区間の箱からはみ出す",
-      "status": "backlog",
+      "status": "ready",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -849,7 +849,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:48:30.993Z",
-      "updatedAt": "2026-11-11T02:48:30.993Z",
+      "updatedAt": "2026-11-11T02:57:34.266Z",
       "closedAt": null,
       "extra": {}
     }
