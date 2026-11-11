@@ -698,7 +698,7 @@
       "number": 29,
       "kind": "task",
       "title": "値の表を段階に載せ、読み込みで強制する(余白の刻み・字の大きさの段)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -706,7 +706,7 @@
       "labels": [],
       "body": "余白・間隔は 4pt 刻み(か 2pt)。字の大きさは段(題・見出し・本文・注など)の名前で定義し、部品は段の名前で引く。いまの dark/light の値で段から外れるもの(itemGap 6・cardPadding 14・subPoint 12.5・small 10.5・coverAuthor 11.5 など)をどうするか決める。変えれば見た目が変わるので、画像で前後を比べる。",
       "doneWhen": "段から外れた値は読み込みで誤りになり(試験あり)、docs/template-values.md に段が書いてあり、dark/light の前後の画像がある",
-      "resolution": null,
+      "resolution": "値の表に scale(spacingUnit 4、typeSizes 8/10/12/14/16/24/36)を足し、余白と字の大きさが段から外れたら読み込みで誤り(Gantt・shapes の寸法も)。dark/light・gantt.json・shapes.json の外れた値を段に寄せた。前後の画像は verification-screenshots/scales_compare_*.png。main fbe30c9。",
       "refs": [],
       "threads": [
         {
@@ -715,8 +715,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:59.028Z",
-      "updatedAt": "2026-11-11T02:59:20.001Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T03:07:05.225Z",
+      "closedAt": "2026-11-11T03:07:05.225Z",
       "extra": {}
     },
     {
