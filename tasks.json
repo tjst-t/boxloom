@@ -672,7 +672,7 @@
       "number": 38,
       "kind": "task",
       "title": "数値のグラフ(chart):PowerPoint の本物のグラフ(c:chart+埋め込み xlsx)で出す",
-      "status": "in-progress",
+      "status": "done",
       "parent": "canvas-patterns",
       "dependsOn": [],
       "milestone": null,
@@ -680,7 +680,7 @@
       "labels": [],
       "body": "人が決めた:案 A(本物のグラフ)を主にする。実装の前に、試作の PPTX を LibreOffice と Google Slides で開いて見た目を確かめる(Google Slides は人が開く)。Zelazny の5分類(構成比・項目比較・時系列・度数分布・相関)を受ける。xlsx は依存ゼロ(archive/zip と encoding/xml)で書く。色は役割名、字は段の名前。軸・目盛りの配置はアプリが決めるので、はみ出しの検査の扱いも決める。",
       "doneWhen": "試作を LibreOffice と Google Slides で開いた結果が docs にあり、chart サブシステムが IR・Schema・Markdown・dark/light・試験・例・schema の出力まで揃い、validate_pptx.py を通る",
-      "resolution": null,
+      "resolution": "main に取り込んだ(605bcc3、push なし)。比べ方 compare(Zelazny の5分類)から形を選ぶ chart サブシステム。PowerPoint の本物のグラフ+埋め込み xlsx。試作の LibreOffice・Google Slides の結果は docs/subsystem.md の12節(Google Slides では円の小さい扇の名前が落ちた。PowerPoint は未確認)。ci.sh go python pptx readers 合格、既存の PPTX 52 個は main と同一。",
       "refs": [],
       "threads": [
         {
@@ -689,8 +689,8 @@
         }
       ],
       "createdAt": "2026-11-11T03:02:37.916Z",
-      "updatedAt": "2026-11-11T03:48:15.829Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:28:27.759Z",
+      "closedAt": "2026-11-11T05:28:27.759Z",
       "extra": {}
     },
     {
