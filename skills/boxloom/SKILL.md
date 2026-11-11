@@ -64,7 +64,11 @@ disclaimer: All names and figures are fictional
 template: light
 ---
 
-# The old cluster loses vendor support in March 2028
+# Vendor support of the old cluster
+
+:::lead
+The old cluster loses vendor support in March 2028, so the 14 services on it must move before then.
+:::
 
 - The vendor ends security fixes on **2028-03-31**
 - 14 services still run there; 9 can move without code changes
@@ -79,8 +83,10 @@ Speaker notes go here. Plain paragraphs and bullets only.
 :::
 ```
 
-- `# Title` starts a slide. **Write the title as the conclusion**, not the topic
-  ("The old cluster loses support in 2028", not "Cluster status").
+- `# Title` starts a slide. **Keep the title a short headline that fits on one line**
+  ("Vendor support of the old cluster"); a title that wraps is warned (`title-wrap`).
+  **Write what the slide says — the conclusion — as a sentence in `:::lead`** right after
+  the title (1–2 lines). The template puts the lead under the title, outside the body.
 - `---` is not a slide separator (it is an error). `##` and deeper headings are errors
   (a group title is written as `:::column Title`, not as a subheading).
 - Body: paragraphs, `- ` / `1. ` bullets (two levels max), `**emphasis**`
@@ -110,8 +116,9 @@ Speaker notes go here. Plain paragraphs and bullets only.
   :::::
   ```
 
-- `:::notes` (speaker notes) and `:::source` (where the slide's numbers come from) must
-  sit at the top level of a slide, once per slide each.
+- `:::lead` (the slide's message), `:::notes` (speaker notes) and `:::source` (where the
+  slide's numbers come from) must sit at the top level of a slide, once per slide each.
+  `:::lead` is for content slides only.
 - `date`, `confidential` and `disclaimer` in the front matter are written **once for the
   deck**; the template puts them on the cover (and `confidential` in the footer). Never
   repeat "fictional" / "confidential" in a `:::note` on every slide.
@@ -133,7 +140,7 @@ Available now (check `boxloom schema` — more may have been added):
 | Content | Use | Notes |
 |---|---|---|
 | A chapter break | `# Part 2: How we migrate {type=section}` | Heading text is the chapter title; nothing but `:::notes` may follow. Not a table of contents — when the deck has two or more sections, the template draws the chapter list with the current one highlighted on every section slide by itself |
-| The slide says exactly one sentence; the evidence is on other slides | `# Migration must move two years earlier {type=statement}` | Heading text is the sentence; nothing but `:::notes` and `:::source` may follow. If you would add reasons, use a normal slide with the conclusion as title |
+| The slide says exactly one sentence; the evidence is on other slides | `# Migration must move two years earlier {type=statement}` | Heading text is the sentence (this is the one slide type whose heading is a full sentence); nothing but `:::notes` and `:::source` may follow. If you would add reasons, use a normal slide with a short title and the conclusion as `:::lead` |
 | 1–4 numbers to show strongly, with no series to compare | `::::stat` → `:::value 3 → 12 {unit=models}` + one-line label inside | 5+ numbers or a time series is a chart/table, not stat. The value is written as-is and must contain a digit. Value and unit are never broken in the middle, so keep them short — 4 cards are narrow (`stat-value`) |
 | A series of numbers (3+ points): ranking, change over time, share of a whole, distribution, relation of two quantities | ```` ```chart ```` | `compare:` `item` / `timeSeries` / `component` / `frequency` / `correlation` — the chart type is chosen for you (never write bar/line/pie). `categories: [...]`, `series: [{name, values: [...]}]` (one value per category, unquoted numbers, max 3 series), optional `unit`, `emphasis: [category]` (one series) or `emphasis: true` on one series, `stacked: true` when series are parts of a total. `correlation` uses `xAxis: {title, unit?}`, `yAxis` and `points: [[x, y], …]` instead of categories. `component` (share) has 1 series and ≤ 6 parts — merge small parts into "Other" |
 | Someone else's words | `:::quote Source text` + the words inside | The source (heading text) is required. Never quote your own conclusion |
@@ -150,6 +157,7 @@ Available now (check `boxloom schema` — more may have been added):
 | 2–6 images compared or in sequence | one paragraph with 2–6 `![alt](path "caption")` | Becomes a gallery (one row for 2–3, a grid for 4–6). 7+ is an error: split the slide |
 | Parallel points | bullets | 2 levels max |
 | Connected prose | paragraph | 2–3 sentences |
+| What the slide says: its conclusion in one or two sentences | `:::lead` at the top level of a content slide, one paragraph | **Every content slide gets one.** Placed by the template right under the title, outside the body; it takes room from the body (1 line ≈ 30 pt, 2 lines ≈ 52 pt). Not a summary of the bullets — the claim they prove |
 | Where the slide's numbers, table, figure or quote come from (source, sample size, date) | `:::source` at the top level of the slide, one paragraph | **Every slide that shows numbers, a table, a chart or a quote gets one.** Content and statement slides only (not section). Placed by the template under the body, above the footer; it takes room from the body (`layout-overflow` counts it). One per slide: several sources go in one paragraph |
 | Deck-wide date, confidentiality, disclaimer ("all figures are fictional") | front matter `date`, `confidential`, `disclaimer` | Written once; shown on the cover (and `confidential` in the footer) |
 | A caveat / footnote-like remark | `:::note` | One short line. Not for sources (`:::source`), not for the deck-wide disclaimer (front matter), and never for the conclusion or a key number |
@@ -343,16 +351,16 @@ text, 16:9):
 
 | Quantity | Limit |
 |---|---|
-| Body area of a content slide | ~414 pt high ≈ 20 lines of body text |
+| Body area of a content slide | ~406 pt high without a lead ≈ 21 lines of body text; ~376 pt with a one-line lead, ~354 pt with a two-line lead; a `:::source` line takes another ~34 pt |
 | One-line bullets on an otherwise empty slide | 15 fit; **aim for 3–6** |
-| Characters per full-width line | ~65 CJK characters, ~100 Latin characters |
+| Characters per full-width line | ~60 CJK characters, ~95 Latin characters (body); a one-line title holds ~36 CJK / ~60 Latin characters |
 | Characters per line inside a `compare` column | ~30 CJK characters |
 | Table rows (12 pt cells, one line each) | ~16 under a title with nothing else; keep tables to ≤ 8 rows and ≤ 5 columns |
-| Gap between blocks | 16 pt (a new block costs this plus its own height) |
+| Gap between blocks | 20 pt (a new block costs this plus its own height) |
 
 Targets that read well (not hard limits):
 
-- One message per slide; the title states it.
+- One message per slide; the `:::lead` states it, the title names it.
 - 3–6 bullets per list, each ≤ 1 line (≤ ~40 CJK / ~70 Latin characters is comfortable).
 - `compare`: 2–3 options, 1–3 pros and 1–3 cons each, each ≤ 1 column line.
 - A slide with a figure (`gantt`, `process`, `orgchart`, `matrix`, `funnel`, `chart`, `shapes`) gets at most 1–2 short lines of text
@@ -362,8 +370,8 @@ Targets that read well (not hard limits):
   it — do not ship a deck with `fill-ratio` warnings left.** Pick one:
   1. **Merge** with a neighbouring thin slide. When the neighbour is also thin and both
      bodies fit on one slide, the warning's `hint` names that slide and the expected
-     fill (e.g. "隣の /slides/5 … 約 96%"). Keep one conclusion title.
-  2. **Add the evidence** the title needs: the numbers, a figure, a table, where the
+     fill (e.g. "隣の /slides/5 … 約 96%"). Keep one title and one lead.
+  2. **Add the evidence** the lead needs: the numbers, a figure, a table, where the
      numbers come from (who, how many, when). Side-by-side blocks (`compare` options,
      `stat` cards, `columns`) are as tall as their tallest card or column: adding a line
      to a shorter one does not change the fill. The `hint` and `capacity` (`cards` with
@@ -378,7 +386,7 @@ Targets that read well (not hard limits):
   tall: alone on a slide it always leaves the side empty, so put it in `columns` with its
   reading. Inside `columns` the warning points at `/columns/C/body/K`: do not mark the
   chart's group `role=main` (mark the text group instead, or none).
-- These warnings measure amount, not quality. Boxloom does not judge whether a title
+- These warnings measure amount, not quality. Boxloom does not judge whether a lead
   is a conclusion or the argument holds; that is your job (§6).
 
 ## 5. The check → fix loop
@@ -394,11 +402,11 @@ returns
  "errors":   [{"file": "deck.bx.md", "line": 14, "column": 1, "path": "/slides/1/body/0",
                "code": "unknown-block", "message": "…", "expected": ["compare", "note"], "hint": "…"}],
  "warnings": [{"file": "deck.bx.md", "line": 38, "path": "/slides/2/body/2",
-               "code": "layout-overflow", "message": "block (points) overflows the body area by 75.1pt …"}],
- "capacity": [{"path": "/slides/2", "bodyArea": 414.1, "need": 518.7, "remaining": -104.6,
-               "blockGap": 16, "bodyLineHeight": 18.9, "remainingBodyLines": 0,
+               "code": "layout-overflow", "message": "block (points) overflows the body area by 155.1pt …"}],
+ "capacity": [{"path": "/slides/2", "bodyArea": 406.1, "need": 594.7, "remaining": -188.6,
+               "blockGap": 20, "bodyLineHeight": 18.9, "remainingBodyLines": 0,
                "blocks": [{"path": "/slides/2/body/2", "line": 38, "type": "points",
-                           "need": 180.3, "lines": 7, "overflow": 75.1}]}]}
+                           "need": 204.3, "lines": 7, "overflow": 155.1}]}]}
 ```
 
 - `line`/`column` point into your Markdown; `path` points into the IR
@@ -429,6 +437,7 @@ Fixes by code:
 | `chart-values` | `chart`: one value per category in every series; `component` needs one series of non-negative parts; `stacked` needs 2+ series; `correlation` needs `xAxis`, `yAxis` and `points` (no `categories`); at most 3 series |
 | `chart-emphasis` | `chart`: `emphasis` must name existing categories and needs a single series; with several series mark one series `emphasis: true` instead |
 | `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently. Inside `columns` the path ends in `/columns/C/body/K`: shorten that group or move it to its own slide |
+| `title-wrap` (warning) | The slide title wraps to a second line. Make it a short headline (the topic in a few words) and move the claim into `:::lead`. Do not just cut words until it fits |
 | `fill-ratio` (warning) | Slide is mostly empty. Always fix (§4): merge with the neighbour the `hint` names, add the missing evidence or figure, or turn a one-message slide into `{type=statement}` |
 | `spare-width` (warning) | A figure/image leaves the side empty: put it in `columns` with text beside it (images and charts can go in a column), or give it more height by cutting text on that slide. In a column: remove `role=main` from the chart's group |
 | `milestone-overlap` (warning) | Milestones are too close in time: merge them into one milestone, turn one into an `annotation`, or narrow the `span` so the dates spread out |
@@ -446,7 +455,7 @@ Fixes by code:
 1. In `capacity`, find the slide with `remaining < 0`.
 2. Find the first block with `overflow > 0`. Everything from that block on moves to a
    new slide placed right after it.
-3. Give the new slide its own conclusion title (not "… (cont.)").
+3. Give the new slide its own title and lead (not "… (cont.)").
 4. If one block alone is taller than `bodyArea`, split the block itself (a long list
    into two lists by theme, a compare with 4 options into two compares).
 5. Run `check` again.
@@ -455,8 +464,8 @@ Fixes by code:
 
 1. Take the pair the `fill-ratio` hint names (or two neighbouring thin slides that make
    one point).
-2. Keep the stronger conclusion as the one title; put both bodies under it, the block
-   that proves the title first.
+2. Keep the stronger conclusion as the one lead (and a title that names it); put both
+   bodies under it, the block that proves the lead first.
 3. Delete the other slide and run `check` again. If it now overflows, the merge was
    wrong: add evidence to each slide instead.
 
@@ -470,7 +479,8 @@ one line fits if `remainingBodyLines ≥ 1`; a new block fits if its height is b
   `shapes`, with role names and 0–1 coordinates).
 - Do not use names of real companies, products or people in examples unless the user
   supplied them as the content.
-- Every slide title is a conclusion. One message per slide.
+- Every content slide has a short one-line title and a `:::lead` stating its conclusion.
+  One message per slide.
 - Every slide that shows numbers, a table, a chart or a quote has a `:::source`.
 - Finish only when `check` reports no errors and no warnings. If you keep a warning on
   purpose (rare), tell the user which one and why.

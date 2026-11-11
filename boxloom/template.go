@@ -69,6 +69,8 @@ type BuiltSlide struct {
 	Main *Spec
 	// MainWhat は Main がはみ出したときの警告で、何がはみ出したかの名前。
 	MainWhat string
+	// Title は本文のスライドの題の葉(1行に収まるかを測る。ほかでは nil)。
+	Title *Spec
 }
 
 // BuildDeck は IR の全スライドを組む。誤りは IR の中の場所を添えて返す。
@@ -210,17 +212,22 @@ func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, erro
 		blocks = append(blocks, b)
 	}
 	body := Col(blocks, WithGap(v.BlockGap), WithGrow(1))
+	// 本文の図が自然な大きさのままだとページに入らないとき、題・リード文・出典・
+	// フッターを縮めず、先に本文の図のゆとり(自然〜最小)から返させる。
+	body.nestedSlack = true
 
-	kids := []*Spec{
-		t.text(s.Title, v.SlideTitle, th.c("text_primary"), true, WithPlaceholder("title")),
-		body,
+	title := t.text(s.Title, v.SlideTitle, th.c("text_primary"), true, WithPlaceholder("title"))
+	head := title
+	if s.Lead != nil {
+		head = Col([]*Spec{head, t.text(s.Lead, v.LeadText, th.c("text_primary"), false)}, WithGap(v.HeaderGap))
 	}
+	kids := []*Spec{head, body}
 	if s.Source != nil {
 		kids = append(kids, t.slideSource(s.Source))
 	}
 	kids = append(kids, t.footer(d, i))
-	root := Col(kids, WithGap(v.SectionGap), WithPadding(v.PagePadding), WithBackground(th.c("bg")))
-	return &BuiltSlide{Root: root, Body: body, Notes: s.Notes}, nil
+	root := Col(kids, WithGap(v.SectionGap), WithPaddingXY(v.PagePadding, v.PagePaddingY), WithBackground(th.c("bg")))
+	return &BuiltSlide{Root: root, Body: body, Notes: s.Notes, Title: title}, nil
 }
 
 // footer は本文のスライドの下の行(左に作者と機密区分、右に「何枚目 / 全部」)。
@@ -337,7 +344,7 @@ func (t *Template) buildStatement(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
 		kids = append(kids, t.slideSource(s.Source))
 	}
 	kids = append(kids, t.footer(d, i))
-	root := Col(kids, WithGap(v.SectionGap), WithPadding(v.PagePadding), WithBackground(th.c("bg")))
+	root := Col(kids, WithGap(v.SectionGap), WithPaddingXY(v.PagePadding, v.PagePaddingY), WithBackground(th.c("bg")))
 	return &BuiltSlide{Root: root, Main: main, MainWhat: "statement", Notes: s.Notes}
 }
 
@@ -577,6 +584,13 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 			}
 		}
 		warnings = append(warnings, lintBlockSubsystems(b)...)
+		if b.Title != nil {
+			// 題は短い見出しで1行に収める(言いたいことの文はリード文に)。
+			if n := textLinesFor(b.Title, b.Title.Box.Width); n > 1 {
+				warnings = append(warnings, fmt.Sprintf("[TITLE-WRAP WARNING] title: the slide title wraps to %d lines (width %.1fpt at %.0fpt); keep it to one line",
+					n, b.Title.Box.Width, b.Title.FontSize))
+			}
+		}
 
 		p := NewPPTXBuilder(v.PageW, v.PageH)
 		p.ColorTheme = &DeckColors{Name: t.Name, Colors: t.Theme}

@@ -45,6 +45,7 @@ type IRSlide struct {
 	Author   Inline // cover だけ
 	Content  Inline // statement だけ(言いたいことの1文)
 	Source   Inline // content・statement: 出典(本文の流れの外。本文の下・フッターの上)
+	Lead     Inline // content だけ: リード文(題の下に置く、このスライドで言いたいことの文)
 	Body     []IRBlock
 	Notes    string
 }
@@ -340,6 +341,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 			Type    string            `json:"type"`
 			Variant string            `json:"variant"`
 			Title   Inline            `json:"title"`
+			Lead    Inline            `json:"lead"`
 			Body    []json.RawMessage `json:"body"`
 			Source  Inline            `json:"source"`
 			Notes   string            `json:"notes"`
@@ -353,7 +355,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 		if v.Body == nil {
 			return fmt.Errorf("content slide needs \"body\"")
 		}
-		out := IRSlide{Type: v.Type, Variant: v.Variant, Title: v.Title, Source: v.Source, Notes: v.Notes}
+		out := IRSlide{Type: v.Type, Variant: v.Variant, Title: v.Title, Lead: v.Lead, Source: v.Source, Notes: v.Notes}
 		for i, r := range v.Body {
 			var blk IRBlock
 			if err := blk.UnmarshalJSON(r); err != nil {

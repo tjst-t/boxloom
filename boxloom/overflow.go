@@ -86,7 +86,7 @@ func measureBody(root, body *Spec) (blocks []BlockMeasure, capacity, need float6
 	for _, b := range body.Children {
 		widths[b] = b.Box.Width
 	}
-	capacity = root.Box.Height - 2*root.Padding - root.Gap*float64(max(0, len(root.Children)-1))
+	capacity = root.Box.Height - 2*root.padY() - root.Gap*float64(max(0, len(root.Children)-1))
 	found := false
 	for _, c := range root.Children {
 		if c == body {
@@ -98,7 +98,7 @@ func measureBody(root, body *Spec) (blocks []BlockMeasure, capacity, need float6
 	if !found {
 		return nil, 0, 0, false
 	}
-	capacity -= 2 * body.Padding
+	capacity -= 2 * body.padY()
 
 	cursor := 0.0
 	for i, b := range body.Children {
@@ -269,9 +269,9 @@ func requiredMeasure(s *Spec, width float64) (float64, int) {
 		return s.Subsystem.Measure(Constraint{Width: width}).Min.Height, lines
 	}
 	if len(s.Children) == 0 {
-		return 2 * s.Padding, 0
+		return 2 * s.padY(), 0
 	}
-	inner := max0(width - 2*s.Padding)
+	inner := max0(width - 2*s.padX())
 	if s.Kind == KindCol {
 		total := s.Gap * float64(max(0, len(s.Children)-1))
 		lines := 0
@@ -286,7 +286,7 @@ func requiredMeasure(s *Spec, width float64) (float64, int) {
 			total += h
 			lines += n
 		}
-		return total + 2*s.Padding, lines
+		return total + 2*s.padY(), lines
 	}
 	// 行: 子の幅を決めるために一度並べる(Box を上書きする)。
 	computeLayout(s, 0, 0, width, naturalSize(s, 'h'))
@@ -300,7 +300,7 @@ func requiredMeasure(s *Spec, width float64) (float64, int) {
 			lines = n
 		}
 	}
-	return m + 2*s.Padding, lines
+	return m + 2*s.padY(), lines
 }
 
 // textLinesFor は文字の葉を幅 width で折り返したときの行の数。

@@ -41,16 +41,19 @@ type TemplateValues struct {
 	PageW float64 `json:"pageWidth"`
 	PageH float64 `json:"pageHeight"`
 
-	PagePadding  float64 `json:"pagePadding" scale:"space"`  // 本文のスライドの外周
+	PagePadding  float64 `json:"pagePadding" scale:"space"`  // 本文・主張のスライドの左右の外周
+	PagePaddingY float64 `json:"pagePaddingY" scale:"space"` // 本文・主張のスライドの上下の外周
 	CoverPadding float64 `json:"coverPadding" scale:"space"` // 表紙の外周
 	SectionGap   float64 `json:"sectionGap" scale:"space"`   // 見出し・本文・フッターの間
 	BlockGap     float64 `json:"blockGap" scale:"space"`     // 本文のブロックの間
 	ItemGap      float64 `json:"itemGap" scale:"space"`      // 箇条の項目の間
+	HeaderGap    float64 `json:"headerGap" scale:"space"`    // 題とリード文の間
 
 	CoverTitle    float64 `json:"coverTitle" scale:"type"`
 	CoverSubtitle float64 `json:"coverSubtitle" scale:"type"`
 	CoverAuthor   float64 `json:"coverAuthor" scale:"type"`
 	SlideTitle    float64 `json:"slideTitle" scale:"type"`
+	LeadText      float64 `json:"leadText" scale:"type"` // リード文(題の下の文)
 	Body          float64 `json:"body" scale:"type"`
 	SubPoint      float64 `json:"subPoint" scale:"type"`     // 入れ子の箇条
 	OptionLabel   float64 `json:"optionLabel" scale:"type"`  // 比較の選択肢の名前

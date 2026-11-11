@@ -234,7 +234,7 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		case "statement":
 			c.checkNotEmpty(sm, sp, "content")
 		}
-		c.checkNotEmpty(sm, sp, "source")
+		c.checkNotEmpty(sm, sp, "source", "lead")
 		body, _ := sm["body"].([]any)
 		for bi, blk := range body {
 			bp := fmt.Sprintf("%s/body/%d", sp, bi)
@@ -826,6 +826,10 @@ func warningIssue(file, w string) Issue {
 		rule = strings.ToLower(m[2])
 	}
 	path, msg := fmt.Sprintf("/slides/%d", n-1), m[3]
+	// 題の警告(title: ...)は題を指す。
+	if rest, ok := strings.CutPrefix(msg, "title: "); ok {
+		path, msg = path+"/title", rest
+	}
 	// 文の頭に本文の中の場所(body[2]: ...)があれば、そのブロックまで指す。
 	if bm := warnBlockRe.FindStringSubmatch(msg); bm != nil {
 		path, msg = path+"/body/"+bm[1], bm[2]

@@ -69,10 +69,10 @@ func TestParseTemplateErrors(t *testing.T) {
 		name, from, to, path string
 	}{
 		{"color", `"accent": "2F6B3A"`, `"accent": "green"`, "/theme/accent"},
-		{"offscale", `"blockGap": 16`, `"blockGap": 13`, "/values/blockGap"},
-		{"wrongtype", `"blockGap": 16`, `"blockGap": "16"`, "/values/blockGap"},
+		{"offscale", `"blockGap": 20`, `"blockGap": 13`, "/values/blockGap"},
+		{"wrongtype", `"blockGap": 20`, `"blockGap": "16"`, "/values/blockGap"},
 		{"unknown", `"latin": `, `"colour": "x", "latin": `, "/fonts/colour"},
-		{"missing", `"pagePadding": 24,`, ``, "/values/pagePadding"},
+		{"missing", `"pagePadding": 40,`, ``, "/values/pagePadding"},
 		{"role", `"accent": "2F6B3A"`, `"accent": "2F6B3A", "brand": "112233"`, "/theme/brand"},
 	}
 	for _, c := range cases {

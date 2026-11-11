@@ -256,7 +256,8 @@ func lintSubsystemMin(root *Spec) []string {
 	walk = func(s *Spec) {
 		if s.Kind == KindSubsystem && s.Subsystem != nil {
 			m := s.Subsystem.Measure(Constraint{Width: s.Box.Width})
-			const eps = 0.01
+			// 0.5pt 未満は丸めの誤差として見ない(layout-overflow と同じ)。
+			const eps = overflowEps
 			if m.Min.Height > s.Box.Height+eps {
 				out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] %s: needs at least %.1fpt height, got %.1fpt",
 					s.Subsystem.Name(), m.Min.Height, s.Box.Height))

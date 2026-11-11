@@ -96,18 +96,18 @@ func abs(v float64) float64 {
 	return v
 }
 
-// 決まった数字:はみ出しの例のスライド(本文の領域 414.1pt、要る高さ
-// 518.7pt。値の段階 #29 のあとの値)と、収まる例の残りの行。JSON のキーの形も見る。
+// 決まった数字:はみ出しの例のスライド(本文の領域 406.1pt、要る高さ
+// 594.7pt。余白を見直したあとの値)と、収まる例の残りの行。JSON のキーの形も見る。
 func TestCapacityNumbersAndJSON(t *testing.T) {
 	_, _, caps := CheckFileCapacity("../examples/ir/check-warnings/layout-overflow.json", "")
 	if len(caps) != 1 {
 		t.Fatalf("want 1 slide with a body, got %d", len(caps))
 	}
 	c := caps[0]
-	if c.Path != "/slides/1" || c.BodyArea != 414.1 || c.Need != 518.7 || c.Remaining != -104.6 || c.RemainingBodyLines != 0 || len(c.Blocks) != 4 {
+	if c.Path != "/slides/1" || c.BodyArea != 406.1 || c.Need != 594.7 || c.Remaining != -188.6 || c.RemainingBodyLines != 0 || len(c.Blocks) != 4 {
 		t.Fatalf("unexpected capacity %+v", c)
 	}
-	if b := c.Blocks[2]; b.Type != "points" || b.Lines == 0 || b.Overflow != 75.1 {
+	if b := c.Blocks[2]; b.Type != "points" || b.Lines == 0 || b.Overflow != 155.1 {
 		t.Fatalf("unexpected block %+v", b)
 	}
 

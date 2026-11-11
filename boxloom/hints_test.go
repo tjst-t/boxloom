@@ -90,7 +90,31 @@ func TestSpareWidthWarningAndCapacity(t *testing.T) {
 // fill-ratio の hint:隣も薄く、まとめると収まるときは、隣のスライドと見込みの
 // 割合(容量の need・blockGap・bodyArea から)を添える。そうでなければ直し方だけ。
 func TestFillRatioMergeHint(t *testing.T) {
-	_, warns, caps := CheckFileCapacity("../examples/md/subsystems-showcase.bx.md", "light")
+	// 表紙 → 区切り → 薄い本文 2 枚(隣り合う)→ 薄い本文 1 枚(区切りの後ろ)。
+	src := []byte(`---
+title: まとめの見込み
+---
+
+# 第 1 部 {type=section}
+
+# 一つ目
+
+- 一つ目の箇条
+- 二つ目の箇条
+
+# 二つ目
+
+- 一つ目の箇条
+- 二つ目の箇条
+- 三つ目の箇条
+
+# 第 2 部 {type=section}
+
+# 三つ目
+
+- ひとつだけの箇条
+`)
+	_, warns, caps := checkCapacity("merge.bx.md", src, "light", nil, nil)
 	capOf := map[string]SlideCapacity{}
 	for _, c := range caps {
 		capOf[c.Path] = c
@@ -101,18 +125,18 @@ func TestFillRatioMergeHint(t *testing.T) {
 			byPath[w.Path] = w
 		}
 	}
-	// /slides/4 と /slides/5 はどちらも薄く、隣り合う。
-	a, b := capOf["/slides/4"], capOf["/slides/5"]
+	// /slides/2 と /slides/3 はどちらも薄く、隣り合う。
+	a, b := capOf["/slides/2"], capOf["/slides/3"]
 	want := fmt.Sprintf("約 %.0f%%", (a.Need+a.BlockGap+b.Need)/math.Min(a.BodyArea, b.BodyArea)*100)
-	for p, other := range map[string]string{"/slides/4": "/slides/5", "/slides/5": "/slides/4"} {
+	for p, other := range map[string]string{"/slides/2": "/slides/3", "/slides/3": "/slides/2"} {
 		h := byPath[p].Hint
 		if !strings.Contains(h, "隣の "+other) || !strings.Contains(h, want) || !strings.Contains(h, fillRatioHint) {
 			t.Errorf("%s: hint = %q (want %s, %s)", p, h, other, want)
 		}
 	}
-	// /slides/1 の隣(0 は表紙、2 は区切り)は本文を持たないので、まとめる相手は無い。
-	if h := byPath["/slides/1"].Hint; h != fillRatioHint {
-		t.Errorf("/slides/1: hint = %q", h)
+	// /slides/5 の隣(4 は区切り、後ろは無い)は本文を持たないので、まとめる相手は無い。
+	if h := byPath["/slides/5"].Hint; h != fillRatioHint {
+		t.Errorf("/slides/5: hint = %q", h)
 	}
 }
 

@@ -74,7 +74,7 @@ func TestTemplateFileFlag(t *testing.T) {
 	bad := t.TempDir() + "/bad.json"
 	src, _ := os.ReadFile(forest)
 	src = bytes.Replace(src, []byte(`"name": "forest"`), []byte(`"name": "bad"`), 1)
-	src = bytes.Replace(src, []byte(`"blockGap": 16`), []byte(`"blockGap": 13`), 1)
+	src = bytes.Replace(src, []byte(`"blockGap": 20`), []byte(`"blockGap": 13`), 1)
 	if err := os.WriteFile(bad, src, 0o644); err != nil {
 		t.Fatal(err)
 	}

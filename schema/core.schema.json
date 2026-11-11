@@ -400,6 +400,11 @@
           "$ref": "#/$defs/variant"
         },
         "title": {
+          "description": "スライドの題。短い見出しで、1行に収める(折り返すと check の警告 title-wrap)。",
+          "$ref": "#/$defs/inline"
+        },
+        "lead": {
+          "description": "リード文。題の下に置く、このスライドで言いたいことを述べる文(1〜2行)。本文の流れの外で、テンプレートが題の直下に置く。",
           "$ref": "#/$defs/inline"
         },
         "body": {

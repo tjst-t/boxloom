@@ -251,6 +251,8 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     発表者ノートは `:::notes`(`md_notes.go`、3.6)→ IR の `notes` → PPTX のノート。
     出典は `:::source`(`md_source.go`、3.6.1)→ IR のスライドの `source` → 本文の下・
     フッターの上の枠(`docs/ir.md` の設計判断11)
+    リード文は `:::lead`(`md_lead.go`、3.6.0)→ IR のスライドの `lead` → 題の直下の枠。
+    本文のスライドの題は短い見出しで1行(折り返すと `title-wrap` の警告)
   - `vocab.go` / `schema_cmd.go` = `go run ./cmd/boxloom schema`。名乗る囲み・文書の頭の
     キー・記法の約束事の表と、それを1つの JSON に組むコマンド
   - `api.go` / `doc.go` = ライブラリの入口とパッケージの説明(`docs/library.md`)

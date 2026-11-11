@@ -104,8 +104,8 @@ type SlideDecl struct {
 // 表紙は文書の頭から作るので、ここには無い(type=cover は誤り)。
 func defaultSlides() []SlideDecl {
 	return []SlideDecl{
-		{Name: "content", Heading: "題(何の話かではなく結論の文)", Body: []string{"本文", "notes", "source"},
-			Meaning: "本文のスライド。type を省くとこれ", IR: "{type: content, title, body}"},
+		{Name: "content", Heading: "題(短い見出し。1行に収める)", Body: []string{"本文", "lead", "notes", "source"},
+			Meaning: "本文のスライド。type を省くとこれ。言いたいことの文は :::lead に", IR: "{type: content, title, lead?, body}"},
 		{Name: "section", Heading: "章の題", Body: []string{"notes"},
 			Meaning: "章の変わり目(R1)。本文は書けない(目次は本文のスライドに箇条で)", IR: "{type: section, title}"},
 		{Name: "statement", Heading: "言いたいことの1文", Body: []string{"notes", "source"},
@@ -130,6 +130,9 @@ func coreBlocks() []BlockDecl {
 		{Name: "notes", Contains: []string{"段落", "箇条"}, Attributes: []string{},
 			Meaning: "発表者ノート。スライドの本文の一番外側に1枚に1つ。最初の # より前なら表紙のノート。見た目には何も足さない",
 			IR:      "スライドの notes(文字だけの文字列)"},
+		{Name: "lead", Contains: []string{"段落1つ"}, Attributes: []string{},
+			Meaning: "リード文。このスライドで言いたいことを述べる文(1〜2行)。本文のスライドの一番外側に1枚に1つ。テンプレートが題の直下に置く。題は短い見出しにし、結論はここに書く",
+			IR:      "スライドの lead(文中の値)"},
 		{Name: "source", Contains: []string{"段落1つ"}, Attributes: []string{},
 			Meaning: "このスライドの出典(出どころ・母数・時点)。スライドの本文の一番外側に1枚に1つ。本文と主張のスライドに書ける。テンプレートが本文の下・フッターの上に置く。但し書きは note、引用の出どころは :::quote の見出しの文",
 			IR:      "スライドの source(文中の値)"},

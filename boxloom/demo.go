@@ -88,7 +88,7 @@ func renderSpec(ctx RenderContext, s *Spec) {
 // --- fill-ratioリンター。本物のcontent_fill_ratio()/lint_fill_ratio()の移植。 ---
 
 func contentFillRatio(root *Spec) float64 {
-	availableH := root.Box.Height - 2*root.Padding
+	availableH := root.Box.Height - 2*root.padY()
 
 	var deepestBottom func(s *Spec) float64
 	deepestBottom = func(s *Spec) float64 {
@@ -108,7 +108,7 @@ func contentFillRatio(root *Spec) float64 {
 			usedH, first = b, false
 		}
 	}
-	usedH -= root.Padding
+	usedH -= root.padY()
 	return usedH / availableH
 }
 

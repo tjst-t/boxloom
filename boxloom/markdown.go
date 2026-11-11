@@ -369,6 +369,10 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 			doc.coverNotes = append(doc.coverNotes, it.fence)
 			return
 		}
+		if c == nil && it.kind == mdFence && it.fence.name == "lead" {
+			p.fail(it.line, 1, "", codeMisplaced, "最初のスライド(# 題)より前に :::lead は書けません", nil, "リード文はそのスライドの「# 題」の行の後ろに置いてください")
+			return
+		}
 		if c == nil && it.kind == mdFence && it.fence.name == "source" {
 			p.fail(it.line, 1, "", codeMisplaced, "最初のスライド(# 題)より前に :::source は書けません(表紙は出典を持ちません)", nil, "出典はそれを示すスライドの「# 題」の行の後ろに置いてください")
 			return
@@ -1022,9 +1026,13 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 		}
 		body, notes := splitNotes(s.items)
 		body, sources := splitSource(body)
+		body, leads := splitLead(body)
 		switch typ {
 		case "content":
 			sl.set("title", p.parseInline(s.title, path+"/title"))
+			if lead, ok := p.leadInline(leads, path+"/lead"); ok {
+				sl.set("lead", lead)
+			}
 			sl.set("body", p.blocks(body, path+"/body"))
 		case "section":
 			sl.set("title", p.parseInline(s.title, path+"/title"))
@@ -1032,6 +1040,11 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 		case "statement":
 			sl.set("content", p.parseInline(s.title, path+"/content"))
 			p.noSlideBody(body, path, typ)
+		}
+		if typ != "content" {
+			for _, f := range leads {
+				p.fail(f.line, 1, path, codeMisplaced, fmt.Sprintf("リード文(:::lead)は本文のスライドにだけ書けます(このスライドは type=%s)", typ), nil, "言いたいことの文は、区切りなら題に、主張なら「# 文」に書いてください")
+			}
 		}
 		if typ == "section" {
 			for _, f := range sources {
@@ -1301,6 +1314,9 @@ func (p *mdParser) fenceBlock(f *mdFenceBlk, path string) any {
 		return p.statBlock(f, path)
 	case f.name == "notes":
 		p.fail(f.line, 1, path, codeMisplaced, "発表者ノート(:::notes)はスライドの一番外側にだけ書けます", nil, "ほかの囲みの外に出してください")
+		return nil
+	case f.name == "lead":
+		p.fail(f.line, 1, path, codeMisplaced, "リード文(:::lead)はスライドの一番外側にだけ書けます", nil, "ほかの囲みの外に出してください")
 		return nil
 	case f.name == "source":
 		p.fail(f.line, 1, path, codeMisplaced, "出典(:::source)はスライドの一番外側にだけ書けます", nil, "ほかの囲みの外に出してください。引用の出どころは :::quote の見出しの文に書きます")

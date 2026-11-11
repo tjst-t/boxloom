@@ -56,7 +56,7 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 文書   { boxloom: "0.1", template?, meta?, slides: [スライド] }
 meta   { title, subtitle?, author?, date?, confidential?, disclaimer? }   日付・機密区分・免責は文書に1回
 スライド  { type: "cover",     variant?, title?, subtitle?, author?, notes? }
-         { type: "content",   variant?, title, body: [ブロック], source?, notes? }
+         { type: "content",   variant?, title, lead?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead
          { type: "section",   variant?, title, notes? }          章の区切り(本文なし)
          { type: "statement", variant?, content, source?, notes? }        言うことが1文だけ(本文なし)
 ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem   (どれも type で選ぶ)
@@ -225,6 +225,13 @@ Schema では書けないので `boxloom check` が見る。
 資料の根拠(どこから来た数か・いつの時点か・誰に見せてよいか)を、注記(`note`)に
 混ぜずに意味として持つ。
 
+- **題とリード文(`lead`)。** 本文のスライドの `title` は何の話かを短く名指す見出しで、
+  1行に収める(折り返すと警告 `title-wrap`)。このスライドで言いたいこと(結論)の文は
+  `lead`(インライン、1〜2行)に書く。日本の資料の「タイトル+リード文」の型で、見出しと
+  主張を分けると、題は1行で揃い、主張は文として読める。`lead` も本文の読む流れの外の
+  欄で、テンプレートの骨組みが題の直下に置く(dark / light は題の下に `leadText` の字で、
+  間は `headerGap`)。本文の領域(容量・はみ出し)はその高さと gap を引いて測る。
+  本文のスライドだけが持つ(区切りの題・主張の1文は、それ自体が言いたいことなので持たない)。
 - **出典はスライドの `source`(インライン)。** 本文のブロックではなくスライドの欄にした。
   出典は本文の読む流れに入らず、どのブロックの後ろに置くかに意味が無いため(置き場所は
   テンプレートの骨組みが決める。dark / light は本文の下・フッターの上に、頭に
@@ -291,7 +298,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `shape-bounds` | shapes の座標・大きさ・線の点が 0〜1 にあり、`x+w`・`y+h` が 1 以下(path は和が越えた `w`・`h`) |
 | `role-exists` | shapes の色(`fill`・`line`・`textColor`・`color`)の役割名が、そのテンプレートのテーマにある |
 | `connector-self` | shapes のコネクタの `from` と `to` が同じ図形 |
-| `empty-text` | 区切りの `title`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label`・スライドの `source`・`meta` の `confidential` と `disclaimer` に、見える文字がある(Schema は `""` や空白だけを通す) |
+| `empty-text` | 区切りの `title`・本文のスライドの `lead`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label`・スライドの `source`・`meta` の `confidential` と `disclaimer` に、見える文字がある(Schema は `""` や空白だけを通す) |
 | `matrix-cells` | matrix の各行の `cells` の数が `columns` の数と同じ(path はその行の `cells`) |
 | `matrix-emphasis` | matrix の `emphasis`(推す列)が `columns` の見出しのどれか(文中の記法を除いた文字)と同じ(path は `…/data/emphasis`) |
 | `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`) |
@@ -307,6 +314,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 
 | code | 見ること |
 |---|---|
+| `title-wrap` | 本文のスライドの題が、題の幅で2行以上に折り返す。題は短い見出しにして1行に収め、言いたいことの文は `lead` に書く。path は題(`/slides/S/title`、.md なら「# 題」の行)、文に行の数と幅 |
 | `fill-ratio` | 本文の箱のうち 65% より少なくしか使っていない(テンプレートの方針)。本文を持たない表紙・区切り・主張には出さない。`hint` に直し方(隣の薄いスライドとまとめる・根拠を足す・主張のスライドにする)を書き、隣り合うスライドも薄く、2枚の本文を1枚にまとめると本文の領域に収まるときは、その相手と見込みの割合も書く(下の「薄いスライドの hint」) |
 | `spare-width` | 本文のブロックの中の図・画像が、縦横比(または横の上限)を保ったために、ブロックの幅の 20% 以上を横に空けた。path はそのブロック、文に空いた幅(pt と %)。容量の `remainingWidth` と同じ数字。並列のまとまり(columns)の中のグラフ・画像は、まとまりの幅に対して同じく測り、path は `/slides/S/body/N/columns/C/body/K` |
 | `stat-value` | `stat` の数と単位が、カードの幅に1行で入らない。数と単位はそれぞれ途中で折らない(「億ド / ル」「12,345, / 678」と折れると読み違えるため)ので、入らなければ単位が次の行に落ち、数そのものが入らなければ1行のままカードからはみ出す。path はその数(`/slides/S/body/N/items/K`、.md なら `:::value` の行)、文に要る幅と有る幅(pt)。字は縮めない |
@@ -330,7 +338,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 並べた後の座標でははみ出しが見えず、文字が重なったり詰まったりするだけになる。
 `layout-overflow` は「縮めなければ要る高さ」を測り直して比べる(`boxloom/overflow.go`)。
 
-- **本文の領域** = ページの内側の高さ − 題・出典(`source` があるとき)・フッターが要る高さ
+- **本文の領域** = ページの内側の高さ − 題・リード文(`lead` があるとき)・出典(`source` があるとき)・フッターが要る高さ
   − その間の gap。
 - **ブロックが要る高さ** = 並べた幅で文字を折り返した高さ。サブシステムは自己申告の
   最小の高さ(`Min`)まで縮めてよいので、`Min` で測る(自然な高さより縮んでも、
@@ -347,7 +355,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 
 ```json
 {"file": "layout-overflow.bx.md", "line": 38, "path": "/slides/1/body/2", "code": "layout-overflow",
- "message": "block (points) overflows the body area by 75.1pt (block needs 180.3pt; body area 414.1pt, all blocks need 518.7pt)"}
+ "message": "block (points) overflows the body area by 155.1pt (block needs 204.3pt; body area 406.1pt, all blocks need 594.7pt)"}
 ```
 
 文字の高さはレイアウトエンジン自身の測り方(字体の幅の表と行の高さの倍率)で
@@ -386,10 +394,10 @@ check でも断られるもの。
 "capacity": [{
   "file": "deck.bx.md", "line": 37,          // .md なら Markdown の行(IR なら省く)
   "path": "/slides/1",
-  "bodyArea": 414.1,      // 本文の領域(ページの内側 − 題・出典・フッター − gap)
+  "bodyArea": 406.1,      // 本文の領域(ページの内側 − 題・リード文・出典・フッター − gap)
   "need": 210.2,          // ブロックを縮めずに積んだ高さ(ブロックの間の gap を含む)
-  "remaining": 203.9,     // bodyArea − need。負ならはみ出している
-  "blockGap": 16,         // ブロックの間の gap。新しいブロックを足すなら先にこれが要る
+  "remaining": 195.9,     // bodyArea − need。負ならはみ出している
+  "blockGap": 20,         // ブロックの間の gap。新しいブロックを足すなら先にこれが要る
   "bodyLineHeight": 18.9, // 本文の字の大きさの1行の高さ
   "remainingBodyLines": 10, // 残りに本文の行がいくつ入るか(既にあるブロックに足す場合)
   "blocks": [{

@@ -48,8 +48,10 @@ type Spec struct {
 	Kind     Kind
 	Children []*Spec
 
-	Gap            float64
-	Padding        float64
+	Gap     float64
+	Padding float64
+	// PaddingY は上下の余白(nil なら Padding と同じ)。Padding は左右の余白になる。
+	PaddingY       *float64
 	Background     string // 空文字列 = 背景なし
 	Radius         float64
 	HasRadius      bool
@@ -99,8 +101,30 @@ type Spec struct {
 
 type SpecOpt func(*Spec)
 
-func WithGap(v float64) SpecOpt            { return func(s *Spec) { s.Gap = v } }
-func WithPadding(v float64) SpecOpt        { return func(s *Spec) { s.Padding = v } }
+func WithGap(v float64) SpecOpt     { return func(s *Spec) { s.Gap = v } }
+func WithPadding(v float64) SpecOpt { return func(s *Spec) { s.Padding = v } }
+
+// WithPaddingXY は左右(x)と上下(y)で違う余白。
+func WithPaddingXY(x, y float64) SpecOpt {
+	return func(s *Spec) { s.Padding = x; s.PaddingY = &y }
+}
+
+// padX は左右の余白、padY は上下の余白。
+func (s *Spec) padX() float64 { return s.Padding }
+func (s *Spec) padY() float64 {
+	if s.PaddingY != nil {
+		return *s.PaddingY
+	}
+	return s.Padding
+}
+
+// padOn は軸(w=横・h=縦)の側の余白。
+func (s *Spec) padOn(axis byte) float64 {
+	if axis == 'h' {
+		return s.padY()
+	}
+	return s.padX()
+}
 func WithBackground(v string) SpecOpt      { return func(s *Spec) { s.Background = v } }
 func WithRadius(v float64) SpecOpt         { return func(s *Spec) { s.Radius = v; s.HasRadius = true } }
 func WithAlignItems(v AlignItems) SpecOpt  { return func(s *Spec) { s.AlignItems = v } }
@@ -176,9 +200,9 @@ func heightForWidth(s *Spec, width float64) float64 {
 		return s.Subsystem.Measure(Constraint{Width: width}).Natural.Height
 	}
 	if len(s.Children) == 0 {
-		return 2 * s.Padding
+		return 2 * s.padY()
 	}
-	inner := max0(width - 2*s.Padding)
+	inner := max0(width - 2*s.padX())
 	if s.Kind == KindCol {
 		total := s.Gap * float64(max(0, len(s.Children)-1))
 		for _, c := range s.Children {
@@ -190,7 +214,7 @@ func heightForWidth(s *Spec, width float64) float64 {
 			}
 			total += heightForWidth(c, cw)
 		}
-		return total + 2*s.Padding
+		return total + 2*s.padY()
 	}
 	// 行: 子の幅を決めるために一度並べてみる(高さは仮)。並べた結果の Box は
 	// あとで本当の computeLayout が上書きする。
@@ -201,7 +225,7 @@ func heightForWidth(s *Spec, width float64) float64 {
 			m = v
 		}
 	}
-	return m + 2*s.Padding
+	return m + 2*s.padY()
 }
 
 // SubsystemNode はサブシステムを葉として置く。大きさは Measure の自己申告で
@@ -270,7 +294,7 @@ func naturalSize(s *Spec, axis byte) float64 {
 
 	// row / col コンテナ
 	if len(s.Children) == 0 {
-		return 2 * s.Padding
+		return 2 * s.padOn(axis)
 	}
 	isRow := s.Kind == KindRow
 	mainAxis := byte('h')
@@ -283,7 +307,7 @@ func naturalSize(s *Spec, axis byte) float64 {
 			total += naturalSize(c, axis)
 		}
 		total += s.Gap * float64(max(0, len(s.Children)-1))
-		return total + 2*s.Padding
+		return total + 2*s.padOn(axis)
 	}
 	m := naturalSize(s.Children[0], axis)
 	for _, c := range s.Children[1:] {
@@ -291,7 +315,7 @@ func naturalSize(s *Spec, axis byte) float64 {
 			m = v
 		}
 	}
-	return m + 2*s.Padding
+	return m + 2*s.padOn(axis)
 }
 
 // computeLayout はspec(とその子孫)に確定した絶対座標(spec.Box)を割り当てる。
@@ -304,9 +328,9 @@ func computeLayout(s *Spec, x, y, width, height float64) {
 	}
 
 	isRow := s.Kind == KindRow
-	ix, iy := x+s.Padding, y+s.Padding
-	iw := max0(width - 2*s.Padding)
-	ih := max0(height - 2*s.Padding)
+	ix, iy := x+s.padX(), y+s.padY()
+	iw := max0(width - 2*s.padX())
+	ih := max0(height - 2*s.padY())
 	innerMain, innerCross := ih, iw
 	if isRow {
 		innerMain, innerCross = iw, ih

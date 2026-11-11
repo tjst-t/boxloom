@@ -98,8 +98,8 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 
 | 種類 | values | subsystems/gantt.json | subsystems/shapes.json |
 |---|---|---|---|
-| 余白 | `pagePadding` `coverPadding` `sectionGap` `blockGap` `itemGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
-| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` `figureDetail` `captionText` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
+| 余白 | `pagePadding` `pagePaddingY` `coverPadding` `sectionGap` `blockGap` `itemGap` `headerGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
+| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `leadText` `body` `subPoint` `optionLabel` `optionItem` `small` `figureDetail` `captionText` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
 ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率は段階に載せない
 (図の寸法で、刻みに合わせても読みやすさは変わらないため)。
@@ -112,7 +112,7 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
   テンプレートは、既定の Gantt の字が段から外れれば読み込みで断られる。
 - dark / light は `spacingUnit` 4、`typeSizes` [8, 10, 12, 14, 16, 24, 36] の7段。
   段の役割はおおむね 36 表紙の題・区切りの題・主張の1文・統計強調の数・引用の印、
-  24 スライドの題、16 小見出し(表紙の副題・比較の選択肢の名前・結論・引用の言葉・
+  24 スライドの題、16 小見出し(表紙の副題・リード文・比較の選択肢の名前・結論・引用の言葉・
   数の単位)、14 本文、12 従の文(入れ子の箇条・利点と欠点・表紙の作者・数の説明・
   引用の出どころ)、10 注(注記・フッター・Gantt の目盛りと行の名前)、8 図の中の細かい字。
   文字のパターン(#17〜#19)のために段は足していない(36 を数と主張に使う)。
@@ -128,6 +128,26 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 | `optionLabel` | 15 | 16 |
 | `optionItem` | 13 | 12 |
 | `small` | 10.5 | 10 |
+
+**余白を見直したときに変えた値**(dark / light / forest 共通)。要素の間が詰まっている
+わりにページの下が空いて見え、ページの外周も狭かったため。余白は「近いものは近く、
+まとまりの間は広く」の順(項目 12 < ブロック 20 ≦ 題と本文 20 < 左右の外周 40)に揃えた。
+あわせて題は短い見出し(1行)にし、言いたいことの文はリード文(`lead`)に分けた:
+
+| 値 | 前 | 後 |
+|---|---|---|
+| `pagePadding`(左右) | 24 | 40 |
+| `pagePaddingY`(上下。新しく足した) | (24) | 24 |
+| `sectionGap` | 16 | 20 |
+| `blockGap` | 16 | 20 |
+| `itemGap` | 8 | 12 |
+| `headerGap`(題とリード文の間。新しく足した) | — | 8 |
+| `leadText`(リード文。新しく足した) | — | 16 |
+| `cardPadding` | 16 | 20 |
+| `coverPadding` | 48 | 64 |
+
+本文の領域は、リード文も出典も無いスライドで 414pt → 406pt(左右が広がり上下はそのまま、
+gap が増えた分)。1行のリード文で約 30pt、2行で約 52pt 狭くなる。
 | gantt `annotationPaddingY` | 6 | 4 |
 | gantt `annotationText` | 8.5 | 8 |
 | gantt `labelText` | 9 | 10 |
@@ -211,13 +231,16 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | キー | 使うところ |
 |---|---|
 | `pageWidth` `pageHeight` | ページの大きさ |
-| `pagePadding` | 本文のスライドの外周 |
+| `pagePadding` | 本文・主張のスライドの左右の外周 |
+| `pagePaddingY` | 本文・主張のスライドの上下の外周(題の上・フッターの下) |
 | `coverPadding` | 表紙の外周 |
-| `sectionGap` | 題・本文・フッターの間 |
+| `sectionGap` | 題(とリード文)・本文・出典・フッターの間 |
 | `blockGap` | 本文のブロックの間、比較のカードの間 |
 | `itemGap` | 箇条の項目の間、カードの中の行の間 |
+| `headerGap` | 題とリード文の間 |
 | `coverTitle` `coverSubtitle` `coverAuthor` | 表紙の字の大きさ |
-| `slideTitle` | 本文のスライドの題 |
+| `slideTitle` | 本文のスライドの題(短い見出し。折り返すと `title-wrap` の警告) |
+| `leadText` | リード文(`lead`。題の直下、色は `text_primary`、太字にしない) |
 | `body` | 段落・箇条 |
 | `subPoint` | 入れ子の箇条 |
 | `optionLabel` `optionItem` | 比較の選択肢の名前、利点・欠点 |
@@ -274,6 +297,7 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 
 | 意味 | dark / light |
 |---|---|
+| リード文 | 題の直下(`leadText`・`text_primary`、題との間は `headerGap`)。本文の領域はこの分だけ狭くなる |
 | スライドの出典 | 本文の下・フッターの上(`small`・`text_muted`、間は `sectionGap`)。本文の領域はこの分だけ狭くなる |
 | 日付 | 表紙の作者の下(`coverAuthor`・`text_muted`) |
 | 機密区分 | 表紙の日付の下と、本文・主張のスライドのフッターの作者の右(`small`・太字・`text_primary`) |
