@@ -507,7 +507,7 @@
       "number": 23,
       "kind": "task",
       "title": "Subsystem interface に縦横比・幅から高さを決める申告と、余りの置き方を足す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "canvas-patterns",
       "dependsOn": [],
       "milestone": null,
@@ -517,9 +517,14 @@
       "doneWhen": "docs/subsystem.md に方針があり、試験用の部品で縦横比を申告する図が幅に合わせた高さをもらうことが試験で確かめられている。従来のデモの PPTX が変わらない",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "924022da-7e0f-48a5-98bf-c24153f6d7c1"
+        }
+      ],
       "createdAt": "2026-11-11T02:02:58.942Z",
-      "updatedAt": "2026-11-11T02:02:58.942Z",
+      "updatedAt": "2026-11-11T02:59:23.869Z",
       "closedAt": null,
       "extra": {}
     },
