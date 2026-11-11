@@ -23,7 +23,6 @@ func (a *aspectSub) Measure(c Constraint) Measurement {
 }
 func (a *aspectSub) Render(ctx RenderContext, box LBox) { a.drawn = box }
 
-
 func renderTree(root *Spec, w, h float64) {
 	computeLayout(root, 0, 0, w, h)
 	renderSpec(RenderContext{Out: NewPPTXBuilder(w, h), Roles: newCheckedRoles(Theme{})}, root)
@@ -96,5 +95,70 @@ func TestMaxClampsCrossAxis(t *testing.T) {
 		if !nearPt(sub.drawn.Height, want) || !nearPt(sub.drawn.Width, leaf.Box.Width) {
 			t.Errorf("maxH %.0f: drawn %+v, want height %.0f in %+v", maxH, sub.drawn, want, leaf.Box)
 		}
+	}
+}
+
+// 行の注記の文が破線の箱に収まらないときは、その行だけが高くなり、本体の
+// 高さの合計は変わらない(Backlog #37)。
+func TestGanttNoteRowGrowsToFitText(t *testing.T) {
+	d, err := readDeck("../examples/ir/gantt-full.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tm, _ := LookupTemplate("dark")
+	built, err := tm.BuildDeck(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var leaf *Spec
+	var walk func(s *Spec)
+	walk = func(s *Spec) {
+		if s.Kind == KindSubsystem {
+			leaf = s
+		}
+		for _, c := range s.Children {
+			walk(c)
+		}
+	}
+	root := built[0].Root
+	computeLayout(root, 0, 0, tm.Values.PageW, tm.Values.PageH)
+	walk(root)
+	g := leaf.Subsystem.(*GanttSubsystem)
+	gv := g.vals()
+	box := subsystemDrawBox(leaf)
+	needs := ganttNoteNeeds(gv, g.Chart, box.Width)
+	if len(needs) == 0 {
+		t.Fatal("example has no row note")
+	}
+	gm := ganttMetricsFor(gv, g.Chart, box.Width)
+	bodyH := box.Height - 2*gv.Padding - gm.annBottomH -
+		(gv.LegendH + gv.LegendGap + gm.annTopH + gm.milestoneH + gv.AxisLabelH + 10)
+	rows := ganttRowLayout(gv, g.Chart, box.Width, bodyH)
+	for _, n := range needs {
+		if h := rows.h(n.group, n.row); h+0.01 < n.rowH {
+			t.Errorf("note %q: row height %.1f < needed %.1f", n.text, h, n.rowH)
+		}
+		if n.rowH <= rows.base {
+			t.Errorf("note %q fits a normal row (need %.1f, base %.1f); the example no longer tests #37", n.text, n.rowH, rows.base)
+		}
+	}
+	gaps := gv.GroupGap * float64(len(g.Chart.Groups)-1)
+	if got := rows.bodyHeight(gaps); !nearPt(got, bodyH) {
+		t.Errorf("rows sum to %.2f, body is %.2f", got, bodyH)
+	}
+	if ws, _ := tm.RenderDeck(d, t.TempDir()+"/g.pptx"); len(ws) != 0 {
+		t.Errorf("unexpected warnings: %v", ws)
+	}
+}
+
+// rowsFor は高くした行の分だけほかの行を低くする。
+func TestRowsFor(t *testing.T) {
+	need := [][]float64{{0, 30, 0}, {0}}
+	r := rowsFor(need, 100, 10)
+	if !nearPt(r.base, 70.0/3) || !nearPt(r.h(0, 1), 30) || !nearPt(r.bodyHeight(0), 100) {
+		t.Errorf("base %.2f h %.2f sum %.2f", r.base, r.h(0, 1), r.bodyHeight(0))
+	}
+	if r := rowsFor(need, 40, 10); !nearPt(r.base, 10) {
+		t.Errorf("base must not go under minRowH: %.2f", r.base)
 	}
 }

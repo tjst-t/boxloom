@@ -235,12 +235,18 @@ func (g *GanttSubsystem) Measure(c Constraint) Measurement {
 			labelRowH = v
 		}
 	}
+	// 行の注記(破線の箱)の文は箱の中で折り返す。収まらない行だけ、収まる高さ
+	// まで高くする(切り詰めない・縮めない。黙って潰さないため)。
+	need := noteNeedGrid(gv, chart, natW)
 	gaps := gv.GroupGap * float64(max(0, nGroups-1))
 	bodyFor := func(rowH float64) float64 {
 		if rowH < labelRowH {
 			rowH = labelRowH
 		}
-		return rowH*float64(totalRows) + gaps
+		if !anyNeedAbove(need, rowH) {
+			return rowH*float64(totalRows) + gaps
+		}
+		return ganttRows{base: rowH, need: need}.bodyHeight(gaps)
 	}
 
 	if lw := 2*gv.Padding + m.legendW; lw > natW && c.Width <= 0 {
@@ -252,6 +258,166 @@ func (g *GanttSubsystem) Measure(c Constraint) Measurement {
 		Min:     Size{Width: minW, Height: m.chromeH + bodyFor(gv.MinRowH)},
 		Max:     Size{Height: m.chromeH + bodyFor(gv.MaxRowH)},
 	}
+}
+
+// ganttNoteNeed は、行の注記の文を破線の箱に収めるのに要る行の高さ。
+type ganttNoteNeed struct {
+	group, row int
+	text       string
+	rowH       float64 // 要る行の高さ(箱の上下の隙間 6pt を含む)
+}
+
+// ganttRows は行ごとの高さ。行の高さはふつう全行で同じ(base)だが、注記の文が
+// base では収まらない行だけは、収まる高さ(need)まで高くする。
+type ganttRows struct {
+	base float64
+	need [][]float64 // [グループ][行]。0 は「base でよい」
+}
+
+// h は行の高さ。
+func (r ganttRows) h(g, i int) float64 { return math.Max(r.base, r.need[g][i]) }
+
+// extra は base を越えた分(行 i より前の行の合計)。全部 base なら 0。
+func (r ganttRows) extraBefore(g, i int) float64 {
+	e := 0.0
+	for j := 0; j < i; j++ {
+		e += r.h(g, j) - r.base
+	}
+	return e
+}
+
+// top は行 i の上端(グループの上端からの距離)。
+func (r ganttRows) top(g, i int) float64 { return float64(i)*r.base + r.extraBefore(g, i) }
+
+// groupH はグループの高さ。
+func (r ganttRows) groupH(g int) float64 {
+	n := len(r.need[g])
+	return float64(n)*r.base + r.extraBefore(g, n)
+}
+
+// ganttRowLayout は本体の高さ bodyH から行の高さを決める(renderGantt が使う)。
+// 注記で高くする行が無ければ、全行が (bodyH − 隙間) ÷ 行数(minRowH 以上)。
+func ganttRowLayout(gv *GanttValues, chart *GanttChart, boxWidth, bodyH float64) ganttRows {
+	nGroups, totalRows := len(chart.Groups), 0
+	for i := range chart.Groups {
+		totalRows += len(chart.Groups[i].Rows)
+	}
+	avail := bodyH - gv.GroupGap*float64(nGroups-1)
+	rowH := avail / float64(totalRows)
+	if rowH < gv.MinRowH {
+		rowH = gv.MinRowH
+	}
+	rows := ganttRows{base: rowH, need: noteNeedGrid(gv, chart, boxWidth)}
+	if anyNeedAbove(rows.need, rowH) {
+		rows = rowsFor(rows.need, avail, gv.MinRowH)
+	}
+	return rows
+}
+
+// anyNeedAbove は base より高くする行があるか。
+func anyNeedAbove(need [][]float64, base float64) bool {
+	for _, g := range need {
+		for _, v := range g {
+			if v > base {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// noteNeedGrid は行ごとの注記の要る高さ(幅 boxWidth で描いたとき)。
+func noteNeedGrid(gv *GanttValues, chart *GanttChart, boxWidth float64) [][]float64 {
+	grid := make([][]float64, len(chart.Groups))
+	for gi := range chart.Groups {
+		grid[gi] = make([]float64, len(chart.Groups[gi].Rows))
+	}
+	for _, n := range ganttNoteNeeds(gv, chart, boxWidth) {
+		grid[n.group][n.row] = n.rowH
+	}
+	return grid
+}
+
+// rowsFor は行の高さの合計を avail(本体の高さ − グループ間の隙間)にする base を
+// 決める。高くした行の分だけほかの行が低くなる。base は minRowH を下回らない
+// (下回るときは本体からはみ出す。Measure の Min がそれを申告している)。
+func rowsFor(need [][]float64, avail, minRowH float64) ganttRows {
+	n := 0
+	for _, g := range need {
+		n += len(g)
+	}
+	r := ganttRows{need: need}
+	if n == 0 {
+		return r
+	}
+	base := avail / float64(n)
+	for iter := 0; iter < n+1; iter++ {
+		fixed, k := 0.0, 0
+		for _, g := range need {
+			for _, v := range g {
+				if v > base {
+					fixed += v
+					k++
+				}
+			}
+		}
+		if k == 0 {
+			break
+		}
+		if k == n {
+			base = 0
+			break
+		}
+		nb := (avail - fixed) / float64(n-k)
+		if nb == base {
+			break
+		}
+		base = nb
+	}
+	if base < minRowH {
+		base = minRowH
+	}
+	r.base = base
+	return r
+}
+
+// bodyHeight は base を決めたときの行の合計 + 隙間。
+func (r ganttRows) bodyHeight(gaps float64) float64 {
+	t := gaps
+	for g := range r.need {
+		t += r.groupH(g)
+	}
+	return t
+}
+
+// ganttNoteBarInset は行の高さと注記・区間の箱の高さの差(renderGantt の barH)。
+const ganttNoteBarInset = 6
+
+// ganttNoteNeeds は、幅 boxWidth で描いたときの各注記の要る行の高さ。箱の幅と
+// 文の幅の取り方は renderGantt と同じ(Measure と描画がずれないように)。
+func ganttNoteNeeds(gv *GanttValues, chart *GanttChart, boxWidth float64) []ganttNoteNeed {
+	gutterW := gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW
+	chartW := boxWidth - 2*gv.Padding - gutterW
+	var out []ganttNoteNeed
+	for gi := range chart.Groups {
+		for ri := range chart.Groups[gi].Rows {
+			row := &chart.Groups[gi].Rows[ri]
+			if !row.HasNote || row.NoteText == "" {
+				continue
+			}
+			ww := chart.Scale.X(row.NoteEnd, 0, chartW) - chart.Scale.X(row.NoteStart, 0, chartW)
+			if ww < 1.0 {
+				ww = 1.0
+			}
+			textW := ww - 10
+			if textW < 1 {
+				textW = 1
+			}
+			h := measureTextHeight(row.NoteText, gv.SmallText, textW, false)
+			out = append(out, ganttNoteNeed{gi, ri, row.NoteText, h + ganttNoteBarInset})
+		}
+	}
+	return out
 }
 
 // ganttMetrics は Measure と renderGantt が共有する、行の本体以外の寸法。
@@ -352,15 +518,9 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 	}
 
 	// --- 行本体 ---
-	totalRows := 0
-	for i := range chart.Groups {
-		totalRows += len(chart.Groups[i].Rows)
-	}
 	nGroups := len(chart.Groups)
-	rowH := (bodyH - gv.GroupGap*float64(nGroups-1)) / float64(totalRows)
-	if rowH < gv.MinRowH {
-		rowH = gv.MinRowH
-	}
+	rows := ganttRowLayout(gv, chart, box.Width, bodyH)
+	rowH := rows.base
 
 	subX := x0 + gv.GutterGroupW
 	labelX := subX + gv.GutterSubW
@@ -371,7 +531,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 		group := &chart.Groups[gi]
 		groupTop := yCursor
 		groupTops[gi] = groupTop
-		groupH := rowH * float64(len(group.Rows))
+		groupH := rowH*float64(len(group.Rows)) + rows.extraBefore(gi, len(group.Rows))
 
 		if group.HasRiskBand {
 			rb0, rb1 := sx(group.RiskStart), sx(group.RiskEnd)
@@ -383,7 +543,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 
 		rowTops := make([]float64, len(group.Rows))
 		for i := range group.Rows {
-			rowTops[i] = groupTop + float64(i)*rowH
+			rowTops[i] = groupTop + float64(i)*rowH + rows.extraBefore(gi, i)
 		}
 
 		// サブグループの縦結合セル
@@ -396,7 +556,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 			}
 			if sub != "" {
 				subTop := rowTops[i]
-				subH := rowTops[j] + rowH - subTop
+				subH := rowTops[j] + rows.h(gi, j) - subTop
 				p.AddTextBox(LBox{X: subX + 2, Y: subTop, Width: gv.GutterSubW - 6, Height: subH}, sub, gv.SmallText, c("text_muted"), false, "center", "middle")
 			}
 			i = j + 1
@@ -405,10 +565,11 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 		for idx := range group.Rows {
 			row := &group.Rows[idx]
 			rowTop := rowTops[idx]
-			p.AddTextBoxNoWrap(LBox{X: labelX, Y: rowTop, Width: gv.GutterLabelW - 8, Height: rowH}, row.Label, gv.LabelText, c("text_muted"), false, "left", "middle")
+			thisH := rows.h(gi, idx)
+			p.AddTextBoxNoWrap(LBox{X: labelX, Y: rowTop, Width: gv.GutterLabelW - 8, Height: thisH}, row.Label, gv.LabelText, c("text_muted"), false, "left", "middle")
 
-			barH := rowH - 6
-			barY := rowTop + (rowH-barH)/2
+			barH := thisH - ganttNoteBarInset
+			barY := rowTop + (thisH-barH)/2
 
 			if row.HasNote {
 				nx1, nx2 := sx(row.NoteStart), sx(row.NoteEnd)
@@ -474,7 +635,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 		ax := sx(ann.AnchorDate)
 		ay := bodyTop + ann.AnchorYFrac*bodyH
 		if ann.Direction == "" {
-			ay = autoAnchorY(chart, ann, groupTops, rowH, bodyTop, bodyH)
+			ay = autoAnchorY(chart, ann, groupTops, rows, bodyTop, bodyH)
 		}
 		annColor := c(ann.Role)
 
@@ -640,15 +801,18 @@ func annAnchorFrac(chart *GanttChart, ann Annotation) float64 {
 
 // autoAnchorY は自動の注釈の点の高さ: 指したグループか行の縦の真ん中。
 // 指す先が無ければ本体の真ん中。
-func autoAnchorY(chart *GanttChart, ann Annotation, groupTops []float64, rowH, bodyTop, bodyH float64) float64 {
+func autoAnchorY(chart *GanttChart, ann Annotation, groupTops []float64, rows ganttRows, bodyTop, bodyH float64) float64 {
 	if ann.TargetGroup < 0 || ann.TargetGroup >= len(groupTops) {
 		return bodyTop + bodyH/2
 	}
-	top := groupTops[ann.TargetGroup]
+	g, rowH := ann.TargetGroup, rows.base
+	top := groupTops[g]
 	if ann.TargetRow >= 0 {
-		return top + (float64(ann.TargetRow)+0.5)*rowH
+		i := ann.TargetRow
+		return top + (float64(i)+0.5)*rowH + rows.extraBefore(g, i) + (rows.h(g, i)-rowH)/2
 	}
-	return top + rowH*float64(len(chart.Groups[ann.TargetGroup].Rows))/2
+	n := len(chart.Groups[g].Rows)
+	return top + rowH*float64(n)/2 + rows.extraBefore(g, n)/2
 }
 
 // buildChart はv11(本物)のbuild_chart()と同じ内容を再現したもの。

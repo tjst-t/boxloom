@@ -183,6 +183,8 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     `connector-self`、警告 `shapes-overlap`・`shapes-text-overflow`
   - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
     `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
+  - `fit.go` = 図と枠の橋渡し。`FixedAspect` の図・Max を越える枠は図の大きさまで
+    切り詰め、余りは `Spec.Place` の側に置く(拡大縮小はしない。`docs/subsystem.md` の9節)
   - `subsystem_test.go` = 差し込み口とレイアウトの試験(`go test ./...`)
   - `pptx.go` = python-pptxの代わりに、OOXML(zip+XML)を直接組み立てる自前
     ライター(`archive/zip`のみ使用。無料で成熟したGo製pptxライブラリが
