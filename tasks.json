@@ -618,7 +618,7 @@
       "number": 27,
       "kind": "task",
       "title": "サブシステム:ファネル",
-      "status": "in-progress",
+      "status": "done",
       "parent": "canvas-patterns",
       "dependsOn": [
         "subsystem-fit"
@@ -628,7 +628,7 @@
       "labels": [],
       "body": "",
       "doneWhen": "schema/subsystems に Schema、Markdown の囲み、dark/light の描き方、試験、例がある",
-      "resolution": null,
+      "resolution": "funnel サブシステム(等しい刻みで36%まで狭める、値は3桁区切り+unit、増えたら funnel-increase 警告)。main aacaef4。",
       "refs": [],
       "threads": [
         {
@@ -637,8 +637,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:58.942Z",
-      "updatedAt": "2026-11-11T04:46:30.944Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:07:42.254Z",
+      "closedAt": "2026-11-11T05:07:42.254Z",
       "extra": {}
     },
     {
