@@ -340,7 +340,8 @@ func TestBlocksExampleBuilds(t *testing.T) {
 			t.Fatalf("%s: %+v", tpl, errs)
 		}
 		for _, w := range warns {
-			if w.Code != "fill-ratio" {
+			// 横長の画像を1つだけ置いたスライド(/slides/4)は、画像の横が空く例でもある。
+			if w.Code != "fill-ratio" && !(w.Code == "spare-width" && w.Path == "/slides/4/body/0") {
 				t.Errorf("%s: unexpected warning %+v", tpl, w)
 			}
 		}

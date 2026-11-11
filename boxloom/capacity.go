@@ -44,6 +44,10 @@ type BlockCapacity struct {
 	Top      float64 `json:"top"`
 	Bottom   float64 `json:"bottom"`
 	Overflow float64 `json:"overflow"` // 本文の領域の下端を越えた高さ(0 なら収まる)
+	// RemainingWidth は、ブロックの中の図・画像が左右に使わずに残した幅の合計
+	// (縦横比を保つ図・横の上限を持つ図の横の空き、spare.go)。本文のブロック
+	// だけで、無ければ省く。
+	RemainingWidth float64 `json:"remainingWidth,omitempty"`
 	// Columns は並列のまとまり(columns)のときだけ、まとまりごとの測り値。
 	Columns []ColumnCapacity `json:"columns,omitempty"`
 }
@@ -126,6 +130,9 @@ func (c SlideCapacity) String() string {
 		out += fmt.Sprintf("\n  %s %s: %d lines, %.1fpt", b.Path, b.Type, b.Lines, b.Need)
 		if b.Overflow > 0 {
 			out += fmt.Sprintf(", overflows by %.1fpt", b.Overflow)
+		}
+		if b.RemainingWidth > 0 {
+			out += fmt.Sprintf(", %.1fpt of width unused beside the figure", b.RemainingWidth)
 		}
 		for _, c := range b.Columns {
 			out += fmt.Sprintf("\n    %s: %d lines, %.1fpt", c.Path, c.Lines, c.Need)

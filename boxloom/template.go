@@ -538,10 +538,19 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 			for _, blk := range d.Slides[i].Body {
 				kinds = append(kinds, blk.Type)
 			}
+			// 横の余りは並べたままの Box で測る(measureBody が Box を並べ直す前に)。
+			spare := bodySpareWidths(b.Body)
+			warnings = append(warnings, spareWidthWarnings(b.Body, spare, kinds)...)
 			// 警告と容量は同じ測り値から作る(数字が食い違わないように)。
 			if blocks, area, need, ok := measureBody(b.Root, b.Body); ok {
 				warnings = append(warnings, overflowWarnings(blocks, area, need, kinds)...)
-				caps = append(caps, slideCapacity(blocks, area, need, b.Body.Gap, i, kinds, v.Body))
+				sc := slideCapacity(blocks, area, need, b.Body.Gap, i, kinds, v.Body)
+				for j := range sc.Blocks {
+					if w, ok := spare[j]; ok {
+						sc.Blocks[j].RemainingWidth = round1(w)
+					}
+				}
+				caps = append(caps, sc)
 			}
 		}
 		if b.Main != nil {

@@ -177,6 +177,7 @@ func checkIRCapacity(file string, b []byte, templateOverride string, values *Tem
 	for _, w := range warnings {
 		warns = append(warns, warningIssue(file, w))
 	}
+	addLayoutHints(warns, caps)
 	for i := range caps {
 		caps[i].File = file
 	}

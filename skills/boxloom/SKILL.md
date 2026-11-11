@@ -330,11 +330,22 @@ Targets that read well (not hard limits):
 - A slide with a figure (`gantt`, `process`, `orgchart`, `matrix`, `funnel`, `chart`, `shapes`) gets at most 1–2 short lines of text
   besides the figure.
 - `fill-ratio` warns when less than 65% of the body is used. A slide with only text
-  needs about 13 lines to pass, so **short text slides (3–6 bullets, one `compare`)
-  normally get this warning — that is expected.** Treat it as a question, not an
-  error: if two neighbouring slides are both thin and make the same point, merge them;
-  if a figure would carry the point, add it; otherwise leave the warning. Never pad a
-  slide with filler to pass it.
+  needs about 13 lines to pass, so short text slides will get it. **Always respond to
+  it — do not ship a deck with `fill-ratio` warnings left.** Pick one:
+  1. **Merge** with a neighbouring thin slide. When the neighbour is also thin and both
+     bodies fit on one slide, the warning's `hint` names that slide and the expected
+     fill (e.g. "隣の /slides/5 … 約 96%"). Keep one conclusion title.
+  2. **Add the evidence** the title needs: the numbers, a figure, a table, where the
+     numbers come from (who, how many, when).
+  3. **Make it a `statement` slide** if the slide really is one message on its own
+     (statement slides have no body, so no `fill-ratio`).
+  Never pad: no repeated points in other words, no bigger text or figures to fill space.
+- `spare-width` warns when a figure or image keeps its aspect ratio and leaves ≥ 20%
+  of the width empty beside it (`remainingWidth` in `capacity`). Put the figure in
+  `columns` with its explanation in the other column, or cut text on the slide so the
+  figure gets more height (and therefore more width).
+- These warnings measure amount, not quality. Boxloom does not judge whether a title
+  is a conclusion or the argument holds; that is your job (§6).
 
 ## 5. The check → fix loop
 
@@ -383,7 +394,8 @@ Fixes by code:
 | `chart-values` | `chart`: one value per category in every series; `component` needs one series of non-negative parts; `stacked` needs 2+ series; `correlation` needs `xAxis`, `yAxis` and `points` (no `categories`); at most 3 series |
 | `chart-emphasis` | `chart`: `emphasis` must name existing categories and needs a single series; with several series mark one series `emphasis: true` instead |
 | `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently. Inside `columns` the path ends in `/columns/C/body/K`: shorten that group or move it to its own slide |
-| `fill-ratio` (warning) | Slide is mostly empty: merge with a neighbour, add the missing figure or evidence, or keep it if it is a deliberate one-line message |
+| `fill-ratio` (warning) | Slide is mostly empty. Always fix (§4): merge with the neighbour the `hint` names, add the missing evidence or figure, or turn a one-message slide into `{type=statement}` |
+| `spare-width` (warning) | A figure/image leaves the side empty: put it in `columns` with text beside it, or give it more height by cutting text on that slide |
 | `gantt-segment-label` (warning) | A Gantt bar is too narrow for its label: shorten the label, or move the explanation to an `annotation` / row `note` and leave the segment label short or empty |
 | `shapes-overlap`, `shapes-text-overflow`, `annotation-overlap`, `subsystem-min` (warnings) | Move/enlarge shapes, shorten text, or give the figure its own slide |
 | `shapes-connector-angle` (warning) | The connector can only meet a side at a shallow angle, so it looks like it ends at a corner. Move the two shapes further apart, or line them up horizontally or vertically |
@@ -401,6 +413,15 @@ Fixes by code:
    into two lists by theme, a compare with 4 options into two compares).
 5. Run `check` again.
 
+### Merging thin slides
+
+1. Take the pair the `fill-ratio` hint names (or two neighbouring thin slides that make
+   one point).
+2. Keep the stronger conclusion as the one title; put both bodies under it, the block
+   that proves the title first.
+3. Delete the other slide and run `check` again. If it now overflows, the merge was
+   wrong: add evidence to each slide instead.
+
 Before adding content to a slide that already passes, use `capacity`: a new bullet of
 one line fits if `remainingBodyLines ≥ 1`; a new block fits if its height is below
 `remaining − blockGap`.
@@ -412,4 +433,5 @@ one line fits if `remainingBodyLines ≥ 1`; a new block fits if its height is b
 - Do not use names of real companies, products or people in examples unless the user
   supplied them as the content.
 - Every slide title is a conclusion. One message per slide.
-- Finish only when `check` reports no errors and no `layout-overflow`.
+- Finish only when `check` reports no errors and no warnings. If you keep a warning on
+  purpose (rare), tell the user which one and why.
