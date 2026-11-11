@@ -2,11 +2,14 @@ package boxloom
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -93,11 +96,11 @@ func TestShapesExampleBuilds(t *testing.T) {
 // 楕円の接続点は 0・2・4・6、矩形は 0・1・2・3。横に離れていれば左右の辺を使う。
 func TestConnectorSides(t *testing.T) {
 	a, b := LBox{X: 0, Y: 0, Width: 100, Height: 50}, LBox{X: 200, Y: 20, Width: 100, Height: 50}
-	if sa, sb := connectorSides(a, b); sa != 3 || sb != 1 {
+	if sa, sb, _ := connectorSides("rect", "rect", a, b); sa != 3 || sb != 1 {
 		t.Fatalf("horizontal: %d %d", sa, sb)
 	}
 	below := LBox{X: 10, Y: 200, Width: 100, Height: 50}
-	if sa, sb := connectorSides(a, below); sa != 2 || sb != 0 {
+	if sa, sb, _ := connectorSides("rect", "rect", a, below); sa != 2 || sb != 0 {
 		t.Fatalf("vertical: %d %d", sa, sb)
 	}
 	if idx, x, y := connectorSite("ellipse", b, 1); idx != 2 || x != 200 || y != 45 {
@@ -105,6 +108,124 @@ func TestConnectorSides(t *testing.T) {
 	}
 	if idx, _, _ := connectorSite("rect", b, 3); idx != 3 {
 		t.Fatalf("rect right site: %d", idx)
+	}
+}
+
+// #41:向かい合う辺の組だと辺をかすめる(浅い角度で入る)位置関係では、隣り合う
+// 辺の組(右→上など)に替える。
+func TestConnectorSidesShallow(t *testing.T) {
+	// 右下にあり、縦のすき間のほうが少し大きい:以前は下→上で、ほぼ水平に上の辺へ入った。
+	a := LBox{X: 0, Y: 0, Width: 100, Height: 120}
+	b := LBox{X: 130, Y: 160, Width: 120, Height: 120}
+	sa, sb, ang := connectorSides("rect", "ellipse", a, b)
+	if sa != 3 || sb != 0 {
+		t.Fatalf("got sides %d->%d (%.1f deg), want right->top", sa, sb, ang)
+	}
+	if ang < connectorAngleMin {
+		t.Fatalf("angle %.1f < %v", ang, connectorAngleMin)
+	}
+	// 向かい合う組で十分な角度があれば、それを使う(真横・斜め上の遠い箱)。
+	far := LBox{X: 400, Y: -150, Width: 100, Height: 50}
+	if sa, sb, _ := connectorSides("rect", "rect", a, far); sa != 3 || sb != 1 {
+		t.Fatalf("far: %d %d", sa, sb)
+	}
+}
+
+// 書いた PPTX で、コネクタの両端の座標が、繋いだ図形の接続点(a:stCxn・a:endCxn の
+// idx が指す点。presetShapeDefinitions の cxnLst の順)と一致するか。
+func TestConnectorEndsMatchSites(t *testing.T) {
+	src := "---\ntitle: t\ntemplate: light\ncover: false\n---\n\n# t\n\n```shapes\naspect: 2.6\nitems:\n" +
+		"  - {id: s1, kind: rect, x: 0.0, y: 0.05, w: 0.25, h: 0.2}\n" +
+		"  - {id: t1, kind: rect, x: 0.3, y: 0.32, w: 0.25, h: 0.2}\n" +
+		"  - {id: s2, kind: rect, x: 0.0, y: 0.6, w: 0.2, h: 0.18}\n" +
+		"  - {id: t2, kind: roundRect, x: 0.28, y: 0.8, w: 0.2, h: 0.18}\n" +
+		"  - {id: s3, kind: rect, x: 0.62, y: 0.1, w: 0.14, h: 0.3}\n" +
+		"  - {id: t3, kind: ellipse, x: 0.8, y: 0.55, w: 0.18, h: 0.3}\n" +
+		"  - {id: c, kind: ellipse, x: 0.4, y: 0.6, w: 0.12, h: 0.2}\n" +
+		"  - {kind: connector, from: s1, to: t1, arrow: true}\n" +
+		"  - {kind: connector, from: s2, to: t2, arrow: true}\n" +
+		"  - {kind: connector, from: s3, to: t3, arrow: true}\n" +
+		"  - {kind: connector, from: c, to: s1, arrow: true}\n" +
+		"  - {kind: connector, from: t3, to: c}\n```\n"
+	deck, err := ReadDeck("t.bx.md", []byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if _, err := Build(&buf, deck, BuildOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	pp := filepath.Join(t.TempDir(), "c.pptx")
+	if err := os.WriteFile(pp, buf.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	x := slideXML(t, pp, "ppt/slides/slide1.xml")
+	type geo struct {
+		prst         string
+		x, y, w, h   float64
+		flipH, flipV bool
+	}
+	num := func(s string) float64 { f, _ := strconv.ParseFloat(s, 64); return f }
+	shapes := map[string]geo{}
+	spRe := regexp.MustCompile(`(?s)<p:sp>.*?<p:cNvPr id="(\d+)".*?<a:off x="(\d+)" y="(\d+)"/><a:ext cx="(\d+)" cy="(\d+)"/>.*?prst="(\w+)".*?</p:sp>`)
+	for _, m := range spRe.FindAllStringSubmatch(x, -1) {
+		shapes[m[1]] = geo{prst: m[6], x: num(m[2]), y: num(m[3]), w: num(m[4]), h: num(m[5])}
+	}
+	site := func(g geo, idx int) (float64, float64) {
+		if g.prst == "ellipse" { // cxnLst: t, (il,it), l, (il,ib), b, (ir,ib), r, (ir,it)
+			pts := [][2]float64{{.5, 0}, {0, .5}, {.5, 1}, {1, .5}}
+			if idx%2 != 0 {
+				t.Fatalf("ellipse diagonal site %d not expected", idx)
+			}
+			p := pts[idx/2]
+			return g.x + p[0]*g.w, g.y + p[1]*g.h
+		}
+		pts := [][2]float64{{.5, 0}, {0, .5}, {.5, 1}, {1, .5}} // rect・roundRect: t, l, b, r
+		p := pts[idx]
+		return g.x + p[0]*g.w, g.y + p[1]*g.h
+	}
+	cxRe := regexp.MustCompile(`(?s)<p:cxnSp>.*?<a:stCxn id="(\d+)" idx="(\d+)"/><a:endCxn id="(\d+)" idx="(\d+)"/>.*?<a:xfrm([^>]*)><a:off x="(-?\d+)" y="(-?\d+)"/><a:ext cx="(\d+)" cy="(\d+)"/>.*?prst="straightConnector1".*?</p:cxnSp>`)
+	ms := cxRe.FindAllStringSubmatch(x, -1)
+	if len(ms) != 5 {
+		t.Fatalf("connectors: %d", len(ms))
+	}
+	for _, m := range ms {
+		ox, oy, cx, cy := num(m[6]), num(m[7]), num(m[8]), num(m[9])
+		x1, y1, x2, y2 := ox, oy, ox+cx, oy+cy
+		if strings.Contains(m[5], `flipH="1"`) {
+			x1, x2 = x2, x1
+		}
+		if strings.Contains(m[5], `flipV="1"`) {
+			y1, y2 = y2, y1
+		}
+		si, _ := strconv.Atoi(m[2])
+		ei, _ := strconv.Atoi(m[4])
+		sx, sy := site(shapes[m[1]], si)
+		ex, ey := site(shapes[m[3]], ei)
+		const tol = 2 // EMU の丸め
+		if math.Abs(sx-x1) > tol || math.Abs(sy-y1) > tol || math.Abs(ex-x2) > tol || math.Abs(ey-y2) > tol {
+			t.Errorf("connector %s(%d)->%s(%d): line (%v,%v)-(%v,%v), sites (%v,%v)-(%v,%v)", m[1], si, m[3], ei, x1, y1, x2, y2, sx, sy, ex, ey)
+		}
+	}
+}
+
+// 浅くしか繋げない位置関係は警告 shapes-connector-angle(path はそのコネクタ)。
+func TestConnectorAngleWarning(t *testing.T) {
+	src := "---\ntitle: t\ntemplate: light\ncover: false\n---\n\n# t\n\n```shapes\naspect: 2.6\nitems:\n" +
+		"  - {id: a, kind: rect, x: 0.0, y: 0.0, w: 0.3, h: 0.3}\n" +
+		"  - {id: b, kind: rect, x: 0.32, y: 0.2, w: 0.3, h: 0.3}\n" +
+		"  - {id: c, kind: rect, x: 0.0, y: 0.7, w: 0.2, h: 0.3}\n" +
+		"  - {kind: connector, from: a, to: b, arrow: true}\n" +
+		"  - {kind: connector, from: a, to: c, arrow: true}\n```\n"
+	res := Check("t.bx.md", []byte(src), CheckOptions{})
+	var got []Issue
+	for _, w := range res.Warnings {
+		if w.Code == "shapes-connector-angle" {
+			got = append(got, w)
+		}
+	}
+	if len(got) != 1 || got[0].Path != "/slides/0/body/0/data/items/3" {
+		t.Fatalf("warnings: %+v", res.Warnings)
 	}
 }
 
@@ -352,4 +473,22 @@ func lineOf(s, sub string) int {
 		}
 	}
 	return 0
+}
+
+// 例:斜めの3組のうち、浅くしか繋げない1組(受付→振り分け)だけが警告になる。
+// .md でも同じ警告にコネクタの行が付く。
+func TestConnectorAngleExample(t *testing.T) {
+	errs, warns := CheckFile("../examples/ir/check-warnings/shapes-connector-angle.json", "")
+	if len(errs) != 0 || len(warns) != 1 || warns[0].Code != "shapes-connector-angle" || warns[0].Path != "/slides/0/body/0/data/items/6" {
+		t.Fatalf("errs %+v warns %+v", errs, warns)
+	}
+	p := "../examples/md/warnings/shapes-connector-angle.bx.md"
+	b, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	errs, warns = CheckFile(p, "")
+	if len(errs) != 0 || len(warns) != 1 || warns[0].Line != lineOf(string(b), "from: s1, to: t1") {
+		t.Fatalf("md: errs %+v warns %+v", errs, warns)
+	}
 }

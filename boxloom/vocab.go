@@ -172,7 +172,7 @@ func shapesDecl() SubsystemDecl {
 			"線の点は流れの書き方の列で書く: from: [0.1, 0.5]",
 			"色はテーマの役割名だけ(fill・line・textColor・color)。16進の色は書けない",
 			"文字の大きさは textStyle に段の名前(small・subPoint・optionItem・body・optionLabel)。数は書けない",
-			"connector の from・to は図形の id。重なった図形は boxloom check が shapes-overlap の警告にする",
+			"connector の from・to は図形の id。重なった図形は boxloom check が shapes-overlap の警告にする。コネクタが辺に浅くしか繋げない位置関係は shapes-connector-angle の警告",
 			"文の値(text)は本文と同じ文中の記法で読む。YAML の列で書くと各行を意味のある改行でつなぐ",
 		},
 	}

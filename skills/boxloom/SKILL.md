@@ -374,6 +374,7 @@ Fixes by code:
 | `fill-ratio` (warning) | Slide is mostly empty: merge with a neighbour, add the missing figure or evidence, or keep it if it is a deliberate one-line message |
 | `gantt-segment-label` (warning) | A Gantt bar is too narrow for its label: shorten the label, or move the explanation to an `annotation` / row `note` and leave the segment label short or empty |
 | `shapes-overlap`, `shapes-text-overflow`, `annotation-overlap`, `subsystem-min` (warnings) | Move/enlarge shapes, shorten text, or give the figure its own slide |
+| `shapes-connector-angle` (warning) | The connector can only meet a side at a shallow angle, so it looks like it ends at a corner. Move the two shapes further apart, or line them up horizontally or vertically |
 | `figure-text-overflow` (warning) | A `process`/`orgchart`/`matrix`/`funnel` box cannot hold its text (an unbreakable word is too wide, or the figure got too little height): shorten the text or give the figure its own slide |
 | `funnel-increase` (warning) | A funnel value grows: check the numbers, or use `process` if the stages do not shrink |
 

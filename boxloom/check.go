@@ -752,6 +752,9 @@ func warningIssue(file, w string) Issue {
 	if shapes && strings.Contains(m[3], "text does not fit") {
 		rule = "shapes-text-overflow" // shapes の図形の文が収まらない
 	}
+	if shapes && strings.Contains(m[3], "meets a side at a shallow angle") {
+		rule = "shapes-connector-angle" // shapes のコネクタが辺に浅く入り、角で終わったように見える
+	}
 	inBlock := m[3] // 本文の中の場所(body[2]: …)を除いた文
 	if bm := warnBlockRe.FindStringSubmatch(inBlock); bm != nil {
 		inBlock = bm[2]

@@ -261,9 +261,18 @@ Render を呼ばずに検査だけしたい道具(将来の `boxloom check`)が�
   幅で事前に折り返す(楕円は内接する矩形の幅)。`text` は左上から置く。
 - **コネクタは本物**:PPTX では `p:cxnSp`(`straightConnector1`)で、`a:stCxn`・
   `a:endCxn` で両端の図形の接続点に繋ぐ。PowerPoint で図形を動かすと線が付いてくる。
-  使う辺は、2つの図形が横に離れているほうが大きければ左右、そうでなければ上下で、
-  辺の真ん中どうしを直線で結ぶ(接続点の番号は、矩形・角丸は上0・左1・下2・右3、
-  楕円は上0・左2・下4・右6)。矢印は `a:tailEnd`(終点)。曲がる線(elbow)は無い。
+  辺の真ん中どうしを直線で結ぶ(接続点の番号は presetShapeDefinitions の cxnLst の順で、
+  矩形・角丸は上0・左1・下2・右3、楕円は上0・左2・下4・右6)。矢印は `a:tailEnd`(終点)。
+  曲がる線(elbow)は無い。
+- **使う辺の選び方**(#41):線が辺に浅い角度で入ると、辺をかすめて角で終わったように
+  見える。そこで、両端の辺が相手のほうを向いている組だけを候補にし、線と辺のなす角の
+  浅いほう(両端の小さいほう)で比べる。向かい合う辺の組(右→左・下→上など)のうち最も
+  良いものが 30°以上ならそれを使い、足りなければ隣り合う辺の組(右→上・下→左など)も
+  含めて最も良い組を使う(同じなら向かい合う組、次に短いほう)。それでも 30°に
+  届かなければ `shapes-connector-angle` の警告(図形の位置を変えないと直らない)。
+  端点の座標と `a:stCxn`・`a:endCxn` の idx が指す接続点が一致することは
+  `shapes_test.go` の `TestConnectorEndsMatchSites` が確かめる(LibreOffice も同じ点に
+  描くことを odp に変えて確かめた)。
 - `line`・`arrow` も `p:cxnSp` で書くが、図形には繋がない。
 
 ### 自己申告(Measure)
@@ -288,6 +297,7 @@ Render を呼ばずに検査だけしたい道具(将来の `boxloom check`)が�
 | check(誤り) | `unique-id` | id の重複(既存の規則) |
 | 警告(Lint) | `shapes-overlap` | 図形どうし(`rect`・`roundRect`・`ellipse`・`text`)の矩形が面積を持って重なる。辺が接するだけなら重ならない。線・矢印・コネクタは見ない。図形の `text` は図形の中身なので重なりではない |
 | 警告(Lint) | `shapes-text-overflow` | 図形・`text` の文が、割り当てられた大きさで折り返しても収まらない |
+| 警告(Lint) | `shapes-connector-angle` | コネクタがどの辺の組でも、辺と 30°未満の浅い角度でしか繋げない(角で終わったように見える)。path はそのコネクタ。図形を離すか、横か縦に揃える |
 
 警告の文は `[SUBSYSTEM WARNING] shapes: items[7] ("db") overlaps items[6] ("auth")` の
 形で、check はその path を後から置いた図形(`/slides/1/body/1/data/items/7`)にする。

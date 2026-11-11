@@ -329,21 +329,88 @@ func connectorSite(kind string, b LBox, side int) (idx int, x, y float64) {
 	return idx, b.X + b.Width, b.Y + b.Height/2
 }
 
-// connectorSides は a から b へ繋ぐときに使う辺(0=上・1=左・2=下・3=右)。
-// 横に離れているほうが大きければ左右の辺、そうでなければ上下の辺を使う。
-func connectorSides(a, b LBox) (sa, sb int) {
-	gapX := math.Max(b.X-(a.X+a.Width), a.X-(b.X+b.Width))
-	gapY := math.Max(b.Y-(a.Y+a.Height), a.Y-(b.Y+b.Height))
-	if gapX >= gapY {
-		if b.X+b.Width/2 >= a.X+a.Width/2 {
-			return 3, 1
+// connectorAngleMin は、コネクタが辺に入る(出る)角度の下限(度)。これより浅いと
+// 線が辺をかすめて、角で終わったように見える(#41)。向かい合う辺の組がこの角度を
+// 満たせばその組を使い、どの組でも満たせなければ check が shapes-connector-angle
+// の警告を出す(図形の位置を変えないと直らないので、作者に知らせる)。
+const connectorAngleMin = 30.0
+
+// sideNormals は辺(0=上・1=左・2=下・3=右)の外向きの向き。
+var sideNormals = [4][2]float64{{0, -1}, {-1, 0}, {0, 1}, {1, 0}}
+
+// connectorSides は a から b へ繋ぐときに使う辺(0=上・1=左・2=下・3=右)と、
+// その組で線が辺に入る浅いほうの角度(度)。
+//
+// 辺の中点どうしを結ぶ直線は、辺に浅い角度で入ると辺をかすめ、角で終わったように
+// 見える(#41)。そこで次の順に選ぶ:
+//  1. 向かい合う辺の組(右→左・下→上など)のうち、両端の角度の浅いほうが最も
+//     大きいもの。それが connectorAngleMin 以上なら使う。
+//  2. 足りなければ、隣り合う辺の組(右→上など)も含めて、浅いほうの角度が最も
+//     大きい組を使う。
+//
+// 使えるのは、両端の辺が相手のほうを向いている組だけ(線が自分の図形の中を
+// 通らない)。角度が同じなら向かい合う組、次に短いほうを選ぶ。
+func connectorSides(ka, kb string, a, b LBox) (sa, sb int, angle float64) {
+	type cand struct {
+		sa, sb   int
+		angle, l float64
+		opposite bool
+	}
+	var best, bestOpp *cand
+	better := func(x, y *cand) bool { // x が y より良いか
+		if y == nil {
+			return true
 		}
-		return 1, 3
+		if math.Abs(x.angle-y.angle) > 1e-6 {
+			return x.angle > y.angle
+		}
+		if x.opposite != y.opposite {
+			return x.opposite
+		}
+		return x.l < y.l
+	}
+	for i := 0; i < 4; i++ {
+		for j := 0; j < 4; j++ {
+			_, x1, y1 := connectorSite(ka, a, i)
+			_, x2, y2 := connectorSite(kb, b, j)
+			dx, dy := x2-x1, y2-y1
+			l := math.Hypot(dx, dy)
+			if l == 0 {
+				continue
+			}
+			na, nb := sideNormals[i], sideNormals[j]
+			outA := (na[0]*dx + na[1]*dy) / l  // a の辺から外へ出る成分
+			outB := -(nb[0]*dx + nb[1]*dy) / l // b の辺へ外から入る成分
+			if outA <= 1e-9 || outB <= 1e-9 {
+				continue
+			}
+			c := &cand{sa: i, sb: j, l: l, opposite: j == (i+2)%4,
+				angle: math.Min(math.Asin(math.Min(outA, 1)), math.Asin(math.Min(outB, 1))) * 180 / math.Pi}
+			if better(c, best) {
+				best = c
+			}
+			if c.opposite && better(c, bestOpp) {
+				bestOpp = c
+			}
+		}
+	}
+	if bestOpp != nil && bestOpp.angle >= connectorAngleMin {
+		return bestOpp.sa, bestOpp.sb, bestOpp.angle
+	}
+	if best != nil {
+		return best.sa, best.sb, best.angle
+	}
+	// 図形が重なっていて、相手を向いた辺が無い。以前と同じく中心の向きで選ぶ。
+	if math.Abs((b.X+b.Width/2)-(a.X+a.Width/2)) >= math.Abs((b.Y+b.Height/2)-(a.Y+a.Height/2)) {
+		if b.X+b.Width/2 >= a.X+a.Width/2 {
+			return 3, 1, 0
+		}
+		return 1, 3, 0
 	}
 	if b.Y+b.Height/2 >= a.Y+a.Height/2 {
-		return 2, 0
+		return 2, 0, 0
 	}
-	return 0, 2
+	return 0, 2, 0
 }
 
 func (s *ShapesSubsystem) Render(ctx RenderContext, box LBox) {
@@ -401,7 +468,7 @@ func (s *ShapesSubsystem) Render(ctx RenderContext, box LBox) {
 		if !okA || !okB {
 			continue // 読み込みで断っているので来ない
 		}
-		sa, sb := connectorSides(a.b, b.b)
+		sa, sb, _ := connectorSides(a.kind, b.kind, a.b, b.b)
 		ia, x1, y1 := connectorSite(a.kind, a.b, sa)
 		ib, x2, y2 := connectorSite(b.kind, b.b, sb)
 		p.AddConnector(x1, y1, x2, y2, v.LineWidth, ctx.Roles.Color(it.Color), it.Arrow,
@@ -418,7 +485,8 @@ func shapesOverlap(a, b *ShapeItem) bool {
 }
 
 // Lint は図形どうしの重なり(shapes-overlap)と、図形の文が収まらないこと
-// (shapes-text-overflow)を警告にする。線・矢印・コネクタは重なりを見ない。
+// (shapes-text-overflow)と、コネクタが辺に浅くしか繋げないこと
+// (shapes-connector-angle)を警告にする。線・矢印・コネクタは重なりを見ない。
 func (s *ShapesSubsystem) Lint(box LBox) []string {
 	var out []string
 	items := s.Data.Items
@@ -444,6 +512,32 @@ func (s *ShapesSubsystem) Lint(box LBox) []string {
 		if needW > haveW+eps || needH > haveH+eps {
 			out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] shapes: items[%d] (%q): text does not fit (needs %.1fx%.1fpt, has %.1fx%.1fpt)",
 				i, it.label(), needW, needH, math.Max(haveW, 0), math.Max(haveH, 0)))
+		}
+	}
+	// コネクタがどの辺の組でも浅くしか繋げない(辺をかすめて角で終わったように見える)。
+	byID := map[string]int{}
+	for i := range items {
+		if items[i].boxed() && items[i].ID != "" {
+			byID[items[i].ID] = i
+		}
+	}
+	for i := range items {
+		it := &items[i]
+		if it.Kind != "connector" {
+			continue
+		}
+		ja, okA := byID[it.FromID]
+		jb, okB := byID[it.ToID]
+		if !okA || !okB {
+			continue
+		}
+		ba, bb := itemBox(in, &items[ja]), itemBox(in, &items[jb])
+		if shapesOverlap(&items[ja], &items[jb]) {
+			continue // 重なりは shapes-overlap が知らせる
+		}
+		if _, _, ang := connectorSides(items[ja].Kind, items[jb].Kind, ba, bb); ang < connectorAngleMin {
+			out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] shapes: items[%d] (connector %s -> %s): meets a side at a shallow angle (%.0f degrees < %.0f), so it looks like it ends at a corner",
+				i, it.FromID, it.ToID, ang, connectorAngleMin))
 		}
 	}
 	return out
