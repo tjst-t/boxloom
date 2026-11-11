@@ -251,7 +251,7 @@
       "number": 10,
       "kind": "task",
       "title": "AI に渡す Skill 文書(SKILL.md)を書く:書き方・選ぶ規則・密度の目安・check で直す手順",
-      "status": "ready",
+      "status": "done",
       "parent": "agent-entry",
       "dependsOn": [
         "routing-rules",
@@ -262,12 +262,12 @@
       "labels": [],
       "body": "中身:schema の出力の読み方、Markdown の書き方の要点、選ぶ規則、密度の数値の目安(1ブロックの箇条の数・1項目の字数。容量の計測で裏付ける)、check の誤りと警告を受けて直す流れ、はみ出したらスライドを分ける手順(エンジンは自動で分けない)。",
       "doneWhen": "skills/boxloom/SKILL.md があり、サブエージェントにそれだけを渡して架空の題材で書かせると、check の誤り0件の .bx.md ができる",
-      "resolution": null,
+      "resolution": "skills/boxloom/SKILL.md(fe569f0)。Skill だけを渡したサブエージェントが架空の題材(8枚、compare・gantt・shapes 入り)で check 誤り0件・はみ出し0件の .bx.md を書けた。指摘を受けて Gantt・shapes の例、役割名の一覧、fill-ratio の扱いを足した(例は check で誤り0件を確認)。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:00:29.883Z",
-      "updatedAt": "2026-11-11T02:00:29.883Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T04:51:15.512Z",
+      "closedAt": "2026-11-11T04:51:15.512Z",
       "extra": {}
     },
     {
