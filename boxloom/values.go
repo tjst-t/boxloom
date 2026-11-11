@@ -358,6 +358,7 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		Marks:      f.Marks,
 		Fonts:      fonts,
 		Subsystems: DefaultSubsystems().Clone(),
+		components: standardComponents.clone(),
 		Variants:   variants,
 		// 名乗る囲みは部品(コード)と対になるので、まだコードの一式を使う。
 		Blocks: defaultBlocks(),

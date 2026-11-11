@@ -201,6 +201,15 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
 1. **いまの組み方を登録簿に移す。** `buildBlockSpec` の switch を登録簿の
    引き方に替え、標準の部品を登録する。出力は1バイトも変えない(例の deck の
    PPTX と check の JSON が同じであることを試験で確かめる)。
+   **済み(#62)。** `boxloom/component.go` の `componentRegistry`(register・
+   override・clone。サブシステムの登録簿と同じ形)に標準の12の部品を登録し、
+   `Template` はその写しを持つ。部品は `componentDecl{Schema, Markdown}` を名乗る
+   (標準の部品は Schema を IR の Schema に任せて空、Markdown は `defaultBlocks` の
+   囲みをそのまま分け持つ)。代わりの組み方(fallback)は interface にあるだけで、
+   標準の部品は持たない。当面は package の中だけの名前で、公開 API は増やしていない。
+   出力が変わらないことは `TestOutputsGolden`(examples の全 deck の build の PPTX の
+   部品ごと・check の JSON・schema を記録した sha256 と比べる。
+   `boxloom/testdata/outputs-golden.json`)で確かめる。
 2. **計測の印を公開の語彙にする**(2.1 の表)。これも出力は変えない。
 3. **最初の追加の部品として `pairs` を作る。** 代わりの組み方つき。どのテンプレートに
    置くか(標準の dark/light か、新しいテンプレートか)は別に決める。

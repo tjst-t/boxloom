@@ -29,6 +29,9 @@ type Template struct {
 	Marks      TemplateMarks
 	Fonts      *FontSet // 字体と幅の余裕(値の表の fonts)
 	Subsystems *SubsystemRegistry
+	// components は部品の登録簿(IR のブロック → 箱の木。component.go)。
+	// 標準の部品の写しで、組み方は override で差し替えられる。
+	components *componentRegistry
 	// Variants はこのテンプレートが用意した変種の名前(IR の variant)。
 	// いまのデモのテンプレートは1つも持たない。
 	Variants map[string]bool
@@ -378,51 +381,11 @@ func (t *Template) buildBlock(b *IRBlock) (*Spec, error) {
 	if err := t.checkVariant(b.Variant); err != nil {
 		return nil, err
 	}
-	s, err := t.buildBlockSpec(b)
+	s, err := t.components.build(componentContext{t: t}, b)
 	if s != nil {
 		s.irType = b.Type
 	}
 	return s, err
-}
-
-func (t *Template) buildBlockSpec(b *IRBlock) (*Spec, error) {
-	v, th := t.Values, t.Theme
-	switch b.Type {
-	case "columns":
-		return t.columns(b)
-	case "table":
-		return t.table(b), nil
-	case "image":
-		leaf, err := t.imageLeaf(b.Src, b.Alt, b.Caption)
-		if err != nil {
-			return nil, fmt.Errorf("src: %w", err)
-		}
-		return SubsystemNode(leaf, WithGrow(1)), nil
-	case "gallery":
-		return t.gallery(b)
-	case "paragraph":
-		return t.text(b.Content, v.Body, th.c("text_primary"), false), nil
-	case "note":
-		return t.text(b.Content, v.Small, th.c("text_muted"), false), nil
-	case "points":
-		return t.points(b.Items, 0), nil
-	case "compare":
-		return t.compare(b.Options), nil
-	case "takeaway":
-		return t.takeaway(b.Content), nil
-	case "stat":
-		return t.stat(b.Stats), nil
-	case "quote":
-		return t.quote(b.Content, b.Source), nil
-	case "subsystem":
-		sub, err := t.Subsystems.Build(b.Subsystem, b.Data)
-		if err != nil {
-			return nil, err
-		}
-		// 高さは自己申告(自然な高さ)が出発点で、余りは grow で受け取る。
-		return SubsystemNode(sub, WithGrow(1), WithBackground(th.c("card")), WithRadius(v.SubsystemRadius)), nil
-	}
-	return nil, fmt.Errorf("unknown block type %q", b.Type)
 }
 
 // points は箇条。印は先頭の塊(Mark)に入れ、PPTX では段落の箇条の印として

@@ -217,6 +217,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     選び(item→横棒・timeSeries→縦棒か折れ線・component→円・frequency→ヒストグラム・
     correlation→散布図)、`c:chartSpace` と埋め込みの xlsx を書く。check の誤り
     `chart-values`・`chart-emphasis`、警告 `chart-labels`。詳細は `docs/subsystem.md` の12節
+  - `component.go` = 部品の登録簿(IR のブロック → 箱の木。標準の部品を登録し、
+    テンプレートは写しを持って組み方を差し替えられる。package の中だけ。
+    `docs/layers.md` の7章)。出力が変わらないことは `TestOutputsGolden`
+    (`testdata/outputs-golden.json`。出力を変える変更では `-update-golden` で書き直す)
   - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
     `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
   - `blocks.go` / `image.go` / `pptx_blocks.go` / `md_blocks.go` = 第1層のブロックの
