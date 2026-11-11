@@ -378,7 +378,6 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 // 行の送りを測ったとおり(字の大きさ×lineHeightMult)に pt で書く。
 func (p *PPTXBuilder) parasXML(s *shape, lines [][]TextRun) string {
 	var paras strings.Builder
-	szHundredths := int(s.fontSize * 100)
 	for _, line := range lines {
 		if len(line) == 0 {
 			line = []TextRun{{Color: s.color, Bold: s.bold}}
@@ -395,7 +394,7 @@ func (p *PPTXBuilder) parasXML(s *shape, lines [][]TextRun) string {
 				boldAttr = ` b="1"`
 			}
 			paras.WriteString(fmt.Sprintf(`<a:r><a:rPr lang="ja-JP" sz="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr><a:t>%s</a:t></a:r>`,
-				szHundredths, boldAttr, hexColor(r.Color), escapeXML(r.Text)))
+				int(runSize(r, s.fontSize)*100), boldAttr, hexColor(r.Color), escapeXML(r.Text)))
 		}
 		paras.WriteString(`</a:p>`)
 	}
