@@ -202,7 +202,7 @@
       "number": 8,
       "kind": "task",
       "title": "パターンを選ぶ規則を明文化する(内容の構造→パターン/キャンバス)",
-      "status": "ready",
+      "status": "done",
       "parent": "agent-entry",
       "dependsOn": [
         "pattern-vocabulary"
@@ -212,12 +212,12 @@
       "labels": [],
       "body": "AI の気分ではなく規則で選ばせる。例:「2つ以上の選択肢を同じ観点で比べる→compare」「方向のある関係で繋がる3つ以上のもの→プロセス/組織図のキャンバス」「数を1つ強く見せる→統計強調」。どれにも当たらないときの扱い(逃げ道)も書く。両方向の失敗の例(簡単な内容を図にする/図が要る内容を箇条にする)を付ける。",
       "doneWhen": "docs/patterns.md に規則があり、各規則に良い例と悪い例が1つずつある",
-      "resolution": null,
+      "resolution": "docs/patterns.md の4章に R1〜R14(上から順に当てる)。各規則に良い例と悪い例。R14 が shapes(最後の手段)で、使う条件3つ付き。e1713c1。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:00:29.883Z",
-      "updatedAt": "2026-11-11T02:00:29.883Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T03:02:37.719Z",
+      "closedAt": "2026-11-11T03:02:37.719Z",
       "extra": {}
     },
     {
