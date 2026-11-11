@@ -1,12 +1,15 @@
 // boxloom check: JSON Schema では書けない IR の検査。
 //
-//	go run . check [-format text|json] [-template dark|light] [-strict] deck.json|deck.bx.md ...
+//	go run . check [-format text|json] [-capacity] [-template dark|light] [-strict] deck.json|deck.bx.md ...
 //
 // 誤りと警告は docs/content-syntax.md の5章の形(Issue)で出す:
 //
 //	{"ok": false,
 //	 "errors":   [{"file": "deck.bx.md", "line": 40, "path": "/slides/2/body/0/data/...", "code": "date-order", "message": "..."}],
-//	 "warnings": [{"file": "deck.json", "path": "/slides/1", "code": "fill-ratio", "message": "..."}]}
+//	 "warnings": [{"file": "deck.json", "path": "/slides/1", "code": "fill-ratio", "message": "..."}],
+//	 "capacity": [{"file": "deck.json", "path": "/slides/1", "bodyArea": 413.4, "need": 210.2, ...}]}
+//
+// capacity は本文を持つスライドごとの容量(capacity.go、docs/ir.md の「容量の計測」)。
 //
 // IR(JSON)を検査したときは line・column を出さない。.md を検査したときは、
 // 記法の誤りならパーサーの誤り(line・column つき)を、意味の誤りなら IR の
@@ -42,6 +45,9 @@ type CheckResult struct {
 	OK       bool    `json:"ok"`
 	Errors   []Issue `json:"errors"`
 	Warnings []Issue `json:"warnings"`
+	// Capacity は本文を持つスライドごとの容量(capacity.go)。誤りがあって
+	// 組み立てまで通らなかったファイルの分は入らない。
+	Capacity []SlideCapacity `json:"capacity"`
 }
 
 func runCheck(args []string) int {
@@ -49,18 +55,20 @@ func runCheck(args []string) int {
 	tmpl := fs.String("template", "", "テンプレートの名前(省くと IR の template)")
 	strict := fs.Bool("strict", false, "警告も誤りとして扱う(終了コード 1)")
 	format := fs.String("format", "text", "出し方: text か json")
+	showCap := fs.Bool("capacity", false, "text の出し方でも容量(本文の残り)を出す(json では常に出る)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if fs.NArg() == 0 || (*format != "text" && *format != "json") {
-		fmt.Fprintln(os.Stderr, "usage: boxloom check [-format text|json] [-template dark|light] [-strict] deck.json|deck.bx.md ...")
+		fmt.Fprintln(os.Stderr, "usage: boxloom check [-format text|json] [-capacity] [-template dark|light] [-strict] deck.json|deck.bx.md ...")
 		return 2
 	}
-	res := CheckResult{Errors: []Issue{}, Warnings: []Issue{}}
+	res := CheckResult{Errors: []Issue{}, Warnings: []Issue{}, Capacity: []SlideCapacity{}}
 	for _, f := range fs.Args() {
-		errs, warns := CheckFile(f, *tmpl)
+		errs, warns, caps := CheckFileCapacity(f, *tmpl)
 		res.Errors = append(res.Errors, errs...)
 		res.Warnings = append(res.Warnings, warns...)
+		res.Capacity = append(res.Capacity, caps...)
 	}
 	res.OK = len(res.Errors) == 0 && (!*strict || len(res.Warnings) == 0)
 	if *format == "json" {
@@ -75,6 +83,11 @@ func runCheck(args []string) int {
 		for _, w := range res.Warnings {
 			fmt.Println("warning:", w.String())
 		}
+		if *showCap {
+			for _, c := range res.Capacity {
+				fmt.Println(c.String())
+			}
+		}
 		fmt.Printf("%d error(s), %d warning(s)\n", len(res.Errors), len(res.Warnings))
 	}
 	if !res.OK {
@@ -88,31 +101,50 @@ func runCheck(args []string) int {
 // あればそれを返す。無ければできた IR を検査し、誤りと警告に Markdown の行を
 // 添える(IR の場所から、その場所を作った Markdown の行を引く)。
 func CheckFile(path, templateOverride string) (errs, warns []Issue) {
+	errs, warns, _ = CheckFileCapacity(path, templateOverride)
+	return errs, warns
+}
+
+// CheckFileCapacity は CheckFile に容量(本文を持つスライドごと)を足したもの。
+// .md なら容量のスライドとブロックにも Markdown の行を添える。
+func CheckFileCapacity(path, templateOverride string) (errs, warns []Issue, caps []SlideCapacity) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return []Issue{{File: path, Message: err.Error(), Code: "read"}}, nil
+		return []Issue{{File: path, Message: err.Error(), Code: "read"}}, nil, nil
 	}
 	if !isMarkdownPath(path) {
-		return CheckIR(path, b, templateOverride)
+		return CheckIRCapacity(path, b, templateOverride)
 	}
 	ir, mdErrs, lines := ParseMarkdownWithMap(b, path)
 	if len(mdErrs) > 0 {
-		return mdErrs, nil
+		return mdErrs, nil, nil
 	}
-	errs, warns = CheckIR(path, ir, templateOverride)
+	errs, warns, caps = CheckIRCapacity(path, ir, templateOverride)
 	for _, list := range [][]Issue{errs, warns} {
 		for i := range list {
 			list[i].Line = lines.Line(list[i].Path)
 		}
 	}
-	return errs, warns
+	for i := range caps {
+		caps[i].Line = lines.Line(caps[i].Path)
+		for j := range caps[i].Blocks {
+			caps[i].Blocks[j].Line = lines.Line(caps[i].Blocks[j].Path)
+		}
+	}
+	return errs, warns, caps
 }
 
 // CheckIR はバイト列の IR を検査する(試験から直接呼べるように分けてある)。
 func CheckIR(file string, b []byte, templateOverride string) (errs, warns []Issue) {
+	errs, warns, _ = CheckIRCapacity(file, b, templateOverride)
+	return errs, warns
+}
+
+// CheckIRCapacity は CheckIR に容量を足したもの。誤りがあれば容量は空。
+func CheckIRCapacity(file string, b []byte, templateOverride string) (errs, warns []Issue, caps []SlideCapacity) {
 	var doc any
 	if err := json.Unmarshal(b, &doc); err != nil {
-		return []Issue{{File: file, Path: "", Message: "not JSON: " + err.Error(), Code: "json"}}, nil
+		return []Issue{{File: file, Path: "", Message: "not JSON: " + err.Error(), Code: "json"}}, nil, nil
 	}
 	c := &checker{file: file}
 
@@ -132,22 +164,28 @@ func CheckIR(file string, b []byte, templateOverride string) (errs, warns []Issu
 	// Go の読み込みが断るもの(知らないキー・必須の欄など)。意味の検査と同じ
 	// 誤りを二重に出さないよう、意味の誤りが無いときだけ見る。
 	if len(c.errs) > 0 {
-		return c.errs, nil
+		return c.errs, nil, nil
 	}
 	deck, perr := ParseIR(b)
 	if perr != nil {
 		c.add(locationToPointer(perr.Error()), perr.Error(), "schema")
-		return c.errs, nil
+		return c.errs, nil, nil
 	}
-	warnings, berr := tm.RenderDeck(deck, os.DevNull)
+	pages, warnings, caps, berr := tm.renderPages(deck)
+	if berr == nil {
+		berr = SaveDeck(os.DevNull, pages, "")
+	}
 	if berr != nil {
 		c.add(locationToPointer(berr.Error()), berr.Error(), "build")
-		return c.errs, nil
+		return c.errs, nil, nil
 	}
 	for _, w := range warnings {
 		warns = append(warns, warningIssue(file, w))
 	}
-	return c.errs, warns
+	for i := range caps {
+		caps[i].File = file
+	}
+	return c.errs, warns, caps
 }
 
 type checker struct {

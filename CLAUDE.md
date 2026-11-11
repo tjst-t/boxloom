@@ -193,7 +193,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     置き場所はサブシステムが決める。詳細は `docs/build.md`
   - `check.go` = `go run . check deck.json|deck.bx.md`。Schema で書けない IR の
     検査(id の一意性・target の指す先・日付の前後と範囲・variant)と組み立ての
-    警告(はみ出しの `layout-overflow` は `overflow.go`)を出す(`docs/ir.md`)。誤りの形はパーサー・`validate_ir.py` と共通の
+    警告(はみ出しの `layout-overflow` は `overflow.go`)を出す(`docs/ir.md`)。
+    `-format json` には本文の容量 `capacity`(`capacity.go`。はみ出しと同じ測り値
+    から作る残りの高さ・行の数)も付く。誤りの形はパーサー・`validate_ir.py` と共通の
     `Issue`(`docs/content-syntax.md` の5章。IR を直接検査したときは行と列を省く)
   - `values.go` + `templates/*.json` + `subsystems/gantt.json` = 値の表(データ)の
     読み込みと厳しい検査。テンプレートの一覧は `templates/` のファイルから作る

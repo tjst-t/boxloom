@@ -196,8 +196,11 @@ go run . check -template dark deck.json                  # IR の template の�
                "path": "/slides/0/body/0/data/milestones/0/at", "code": "within-span",
                "message": "2036-05 is outside the chart span 2026-09 .. 2034-11"}],
  "warnings": [{"file": "deck.json", "path": "/slides/1", "code": "fill-ratio",
-               "message": "underfilled: 50.8% (< 65%)"}]}
+               "message": "underfilled: 50.8% (< 65%)"}],
+ "capacity": []}
 ```
+
+`capacity` は本文の容量(下の「容量の計測」。誤りのあるファイルの分は空)。
 
 | code | 見ること |
 |---|---|
@@ -261,6 +264,43 @@ go run . check -template dark deck.json                  # IR の template の�
 (`validate_ir.py --self-test` は Schema で通ることを、`boxloom/check_test.go` は
 決まった code で断られることを確かめる)。`examples/ir/invalid/` は Schema でも
 check でも断られるもの。
+
+### 容量の計測(capacity)
+
+はみ出す前に「あとどれだけ入るか」を数字で知るために、`check -format json` の
+結果には `capacity` が付く(`boxloom/capacity.go`)。本文を持つスライドごとに1件
+(表紙は出ない)。誤りがあって組み立てまで通らなかったファイルの分は入らない。
+`-format text` でも `-capacity` を付ければ同じ数字を1行ずつ出す。
+
+測り方は上の `layout-overflow` と**同じ1回の測り値**から作るので、数字は警告と
+食い違わない(警告の pt は、ここの値と同じく 0.1pt に丸めたもの)。高さはすべて pt。
+
+```
+"capacity": [{
+  "file": "deck.bx.md", "line": 37,          // .md なら Markdown の行(IR なら省く)
+  "path": "/slides/1",
+  "bodyArea": 413.4,      // 本文の領域(ページの内側 − 題・フッター − gap)
+  "need": 210.2,          // ブロックを縮めずに積んだ高さ(ブロックの間の gap を含む)
+  "remaining": 203.2,     // bodyArea − need。負ならはみ出している
+  "blockGap": 16,         // ブロックの間の gap。新しいブロックを足すなら先にこれが要る
+  "bodyLineHeight": 18.9, // 本文の字の大きさの1行の高さ
+  "remainingBodyLines": 10, // 残りに本文の行がいくつ入るか(既にあるブロックに足す場合)
+  "blocks": [{
+    "path": "/slides/1/body/0", "line": 40, "type": "points",
+    "need": 68.7,         // そのブロックが縮めずに要る高さ
+    "lines": 3,           // 中の文字の行の数(折り返し後。横に並ぶものは一番多い列)
+    "top": 0, "bottom": 68.7, // 本文の領域の上端からの位置
+    "overflow": 0         // 本文の領域の下端を越えた高さ(layout-overflow の pt と同じ)
+  }]
+}]
+```
+
+- **使い方の目安**:箇条を1項目足せるかは `remainingBodyLines`(1項目が1行なら
+  その数まで)。新しいブロックを足すなら `remaining − blockGap` に入るか。
+  `remaining` が負なら、`overflow` が 0 でない最初のブロックの前でスライドを
+  分ける(エンジンは自動で分けない)。
+- サブシステムは文字の行を数えない(`lines` は 0)。`need` は自己申告の最小の高さ。
+- 字の行の数は、測った字体の幅で折り返したもの(`docs/fonts.md`)。
 
 ## まだ決めていないこと
 

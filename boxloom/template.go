@@ -311,12 +311,20 @@ func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
 // RenderPages は RenderDeck のうち、ファイルに書く前まで(組み・並べ・描いた
 // スライドと警告)。字体の検査(fonts コマンド)もこれを使う。
 func (t *Template) RenderPages(d *IRDeck) ([]*PPTXBuilder, []string, error) {
+	pages, all, _, err := t.renderPages(d)
+	return pages, all, err
+}
+
+// renderPages は RenderPages に、本文を持つスライドごとの容量(capacity.go)を
+// 足したもの。check が使う。
+func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapacity, error) {
 	built, err := t.BuildDeck(d)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	var pages []*PPTXBuilder
 	var all []string
+	caps := []SlideCapacity{}
 	for i, b := range built {
 		v := t.Values
 		computeLayout(b.Root, 0, 0, v.PageW, v.PageH)
@@ -342,7 +350,11 @@ func (t *Template) RenderPages(d *IRDeck) ([]*PPTXBuilder, []string, error) {
 			for _, blk := range d.Slides[i].Body {
 				kinds = append(kinds, blk.Type)
 			}
-			warnings = append(warnings, lintBodyOverflow(b.Root, b.Body, kinds)...)
+			// 警告と容量は同じ測り値から作る(数字が食い違わないように)。
+			if blocks, area, need, ok := measureBody(b.Root, b.Body); ok {
+				warnings = append(warnings, overflowWarnings(blocks, area, need, kinds)...)
+				caps = append(caps, slideCapacity(blocks, area, need, b.Body.Gap, i, kinds, v.Body))
+			}
 		}
 
 		// ノートには作者の文だけを入れる。警告は返り値(check・build の出力)で知らせる。
@@ -352,5 +364,5 @@ func (t *Template) RenderPages(d *IRDeck) ([]*PPTXBuilder, []string, error) {
 			all = append(all, fmt.Sprintf("slide %d: %s", i+1, w))
 		}
 	}
-	return pages, all, nil
+	return pages, all, caps, nil
 }
