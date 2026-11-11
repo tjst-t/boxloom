@@ -346,7 +346,7 @@
       "number": 49,
       "kind": "task",
       "title": "fill-ratio への対応を促す:隣の薄いページ・画像の横の余りを hint と capacity に出し、SKILL に直し方を書く",
-      "status": "in-progress",
+      "status": "done",
       "parent": "agent-entry",
       "dependsOn": [],
       "milestone": null,
@@ -354,7 +354,7 @@
       "labels": [],
       "body": "デモのレビュー(.tmp-sc/review.md の P5)から。デモは fill-ratio の警告7件を残したまま同梱されていた。Boxloom は内容の良し悪しを判定しないが、量で測れることは知らせ、対応は SKILL で作者に促す。\n- fill-ratio の hint に、隣り合う薄いページの組と、統合したときの見込みの割合。\n- capacity に FixedAspect の図・画像の横の余り(remainingWidth)を出し、columns で文を横に置ける旨の hint。\n- compare・stat のカード・matrix のセルが Max まで伸びて間延びする所は「余計に伸ばさない」側に揃えるか検討(自動で埋めない方針は変えない)。\n- SKILL.md:fill-ratio の警告が出たら、統合する・根拠を足す・columns で横に置く、のどれかで必ず対応する。数字を出すページには出典を書く。\n- examples の同梱デモは fill-ratio を含め警告0件を目標に(デモの書き直しは別の仕事)。",
       "doneWhen": "hint と capacity の新しい欄が試験・docs/ir.md つきで入り、SKILL.md に警告ごとの対応が書かれ、ci.sh go python pptx が通る。",
-      "resolution": null,
+      "resolution": "main 866325a(+053a80e で誤って入った symlink を外した)。fill-ratio の hint に隣の薄いスライドと統合の見込み、警告 spare-width と capacity の remainingWidth、SKILL に必ず対応する手順。compare・stat のカードは縦に伸びないことをコードで確かめ、変えていない。",
       "refs": [],
       "threads": [
         {
@@ -363,8 +363,8 @@
         }
       ],
       "createdAt": "2026-11-11T05:56:03.162Z",
-      "updatedAt": "2026-11-11T05:56:59.287Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T06:02:22.242Z",
+      "closedAt": "2026-11-11T06:02:22.242Z",
       "extra": {}
     },
     {
