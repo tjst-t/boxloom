@@ -43,6 +43,7 @@ func TestMarkdownExamplesMatchIR(t *testing.T) {
 		{"../examples/md/gantt-full.bx.md", "../examples/ir/gantt-full.json"},
 		{"../examples/md/speaker-notes.bx.md", "../examples/ir/speaker-notes.json"},
 		{"../examples/md/shapes.bx.md", "../examples/ir/shapes.json"},
+		{"../examples/md/text-patterns.bx.md", "../examples/ir/text-patterns.json"},
 	}
 	for _, pr := range pairs {
 		src, err := os.ReadFile(pr[0])
@@ -138,7 +139,7 @@ func TestMarkdownErrors(t *testing.T) {
 	}{
 		{"orphan", "前置き\n# A\n", codeMisplaced, 1},
 		{"unknown block", "# A\n:::warning\nx\n:::\n", codeUnknownBlock, 2},
-		{"planned block", "# A\n:::takeaway\nx\n:::\n", codePlannedSyntax, 2},
+		{"planned block", "# A\n:::columns\nx\n:::\n", codePlannedSyntax, 2},
 		{"unknown attr", "# A {color=red}\n", codeUnknownAttribute, 1},
 		{"id attr planned", "# A {id=x}\n", codePlannedSyntax, 1},
 		{"raw html block", "# A\n<div>x</div>\n", codeRawHTML, 2},

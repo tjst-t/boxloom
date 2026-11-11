@@ -66,7 +66,54 @@ func defaultBlocks() []BlockDecl {
 			Meaning: "比較の1つの選択肢", IR: "compare.options[](label が名前)"},
 		{Name: "pros", Inside: []string{"option"}, Contains: []string{"箇条"}, Attributes: []string{},
 			Meaning: "良い点", IR: "compare.options[].pros"},
+		{Name: "quote", Label: "出どころ(誰の・いつの言葉か)", LabelRequired: true, Contains: []string{"段落1つ"}, Attributes: []string{"variant"},
+			Meaning: "他人の言葉と出どころ(docs/patterns.md の R11)。中の段落が引用した言葉。自分の結論には使わない(それは takeaway)",
+			IR:      "quote(content が言葉、source が見出しの文)"},
+		{Name: "stat", Contains: []string{"value"}, MinChildren: 1, Attributes: []string{"variant"},
+			Meaning: "1〜4個の数を、単位と短い説明つきで強く見せる(R3)。5つ以上・推移は系列なので table・chart",
+			IR:      "stat"},
+		{Name: "takeaway", Contains: []string{"段落1つ"}, Attributes: []string{"variant"},
+			Meaning: "本文の中で言いたいことを1文で目立たせる(R2)。スライド全体が1文なら # 題 {type=statement}",
+			IR:      "takeaway"},
+		{Name: "value", Label: "数(書いたとおりの文字。例 12・−40・3 → 12。数字を含む)", LabelRequired: true, Inside: []string{"stat"},
+			Contains: []string{"段落1つ"}, Attributes: []string{"unit"},
+			Meaning: "stat の1つの数。属性 unit が単位(空白を含まない)、中の段落が数の説明。stat の中に1〜4個",
+			IR:      "stat.items[](value が見出しの文、unit が属性、label が中の段落)"},
 	}
+}
+
+// SlideDecl は1つのスライドの種類が名乗るもの(「# 題 {type=名前}」)。
+type SlideDecl struct {
+	Name string `json:"name"`
+	// Heading は # の行の文の意味。
+	Heading string `json:"heading"`
+	// Body は # の行の後ろに書けるもの。
+	Body    []string `json:"body"`
+	Meaning string   `json:"meaning"`
+	IR      string   `json:"ir"`
+}
+
+// defaultSlides はテンプレートの骨組みがあるスライドの種類(docs/patterns.md の3.1)。
+// 表紙は文書の頭から作るので、ここには無い(type=cover は誤り)。
+func defaultSlides() []SlideDecl {
+	return []SlideDecl{
+		{Name: "content", Heading: "題(何の話かではなく結論の文)", Body: []string{"本文", "notes"},
+			Meaning: "本文のスライド。type を省くとこれ", IR: "{type: content, title, body}"},
+		{Name: "section", Heading: "章の題", Body: []string{"notes"},
+			Meaning: "章の変わり目(R1)。本文は書けない(目次は本文のスライドに箇条で)", IR: "{type: section, title}"},
+		{Name: "statement", Heading: "言いたいことの1文", Body: []string{"notes"},
+			Meaning: "このスライドで言うことが1文だけ(R2)。根拠はほかのスライドに置く。本文は書けない", IR: "{type: statement, content}"},
+	}
+}
+
+// slideTypeNames は「# 題 {type=…}」に書ける名前(名前の順)。
+func slideTypeNames() []string {
+	var out []string
+	for _, d := range defaultSlides() {
+		out = append(out, d.Name)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // coreBlocks はテンプレートに依らずコアが持つ囲み(見た目を持たないもの)。
@@ -174,9 +221,9 @@ func bodySyntax() []bodySyntaxItem {
 // markdownRules は記法全体の約束事(2章・3章の要点)。
 func markdownRules() []string {
 	return []string{
-		"`# 題` が1枚のスライドの始まり。行末に {variant=名前} を書ける。1枚目の # より前に本文を書くのは誤り",
+		"`# 題` が1枚のスライドの始まり。行末に {type=種類 variant=名前} を書ける。種類は slides(省けば content)。section・statement は # の行の文だけを持ち、本文は書けない(:::notes だけ書ける)。1枚目の # より前に本文を書くのは誤り",
 		"`---`(水平線)はスライドの区切りではなく誤り",
-		"小見出し(##)・表・画像・:::takeaway・:::columns は予定で、いまは誤り。### 以下の見出しは使えない",
+		"小見出し(##)・表・画像・:::columns は予定で、いまは誤り。### 以下の見出しは使えない",
 		"囲みは :::名前 で開き、同じ数のコロンの ::: で閉じる。閉じの省略は誤り。中に囲みを入れるときは外側のコロンを1つ増やす。入れ子は3段まで",
 		"囲みの書き方は `:::名前 見出しの文 {属性=値}`。名乗っていない囲み・属性は誤り",
 		"サブシステムは言語名つきのコードブロック(```名前)で、中身は YAML。言語名の後ろに {variant=名前} を書ける",
