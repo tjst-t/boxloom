@@ -724,7 +724,7 @@
       "number": 30,
       "kind": "task",
       "title": "題と本文をスライドのレイアウトのプレースホルダーとして出す",
-      "status": "in-progress",
+      "status": "done",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -732,7 +732,7 @@
       "labels": [],
       "body": "いまはレイアウトが1つで、題もただのテキストボックス。表紙・本文(・区切り)のレイアウトを持ち、題を title のプレースホルダーに入れる。位置はエンジンが決めた座標をそのまま使う。",
       "doneWhen": "LibreOffice のアウトライン表示(か PowerPoint)で題が出て、スライドの見た目が変わらないことを画像で確かめている",
-      "resolution": null,
+      "resolution": "題をプレースホルダーで書く(表紙 ctrTitle・subTitle→Title Slide、本文 title→Title Only、題なし→Blank)。位置・大きさは図形の側のまま。画像の差は 0%、python-pptx の shapes.title と LibreOffice の presentation:class=title で題として読まれることを確かめた。PowerPoint のアウトライン表示は未確認。main fbe30c9。",
       "refs": [],
       "threads": [
         {
@@ -741,8 +741,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:59.028Z",
-      "updatedAt": "2026-11-11T02:59:20.132Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T03:07:05.320Z",
+      "closedAt": "2026-11-11T03:07:05.320Z",
       "extra": {}
     },
     {
