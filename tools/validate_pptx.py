@@ -432,7 +432,7 @@ def mutations(shapes, notes):
         ("connector to a missing shape", shapes, sub(s2, stcxn, '<a:stCxn id="9999"'), "connector-target"),
         ("duplicate slide id", shapes, sub("ppt/presentation.xml", '<p:sldId id="257"', '<p:sldId id="256"'), "id-duplicate"),
         ("slide without layout", shapes, sub("ppt/slides/_rels/slide2.xml.rels", "relationships/slideLayout", "relationships/notAType"), "rel-required"),
-        ("relationship to the wrong kind of part", shapes, sub("ppt/slides/_rels/slide2.xml.rels", "../slideLayouts/slideLayout1.xml", "../theme/theme1.xml"), "rel-target-type"),
+        ("relationship to the wrong kind of part", shapes, sub("ppt/slides/_rels/slide2.xml.rels", first_match(shapes, "ppt/slides/_rels/slide2.xml.rels", r"\.\./slideLayouts/slideLayout\d+\.xml"), "../theme/theme1.xml"), "rel-target-type"),
         ("Content_Types removed", notes, lambda f: f.__setitem__("[Content_Types].xml", None), "package"),
         ("notes slide pointing to a missing master", notes, sub("ppt/notesSlides/_rels/notesSlide1.xml.rels", "notesMaster1.xml", "notesMaster9.xml"), "rel-target-missing"),
     ]
