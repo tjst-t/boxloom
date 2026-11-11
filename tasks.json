@@ -1038,7 +1038,7 @@
       "number": 43,
       "kind": "bug",
       "title": "PPTX の theme1.xml がテンプレートの色を持たず固定の色のまま",
-      "status": "backlog",
+      "status": "ready",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -1050,7 +1050,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T04:54:36.567Z",
-      "updatedAt": "2026-11-11T04:54:36.567Z",
+      "updatedAt": "2026-11-11T05:16:30.124Z",
       "closedAt": null,
       "extra": {}
     }
