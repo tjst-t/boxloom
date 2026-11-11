@@ -184,6 +184,9 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "build" {
 		os.Exit(runBuild(os.Args[2:]))
 	}
+	if len(os.Args) > 1 && os.Args[1] == "check" {
+		os.Exit(runCheck(os.Args[2:]))
+	}
 	if err := os.MkdirAll("out", 0o755); err != nil {
 		panic(err)
 	}

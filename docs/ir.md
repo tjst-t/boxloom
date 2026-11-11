@@ -144,13 +144,65 @@ IR は人が書くものではなく、パーサーの出力・AI の構造化�
 増やしたい場面が出たら、チャートの中で状態を宣言する形にするか、テンプレートが
 状態の一覧を持つ形にするかを決める。
 
+## 意味の検査(boxloom check)
+
+JSON Schema では書けない検査は Go の `boxloom check` がする。
+
+```sh
+cd boxloom
+go run . check ../examples/ir/demo-deck.json            # 誤りが無ければ exit 0
+go run . check -strict deck.json                         # 警告も exit 1 にする
+go run . check -template dark deck.json                  # IR の template の代わりに
+```
+
+出力は `validate_ir.py` と同じ欄の JSON に、組み立てまで通したときの警告を
+足したもの。誤りは最初の1件で止めず全部集める。
+
+```json
+{"ok": false,
+ "errors":   [{"file": "deck.json", "at": "/slides/2/body/0/data/annotations/0/target",
+               "message": "no group or row has id \"gen9\"", "rule": "target-exists"}],
+ "warnings": [{"file": "deck.json", "at": "/slides/1",
+               "message": "underfilled: 50.8% (< 65%)", "rule": "fill-ratio"}]}
+```
+
+| rule | 見ること |
+|---|---|
+| `unique-id` | id は文書全体で一意(スライドやチャートをまたいでも重ならない) |
+| `target-exists` | 注釈の `target` が、同じチャートのグループか行の id を指す(別のチャートの id なら、その場所を添えて断る) |
+| `date-order` | `from` が `to` より前(同じ日も断る。長さ0の区間は描けない) |
+| `date-valid` | 日付が暦の上で実在する(Schema の正規表現は 2028-02-30 を通す) |
+| `within-span` | Gantt の区間・リスク・注記・目盛り・節目・注釈・軸を切る日付が、`span` の中にある(外の日付は軸の端に押し込まれて、誤った絵になるため) |
+| `template-exists` | `template` の名前のテンプレートがある |
+| `variant-exists` | `variant` の名前が、そのテンプレートにある(デモのテンプレートは変種を1つも持たない) |
+| `ir-read` / `build` | Go の IR の読み込み・組み立てが断ったもの(知らないキー・知らない状態など。形の誤り) |
+
+警告(誤りではない。`-strict` のときだけ exit 1):
+
+| rule | 見ること |
+|---|---|
+| `fill-ratio` | 本文の箱のうち 65% より少なくしか使っていない(テンプレートの方針) |
+| `subsystem-min` | サブシステムに割り当てた大きさが、自己申告の最小を下回った |
+| `theme-role` | テーマに値の無い役割名をサブシステムが使った |
+
+組み立ての警告は、意味の誤りが1件も無いときだけ出す(壊れた IR を組むと、
+的外れな警告が混ざるため)。新しい種類の警告(`[XXX WARNING]` の形)は、
+そのまま rule `xxx` になる。
+
+例:`examples/ir/check-invalid/` は Schema では通り check で断られるもの
+(`validate_ir.py --self-test` は Schema で通ることを、`boxloom/check_test.go` は
+決まった rule で断られることを確かめる)。`examples/ir/invalid/` は Schema でも
+check でも断られるもの。
+
 ## まだ決めていないこと
 
 - **`$id` のドメイン**:いまは `https://boxloom.invalid/…`(使えないことが
   分かる仮の名前)。OSS で公開するときに決める。
-- **id の一意性・参照先の実在**(注釈の `target` が実在する id を指すか)、
-  **日付の前後**(`from` が `to` より前か)は、JSON Schema では書けない。
-  将来の `boxloom check` で見る。
+- **Schema の検査と意味の検査を1つのコマンドにするか**:いまは2つ
+  (`tools/validate_ir.py` が形、`go run . check` が意味)。Go は依存ゼロの方針で
+  JSON Schema の検査器を持たないので、形の誤りは Go の IR の読み込みが代わりに
+  断る(場所は分かるが、文は Schema より粗い。Gantt の中の知らないキーは
+  `data` までしか指さない)。
 - **画像・表・コード片・図の引用**など、お題3枚に無いブロック。
 - **スライドの骨組みの枠**(title / body / aside …)をコンテンツから指すか。いまの
   IR は `body` の1つだけ。
