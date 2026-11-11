@@ -101,6 +101,9 @@ go run ./cmd/boxloom build -o /tmp/hello.pptx /tmp/hello.bx.md
 
 More examples are in [`examples/md`](examples/md) (Markdown) and
 [`examples/ir`](examples/ir) (the JSON intermediate representation).
+A full-length sample deck that uses every block and figure type with sourced figures is
+[`examples/md/ai-society.bx.md`](examples/md/ai-society.bx.md) (28 slides, built into
+`boxloom/out/ai_society_light.pptx` and `ai_society_dark.pptx`).
 
 ## Commands
 
