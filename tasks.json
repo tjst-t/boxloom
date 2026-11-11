@@ -81,7 +81,7 @@
       "number": 15,
       "kind": "task",
       "title": "OOXML の妥当性を機械で検査する試験を足す",
-      "status": "in-progress",
+      "status": "done",
       "parent": "verify-hypothesis",
       "dependsOn": [],
       "milestone": null,
@@ -89,7 +89,7 @@
       "labels": [],
       "body": "PowerPoint が「修復が必要」と言う種類の誤りを、人が開く前に捕まえる。ECMA-376 の XSD で各部品を検査するか、別の実装(python-pptx で開き直す・LibreOffice の往復)で読めることを試験にする。依存ゼロの方針なので、Go の本体ではなく tools/ の検査として置く。",
       "doneWhen": "tools/ の検査が examples の全 PPTX を通り、壊した PPTX を断ることが試験で確かめられている",
-      "resolution": null,
+      "resolution": "tools/validate_pptx.py:ECMA-376 の XSD(Part 4 Transitional・Part 2 OPC。fetch_ooxml_schemas.py が sha256 を確かめて取ってくる)と、パッケージ・参照の整合の検査、python-pptx・LibreOffice で読めるかの確かめ。--self-test で examples を dark/light で作った22個と従来のデモ2枚が通り、壊した15通りがそれぞれ決めた code で断られる(main 5d97660・6f38758)。",
       "refs": [],
       "threads": [
         {
@@ -98,8 +98,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:58.763Z",
-      "updatedAt": "2026-11-11T02:59:22.305Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T03:08:41.825Z",
+      "closedAt": "2026-11-11T03:08:41.825Z",
       "extra": {}
     },
     {
