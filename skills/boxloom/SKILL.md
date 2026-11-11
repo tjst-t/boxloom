@@ -124,6 +124,11 @@ Available now (check `boxloom schema` — more may have been added):
 
 | Content | Use | Notes |
 |---|---|---|
+| A chapter break | `# Part 2: How we migrate {type=section}` | Heading text is the chapter title; nothing but `:::notes` may follow. Not a table of contents |
+| The slide says exactly one sentence; the evidence is on other slides | `# Migration must move two years earlier {type=statement}` | Heading text is the sentence; nothing but `:::notes` may follow. If you would add reasons, use a normal slide with the conclusion as title |
+| 1–4 numbers to show strongly, with no series to compare | `::::stat` → `:::value 3 → 12 {unit=models}` + one-line label inside | 5+ numbers or a time series is a chart/table, not stat. The value is written as-is and must contain a digit |
+| Someone else's words | `:::quote Source text` + the words inside | The source (heading text) is required. Never quote your own conclusion |
+| One sentence to emphasise inside a normal slide | `:::takeaway` + one sentence | At most one per slide, usually last |
 | Two or more options, each with pros and cons | `:::compare` → `:::option` → `:::pros` / `:::cons` | If 3+ shared criteria apply to every option, a matrix/table fits better (see below) |
 | A dated plan, periods, deadlines, statuses over time | ```` ```gantt ```` | States are `support`, `conditional`, `none`, `danger` (roles, not colors). Hardware/support-risk periods are a group `risk: A .. B`. Annotations point at a group/row `id` via `target`; the subsystem places them |
 | Parallel points | bullets | 2 levels max |
@@ -131,9 +136,8 @@ Available now (check `boxloom schema` — more may have been added):
 | A caveat / footnote-like remark | `:::note` | One short line |
 | A diagram whose positions/links carry meaning and none of the above fits | ```` ```shapes ```` | **Last resort**, see §3.1 |
 
-Patterns described in `docs/patterns.md` but **not in the schema yet** (section,
-statement, takeaway, stat, quote, columns, table, image, process, orgchart, matrix,
-funnel, chart) are errors until `boxloom schema` lists them. When the schema lists
+Patterns described in `docs/patterns.md` but **not in the schema yet** (columns,
+table, image, process, orgchart, matrix, funnel, chart) are errors until `boxloom schema` lists them. When the schema lists
 them, prefer them in the order of `docs/patterns.md` §4 (R1–R14).
 
 Until then:
@@ -142,6 +146,32 @@ Until then:
   dated periods. Do not draw charts with `shapes`.
 - Steps without dates → numbered bullets (`1. `) unless the flow between steps is the
   point, in which case `shapes` is allowed (§3.1).
+
+Example of the text patterns (full deck: `examples/md/text-patterns.bx.md`):
+
+```
+# Support tickets fell by 40% after the redesign
+
+::::stat
+:::value 3 → 12 {unit=models}
+Device models supported
+:::
+:::value −40 {unit=%}
+Tickets per month (year on year)
+:::
+::::
+
+:::quote Front-desk staff A, interview in Sept 2026
+It now ends on one screen.
+:::
+
+:::takeaway
+Most of the drop came from the **first registration** flow
+:::
+```
+
+`>` blockquotes are an error; use `:::quote`. A unit containing spaces cannot be
+written yet (attribute values are single words).
 
 Text next to a figure: put the one or two lines of conclusion as a paragraph or bullets
 **after** the figure; use `:::note` only for a caveat ("dates are illustrative").
