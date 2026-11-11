@@ -898,7 +898,7 @@
       "number": 37,
       "kind": "bug",
       "title": "Gantt の破線の区間の文字が2行に折り返して区間の箱からはみ出す",
-      "status": "in-progress",
+      "status": "done",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -906,7 +906,7 @@
       "labels": [],
       "body": "examples/ir/gantt-full.json(dark)の第1世代 Loom 3/4/5 の行で、破線の区間「Store X は Loom 4 非対応のため移行先になり得ない」が2行に折り返し、2行目が区間の箱(行の高さ)の下へはみ出す。LibreOffice で画像にして見つけた(verification-screenshots/fonts_compare_gantt-full.png の両側)。字体の変更とは関係なく、以前からある。",
       "doneWhen": "区間の文字が箱に収まる(1行に切り詰める・行を高くする・警告を出す、のどれかを決めて実装)ことを画像で確かめている",
-      "resolution": null,
+      "resolution": "注記の文が収まらない行だけを収まる高さまで高くし、ほかの行が譲る(本体の合計は同じ)。Measure の Natural・Min・Max にも入れたので、足りなければ subsystem-min の警告が出る。切り詰め・字を縮める・全行一律・警告だけ、は理由を docs/subsystem.md の10節に書いて採らなかった。画像は verification-screenshots/gantt_note_fit_compare.png。",
       "refs": [],
       "threads": [
         {
@@ -915,8 +915,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:48:30.993Z",
-      "updatedAt": "2026-11-11T02:59:23.984Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T03:06:08.210Z",
+      "closedAt": "2026-11-11T03:06:08.210Z",
       "extra": {}
     }
   ]
