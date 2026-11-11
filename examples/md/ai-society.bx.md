@@ -26,7 +26,6 @@ AI の影響はすでに数字で測れる段階にある。国・企業・人�
 - **企業**:9 割近くが AI を使うが、利益への効果を確かめたのは 4 割、高い成果は 6%(McKinsey、2025 年)
 - **基盤**:データセンターの電力は 2030 年に倍増(IEA、2025 年)。同じ性能の推論の費用は 2 年で 280 分の 1
 - **社会**:選挙への偽情報の被害は予想より小さく、教育と著作権の制度は利用の広がりに追いついていない
-  - 世論は国で割れ、米国では「利点が多い」が 39%、専門家と市民の見方の差は 50 ポイント
 - **ガバナンス**:EU・中国・日本・韓国・米国で 2024〜2028 年に施行が続き、EU の高リスク規制は 2027 年末へ延びた
 
 :::takeaway
@@ -44,17 +43,17 @@ AI の影響は、4 つの入口(雇用・生産性・基盤・情報)から、�
 :::
 
 ```shapes
-aspect: 2.6
+aspect: 3.0
 items:
   - {kind: text, x: 0, y: 0, w: 0.2, h: 0.08, text: 入口(資源), textStyle: small, color: text_muted}
   - {kind: text, x: 0.3, y: 0, w: 0.2, h: 0.08, text: 変換, textStyle: small, color: text_muted}
   - {kind: text, x: 0.56, y: 0, w: 0.2, h: 0.08, text: 使う場, textStyle: small, color: text_muted}
   - {kind: text, x: 0.8, y: 0, w: 0.2, h: 0.08, text: 社会への影響, textStyle: small, color: text_muted}
-  - {id: compute, kind: roundRect, x: 0, y: 0.1, w: 0.17, h: 0.17, text: 計算資源と電力, textStyle: subPoint, line: grid}
-  - {id: data, kind: roundRect, x: 0, y: 0.32, w: 0.17, h: 0.17, text: データ, textStyle: subPoint, line: grid}
-  - {id: talent, kind: roundRect, x: 0, y: 0.54, w: 0.17, h: 0.17, text: 人材と技能, textStyle: subPoint, line: grid}
-  - {id: capital, kind: roundRect, x: 0, y: 0.76, w: 0.17, h: 0.17, text: 資本(投資), textStyle: subPoint, line: grid}
-  - {id: model, kind: rect, x: 0.3, y: 0.38, w: 0.17, h: 0.24, text: [モデルと, 製品・サービス], textStyle: body, fill: accent, textColor: on_conditional}
+  - {id: compute, kind: roundRect, x: 0, y: 0.1, w: 0.17, h: 0.19, text: 計算資源と電力, textStyle: subPoint, line: grid}
+  - {id: data, kind: roundRect, x: 0, y: 0.32, w: 0.17, h: 0.19, text: データ, textStyle: subPoint, line: grid}
+  - {id: talent, kind: roundRect, x: 0, y: 0.54, w: 0.17, h: 0.19, text: 人材と技能, textStyle: subPoint, line: grid}
+  - {id: capital, kind: roundRect, x: 0, y: 0.76, w: 0.17, h: 0.19, text: 資本(投資), textStyle: subPoint, line: grid}
+  - {id: model, kind: rect, x: 0.29, y: 0.38, w: 0.19, h: 0.24, text: [モデルと, 製品・サービス], textStyle: subPoint, fill: accent, textColor: on_conditional}
   - {id: firms, kind: rect, x: 0.56, y: 0.1, w: 0.17, h: 0.2, text: 企業の導入, textStyle: subPoint, line: grid}
   - {id: public, kind: rect, x: 0.56, y: 0.4, w: 0.17, h: 0.2, text: 公共サービス, textStyle: subPoint, line: grid}
   - {id: people, kind: rect, x: 0.56, y: 0.7, w: 0.17, h: 0.2, text: 個人の利用, textStyle: subPoint, line: grid}
@@ -544,8 +543,6 @@ units:
 legend:
   conditional: 2026 年 8 月 2 日から監督を担う(高リスクは 2027 年 12 月から)
 ```
-
-- 汎用 AI モデルは EU が直接、高リスクの AI は各国の当局が監督するという二層の分担
 
 :::source
 規則 (EU) 2024/1689 第 7 章(第 64〜70 条)、欧州委員会の AI Act のページ(2026 年 10 月更新)

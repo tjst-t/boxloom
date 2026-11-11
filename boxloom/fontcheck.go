@@ -1,8 +1,9 @@
 // `boxloom fonts`:字体が置き換わったときに、文字が箱からはみ出すかを測る。
 //
-// PPTX は折り返しを自前で済ませて wrap="none" で書く(text.go)。だから
-// 開く環境で字体が置き換わっても行の数は変わらない。変わるのは
-//   - 1行の幅:置き換わった字体のほうが広いと、行が箱の右へはみ出す
+// Boxloom は折り返して行の数を測り、PPTX には段落のまま wrap="square" で書く
+// (折り返しは描く側。pptx.go の flowXML)。開く環境で字体が置き換わると
+//   - 1行の幅:置き換わった字体のほうが広いと、1行と測った文を描く側が2行に折り、
+//     枠の下へはみ出す(wider lines はその行の数)
 //   - 1行の高さ:行の送りを固定しない(fonts.fixedLineSpacing が false)と、
 //     描く側は字体の ascent+descent で行を送るので、箱の下へはみ出す
 //
@@ -100,10 +101,20 @@ func hasEastAsian(lines [][]TextRun) bool {
 // measurePages は組んだスライドの文字を alt の字体で測り直す。
 func measurePages(pages []*PPTXBuilder, alt *FontSet) fontStats {
 	var st fontStats
-	const eps = 0.01
 	for _, p := range pages {
 		for i := range p.Shapes {
 			s := &p.Shapes[i]
+			if len(s.list) > 0 {
+				// 箇条:項目(段落)ごとに、字下げを引いた幅で測る。
+				for _, it := range s.list {
+					restore := useFonts(p.Fonts)
+					box := LBox{X: s.box.X + it.Indent, Y: s.box.Y, Width: s.box.Width - it.Indent, Height: math.Inf(1)}
+					lines := wrapRuns(it.Runs, it.Size, box.Width)
+					restore()
+					measureUnit(&st, alt, p, s, it.Runs, lines, box, it.Size)
+				}
+				continue
+			}
 			var lines [][]TextRun
 			box := s.box
 			switch {
@@ -119,55 +130,61 @@ func measurePages(pages []*PPTXBuilder, alt *FontSet) fontStats {
 			default:
 				continue
 			}
-			st.Boxes++
-			st.Lines += len(lines)
-			for _, l := range lines {
-				w := lineWidthPt(alt, l, s.fontSize)
-				if over := w - box.Width; over > eps {
-					st.Over = append(st.Over, overLine{Text: runsText(l), OverPt: over, BoxW: box.Width, Wrapped: s.wrap || len(s.runs) > 0, Align: s.align})
-					st.WidthOver++
-					if over > st.WorstOverPt {
-						st.WorstOverPt = over
-						st.WorstOverPct = 100 * over / box.Width
-						st.WorstLine = runsText(l)
-					}
-				}
-			}
-			// 折り返し直したら行の数が変わるか(描く側が自分で折り返すときの目安)。
-			if s.wrap || len(s.runs) > 0 {
-				restore := useFonts(alt)
-				var n int
-				if len(s.runs) > 0 {
-					n = len(wrapRuns(s.runs, s.fontSize, box.Width))
-				} else {
-					n = len(wrapText(s.text, s.fontSize, box.Width, s.bold))
-				}
-				restore()
-				if n != len(lines) {
-					st.RewrapChanged++
-				}
-			}
-			// 行の高さ:固定しないなら字体の ascent+descent で送られる(目安)。
-			lh := lineHeightMult
-			if p.Fonts == nil || !p.Fonts.FixedLineSpacing {
-				lh = alt.Latin.LineHeightEm()
-				if hasEastAsian(lines) {
-					lh = math.Max(lh, alt.EastAsian.LineHeightEm())
-				}
-			}
-			h := float64(len(lines)) * s.fontSize * lh
-			assumed := float64(len(lines)) * s.fontSize * lineHeightMult
-			// 組むときの見積もり(行の数×字の大きさ×lineHeightMult)では収まって
-			// いた箱だけを数える(エンジンが縮めた箱・固定の大きさの箱は別の話)。
-			if h-box.Height > eps && assumed <= box.Height+eps {
-				st.HeightOver++
-				if pct := 100 * (h - box.Height) / box.Height; pct > st.WorstHeightPct {
-					st.WorstHeightPct = pct
-				}
-			}
+			measureUnit(&st, alt, p, s, s.runs, lines, box, s.fontSize)
 		}
 	}
 	return st
+}
+
+// measureUnit は1つの文字の枠(箇条なら1つの段落)を alt の字体で測り直して数える。
+func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []TextRun, lines [][]TextRun, box LBox, size float64) {
+	const eps = 0.01
+	st.Boxes++
+	st.Lines += len(lines)
+	for _, l := range lines {
+		w := lineWidthPt(alt, l, size)
+		if over := w - box.Width; over > eps {
+			st.Over = append(st.Over, overLine{Text: runsText(l), OverPt: over, BoxW: box.Width, Wrapped: s.wrap || len(runs) > 0, Align: s.align})
+			st.WidthOver++
+			if over > st.WorstOverPt {
+				st.WorstOverPt = over
+				st.WorstOverPct = 100 * over / box.Width
+				st.WorstLine = runsText(l)
+			}
+		}
+	}
+	// 折り返し直したら行の数が変わるか(描く側が自分で折り返すときの目安)。
+	if s.wrap || len(runs) > 0 {
+		restore := useFonts(alt)
+		var n int
+		if len(runs) > 0 {
+			n = len(wrapRuns(runs, size, box.Width))
+		} else {
+			n = len(wrapText(s.text, size, box.Width, s.bold))
+		}
+		restore()
+		if n != len(lines) {
+			st.RewrapChanged++
+		}
+	}
+	// 行の高さ:固定しないなら字体の ascent+descent で送られる(目安)。
+	lh := lineHeightMult
+	if p.Fonts == nil || !p.Fonts.FixedLineSpacing {
+		lh = alt.Latin.LineHeightEm()
+		if hasEastAsian(lines) {
+			lh = math.Max(lh, alt.EastAsian.LineHeightEm())
+		}
+	}
+	h := float64(len(lines)) * size * lh
+	assumed := float64(len(lines)) * size * lineHeightMult
+	// 組むときの見積もり(行の数×字の大きさ×lineHeightMult)では収まって
+	// いた箱だけを数える(エンジンが縮めた箱・固定の大きさの箱は別の話)。
+	if h-box.Height > eps && assumed <= box.Height+eps {
+		st.HeightOver++
+		if pct := 100 * (h - box.Height) / box.Height; pct > st.WorstHeightPct {
+			st.WorstHeightPct = pct
+		}
+	}
 }
 
 func scenarioFonts(sc fontScenario, base *FontSet) (*FontSet, error) {

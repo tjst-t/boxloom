@@ -12,6 +12,7 @@ package boxloom
 import (
 	"fmt"
 	"io"
+	"math"
 )
 
 const (
@@ -63,6 +64,10 @@ func renderSpec(ctx RenderContext, s *Spec) {
 		}
 		p.AddRect(bg, s.Background, radius)
 	}
+	if s.List {
+		renderList(p, s)
+		return
+	}
 	switch s.Kind {
 	case KindText:
 		if len(s.Runs) > 0 {
@@ -83,6 +88,39 @@ func renderSpec(ctx RenderContext, s *Spec) {
 	for _, c := range s.Children {
 		renderSpec(ctx, c)
 	}
+}
+
+// renderList は箇条の並びを1つの文字の枠にする。項目の段落の前の間は、組んだ
+// 位置(前の項目の下端から次の項目の上端まで)から取り、字下げは項目の左端の
+// ずれから取るので、組んだとおりの位置に並ぶ。入れ子の深さは lvl に書く。
+func renderList(p *PPTXBuilder, s *Spec) {
+	var items []listPara
+	prevBottom := s.Box.Y
+	var walk func(n *Spec, level int)
+	walk = func(n *Spec, level int) {
+		for _, c := range n.Children {
+			switch {
+			case c.Kind == KindText:
+				sp := c.Box.Y - prevBottom
+				if len(items) == 0 {
+					sp = 0
+				}
+				runs := c.Runs
+				if len(runs) == 0 {
+					runs = []TextRun{{Text: c.Text, Color: c.Color, Bold: c.Bold}}
+				}
+				items = append(items, listPara{Runs: runs, Size: c.FontSize, Level: level,
+					Indent: c.Box.X - s.Box.X, SpaceBefore: math.Max(sp, 0)})
+				prevBottom = c.Box.Y + c.Box.Height
+			case c.List:
+				walk(c, level+1)
+			default:
+				walk(c, level)
+			}
+		}
+	}
+	walk(s, 0)
+	p.AddList(s.Box, items)
 }
 
 // --- fill-ratioリンター。本物のcontent_fill_ratio()/lint_fill_ratio()の移植。 ---

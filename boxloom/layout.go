@@ -73,6 +73,9 @@ type Spec struct {
 	// 書く種類("title" | "ctrTitle" | "subTitle"。空ならただのテキストボックス)。
 	// 位置と字の大きさはエンジンの決めたままで、見た目は変わらない。
 	Placeholder string
+	// List は箇条の並び(中の文字の葉が項目)。測り方と置き方はふつうの Col と
+	// 同じで、PPTX では項目を1つの文字の枠の段落として書く(renderList)。
+	List bool
 
 	Subsystem Subsystem // KindSubsystem のときだけ
 	Place     Place     // KindSubsystem: 割り当てが図より大きいときの置き方(既定は左上)

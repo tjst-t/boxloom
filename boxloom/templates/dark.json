@@ -17,7 +17,7 @@
   },
   "scale": {
     "spacingUnit": 4,
-    "typeSizes": [8, 10, 12, 14, 16, 24, 36]
+    "typeSizes": [8, 10, 12, 14, 16, 18, 24, 36]
   },
   "values": {
     "pageWidth": 960,
@@ -27,15 +27,15 @@
     "coverPadding": 64,
     "sectionGap": 20,
     "blockGap": 20,
-    "itemGap": 12,
+    "itemGap": 8,
     "headerGap": 8,
     "coverTitle": 36,
     "coverSubtitle": 16,
     "coverAuthor": 12,
     "slideTitle": 24,
-    "leadText": 16,
-    "body": 14,
-    "subPoint": 12,
+    "leadText": 18,
+    "body": 16,
+    "subPoint": 14,
     "optionLabel": 16,
     "optionItem": 12,
     "small": 10,
@@ -64,7 +64,7 @@
     "columnTitle": 16,
     "columnGap": 32,
     "columnMainWeight": 2,
-    "tableText": 12,
+    "tableText": 14,
     "tableCellPaddingX": 8,
     "tableCellPaddingY": 4,
     "tableRuleWidth": 1,

@@ -66,7 +66,10 @@ func TestChartInColumns(t *testing.T) {
 		if chartMain {
 			role, textRole = " {role=main}", ""
 		}
-		return "# 円と読み取り\n\n::::columns\n:::column" + role + "\n" + pieYAML + ":::\n:::column 読み取り" + textRole +
+		// 名前の短い円(扇の外の名前が狭いぶん円の横が空き、余りが主のまとまりの幅の
+		// 2 割を確かに越える。「その他」のままだと 2 割ちょうどの境目になる)。
+		pie := strings.Replace(pieYAML, "その他]", "他]", 1)
+		return "# 円と読み取り\n\n::::columns\n:::column" + role + "\n" + pie + ":::\n:::column 読み取り" + textRole +
 			"\n- 操作の質問が 46% で最も多い\n- 契約と障害を合わせても半分に届かない\n- 操作の手引きを直すのが先\n:::\n::::\n"
 	}
 	errs, warns, caps := checkMD(t, cols(true))

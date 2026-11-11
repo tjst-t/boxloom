@@ -10,8 +10,8 @@
 // 唯一の意図的な相違点: 本物はwrap_text()自体では明示的な改行("\n")を
 // 特別扱いしない(Ganttサブエンジン内の複数行ラベルはbox_engine.wrap_text()を
 // 経由せず、PowerPoint/LibreOffice側のネイティブ折り返し word_wrap=True に
-// 任せている)。このGo版は自前のOOXMLライターで全テキストを事前折り返しして
-// wrap="none"で出力する設計(レンダラに依存しないようにするため)なので、
+// 任せている)。このGo版も PPTX には段落のまま wrap="square" で書いて折り返しは
+// アプリに任せるが、高さを決めるために同じ文を自分でも折り返して行を数えるので、
 // "\n"を段落境界として扱う機能が必要。そのため wrapText() は "\n" で
 // 段落分割してから、各段落に対して本物と同じトークン化・折り返しロジックを
 // 適用する。
@@ -29,7 +29,13 @@ const (
 
 // measureSafetyMargin は測った幅に掛ける余裕(既定 1.05。box_engine.py の
 // MEASURE_SAFETY_MARGIN と同じ)。テンプレートの fonts.widthMargin で決まる。
+// 余裕は全角の文字(どの字体でも 1em)には掛けず、それより狭い文字(欧文・数字・
+// 詰めた仮名など、字体によって幅が変わる文字)にだけ掛ける(charEmWidth)。
 func measureSafetyMargin() float64 { return activeFonts.WidthMargin }
+
+// fullWidthEm より広い文字は全角とみなし、余裕を掛けない。和文の字体は
+// 漢字・仮名・全角の約物を 1em の正方形に描くので、置き換わっても広くならない。
+const fullWidthEm = 0.99
 
 // 本物の _tokens() と同じトークン化: 英数字記号の塊はひとつのトークンとして
 // 分割しない(単語の途中で折り返さない)。空白の連続もひとつのトークン。
@@ -41,12 +47,17 @@ func tokenizeLine(s string) []string {
 }
 
 // charEmWidth は1文字分の「フォントサイズ1ptあたりの幅(pt)」を返す。
+// 全角より狭い文字には幅の余裕(measureSafetyMargin)を掛けた値。
 // 改行は幅0とする(Pillowでの実測に相当する扱いが無いため明示的にゼロ扱いにする)。
 func charEmWidth(ch rune, bold bool) float64 {
 	if ch == '\n' {
 		return 0
 	}
-	return activeFonts.emWidth(ch, bold)
+	w := activeFonts.emWidth(ch, bold)
+	if w < fullWidthEm {
+		w *= measureSafetyMargin()
+	}
+	return w
 }
 
 // runWidthPt は文字列全体の幅(pt)を安全マージン込みで返す(トークン化せず、
@@ -56,7 +67,7 @@ func runWidthPt(s string, fontSizePt float64, bold bool) float64 {
 	for _, ch := range s {
 		total += charEmWidth(ch, bold) * fontSizePt
 	}
-	return total * measureSafetyMargin()
+	return total
 }
 
 // tokenWidthPt は1トークン分の幅(pt)。安全マージン込み。
@@ -66,7 +77,7 @@ func tokenWidthPt(tok string, fontSizePt float64, bold bool) float64 {
 	for _, ch := range tok {
 		total += charEmWidth(ch, bold) * fontSizePt
 	}
-	return total * measureSafetyMargin()
+	return total
 }
 
 // naturalTextWidth はテキストノードの「折り返さない場合の自然な幅」。
@@ -79,7 +90,7 @@ func naturalTextWidth(s *Spec) float64 {
 			total += charEmWidth(ch, s.Bold)
 		}
 	}
-	return total * s.FontSize * measureSafetyMargin()
+	return total * s.FontSize
 }
 
 // wrapText はテキストを maxWidthPt に収まるよう折り返す。
@@ -150,6 +161,10 @@ type TextRun struct {
 	// 1行のまま幅からはみ出すので、使う側が幅を測って警告する(stat なら
 	// stat-value、keepline.go)。
 	Keep bool
+	// Phrase は折るところを文の切れ目・読点に寄せる(行の数は増やさない)。
+	// リード文のように文として読む段落に使う。塊のどれかが Phrase なら段落の
+	// 全体に効く。
+	Phrase bool
 }
 
 // runSize は塊の字の大きさ(0 なら葉の大きさ)。
@@ -190,36 +205,55 @@ func naturalRunsWidth(runs []TextRun, fontSizePt float64) float64 {
 			total += charEmWidth(ch, r.Bold) * runSize(r, fontSizePt)
 		}
 	}
-	return total * measureSafetyMargin()
+	return total
 }
 
 // wrapRuns は wrapText と同じ規則(トークン単位・空白では折り返さない・"\n" は
 // 段落の境目)で、装飾つきの文字を折り返す。太さは文字ごとに測る。
+//
+// 塊のどれかが Phrase なら、行の数を増やさない範囲で、文の切れ目(。!?)、
+// 次に読点(、,)の後ろで折る(phraseBreaks)。
 func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 	rs, style := richRunes(runs)
+	phrase := false
+	for _, r := range runs {
+		phrase = phrase || r.Phrase
+	}
 	var lines [][2]int // [start, end) の文字の位置
 	start := 0
 	for paraEnd := 0; paraEnd <= len(rs); paraEnd++ {
 		if paraEnd < len(rs) && rs[paraEnd] != '\n' {
 			continue
 		}
-		pos := start
-		lineStart, curW, curLen := start, 0.0, 0
-		for _, tok := range keepTokens(rs[start:paraEnd], style[start:paraEnd], runs) {
+		// 頭の印(箇条の「・」など)は、PPTX では段落の箇条の印として書き、本文は
+		// 印の幅だけ字下げする(ぶら下げ)。2行目以降も印の幅だけ内側から始まるので、
+		// 印を除いた本文を、幅から印の幅を引いた幅で折る。
+		markEnd, markW := start, 0.0
+		for markEnd < paraEnd && runs[style[markEnd]].Mark {
+			markW += charEmWidth(rs[markEnd], runs[style[markEnd]].Bold) * runSize(runs[style[markEnd]], fontSizePt)
+			markEnd++
+		}
+		var toks []wrapTok
+		pos := markEnd
+		for _, tok := range keepTokens(rs[markEnd:paraEnd], style[markEnd:paraEnd], runs) {
 			n := len([]rune(tok))
 			tokW := 0.0
 			for k := pos; k < pos+n; k++ {
 				tokW += charEmWidth(rs[k], runs[style[k]].Bold) * runSize(runs[style[k]], fontSizePt)
 			}
-			tokW *= measureSafetyMargin()
-			const wrapEps = 1e-6
-			if curLen > 0 && curW+tokW > maxWidthPt+wrapEps && strings.TrimSpace(tok) != "" {
-				lines = append(lines, [2]int{lineStart, pos})
-				lineStart, curW, curLen = pos, 0, 0
-			}
-			curW += tokW
-			curLen += n
+			toks = append(toks, wrapTok{pos: pos, n: n, w: tokW, space: strings.TrimSpace(tok) == "", text: tok})
 			pos += n
+		}
+		var breaks []int // 次の行の頭のトークンの番号
+		if phrase {
+			breaks = phraseBreaks(toks, maxWidthPt-markW)
+		} else {
+			breaks = greedyBreaks(toks, 0, maxWidthPt-markW)
+		}
+		lineStart := start
+		for _, b := range breaks {
+			lines = append(lines, [2]int{lineStart, toks[b].pos})
+			lineStart = toks[b].pos
 		}
 		lines = append(lines, [2]int{lineStart, paraEnd})
 		start = paraEnd + 1
@@ -233,7 +267,7 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 				line[len(line)-1].Text += string(rs[k])
 				continue
 			}
-			line = append(line, TextRun{Text: string(rs[k]), Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep})
+			line = append(line, TextRun{Text: string(rs[k]), Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep, Phrase: r.Phrase})
 		}
 		out = append(out, line)
 	}
@@ -266,4 +300,77 @@ func keepTokens(rs []rune, style []int, runs []TextRun) []string {
 // measureRunsHeight は折り返した行数から高さを出す。
 func measureRunsHeight(runs []TextRun, fontSizePt, maxWidthPt float64) float64 {
 	return float64(len(wrapRuns(runs, fontSizePt, maxWidthPt))) * fontSizePt * lineHeightMult
+}
+
+// wrapTok は折り返しの単位(トークン)。pos は文字の位置、w は幅(pt)。
+type wrapTok struct {
+	pos, n int
+	w      float64
+	space  bool
+	text   string
+}
+
+// greedyBreaks は from 番目のトークンから、入るだけ詰めて折った行の頭の
+// トークンの番号(from の行は含めない)。空白では折らない。
+func greedyBreaks(toks []wrapTok, from int, maxW float64) []int {
+	// maxW 自体が同じトークンの合計から来ることが多く、浮動小数点の加算順序の
+	// 違いだけで僅かに上回ることがある。実用上無害な微小な許容誤差を入れる。
+	const wrapEps = 1e-6
+	var breaks []int
+	curW, curLen := 0.0, 0
+	for i := from; i < len(toks); i++ {
+		t := toks[i]
+		if curLen > 0 && curW+t.w > maxW+wrapEps && !t.space {
+			breaks = append(breaks, i)
+			curW, curLen = 0, 0
+		}
+		curW += t.w
+		curLen += t.n
+	}
+	return breaks
+}
+
+// 文の切れ目と読点。closers は行の頭に来てはいけない閉じの約物(その前では折らない)。
+const (
+	sentenceEnds = "。．！？!?"
+	commaMarks   = "、，,"
+	closers      = "」』）)】〕”’、。，．,.!?！？・:：;；"
+)
+
+// phraseBreaks は詰めて折ったときと同じ行の数のまま、行の終わりを文の切れ目、
+// 次に読点の後ろに寄せる。どちらも無い行は詰めて折る。
+func phraseBreaks(toks []wrapTok, maxW float64) []int {
+	total := len(greedyBreaks(toks, 0, maxW)) + 1
+	var breaks []int
+	for i := 0; ; {
+		g := greedyBreaks(toks, i, maxW)
+		if len(g) == 0 {
+			return breaks
+		}
+		end := g[0]                     // 詰めたときの次の行の頭
+		left := total - len(breaks) - 1 // この行のあとに使える行の数
+		best := end
+	search:
+		for _, marks := range []string{sentenceEnds, commaMarks} {
+			for j := end; j > i+1; j-- {
+				prev := toks[j-1]
+				if prev.space || !strings.Contains(marks, prev.text) {
+					continue
+				}
+				k := j
+				for k < len(toks) && toks[k].space {
+					k++ // 後ろの空白はこの行に残す
+				}
+				if k >= len(toks) || strings.Contains(closers, toks[k].text) {
+					continue
+				}
+				if len(greedyBreaks(toks, k, maxW))+1 <= left {
+					best = k
+					break search
+				}
+			}
+		}
+		breaks = append(breaks, best)
+		i = best
+	}
 }

@@ -119,7 +119,7 @@ func TestPPTXFontsAndFixedLineSpacing(t *testing.T) {
 		t.Errorf("theme fonts: %s", theme[strings.Index(theme, "<a:fontScheme"):strings.Index(theme, "</a:fontScheme>")])
 	}
 	// dark・light の既定は行の送りを固定する(Backlog #36)。
-	if !strings.Contains(read(plain, "ppt/slides/slide2.xml"), `<a:lnSpc><a:spcPts val="1890"/></a:lnSpc>`) {
+	if !strings.Contains(read(plain, "ppt/slides/slide2.xml"), `<a:lnSpc><a:spcPts val="2160"/></a:lnSpc>`) {
 		t.Error("default templates must fix line spacing")
 	}
 
@@ -135,8 +135,8 @@ func TestPPTXFontsAndFixedLineSpacing(t *testing.T) {
 	if !strings.Contains(read(fixed, "ppt/theme/theme1.xml"), `<a:ea typeface="BIZ UDPGothic"/>`) {
 		t.Error("theme does not name the chosen east asian font")
 	}
-	// 本文 14pt × 1.35 = 18.9pt → 1890。
-	if !strings.Contains(read(fixed, "ppt/slides/slide2.xml"), `<a:lnSpc><a:spcPts val="1890"/></a:lnSpc>`) {
+	// 本文 16pt × 1.35 = 21.6pt → 2160。
+	if !strings.Contains(read(fixed, "ppt/slides/slide2.xml"), `<a:lnSpc><a:spcPts val="2160"/></a:lnSpc>`) {
 		t.Error("fixed line spacing not written")
 	}
 }

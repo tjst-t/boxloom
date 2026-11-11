@@ -284,9 +284,12 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   実害はない。
 - 本物はGanttサブエンジン内の複数行テキスト(グループラベル等)をbox_engineの
   `wrap_text()`経由ではなく、PowerPoint/LibreOffice側のネイティブ折り返し
-  (`word_wrap=True`)に任せている。Go版は自前OOXMLライターが全テキストを
-  事前折り返しして`wrap="none"`で出力する設計(レンダラ非依存にするため)。
-  意図的な設計差であり、結果は視覚的に同等。
+  (`word_wrap=True`)に任せている。Go版も流れる文字は段落ごとに1つの `a:p` にして
+  `wrap="square"` で書き、折り返しはアプリに任せる(PowerPoint で編集すれば流れ直る)。
+  Boxloom は同じ文を自分でも折り返して行の数を測り、高さを決める。強制の改行(`a:br`)は
+  リード文などの文の切れ目と、統計強調の数の塊の境目だけ。箇条は1つのテキストボックスの
+  段落(印は `a:buChar`、入れ子は `lvl`、項目の間は `a:spcBef`)。図の中の折り返さない
+  名前だけが `wrap="none"`。
 - python-pptxの`add_shape()`はテーマ由来の`<p:style>`参照(lnRef/fillRef/
   effectRef/fontRef)を自動付与するが(それを打ち消すために`shadow.inherit =
   False`を呼んでいる)、Go版の手書きXMLはそもそも`<p:style>`を持たない。

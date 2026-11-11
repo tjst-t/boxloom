@@ -157,7 +157,7 @@ Available now (check `boxloom schema` — more may have been added):
 | 2–6 images compared or in sequence | one paragraph with 2–6 `![alt](path "caption")` | Becomes a gallery (one row for 2–3, a grid for 4–6). 7+ is an error: split the slide |
 | Parallel points | bullets | 2 levels max |
 | Connected prose | paragraph | 2–3 sentences |
-| What the slide says: its conclusion in one or two sentences | `:::lead` at the top level of a content slide, one paragraph | **Every content slide gets one.** Placed by the template right under the title, outside the body; it takes room from the body (1 line ≈ 30 pt, 2 lines ≈ 52 pt). Not a summary of the bullets — the claim they prove |
+| What the slide says: its conclusion in one or two sentences | `:::lead` at the top level of a content slide, one paragraph | **Every content slide gets one.** Placed by the template right under the title, outside the body; it takes room from the body (1 line ≈ 32 pt, 2 lines ≈ 57 pt). When it needs two lines the engine breaks it after a sentence end (。) or, failing that, a comma (、) without adding a line — so two short sentences read best. Not a summary of the bullets — the claim they prove |
 | Where the slide's numbers, table, figure or quote come from (source, sample size, date) | `:::source` at the top level of the slide, one paragraph | **Every slide that shows numbers, a table, a chart or a quote gets one.** Content and statement slides only (not section). Placed by the template under the body, above the footer; it takes room from the body (`layout-overflow` counts it). One per slide: several sources go in one paragraph |
 | Deck-wide date, confidentiality, disclaimer ("all figures are fictional") | front matter `date`, `confidential`, `disclaimer` | Written once; shown on the cover (and `confidential` in the footer) |
 | A caveat / footnote-like remark | `:::note` | One short line. Not for sources (`:::source`), not for the deck-wide disclaimer (front matter), and never for the conclusion or a key number |
@@ -351,11 +351,11 @@ text, 16:9):
 
 | Quantity | Limit |
 |---|---|
-| Body area of a content slide | ~406 pt high without a lead ≈ 21 lines of body text; ~376 pt with a one-line lead, ~354 pt with a two-line lead; a `:::source` line takes another ~34 pt |
-| One-line bullets on an otherwise empty slide | 15 fit; **aim for 3–6** |
-| Characters per full-width line | ~60 CJK characters, ~95 Latin characters (body); a one-line title holds ~36 CJK / ~60 Latin characters |
+| Body area of a content slide | ~406 pt high without a lead ≈ 18 lines of body text; ~374 pt with a one-line lead, ~350 pt with a two-line lead; a `:::source` line takes another ~34 pt |
+| One-line bullets on an otherwise empty slide | 13 fit; **aim for 3–6** |
+| Characters per full-width line | ~55 CJK characters, ~85 Latin characters (body); a lead line holds ~48 CJK characters; a one-line title holds ~36 CJK / ~60 Latin characters |
 | Characters per line inside a `compare` column | ~30 CJK characters |
-| Table rows (12 pt cells, one line each) | ~16 under a title with nothing else; keep tables to ≤ 8 rows and ≤ 5 columns |
+| Table rows (14 pt cells, one line each) | ~14 under a title with nothing else; keep tables to ≤ 8 rows and ≤ 5 columns |
 | Gap between blocks | 20 pt (a new block costs this plus its own height) |
 
 Targets that read well (not hard limits):
@@ -402,11 +402,11 @@ returns
  "errors":   [{"file": "deck.bx.md", "line": 14, "column": 1, "path": "/slides/1/body/0",
                "code": "unknown-block", "message": "…", "expected": ["compare", "note"], "hint": "…"}],
  "warnings": [{"file": "deck.bx.md", "line": 38, "path": "/slides/2/body/2",
-               "code": "layout-overflow", "message": "block (points) overflows the body area by 155.1pt …"}],
- "capacity": [{"path": "/slides/2", "bodyArea": 406.1, "need": 594.7, "remaining": -188.6,
-               "blockGap": 20, "bodyLineHeight": 18.9, "remainingBodyLines": 0,
+               "code": "layout-overflow", "message": "block (points) overflows the body area by 131.5pt …"}],
+ "capacity": [{"path": "/slides/2", "bodyArea": 406.1, "need": 571.1, "remaining": -165.0,
+               "blockGap": 20, "bodyLineHeight": 21.6, "remainingBodyLines": 0,
                "blocks": [{"path": "/slides/2/body/2", "line": 38, "type": "points",
-                           "need": 204.3, "lines": 7, "overflow": 155.1}]}]}
+                           "need": 199.2, "lines": 7, "overflow": 131.5}]}]}
 ```
 
 - `line`/`column` point into your Markdown; `path` points into the IR

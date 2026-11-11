@@ -43,7 +43,7 @@ func minRunsWidth(runs []TextRun, size float64) float64 {
 				for k := pos; k < pos+n; k++ {
 					w += charEmWidth(rs[k], runs[style[k]].Bold) * size
 				}
-				if w *= measureSafetyMargin(); w > m {
+				if w > m {
 					m = w
 				}
 			}

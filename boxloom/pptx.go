@@ -71,6 +71,9 @@ type shape struct {
 	paras     [][]TextRun
 	paraSizes []float64
 
+	// list は箇条(skText)。1つの文字の枠に、項目を1つずつ段落として書く。
+	list []listPara
+
 	// skConnector
 	elbow         bool    // 縦に出て横に曲がり、縦に入る線(bentConnector3)
 	elbowAdj      float64 // 曲がる位置(始点からの縦の割合。0 なら 0.5)
@@ -178,6 +181,31 @@ func (p *PPTXBuilder) AddRichTextBox(box LBox, runs []TextRun, fontSize float64,
 	p.Shapes = append(p.Shapes, shape{
 		id: p.allocID(), kind: skText, box: box,
 		text: runsText(runs), runs: runs, fontSize: fontSize, align: align, anchor: anchor, wrap: true,
+	})
+}
+
+// listPara は箇条の1項目(1つの段落)。Indent は枠の左端から印までの字下げ、
+// SpaceBefore は前の項目の下端からの間(pt。最初の項目は 0)。Level は入れ子の深さ
+// (a:pPr の lvl)。
+type listPara struct {
+	Runs        []TextRun
+	Size        float64
+	Level       int
+	Indent      float64
+	SpaceBefore float64
+}
+
+// AddList は箇条を1つの文字の枠(テキストボックス)として足す。項目は段落で、
+// 印は段落の箇条の印(a:buChar)、入れ子は lvl と字下げ、項目の間は段落の前の間
+// (a:spcBef)。折り返しはアプリに任せる(wrap="square")。
+func (p *PPTXBuilder) AddList(box LBox, items []listPara) {
+	var text []string
+	for _, it := range items {
+		text = append(text, runsText(it.Runs))
+	}
+	p.Shapes = append(p.Shapes, shape{
+		id: p.allocID(), kind: skText, box: box, text: strings.Join(text, "\n"),
+		list: items, align: "left", anchor: "top", wrap: true,
 	})
 }
 
@@ -294,8 +322,9 @@ func alignAttr(a string) string {
 	}
 }
 
-// textLines は文字の図形を書く行に分ける(自前で折り返し、wrap="none" で
-// 書くため)。折り返しはこのスライドを組んだときの字体の一式で測る。
+// textLines は文字の図形を Boxloom が測った行に分ける(fonts の測り直しと、
+// 折り返さない文字(wrap="none")の書き出しに使う)。折り返しはこのスライドを
+// 組んだときの字体の一式で測る。
 func (p *PPTXBuilder) textLines(s *shape) [][]TextRun {
 	if p.Fonts != nil {
 		defer useFonts(p.Fonts)()
@@ -380,8 +409,20 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 `, s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), fillXML)
 
 	case skText:
-		lines := p.textLines(s)
-		paras := p.parasXML(s, lines)
+		var paras string
+		wrap := "square"
+		switch {
+		case len(s.list) > 0:
+			paras = p.listXML(s)
+		case len(s.runs) > 0:
+			paras = p.flowXML(s, s.runs, s.fontSize, s.box.Width)
+		case s.wrap:
+			paras = p.flowXML(s, []TextRun{{Text: s.text, Color: s.color, Bold: s.bold}}, s.fontSize, s.box.Width)
+		default:
+			// 折り返さない文字(図の中の名前など):"\n" だけを段落の境目にする。
+			wrap = "none"
+			paras = p.parasXML(s, p.textLines(s))
+		}
 		return fmt.Sprintf(`<p:sp>
 %s
 <p:spPr>
@@ -389,9 +430,9 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
 <a:noFill/>
 </p:spPr>
-<p:txBody><a:bodyPr wrap="none" anchor="%s" lIns="0" tIns="0" rIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>%s</p:txBody>
+<p:txBody><a:bodyPr wrap="%s" anchor="%s" lIns="0" tIns="0" rIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>%s</p:txBody>
 </p:sp>
-`, textNvSpPr(s), ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), anchorAttr(s.anchor), paras)
+`, textNvSpPr(s), ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), wrap, anchorAttr(s.anchor), paras)
 
 	case skLine:
 		dashXML := ""
@@ -443,7 +484,7 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 	return ""
 }
 
-// parasXML は折り返し済みの行を段落(a:p)にする。fonts.fixedLineSpacing なら
+// parasXML は行を1つずつ段落(a:p)にする(折り返さない文字だけ)。fonts.fixedLineSpacing なら
 // 行の送りを測ったとおり(字の大きさ×lineHeightMult)に pt で書く。
 func (p *PPTXBuilder) parasXML(s *shape, lines [][]TextRun) string {
 	return p.parasXMLSized(s, lines, s.fontSize)
@@ -459,7 +500,7 @@ func (p *PPTXBuilder) parasXMLSized(s *shape, lines [][]TextRun, fontSize float6
 		var bullet, indent string
 		if mark != nil && len(rest) > 0 {
 			line = rest
-			bullet, indent = p.bulletXML(mark, fontSize)
+			bullet, indent = p.bulletXML(mark, fontSize, 0)
 		}
 		lnSpc := ""
 		if p.Fonts != nil && p.Fonts.FixedLineSpacing {
@@ -483,6 +524,140 @@ func (p *PPTXBuilder) parasXMLSized(s *shape, lines [][]TextRun, fontSize float6
 	return paras.String()
 }
 
+// flowXML は文字を段落("\n" の境目)ごとに1つの a:p にして書き、行の折り返しは
+// アプリに任せる(wrap="square")。PowerPoint で文を直せば流れ直る。高さは
+// Boxloom が測った行の数で決めてあり、測る幅は置き換わり得る字体のいちばん広い
+// 幅なので、アプリはふつう同じか少ない行の数で折る。
+//
+// 強制の改行(a:br。PowerPoint の Shift+Enter)を入れるのは、折るところに意味が
+// あるときだけ:文として読む段落(Phrase)で文の切れ目・読点の後ろに寄せたところと、
+// 途中で折れてはいけない塊(Keep。統計強調の数と単位)の境目。
+func (p *PPTXBuilder) flowXML(s *shape, runs []TextRun, fontSize, width float64) string {
+	restore := func() {}
+	if p.Fonts != nil {
+		restore = useFonts(p.Fonts)
+	}
+	defer restore()
+	var out strings.Builder
+	for _, para := range splitParas(runs) {
+		lines := wrapRuns(para, fontSize, math.Max(width, 0))
+		out.WriteString(p.paraXML(s, lines, fontSize, paraOpts{}))
+	}
+	return out.String()
+}
+
+// paraOpts は段落の属性のうち、箇条の並びで使うもの。
+type paraOpts struct {
+	level       int
+	indent      float64 // 枠の左端から印までの字下げ(pt)
+	spaceBefore float64 // 段落の前の間(pt)
+}
+
+// paraXML は1つの段落(折り返した行の並び)を a:p にする。行の間は、意味のある
+// 折り目(forcedBreak)にだけ a:br を書き、ほかはつなげてアプリに折らせる。
+func (p *PPTXBuilder) paraXML(s *shape, lines [][]TextRun, fontSize float64, o paraOpts) string {
+	var b strings.Builder
+	if len(lines) == 0 || len(lines) == 1 && len(lines[0]) == 0 {
+		lines = [][]TextRun{{{Color: s.color, Bold: s.bold}}}
+	}
+	mark, first := splitMark(lines[0])
+	var bullet, indent string
+	if mark != nil {
+		lines = append([][]TextRun{first}, lines[1:]...)
+		bullet, indent = p.bulletXML(mark, fontSize, o.indent)
+	} else if o.indent > 0 {
+		indent = fmt.Sprintf(` marL="%d"`, ptToEMU(o.indent))
+	}
+	if o.level > 0 {
+		indent = fmt.Sprintf(` lvl="%d"`, o.level) + indent
+	}
+	var props strings.Builder
+	if p.Fonts != nil && p.Fonts.FixedLineSpacing {
+		fmt.Fprintf(&props, `<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(fontSize*lineHeightMult*100)))
+	}
+	if o.spaceBefore > 0 {
+		fmt.Fprintf(&props, `<a:spcBef><a:spcPts val="%d"/></a:spcBef>`, int(math.Round(o.spaceBefore*100)))
+	}
+	props.WriteString(bullet)
+	if props.Len() == 0 {
+		fmt.Fprintf(&b, `<a:p><a:pPr%s algn="%s"/>`, indent, alignAttr(s.align))
+	} else {
+		fmt.Fprintf(&b, `<a:p><a:pPr%s algn="%s">%s</a:pPr>`, indent, alignAttr(s.align), props.String())
+	}
+	for i, line := range lines {
+		if i > 0 && forcedBreak(lines[i-1], line) {
+			fmt.Fprintf(&b, `<a:br><a:rPr lang="ja-JP" sz="%d"/></a:br>`, int(fontSize*100))
+		}
+		for _, r := range line {
+			if r.Text == "" && len(lines) > 1 {
+				continue
+			}
+			b.WriteString(runXML(r, fontSize))
+		}
+	}
+	b.WriteString(`</a:p>`)
+	return b.String()
+}
+
+func runXML(r TextRun, fontSize float64) string {
+	boldAttr := ""
+	if r.Bold {
+		boldAttr = ` b="1"`
+	}
+	return fmt.Sprintf(`<a:r><a:rPr lang="ja-JP" sz="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr><a:t>%s</a:t></a:r>`,
+		int(runSize(r, fontSize)*100), boldAttr, hexColor(r.Color), escapeXML(r.Text))
+}
+
+// forcedBreak は、折り返した2つの行の間に強制の改行を書くか。
+func forcedBreak(prev, next []TextRun) bool {
+	if len(prev) == 0 || len(next) == 0 {
+		return false
+	}
+	if prev[len(prev)-1].Keep || next[0].Keep {
+		return true
+	}
+	if !prev[len(prev)-1].Phrase {
+		return false
+	}
+	t := strings.TrimRight(runsText(prev), " \t")
+	rs := []rune(t)
+	return len(rs) > 0 && strings.ContainsRune(sentenceEnds+commaMarks, rs[len(rs)-1])
+}
+
+// splitParas は塊の並びを "\n" の境目で段落に分ける。
+func splitParas(runs []TextRun) [][]TextRun {
+	paras := [][]TextRun{nil}
+	for _, r := range runs {
+		parts := strings.Split(r.Text, "\n")
+		for i, part := range parts {
+			if i > 0 {
+				paras = append(paras, nil)
+			}
+			if part != "" {
+				c := r
+				c.Text = part
+				paras[len(paras)-1] = append(paras[len(paras)-1], c)
+			}
+		}
+	}
+	return paras
+}
+
+// listXML は箇条の項目を1つずつ段落にする。
+func (p *PPTXBuilder) listXML(s *shape) string {
+	restore := func() {}
+	if p.Fonts != nil {
+		restore = useFonts(p.Fonts)
+	}
+	defer restore()
+	var out strings.Builder
+	for _, it := range s.list {
+		lines := wrapRuns(it.Runs, it.Size, math.Max(s.box.Width-it.Indent, 0))
+		out.WriteString(p.paraXML(s, lines, it.Size, paraOpts{level: it.Level, indent: it.Indent, spaceBefore: it.SpaceBefore}))
+	}
+	return out.String()
+}
+
 // splitMark は行の頭の印の塊(Mark)と残りに分ける。印が無ければ mark は nil。
 func splitMark(line []TextRun) (mark, rest []TextRun) {
 	i := 0
@@ -500,7 +675,7 @@ func splitMark(line []TextRun) (mark, rest []TextRun) {
 // (marL と、印を左端に戻す負の indent)を返す。印の幅は折り返しの測りと
 // 同じ数え方なので、1行目に入る文字は測ったとおり。印の字体は文字の
 // 決まり(U+2000 未満は欧文、以降は和文)で選ぶ。
-func (p *PPTXBuilder) bulletXML(mark []TextRun, fontSize float64) (bullet, indent string) {
+func (p *PPTXBuilder) bulletXML(mark []TextRun, fontSize, base float64) (bullet, indent string) {
 	w := naturalRunsWidth(mark, fontSize)
 	ch := strings.TrimSpace(runsText(mark))
 	if ch == "" {
@@ -525,7 +700,7 @@ func (p *PPTXBuilder) bulletXML(mark []TextRun, fontSize float64) (bullet, inden
 	fmt.Fprintf(&b, `<a:buFont typeface="%s"/>`, escapeXML(font))
 	fmt.Fprintf(&b, `<a:buChar char="%s"/>`, escapeXML(ch))
 	e := ptToEMU(w)
-	return b.String(), fmt.Sprintf(` marL="%d" indent="%d"`, e, -e)
+	return b.String(), fmt.Sprintf(` marL="%d" indent="%d"`, ptToEMU(base+w), -e)
 }
 
 // textNvSpPr は文字の図形の名前の部分。プレースホルダーなら p:ph を書き、
@@ -609,13 +784,12 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 		if p.Fonts != nil {
 			restore = useFonts(p.Fonts)
 		}
-		lines := wrapRuns(s.runs, s.fontSize, tr.Width-2*s.insetX)
-		var extra []string
-		for i, r := range s.paras {
-			extra = append(extra, p.parasXMLSized(s, wrapRuns(r, s.paraSizes[i], tr.Width-2*s.insetX), s.paraSizes[i]))
-		}
 		restore()
-		paras = p.parasXML(s, lines) + strings.Join(extra, "")
+		w := tr.Width - 2*s.insetX
+		paras = p.flowXML(s, s.runs, s.fontSize, w)
+		for i, r := range s.paras {
+			paras += p.flowXML(s, r, s.paraSizes[i], w)
+		}
 	}
 	return fmt.Sprintf(`<p:sp>
 <p:nvSpPr><p:cNvPr id="%d" name="Shape %d"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
@@ -625,7 +799,7 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 %s
 %s
 </p:spPr>
-<p:txBody><a:bodyPr wrap="none" anchor="%s" lIns="%d" tIns="%d" rIns="%d" bIns="%d"><a:noAutofit/></a:bodyPr><a:lstStyle/>%s</p:txBody>
+<p:txBody><a:bodyPr wrap="square" anchor="%s" lIns="%d" tIns="%d" rIns="%d" bIns="%d"><a:noAutofit/></a:bodyPr><a:lstStyle/>%s</p:txBody>
 </p:sp>
 `, s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), s.prst, adj, fillXML, lnXML,
 		anchorAttr(s.anchor), ptToEMU(s.insetX), ptToEMU(s.insetY), ptToEMU(s.insetX), ptToEMU(s.insetY), paras)

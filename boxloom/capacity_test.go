@@ -97,23 +97,23 @@ func abs(v float64) float64 {
 }
 
 // 決まった数字:はみ出しの例のスライド(本文の領域 406.1pt、要る高さ
-// 594.7pt。余白を見直したあとの値)と、収まる例の残りの行。JSON のキーの形も見る。
+// 571.1pt。字の大きさを見直したあとの値)と、収まる例の残りの行。JSON のキーの形も見る。
 func TestCapacityNumbersAndJSON(t *testing.T) {
 	_, _, caps := CheckFileCapacity("../examples/ir/check-warnings/layout-overflow.json", "")
 	if len(caps) != 1 {
 		t.Fatalf("want 1 slide with a body, got %d", len(caps))
 	}
 	c := caps[0]
-	if c.Path != "/slides/1" || c.BodyArea != 406.1 || c.Need != 594.7 || c.Remaining != -188.6 || c.RemainingBodyLines != 0 || len(c.Blocks) != 4 {
+	if c.Path != "/slides/1" || c.BodyArea != 406.1 || c.Need != 571.1 || c.Remaining != -165.0 || c.RemainingBodyLines != 0 || len(c.Blocks) != 4 {
 		t.Fatalf("unexpected capacity %+v", c)
 	}
-	if b := c.Blocks[2]; b.Type != "points" || b.Lines == 0 || b.Overflow != 155.1 {
+	if b := c.Blocks[2]; b.Type != "points" || b.Lines == 0 || b.Overflow != 131.5 {
 		t.Fatalf("unexpected block %+v", b)
 	}
 
 	_, _, caps = CheckFileCapacity("../examples/ir/demo-deck.json", "")
 	for _, c := range caps {
-		if c.Remaining <= 0 || c.RemainingBodyLines == 0 || c.BodyLineHeight != 18.9 || c.BlockGap <= 0 {
+		if c.Remaining <= 0 || c.RemainingBodyLines == 0 || c.BodyLineHeight != 21.6 || c.BlockGap <= 0 {
 			t.Errorf("demo-deck %s: unexpected %+v", c.Path, c)
 		}
 		if c.File != "../examples/ir/demo-deck.json" || c.Line != 0 {

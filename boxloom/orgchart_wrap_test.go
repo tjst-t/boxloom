@@ -35,14 +35,14 @@ func TestOrgChartUnitAvoidsOrphanLine(t *testing.T) {
 		sub := figureFromIR(t, tmpl, "orgchart", data).(*OrgChartSubsystem)
 		tx := sub.text()
 		fv, mv := sub.boxValues("rect"), sub.boxValues("roundRect")
-		for _, width := range []float64{912, 760} {
+		for _, width := range []float64{912, 780} {
 			g := sub.geom(width)
 			for i := range sub.Data.Units {
 				u := &sub.Data.Units[i]
 				if last := orphanIn(u.Title, tx.Title, g.unitW[i], fv); last != "" {
 					t.Errorf("%s %.0f: unit %q leaves %q alone on the last line (box %.1fpt)", tmpl, width, u.Title.Plain(), last, g.unitW[i])
 				}
-				// 3段目:760pt では列の余りが箱ごとに約 3pt しかなく直せない(広げられなければ
+				// 3段目:780pt では列の余りが箱ごとに約 3pt しかなく直せない(広げられなければ
 				// もとの幅のまま)。本文の幅いっぱい(912pt)では直る。
 				if width < 912 {
 					if g.memberWs[i] != g.memberW {

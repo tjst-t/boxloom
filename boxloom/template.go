@@ -146,6 +146,16 @@ func (t *Template) text(in Inline, size float64, color string, bold bool, opts .
 	return RichTextNode(t.runs(in, color, bold), append([]SpecOpt{WithFontSize(size)}, opts...)...)
 }
 
+// prose は文として読む段落(リード文・ステートメント・要点・引用)。折るところを
+// 文の切れ目・読点に寄せる(TextRun.Phrase。行の数は増やさない)。
+func (t *Template) prose(in Inline, size float64, color string, bold bool, opts ...SpecOpt) *Spec {
+	runs := t.runs(in, color, bold)
+	for i := range runs {
+		runs[i].Phrase = true
+	}
+	return RichTextNode(runs, append([]SpecOpt{WithFontSize(size)}, opts...)...)
+}
+
 func plainInline(s string) Inline { return Inline{{Text: s}} }
 
 // --- 骨組み: 表紙 ---
@@ -219,7 +229,7 @@ func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, erro
 	title := t.text(s.Title, v.SlideTitle, th.c("text_primary"), true, WithPlaceholder("title"))
 	head := title
 	if s.Lead != nil {
-		head = Col([]*Spec{head, t.text(s.Lead, v.LeadText, th.c("text_primary"), false)}, WithGap(v.HeaderGap))
+		head = Col([]*Spec{head, t.prose(s.Lead, v.LeadText, th.c("text_primary"), false)}, WithGap(v.HeaderGap))
 	}
 	kids := []*Spec{head, body}
 	if s.Source != nil {
@@ -336,7 +346,7 @@ func (t *Template) buildStatement(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
 	main := Col([]*Spec{
 		Col(nil, WithGrow(2)),
 		t.accentRule(),
-		t.text(s.Content, v.StatementText, th.c("text_primary"), true, WithPlaceholder("title")),
+		t.prose(s.Content, v.StatementText, th.c("text_primary"), true, WithPlaceholder("title")),
 		Col(nil, WithGrow(3)),
 	}, WithGap(v.SectionGap), WithPadding(v.StatementInset), WithGrow(1))
 	kids := []*Spec{main}
@@ -420,6 +430,7 @@ func (t *Template) points(items []IRPointItem, depth int) *Spec {
 		}
 	}
 	col := Col(kids, WithGap(v.ItemGap))
+	col.List = true
 	if depth > 0 {
 		col.Grow, col.Basis = 1, new(float64)
 	}
@@ -454,7 +465,7 @@ func (t *Template) takeaway(in Inline) *Spec {
 	v, th := t.Values, t.Theme
 	return Row([]*Spec{
 		Col(nil, WithWidth(v.AccentBarWidth), WithBackground(th.c("accent"))),
-		Col([]*Spec{t.text(in, v.TakeawayText, th.c("text_primary"), true)},
+		Col([]*Spec{t.prose(in, v.TakeawayText, th.c("text_primary"), true)},
 			WithPadding(v.CardPadding), WithBackground(th.c("card")), WithGrow(1), WithBasis(0)),
 	})
 }
@@ -496,7 +507,7 @@ func (t *Template) quote(content, source Inline) *Spec {
 	return Row([]*Spec{
 		TextNode(t.Marks.Quote, WithFontSize(v.QuoteMark), WithColor(th.c("accent")), WithBold(true)),
 		Col([]*Spec{
-			t.text(content, v.QuoteText, th.c("text_primary"), false),
+			t.prose(content, v.QuoteText, th.c("text_primary"), false),
 			RichTextNode(src, WithFontSize(v.QuoteSource)),
 		}, WithGap(v.ItemGap), WithGrow(1), WithBasis(0)),
 	}, WithGap(v.ItemGap))

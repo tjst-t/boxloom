@@ -355,7 +355,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 
 ```json
 {"file": "layout-overflow.bx.md", "line": 38, "path": "/slides/1/body/2", "code": "layout-overflow",
- "message": "block (points) overflows the body area by 155.1pt (block needs 204.3pt; body area 406.1pt, all blocks need 594.7pt)"}
+ "message": "block (points) overflows the body area by 131.5pt (block needs 199.2pt; body area 406.1pt, all blocks need 571.1pt)"}
 ```
 
 文字の高さはレイアウトエンジン自身の測り方(字体の幅の表と行の高さの倍率)で
@@ -398,7 +398,7 @@ check でも断られるもの。
   "need": 210.2,          // ブロックを縮めずに積んだ高さ(ブロックの間の gap を含む)
   "remaining": 195.9,     // bodyArea − need。負ならはみ出している
   "blockGap": 20,         // ブロックの間の gap。新しいブロックを足すなら先にこれが要る
-  "bodyLineHeight": 18.9, // 本文の字の大きさの1行の高さ
+  "bodyLineHeight": 21.6, // 本文の字の大きさの1行の高さ
   "remainingBodyLines": 10, // 残りに本文の行がいくつ入るか(既にあるブロックに足す場合)
   "blocks": [{
     "path": "/slides/1/body/0", "line": 40, "type": "points",
