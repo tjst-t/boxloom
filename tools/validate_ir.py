@@ -91,6 +91,13 @@ def self_test(validator):
         for e in errs:
             print("      ", json.dumps(e, ensure_ascii=False))
         ok &= not errs
+    # Schema も意味の検査も通り、組み立ての警告(layout-overflow など)だけが出るもの。
+    for path in sorted((ROOT / "examples" / "ir" / "check-warnings").glob("*.json")):
+        errs = check(validator, path)
+        print(f"{'PASS' if not errs else 'FAIL'}  valid    {path.relative_to(ROOT)}  (boxloom check warns)")
+        for e in errs:
+            print("      ", json.dumps(e, ensure_ascii=False))
+        ok &= not errs
     # Schema では通り、意味の検査(boxloom check)で断るもの。Schema が誤って
     # 断るようになっていないかを見る(断るのは Go の試験 check_test.go)。
     for path in sorted((ROOT / "examples" / "ir" / "check-invalid").glob("*.json")):

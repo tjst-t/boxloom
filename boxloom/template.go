@@ -327,6 +327,14 @@ func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
 		if missing := roles.Missing(); len(missing) > 0 {
 			warnings = append(warnings, fmt.Sprintf("[ROLE WARNING] theme has no value for roles: %v", missing))
 		}
+		// はみ出しは描いた後に測る(測るときに行の Box を並べ直すため)。
+		if b.Body != nil {
+			var kinds []string
+			for _, blk := range d.Slides[i].Body {
+				kinds = append(kinds, blk.Type)
+			}
+			warnings = append(warnings, lintBodyOverflow(b.Root, b.Body, kinds)...)
+		}
 
 		notes := b.Notes
 		if len(warnings) > 0 {

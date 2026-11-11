@@ -14,7 +14,7 @@ go run .                                                      # 従来の Go で
 - テンプレートは `-template` > IR の `template` > `light` の順で決まる。
 - 誤りは IR の中の場所を添えて止まる(例 `slides[2]: body[0]: gantt: ticks[0].status:
   unknown status "text_primary"`)。`examples/ir/invalid/` の9件は全部ここで断られる。
-- 警告(本文の埋まり具合・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名)は
+- 警告(本文の埋まり具合・本文のはみ出し・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名)は
   標準出力と、そのスライドのノートに書く。
 - 書き出さずに検査だけするなら `go run . check deck.json`(`.bx.md` も可。誤りと
   警告を `docs/content-syntax.md` の5章の形で出す。`-format json` で JSON。
@@ -33,6 +33,7 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 | `template.go` | テンプレート(値の表・骨組み・部品)。表紙と本文のスライド、ブロック(段落・箇条・比較・注記・サブシステム)を Spec に組む |
 | `gantt_ir.go` | Gantt の `data` から `GanttChart` を組む(軸の圧縮・目盛りの文字・注釈の指す先) |
 | `gantt.go` | 注釈の置き場所と箱の大きさを決める(`planAnnotations`)。置けない注釈は警告(`Lint`)。確定していない区間を破線で描く |
+| `overflow.go` | 本文のはみ出しの検査(`layout-overflow`)。縮めなければ要る高さを測り直し、本文の領域と比べる |
 | `pptx.go` | 複数枚の書き出し(`SaveDeck`)と、装飾つきの文字(`AddRichTextBox`) |
 
 ## テンプレートが決めていること(dark / light)
@@ -63,5 +64,6 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 
 - テンプレートの値の表(色・大きさ)をデータ(ファイル)にすること。いまは Go のコード。
 - 押せるリンク、`code` の等幅の字体。
-- 本文の高さがページに収まらないときの扱い(いまは比例で縮むだけで、警告は
-  サブシステムの最小を下回ったときにしか出ない)。
+- 本文の高さがページに収まらないときの自動の扱い(いまは比例で縮むだけ)。
+  はみ出しは `layout-overflow` の警告で知らせ、直すのは作者(`docs/ir.md` の
+  「はみ出しの測り方」)。

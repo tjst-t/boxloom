@@ -431,6 +431,8 @@ var unknownFieldRe = regexp.MustCompile(`json: unknown field "([^"]+)"`)
 // 新しい種類の警告が増えても、この形で書かれていればそのまま rule になる。
 var warnRe = regexp.MustCompile(`^slide ([0-9]+): \[([A-Z-]+) WARNING\] (.*)$`)
 
+var warnBlockRe = regexp.MustCompile(`^body\[([0-9]+)\]: (.*)$`)
+
 var warnRuleNames = map[string]string{"SUBSYSTEM": "subsystem-min", "ROLE": "theme-role"}
 
 func warningIssue(file, w string) Issue {
@@ -447,5 +449,10 @@ func warningIssue(file, w string) Issue {
 	if rule == "" {
 		rule = strings.ToLower(m[2])
 	}
-	return Issue{File: file, Path: fmt.Sprintf("/slides/%d", n-1), Message: m[3], Code: rule}
+	path, msg := fmt.Sprintf("/slides/%d", n-1), m[3]
+	// 文の頭に本文の中の場所(body[2]: ...)があれば、そのブロックまで指す。
+	if bm := warnBlockRe.FindStringSubmatch(msg); bm != nil {
+		path, msg = path+"/body/"+bm[1], bm[2]
+	}
+	return Issue{File: file, Path: path, Message: msg, Code: rule}
 }

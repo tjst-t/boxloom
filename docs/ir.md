@@ -194,9 +194,38 @@ go run . check -template dark deck.json                  # IR の template の�
 | code | 見ること |
 |---|---|
 | `fill-ratio` | 本文の箱のうち 65% より少なくしか使っていない(テンプレートの方針) |
+| `layout-overflow` | 本文のブロックが本文の領域に収まらない。はみ出したブロックごとに1件で、`path` はそのブロック(`/slides/S/body/N`)、文にはみ出した高さ(pt)を書く(下の節) |
 | `subsystem-min` | サブシステムに割り当てた大きさが、自己申告の最小を下回った |
 | `annotation-overlap` | Gantt の注釈に空いた置き場所が無く、ほかの注釈に重ねて置いた |
 | `theme-role` | テーマに値の無い役割名をサブシステムが使った |
+
+### はみ出し(layout-overflow)の測り方
+
+レイアウトエンジンは、足りないとき子を比例で縮めて必ず箱の中に収める。そのため
+並べた後の座標でははみ出しが見えず、文字が重なったり詰まったりするだけになる。
+`layout-overflow` は「縮めなければ要る高さ」を測り直して比べる(`boxloom/overflow.go`)。
+
+- **本文の領域** = ページの内側の高さ − 題とフッターが要る高さ − その間の gap。
+- **ブロックが要る高さ** = 並べた幅で文字を折り返した高さ。サブシステムは自己申告の
+  最小の高さ(`Min`)まで縮めてよいので、`Min` で測る(自然な高さより縮んでも、
+  `Min` が収まればはみ出しにしない)。
+- ブロックを上から gap を挟んで積み、領域の下端を越えたブロックごとに1件出す。
+  越えた高さは、下端をまたぐブロックなら下端より下の分、丸ごと下に落ちたブロックなら
+  要る高さ全部。0.5pt 未満は丸めの誤差として見ない。
+
+```json
+{"file": "layout-overflow.bx.md", "line": 38, "path": "/slides/1/body/2", "code": "layout-overflow",
+ "message": "block (points) overflows the body area by 47.8pt (block needs 168.3pt; body area 413.4pt, all blocks need 491.4pt)"}
+```
+
+文字の高さはレイアウトエンジン自身の測り方(字体の幅の表と行の高さの倍率)で
+測る。PowerPoint や LibreOffice が実際に描く行の高さとは少し違うので、数 pt の
+はみ出しは、描いた絵では目立たないことがある。直し方は作者の側(ブロックを減らす・
+スライドを分ける)で、テンプレートは勝手に縮めたり次のページへ送ったりしない。
+
+例:`examples/ir/check-warnings/layout-overflow.json`(と同じ中身の
+`examples/md/warnings/layout-overflow.bx.md`)は誤り0件で、2つのブロックに
+`layout-overflow` が出る(`boxloom/overflow_test.go`)。
 
 組み立ての警告は、意味の誤りが1件も無いときだけ出す(壊れた IR を組むと、
 的外れな警告が混ざるため)。新しい種類の警告(`[XXX WARNING]` の形)は、

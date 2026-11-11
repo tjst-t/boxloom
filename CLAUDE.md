@@ -83,6 +83,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   余白は、fill-ratio の数値に関わらず常に NG。
 - **コンテンツ不足を自動で埋めない**: fill-ratio の検査で警告を出すだけで、
   他ページからの流用などはしない。
+- **はみ出しも自動で直さない**: 本文が収まらないときは `layout-overflow` の
+  警告(はみ出したブロックと高さ)を出すだけで、字を小さくしたり次のページへ
+  送ったりはしない。
 
 ### コンテンツ(意味)
 
@@ -165,7 +168,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     置き場所はサブシステムが決める。詳細は `docs/build.md`
   - `check.go` = `go run . check deck.json|deck.bx.md`。Schema で書けない IR の
     検査(id の一意性・target の指す先・日付の前後と範囲・variant)と組み立ての
-    警告を出す(`docs/ir.md`)。誤りの形はパーサー・`validate_ir.py` と共通の
+    警告(はみ出しの `layout-overflow` は `overflow.go`)を出す(`docs/ir.md`)。誤りの形はパーサー・`validate_ir.py` と共通の
     `Issue`(`docs/content-syntax.md` の5章。IR を直接検査したときは行と列を省く)
   - `markdown.go` / `md_gantt.go` / `yaml.go` = Boxloom Markdown → IR の
     パーサー(YAML の部分集合も自前)。`go run . parse deck.bx.md`、`build` は
