@@ -139,6 +139,12 @@ type TextRun struct {
 	Color string
 	Bold  bool
 	Size  float64
+	// Mark は文の頭の印(箇条の「・」、良い点・悪い点の「＋」「－」など)。
+	// 測るときはふつうの文字と同じに幅を数える。PPTX では印を本文の文字に
+	// せず、段落の箇条の印(a:buChar)として書き、本文は印の幅だけ字下げした
+	// 位置から始める(描く側が和文と欧文の間に足す空き(LibreOffice の
+	// 「アジア言語と欧文の間隔」)が、印と数字・英字の間に入らないように)。
+	Mark bool
 }
 
 // runSize は塊の字の大きさ(0 なら葉の大きさ)。
@@ -222,7 +228,7 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 				line[len(line)-1].Text += string(rs[k])
 				continue
 			}
-			line = append(line, TextRun{Text: string(rs[k]), Color: r.Color, Bold: r.Bold, Size: r.Size})
+			line = append(line, TextRun{Text: string(rs[k]), Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark})
 		}
 		out = append(out, line)
 	}

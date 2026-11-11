@@ -310,7 +310,8 @@ func (t *Template) buildBlockSpec(b *IRBlock) (*Spec, error) {
 	return nil, fmt.Errorf("unknown block type %q", b.Type)
 }
 
-// points は箇条。印は先頭の文字に入れる(折り返した行は印の下に戻る)。
+// points は箇条。印は先頭の塊(Mark)に入れ、PPTX では段落の箇条の印として
+// 書く(折り返した行は印の下に戻る)。
 func (t *Template) points(items []IRPointItem, depth int) *Spec {
 	v, th := t.Values, t.Theme
 	mark := t.Marks.Point
@@ -320,7 +321,7 @@ func (t *Template) points(items []IRPointItem, depth int) *Spec {
 	}
 	var kids []*Spec
 	for _, it := range items {
-		runs := append([]TextRun{{Text: mark, Color: th.c("accent"), Bold: true}}, t.runs(it.Content, th.c("text_primary"), false)...)
+		runs := append([]TextRun{{Text: mark, Color: th.c("accent"), Bold: true, Mark: true}}, t.runs(it.Content, th.c("text_primary"), false)...)
 		kids = append(kids, RichTextNode(runs, WithFontSize(size)))
 		if len(it.Items) > 0 {
 			// 字下げ: 左に固定幅の空き + 入れ子の箇条(残りの幅をもらう)。
@@ -341,11 +342,11 @@ func (t *Template) compare(opts []IRCompareOption) *Spec {
 	for _, o := range opts {
 		kids := []*Spec{t.text(o.Label, v.OptionLabel, th.c("text_primary"), true)}
 		for _, p := range o.Pros {
-			runs := append([]TextRun{{Text: t.Marks.Pro, Color: th.c("support"), Bold: true}}, t.runs(p, th.c("text_primary"), false)...)
+			runs := append([]TextRun{{Text: t.Marks.Pro, Color: th.c("support"), Bold: true, Mark: true}}, t.runs(p, th.c("text_primary"), false)...)
 			kids = append(kids, RichTextNode(runs, WithFontSize(v.OptionItem)))
 		}
 		for _, c := range o.Cons {
-			runs := append([]TextRun{{Text: t.Marks.Con, Color: th.c("danger"), Bold: true}}, t.runs(c, th.c("text_primary"), false)...)
+			runs := append([]TextRun{{Text: t.Marks.Con, Color: th.c("danger"), Bold: true, Mark: true}}, t.runs(c, th.c("text_primary"), false)...)
 			kids = append(kids, RichTextNode(runs, WithFontSize(v.OptionItem)))
 		}
 		cards = append(cards, Col(kids, WithGap(v.ItemGap), WithPadding(v.CardPadding),

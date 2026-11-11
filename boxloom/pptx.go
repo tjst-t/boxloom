@@ -443,11 +443,20 @@ func (p *PPTXBuilder) parasXMLSized(s *shape, lines [][]TextRun, fontSize float6
 		if len(line) == 0 {
 			line = []TextRun{{Color: s.color, Bold: s.bold}}
 		}
+		mark, rest := splitMark(line)
+		var bullet, indent string
+		if mark != nil && len(rest) > 0 {
+			line = rest
+			bullet, indent = p.bulletXML(mark, fontSize)
+		}
+		lnSpc := ""
 		if p.Fonts != nil && p.Fonts.FixedLineSpacing {
-			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"><a:lnSpc><a:spcPts val="%d"/></a:lnSpc></a:pPr>`,
-				alignAttr(s.align), int(math.Round(fontSize*lineHeightMult*100))))
+			lnSpc = fmt.Sprintf(`<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(fontSize*lineHeightMult*100)))
+		}
+		if lnSpc == "" && bullet == "" {
+			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr%s algn="%s"/>`, indent, alignAttr(s.align)))
 		} else {
-			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"/>`, alignAttr(s.align)))
+			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr%s algn="%s">%s%s</a:pPr>`, indent, alignAttr(s.align), lnSpc, bullet))
 		}
 		for _, r := range line {
 			boldAttr := ""
@@ -460,6 +469,51 @@ func (p *PPTXBuilder) parasXMLSized(s *shape, lines [][]TextRun, fontSize float6
 		paras.WriteString(`</a:p>`)
 	}
 	return paras.String()
+}
+
+// splitMark は行の頭の印の塊(Mark)と残りに分ける。印が無ければ mark は nil。
+func splitMark(line []TextRun) (mark, rest []TextRun) {
+	i := 0
+	for i < len(line) && line[i].Mark {
+		i++
+	}
+	if i == 0 {
+		return nil, line
+	}
+	return line[:i], line[i:]
+}
+
+// bulletXML は頭の印を段落の箇条の印(a:buClr・a:buFont・a:buChar)にし、
+// 本文を印の幅(測ったとおり。印の後ろの空白も含む)だけ字下げする属性
+// (marL と、印を左端に戻す負の indent)を返す。印の幅は折り返しの測りと
+// 同じ数え方なので、1行目に入る文字は測ったとおり。印の字体は文字の
+// 決まり(U+2000 未満は欧文、以降は和文)で選ぶ。
+func (p *PPTXBuilder) bulletXML(mark []TextRun, fontSize float64) (bullet, indent string) {
+	w := naturalRunsWidth(mark, fontSize)
+	ch := strings.TrimSpace(runsText(mark))
+	if ch == "" {
+		ch = runsText(mark)
+	}
+	fonts := p.Fonts
+	if fonts == nil {
+		fonts = defaultFontSet()
+	}
+	font := fonts.Latin.Family
+	for _, r := range ch {
+		if r >= 0x2000 {
+			font = fonts.EastAsian.Family
+		}
+		break
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, `<a:buClr><a:srgbClr val="%s"/></a:buClr>`, hexColor(mark[0].Color))
+	if sz := runSize(mark[0], fontSize); sz != fontSize {
+		fmt.Fprintf(&b, `<a:buSzPts val="%d"/>`, int(sz*100))
+	}
+	fmt.Fprintf(&b, `<a:buFont typeface="%s"/>`, escapeXML(font))
+	fmt.Fprintf(&b, `<a:buChar char="%s"/>`, escapeXML(ch))
+	e := ptToEMU(w)
+	return b.String(), fmt.Sprintf(` marL="%d" indent="%d"`, e, -e)
 }
 
 // textNvSpPr は文字の図形の名前の部分。プレースホルダーなら p:ph を書き、
