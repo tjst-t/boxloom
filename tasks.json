@@ -821,7 +821,7 @@
       "number": 34,
       "kind": "task",
       "title": "CI:go vet・go test・validate_ir.py --self-test・固有名の検査を流す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "oss-release-prep",
       "dependsOn": [],
       "milestone": null,
@@ -831,9 +831,14 @@
       "doneWhen": "GitHub Actions の実行が緑で、固有名を入れた試しのコミットで落ちる",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "9bee10d0-e934-4e37-840b-96c4a8829324"
+        }
+      ],
       "createdAt": "2026-11-11T02:02:59.118Z",
-      "updatedAt": "2026-11-11T02:02:59.118Z",
+      "updatedAt": "2026-11-11T02:59:22.425Z",
       "closedAt": null,
       "extra": {}
     },
