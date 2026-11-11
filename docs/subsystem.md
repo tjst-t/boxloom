@@ -138,9 +138,21 @@ Gantt の Factory は `ganttFromIR`(`gantt_ir.go`)で読み、`GanttChart` を
 | 軸の圧縮の制御点 | 目盛り(と軸を切る日付)で区切った区間に、日数の平方根に比べた幅を割り当てる |
 | 目盛りの文字 | `at` を値の表(`subsystems/gantt.json`)の `dateFormat` で書く(既定 `YYYY/M` → `2029/12`。`YY/M`・`YYYY年M月`・`YYYY-MM` なども書ける。年は YYYY か YY、月は M か MM で、月は必須)。節目の文字の頭の日付も同じ。範囲の両端に目盛りが無ければ日付だけの目盛りを足す |
 | 状態の無い目盛りの色 | `text_primary`(両端に足したものは `text_muted`) |
-| 節目の文字 | `28/5 ライセンス更新` のように日付を前に付ける |
+| 節目の文字 | `2028/5 ライセンス更新` のように日付を前に付ける |
+| 節目の段 | 下の「節目の段」 |
 | 注釈の上下と横のずらし | 下の「注釈の置き場所」 |
 | 確定していない区間(`tentative`) | 塗らずに、状態の色の破線の枠で描く |
+
+**節目の段**(Issue #51、`planMilestones`):節目の文字(`★ 日付 名前`)の幅を実測し、
+左から順に、横に重ならない(隙間 6pt)一番下の段へ置く。段は2つまで
+(`ganttMilestoneMaxRows`)で、軸に一番近い段から埋める。日付が近い節目が2つなら
+段をずらして並べ、そのぶん節目の帯が1段高くなる(Measure の自然な高さも同じだけ
+増えるので、はみ出しの計測と描画はずれない)。2段のどちらにも空きが無い節目は、
+右端が一番左にある段に重ねて置き、警告 `milestone-overlap` を出す(path はその節目
+`…/data/milestones/N`)。前は節目をすべて1段に置き、近い日付の文字が重なっても
+何も言わなかった。例は `examples/md/warnings/milestone-overlap.bx.md`
+(↔ `examples/ir/check-warnings/milestone-overlap.json`)、試験は
+`gantt_milestone_test.go`。
 
 **注釈の置き場所**(`planAnnotations`):
 

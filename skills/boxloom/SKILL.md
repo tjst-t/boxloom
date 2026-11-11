@@ -282,7 +282,9 @@ annotations:                             # placed automatically next to the targ
   status: it is only a group's `risk: A .. B` range and a `legend` key.
 - `openEnd: true` = continues past the chart; `tentative: true` = not yet decided
   (drawn dashed). A row may have `note: {from, to, text}` instead of segments.
-- Use `ticks` for dates readers should orient by; `milestones` for events.
+- Use `ticks` for dates readers should orient by; `milestones` for events. Milestones
+  on close dates are stacked in up to 2 rows; a third one on the same dates overlaps and
+  `check` warns `milestone-overlap`.
 - Ids are unique across the whole deck.
 - Segment labels wrap inside the bar (up to 3 lines; the row grows). If a bar is too
   narrow even for that, the label is not drawn and `check` warns `gantt-segment-label`.
@@ -426,6 +428,7 @@ Fixes by code:
 | `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently. Inside `columns` the path ends in `/columns/C/body/K`: shorten that group or move it to its own slide |
 | `fill-ratio` (warning) | Slide is mostly empty. Always fix (§4): merge with the neighbour the `hint` names, add the missing evidence or figure, or turn a one-message slide into `{type=statement}` |
 | `spare-width` (warning) | A figure/image leaves the side empty: put it in `columns` with text beside it, or give it more height by cutting text on that slide |
+| `milestone-overlap` (warning) | Milestones are too close in time: merge them into one milestone, turn one into an `annotation`, or narrow the `span` so the dates spread out |
 | `gantt-segment-label` (warning) | A Gantt bar is too narrow for its label: shorten the label, or move the explanation to an `annotation` / row `note` and leave the segment label short or empty |
 | `shapes-overlap`, `shapes-text-overflow`, `annotation-overlap`, `subsystem-min` (warnings) | Move/enlarge shapes, shorten text, or give the figure its own slide |
 | `shapes-connector-angle` (warning) | The connector can only meet a side at a shallow angle, so it looks like it ends at a corner. Move the two shapes further apart, or line them up horizontally or vertically |

@@ -311,6 +311,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `layout-overflow` | 本文のブロックが本文の領域に収まらない。はみ出したブロックごとに1件で、`path` はそのブロック(`/slides/S/body/N`)、文にはみ出した高さ(pt)を書く(下の節)。区切りの題・主張の1文がページに収まらないときも出し、`path` はそのスライド(`/slides/S`)。並列のまとまりは、まとまりの中のはみ出したブロック(`/slides/S/body/N/columns/C/body/K`) |
 | `subsystem-min` | サブシステムに割り当てた大きさが、自己申告の最小を下回った(サブシステムの警告の path は、そのブロック `/slides/S/body/N`) |
 | `annotation-overlap` | Gantt の注釈に空いた置き場所が無く、ほかの注釈に重ねて置いた |
+| `milestone-overlap` | Gantt の節目の日付が近すぎて、段を2つにずらしても文字が重なった。path はその節目(`…/data/milestones/N`)(`docs/subsystem.md` の6節「節目の段」) |
 | `gantt-segment-label` | Gantt の区間の文が、帯が狭すぎて置けない(描かなかった)。path はその区間(`…/data/groups/G/rows/R/segments/S`)。折り返して収まる文は警告にならない(`docs/subsystem.md` の11節) |
 | `shapes-overlap` | shapes の図形どうしが重なった。path は後から置いた図形(`…/data/items/N`) |
 | `shapes-text-overflow` | shapes の図形の文が、割り当てられた大きさに収まらない。path はその図形 |

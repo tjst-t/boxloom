@@ -521,6 +521,7 @@ func ganttNoteNeeds(gv *GanttValues, chart *GanttChart, boxWidth float64) []gant
 // 両方が同じ計算を使うので、申告した大きさと実際の描画がずれない。
 type ganttMetrics struct {
 	annTopH, annBottomH, milestoneH float64
+	milestones                      milestonePlan
 	chromeH                         float64 // 行の本体以外の高さの合計(内側の余白を含む)
 	legendW                         float64
 }
@@ -538,7 +539,9 @@ func ganttMetricsFor(gv *GanttValues, chart *GanttChart, boxWidth float64) gantt
 		}
 	}
 	if len(chart.Milestones) > 0 {
-		m.milestoneH = gv.MilestoneH + 4
+		gutterW := gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW
+		m.milestones = planMilestones(gv, chart, boxWidth-2*gv.Padding-gutterW)
+		m.milestoneH = float64(m.milestones.rows)*gv.MilestoneH + 4
 	}
 	// renderGantt の縦の並び: 余白 / 凡例 / 上の注釈 / 節目 / 軸の文字 / 軸 / 本体 / 下の注釈 / 余白
 	m.chromeH = 2*gv.Padding + gv.LegendH + gv.LegendGap + m.annTopH + m.milestoneH + gv.AxisLabelH + 5 + 5 + m.annBottomH
@@ -571,9 +574,12 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 	sx := f.sx(chart)
 
 	// --- ★マイルストーン ---
-	for _, m := range chart.Milestones {
+	for i, m := range chart.Milestones {
 		mx := sx(m.Date)
-		p.AddTextBoxNoWrap(LBox{X: mx - 74, Y: milestoneY, Width: 148, Height: gv.MilestoneH}, "★ "+m.text(gv), gv.SmallText, c("accent"), true, "center", "middle")
+		text := "★ " + m.text(gv)
+		bw := math.Max(148, runWidthPt(text, gv.SmallText, true)+8)
+		y := f.gm.milestones.rowY(milestoneY, gv, i)
+		p.AddTextBoxNoWrap(LBox{X: mx - bw/2, Y: y, Width: bw, Height: gv.MilestoneH}, text, gv.SmallText, c("accent"), true, "center", "middle")
 	}
 
 	// --- 軸目盛り ---
@@ -809,8 +815,8 @@ func ganttLabelRects(gv *GanttValues, chart *GanttChart, f ganttFrame) []placedB
 		return placedBox{cx - tw/2, y, tw, th}
 	}
 	var out []placedBox
-	for _, m := range chart.Milestones {
-		out = append(out, ink(sx(m.Date), f.milestoneY, gv.MilestoneH, "★ "+m.text(gv), gv.SmallText, true, true))
+	for i, m := range chart.Milestones {
+		out = append(out, ink(sx(m.Date), f.gm.milestones.rowY(f.milestoneY, gv, i), gv.MilestoneH, "★ "+m.text(gv), gv.SmallText, true, true))
 	}
 	for _, t := range chart.Ticks {
 		tx := sx(t.Date)
@@ -1024,11 +1030,93 @@ func planAnnotations(gv *GanttValues, chart *GanttChart, x0, w float64) []annPla
 	return out
 }
 
+// ganttMilestoneMaxRows は節目の文字を積む段の数の上限。近い節目は段をずらして
+// 重ならないようにし、それでも重なるものは警告 milestone-overlap にする。
+const ganttMilestoneMaxRows = 2
+
+// ganttMilestoneGap は、同じ段に並べる節目の文字どうしの最小の隙間(pt)。
+const ganttMilestoneGap = 6.0
+
+// milestonePlan は節目ごとの段(0 が軸に一番近い段)と、段の数、
+// 置き場所が無く重ねて置いた節目の組。
+type milestonePlan struct {
+	row     []int
+	rows    int
+	overlap [][2]int // {重ねて置いた節目, 重なった相手}
+}
+
+// rowY は節目 i の文字の箱の上端。段 0 は軸に一番近い(一番下の)段。
+func (mp milestonePlan) rowY(top float64, gv *GanttValues, i int) float64 {
+	r := 0
+	if i < len(mp.row) {
+		r = mp.row[i]
+	}
+	return top + float64(mp.rows-1-r)*gv.MilestoneH
+}
+
+// planMilestones は節目の文字を左から順に、横に重ならない一番下の段へ置く。
+// 文字の幅は実測(★ と日付を含む)。chartW は時間軸の幅(位置は相対で足りる)。
+func planMilestones(gv *GanttValues, chart *GanttChart, chartW float64) milestonePlan {
+	n := len(chart.Milestones)
+	mp := milestonePlan{row: make([]int, n), rows: 1}
+	type span struct {
+		i           int
+		left, right float64
+	}
+	spans := make([]span, n)
+	for i, m := range chart.Milestones {
+		cx := chart.Scale.X(m.Date, 0, chartW)
+		w := runWidthPt("★ "+m.text(gv), gv.SmallText, true)
+		spans[i] = span{i, cx - w/2, cx + w/2}
+	}
+	order := make([]span, n)
+	copy(order, spans)
+	sort.SliceStable(order, func(a, b int) bool { return order[a].left < order[b].left })
+	last := make([]int, ganttMilestoneMaxRows) // 段ごとに最後に置いた節目(-1 は空)
+	for r := range last {
+		last[r] = -1
+	}
+	for _, sp := range order {
+		placed := false
+		for r := 0; r < ganttMilestoneMaxRows; r++ {
+			if last[r] < 0 || spans[last[r]].right+ganttMilestoneGap <= sp.left {
+				mp.row[sp.i], last[r], placed = r, sp.i, true
+				if r+1 > mp.rows {
+					mp.rows = r + 1
+				}
+				break
+			}
+		}
+		if !placed {
+			// どの段にも空きが無い:右端が一番左にある段に重ねて置く
+			best := 0
+			for r := 1; r < ganttMilestoneMaxRows; r++ {
+				if spans[last[r]].right < spans[last[best]].right {
+					best = r
+				}
+			}
+			mp.overlap = append(mp.overlap, [2]int{sp.i, last[best]})
+			mp.row[sp.i], last[best] = best, sp.i
+			if best+1 > mp.rows {
+				mp.rows = best + 1
+			}
+		}
+	}
+	return mp
+}
+
 // Lint は描く前の検査(SubsystemLinter)。割り当てられた矩形で注釈の置き場所を
 // 計画し、重ねて置くしかなかった注釈を警告にする。
 func (g *GanttSubsystem) Lint(box LBox) []string {
 	gv := g.vals()
 	var out []string
+	if len(g.Chart.Milestones) > 0 {
+		chartW0 := box.Width - 2*gv.Padding - (gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW)
+		for _, ov := range planMilestones(gv, g.Chart, chartW0).overlap {
+			out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] gantt: milestones[%d] (%q) overlaps milestones[%d] (%q): the dates are too close to fit the labels in %d rows",
+				ov[0], g.Chart.Milestones[ov[0]].text(gv), ov[1], g.Chart.Milestones[ov[1]].text(gv), ganttMilestoneMaxRows))
+		}
+	}
 	plan := planAnnotations(gv, g.Chart, box.X+gv.Padding, box.Width-2*gv.Padding)
 	for i, pl := range plan {
 		if !pl.overlap {

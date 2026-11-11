@@ -159,9 +159,10 @@ func TestCheckOK(t *testing.T) {
 // 注釈の重なりの警告は、最小の大きさの警告と別の rule になる。
 func TestWarningIssueRules(t *testing.T) {
 	cases := map[string]string{
-		`slide 3: [SUBSYSTEM WARNING] gantt: needs at least 400.0pt height, got 300.0pt`:                           "subsystem-min",
-		`slide 3: [SUBSYSTEM WARNING] gantt: annotation 9 ("x") has no free place and overlaps another annotation`: "annotation-overlap",
-		`slide 2: [FILL-RATIO WARNING] underfilled: 50.8% (< 65%)`:                                                 "fill-ratio",
+		`slide 3: [SUBSYSTEM WARNING] gantt: needs at least 400.0pt height, got 300.0pt`:                                                            "subsystem-min",
+		`slide 3: [SUBSYSTEM WARNING] gantt: annotation 9 ("x") has no free place and overlaps another annotation`:                                  "annotation-overlap",
+		`slide 3: [SUBSYSTEM WARNING] gantt: milestones[2] ("a") overlaps milestones[0] ("b"): the dates are too close to fit the labels in 2 rows`: "milestone-overlap",
+		`slide 2: [FILL-RATIO WARNING] underfilled: 50.8% (< 65%)`:                                                                                  "fill-ratio",
 	}
 	for w, want := range cases {
 		if got := warningIssue("f", w).Code; got != want {

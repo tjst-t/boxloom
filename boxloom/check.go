@@ -747,6 +747,8 @@ var warnColumnRe = regexp.MustCompile(`^columns\[([0-9]+)\]: body\[([0-9]+)\]: (
 
 var warnShapeItemRe = regexp.MustCompile(`^shapes: items\[([0-9]+)\]`)
 
+var warnGanttMilestoneRe = regexp.MustCompile(`^gantt: milestones\[([0-9]+)\]`)
+
 var warnGanttSegRe = regexp.MustCompile(`^gantt: groups\[([0-9]+)\]\.rows\[([0-9]+)\]\.segments\[([0-9]+)\]`)
 
 // warnFigureRe は図のサブシステム(process・orgchart・matrix・funnel)の警告の
@@ -781,6 +783,10 @@ func warningIssue(file, w string) Issue {
 	if m[2] == "SUBSYSTEM" && strings.Contains(m[3], "overlaps another annotation") {
 		// Gantt の注釈の置き場所が無かった(lintSubsystems が拾う SubsystemLinter の警告)
 		rule = "annotation-overlap"
+	}
+	if m[2] == "SUBSYSTEM" && strings.Contains(m[3], "gantt: milestones[") && strings.Contains(m[3], ") overlaps milestones[") {
+		// Gantt の節目の文字が近すぎて、段をずらしても重なった(GanttSubsystem.Lint)
+		rule = "milestone-overlap"
 	}
 	if m[2] == "SUBSYSTEM" && strings.Contains(m[3], "gantt: groups[") && strings.Contains(m[3], "is not drawn") {
 		// Gantt の区間の文を帯が狭すぎて置けなかった(GanttSubsystem.Lint)
@@ -829,6 +835,9 @@ func warningIssue(file, w string) Issue {
 			path += "/data/items/" + im[1]
 		}
 		// Gantt の区間の文の警告は、その区間まで指す。
+		if mm := warnGanttMilestoneRe.FindStringSubmatch(msg); mm != nil {
+			path += "/data/milestones/" + mm[1]
+		}
 		if gm := warnGanttSegRe.FindStringSubmatch(msg); gm != nil {
 			path += "/data/groups/" + gm[1] + "/rows/" + gm[2] + "/segments/" + gm[3]
 		}
