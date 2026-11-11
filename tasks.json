@@ -961,7 +961,7 @@
       "number": 57,
       "kind": "task",
       "title": "スライドの地を PowerPoint のスライドの背景(p:bg)で書き、全面の四角を描かない",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -973,7 +973,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T08:55:52.789Z",
-      "updatedAt": "2026-11-11T08:55:52.789Z",
+      "updatedAt": "2026-11-11T09:05:10.907Z",
       "closedAt": null,
       "extra": {}
     },
