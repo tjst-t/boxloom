@@ -344,7 +344,7 @@
       "number": 17,
       "kind": "task",
       "title": "区切りのスライドとメッセージを1つ強く出すスライドを足す",
-      "status": "ready",
+      "status": "done",
       "parent": "slide-patterns",
       "dependsOn": [
         "pattern-vocabulary"
@@ -354,12 +354,12 @@
       "labels": [],
       "body": "章の区切り(section)と、結論の1文だけのスライド(statement / takeaway)。いまは表紙と本文の2種類しかない。",
       "doneWhen": "IR・Schema・Markdown・dark/light の描き方・試験・例・schema の出力が揃い、画像で確かめている",
-      "resolution": null,
+      "resolution": "section・statement(# 題 {type=…})と :::takeaway を実装。main 5245819。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:02:58.852Z",
-      "updatedAt": "2026-11-11T02:02:58.852Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:02:32.732Z",
+      "closedAt": "2026-11-11T05:02:32.732Z",
       "extra": {}
     },
     {
