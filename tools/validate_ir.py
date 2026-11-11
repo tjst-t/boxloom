@@ -10,8 +10,15 @@ Go の `go run . check deck.json`(boxloom/check.go)がする。
 
 要るもの: pip install jsonschema (4.18 以降。referencing を使う)
 
-誤りは「ファイル・IR の中の場所(JSON Pointer)・何が問題か」の形で返す。
-AI に読ませて直させることを考えて、機械が読める形にしてある。
+誤りは docs/content-syntax.md の5章の形で返す(Go の boxloom check・Markdown の
+パーサーと同じ):
+
+    {"file": "deck.json", "path": "/slides/2/...", "code": "schema",
+     "message": "...", "expected": [...], "hint": "..."}
+
+IR(JSON)を検査するので line・column は無い。code はいつも "schema" で、
+どの Schema の規則に当たったか(enum・additionalProperties など)は hint に書く。
+expected は、選べる値が決まっているとき(enum・const)だけ付ける。
 """
 import json
 import pathlib
@@ -41,6 +48,8 @@ def make_validator():
 
 
 def pointer(path):
+    if not path:
+        return ""
     return "/" + "/".join(str(p).replace("~", "~0").replace("/", "~1") for p in path)
 
 
@@ -59,12 +68,18 @@ def check(validator, path):
     errors = []
     for err in sorted(validator.iter_errors(doc), key=lambda e: list(map(str, e.absolute_path))):
         leaf = deepest(err)
-        errors.append({
+        issue = {
             "file": str(path),
-            "at": pointer(leaf.absolute_path),
+            "path": pointer(leaf.absolute_path),
+            "code": "schema",
             "message": leaf.message,
-            "rule": leaf.validator,
-        })
+        }
+        if leaf.validator == "enum":
+            issue["expected"] = [str(v) for v in leaf.validator_value]
+        elif leaf.validator == "const":
+            issue["expected"] = [str(leaf.validator_value)]
+        issue["hint"] = f"Schema の規則: {leaf.validator}"
+        errors.append(issue)
     return errors
 
 
@@ -87,7 +102,7 @@ def self_test(validator):
     for path in sorted((ROOT / "examples" / "ir" / "invalid").glob("*.json")):
         errs = check(validator, path)
         print(f"{'PASS' if errs else 'FAIL'}  rejected {path.relative_to(ROOT)}"
-              + (f"  -> {errs[0]['at']}: {errs[0]['message']}" if errs else ""))
+              + (f"  -> {errs[0]['path']}: {errs[0]['message']}" if errs else ""))
         ok &= bool(errs)
     return ok
 

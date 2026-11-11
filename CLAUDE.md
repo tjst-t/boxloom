@@ -163,9 +163,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     (dark / light)で Box の木に組み、PPTX に書く道。`go run . build
     ../examples/ir/demo-deck.json` → `out/demo-deck.pptx`。Gantt の注釈の
     置き場所はサブシステムが決める。詳細は `docs/build.md`
-  - `check.go` = `go run . check deck.json`。Schema で書けない IR の検査
-    (id の一意性・target の指す先・日付の前後と範囲・variant)と組み立ての
-    警告を、`validate_ir.py` と同じ形の JSON で出す(`docs/ir.md`)
+  - `check.go` = `go run . check deck.json|deck.bx.md`。Schema で書けない IR の
+    検査(id の一意性・target の指す先・日付の前後と範囲・variant)と組み立ての
+    警告を出す(`docs/ir.md`)。誤りの形はパーサー・`validate_ir.py` と共通の
+    `Issue`(`docs/content-syntax.md` の5章。IR を直接検査したときは行と列を省く)
   - `markdown.go` / `md_gantt.go` / `yaml.go` = Boxloom Markdown → IR の
     パーサー(YAML の部分集合も自前)。`go run . parse deck.bx.md`、`build` は
     `.md` もそのまま受け取る。詳細は `docs/content-syntax.md` の8章

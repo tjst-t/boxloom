@@ -1,17 +1,21 @@
 // boxloom check: JSON Schema では書けない IR の検査。
 //
-//	go run . check [-template dark|light] [-strict] deck.json ...
+//	go run . check [-format text|json] [-template dark|light] [-strict] deck.json|deck.bx.md ...
 //
-// 出すものは tools/validate_ir.py と同じ形の JSON:
+// 誤りと警告は docs/content-syntax.md の5章の形(Issue)で出す:
 //
 //	{"ok": false,
-//	 "errors":   [{"file": "deck.json", "at": "/slides/2/...", "message": "...", "rule": "date-order"}],
-//	 "warnings": [{"file": "deck.json", "at": "/slides/1", "message": "...", "rule": "fill-ratio"}]}
+//	 "errors":   [{"file": "deck.bx.md", "line": 40, "path": "/slides/2/body/0/data/...", "code": "date-order", "message": "..."}],
+//	 "warnings": [{"file": "deck.json", "path": "/slides/1", "code": "fill-ratio", "message": "..."}]}
+//
+// IR(JSON)を検査したときは line・column を出さない。.md を検査したときは、
+// 記法の誤りならパーサーの誤り(line・column つき)を、意味の誤りなら IR の
+// 場所から引いた Markdown の行(line だけ)を添える。
 //
 // 誤りは最初の1件で止めず、全部集める。誤りが無ければ組み立て(build)まで通し、
-// そのときの警告(本文の埋まり具合・サブシステムの最小の大きさ・テーマに無い
-// 役割名)も rule つきで出す。終了コードは 0=誤りなし、1=誤りあり(-strict なら
-// 警告もこちら)、2=使い方の誤り。
+// そのときの警告(本文の埋まり具合・サブシステムの最小の大きさ・注釈の重なり・
+// テーマに無い役割名)も code つきで出す。終了コードは 0=誤りなし、1=誤りあり
+// (-strict なら警告もこちら)、2=使い方の誤り。
 //
 // 形(キー・型・enum)の検査は Schema(tools/validate_ir.py)の仕事。ここは
 // 「形は正しいが意味が通らない」もの(id の重なり・指す先の無い target・
@@ -32,43 +36,47 @@ import (
 	"time"
 )
 
-// CheckIssue は誤り・警告の1件。validate_ir.py と同じ欄。
-type CheckIssue struct {
-	File    string `json:"file"`
-	At      string `json:"at"`
-	Message string `json:"message"`
-	Rule    string `json:"rule"`
-}
-
-// CheckResult は1回の check の結果。
+// CheckResult は1回の check の結果。誤りと警告は Issue(docs/content-syntax.md
+// の5章の形)。
 type CheckResult struct {
-	OK       bool         `json:"ok"`
-	Errors   []CheckIssue `json:"errors"`
-	Warnings []CheckIssue `json:"warnings"`
+	OK       bool    `json:"ok"`
+	Errors   []Issue `json:"errors"`
+	Warnings []Issue `json:"warnings"`
 }
 
 func runCheck(args []string) int {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
 	tmpl := fs.String("template", "", "テンプレートの名前(省くと IR の template)")
 	strict := fs.Bool("strict", false, "警告も誤りとして扱う(終了コード 1)")
+	format := fs.String("format", "text", "出し方: text か json")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	if fs.NArg() == 0 {
-		fmt.Fprintln(os.Stderr, "usage: boxloom check [-template dark|light] [-strict] deck.json ...")
+	if fs.NArg() == 0 || (*format != "text" && *format != "json") {
+		fmt.Fprintln(os.Stderr, "usage: boxloom check [-format text|json] [-template dark|light] [-strict] deck.json|deck.bx.md ...")
 		return 2
 	}
-	res := CheckResult{Errors: []CheckIssue{}, Warnings: []CheckIssue{}}
+	res := CheckResult{Errors: []Issue{}, Warnings: []Issue{}}
 	for _, f := range fs.Args() {
 		errs, warns := CheckFile(f, *tmpl)
 		res.Errors = append(res.Errors, errs...)
 		res.Warnings = append(res.Warnings, warns...)
 	}
 	res.OK = len(res.Errors) == 0 && (!*strict || len(res.Warnings) == 0)
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "  ")
-	_ = enc.Encode(res)
+	if *format == "json" {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "  ")
+		_ = enc.Encode(res)
+	} else {
+		for _, e := range res.Errors {
+			fmt.Println("error:", e.String())
+		}
+		for _, w := range res.Warnings {
+			fmt.Println("warning:", w.String())
+		}
+		fmt.Printf("%d error(s), %d warning(s)\n", len(res.Errors), len(res.Warnings))
+	}
 	if !res.OK {
 		return 1
 	}
@@ -76,20 +84,35 @@ func runCheck(args []string) int {
 }
 
 // CheckFile は1つのファイルを検査する。templateOverride が空でなければ IR の
-// template より優先する。
-func CheckFile(path, templateOverride string) (errs, warns []CheckIssue) {
+// template より優先する。.md は Boxloom Markdown として読み、記法の誤りが
+// あればそれを返す。無ければできた IR を検査し、誤りと警告に Markdown の行を
+// 添える(IR の場所から、その場所を作った Markdown の行を引く)。
+func CheckFile(path, templateOverride string) (errs, warns []Issue) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return []CheckIssue{{File: path, At: "", Message: err.Error(), Rule: "read"}}, nil
+		return []Issue{{File: path, Message: err.Error(), Code: "read"}}, nil
 	}
-	return CheckIR(path, b, templateOverride)
+	if !isMarkdownPath(path) {
+		return CheckIR(path, b, templateOverride)
+	}
+	ir, mdErrs, lines := ParseMarkdownWithMap(b, path)
+	if len(mdErrs) > 0 {
+		return mdErrs, nil
+	}
+	errs, warns = CheckIR(path, ir, templateOverride)
+	for _, list := range [][]Issue{errs, warns} {
+		for i := range list {
+			list[i].Line = lines.Line(list[i].Path)
+		}
+	}
+	return errs, warns
 }
 
 // CheckIR はバイト列の IR を検査する(試験から直接呼べるように分けてある)。
-func CheckIR(file string, b []byte, templateOverride string) (errs, warns []CheckIssue) {
+func CheckIR(file string, b []byte, templateOverride string) (errs, warns []Issue) {
 	var doc any
 	if err := json.Unmarshal(b, &doc); err != nil {
-		return []CheckIssue{{File: file, At: "", Message: "not JSON: " + err.Error(), Rule: "json"}}, nil
+		return []Issue{{File: file, Path: "", Message: "not JSON: " + err.Error(), Code: "json"}}, nil
 	}
 	c := &checker{file: file}
 
@@ -113,7 +136,7 @@ func CheckIR(file string, b []byte, templateOverride string) (errs, warns []Chec
 	}
 	deck, perr := ParseIR(b)
 	if perr != nil {
-		c.add(locationToPointer(perr.Error()), perr.Error(), "ir-read")
+		c.add(locationToPointer(perr.Error()), perr.Error(), "schema")
 		return c.errs, nil
 	}
 	warnings, berr := tm.RenderDeck(deck, os.DevNull)
@@ -129,11 +152,11 @@ func CheckIR(file string, b []byte, templateOverride string) (errs, warns []Chec
 
 type checker struct {
 	file string
-	errs []CheckIssue
+	errs []Issue
 }
 
 func (c *checker) add(at, msg, rule string) {
-	c.errs = append(c.errs, CheckIssue{File: c.file, At: at, Message: msg, Rule: rule})
+	c.errs = append(c.errs, Issue{File: c.file, Path: at, Message: msg, Code: rule})
 }
 
 // --- 文書の歩き方 ---
@@ -410,10 +433,10 @@ var warnRe = regexp.MustCompile(`^slide ([0-9]+): \[([A-Z-]+) WARNING\] (.*)$`)
 
 var warnRuleNames = map[string]string{"SUBSYSTEM": "subsystem-min", "ROLE": "theme-role"}
 
-func warningIssue(file, w string) CheckIssue {
+func warningIssue(file, w string) Issue {
 	m := warnRe.FindStringSubmatch(w)
 	if m == nil {
-		return CheckIssue{File: file, Message: w, Rule: "warning"}
+		return Issue{File: file, Message: w, Code: "warning"}
 	}
 	n, _ := strconv.Atoi(m[1])
 	rule := warnRuleNames[m[2]]
@@ -424,5 +447,5 @@ func warningIssue(file, w string) CheckIssue {
 	if rule == "" {
 		rule = strings.ToLower(m[2])
 	}
-	return CheckIssue{File: file, At: fmt.Sprintf("/slides/%d", n-1), Message: m[3], Rule: rule}
+	return Issue{File: file, Path: fmt.Sprintf("/slides/%d", n-1), Message: m[3], Code: rule}
 }

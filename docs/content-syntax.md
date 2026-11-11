@@ -262,7 +262,8 @@ annotations:
 
 ## 5. 誤りの返し方(`boxloom check`)
 
-`boxloom check deck.bx.md --format json` は、誤りを1件ずつ次の形で返す。
+`boxloom check -format json deck.bx.md` は、誤りを1件ずつ次の形で返す。Markdown の
+パーサー(`parse`)・`boxloom check`・`tools/validate_ir.py` は、どれもこの形で出す。
 
 ```json
 {
@@ -276,12 +277,19 @@ annotations:
 }
 ```
 
-- `path` は IR の中の場所(JSON Pointer)。
+- `line`・`column` は Markdown の中の場所。**IR(JSON)を直接検査したときは出さない**。
+  Markdown の記法が通ったあとの意味の誤り(日付が範囲の外など)は、IR の場所から
+  引いた行だけを付ける(`column` は無い)。
+- `path` は IR の中の場所(JSON Pointer)。いつも出す(`""` は文書全体)。
+- `expected`(選べるもの)と `hint`(直し方)は、あるときだけ出す。
 - `code` は決まった一覧(`unknown-block` `unknown-attribute` `raw-html` `unsupported-syntax`
   `unclosed-block` `schema` `layout-overflow` …)。AI はこれで分岐できる。
 - テンプレートの規則の検査(はみ出し・fill-ratio など)も同じ形で返す。
   `layout-overflow` のときは、どの意味ブロックがどれだけはみ出したかを付ける。
-- 終了コードは、誤りがあれば 1、警告だけなら 0。
+- 警告(fill-ratio など)は `warnings` に同じ形で入る。
+- 終了コードは、誤りがあれば 1、警告だけなら 0(`-strict` なら警告も 1)。
+- `code` の全部の一覧は、記法の誤りが8章、意味の誤りと警告が `docs/ir.md` の
+  「意味の検査」の節。
 
 ## 6. AI に書かせるときの決まり
 
@@ -312,7 +320,7 @@ go run . build ../examples/md/demo-deck.bx.md            # .md もそのまま P
   出力の名前は `deck.bx.md` → `out/deck.pptx`。
 - 誤りは最初の1件で止めず、読めるところまで全部集めて、行の順に返す。形は5章の形
   (`file`・`line`・`column`・`path`・`code`・`message`・`expected`・`hint`)。
-  `-format text`(既定)は `file:line:column: code: message` の1行ずつ。
+  `-format text`(既定)は `file:line:column path: code: message` の1行ずつ。
 - いまの `code` の一覧:`unknown-block`・`unknown-attribute`・`raw-html`・
   `unsupported-syntax`・`planned-syntax`(仕様で「予定」のもの)・`unclosed-block`
   (囲み・コードブロック・強調・コロンの数の不一致)・`misplaced-content`(その場所に
@@ -322,5 +330,6 @@ go run . build ../examples/md/demo-deck.bx.md            # .md もそのまま P
 - Gantt のコードブロックは、YAML の検査が通ったあと Gantt サブシステム自身にも
   読ませる。Schema では書けない誤り(`target` の行き先が無い・id の重複・範囲の
   前後)もここで見つかる(このときの `line` はコードブロックの開きの行)。
-- `layout-overflow` などテンプレートの規則の検査と、`boxloom check` のコマンド
-  そのものはまだ無い(`build` の警告として出る)。
+- `boxloom check` は `.md` も受け取る(記法の誤り → 無ければ IR の意味の検査と
+  組み立ての警告。`docs/ir.md` の「意味の検査」)。`layout-overflow`(はみ出し)の
+  検査はまだ無い。

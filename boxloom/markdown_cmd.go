@@ -31,7 +31,7 @@ func deckBaseName(path string) string {
 }
 
 // MarkdownErrors は Markdown の誤りの一覧(error として返すため)。
-type MarkdownErrors []MDError
+type MarkdownErrors []Issue
 
 func (es MarkdownErrors) Error() string {
 	var lines []string
@@ -87,8 +87,8 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 	}
 	if *format == "json" {
 		b, _ := json.MarshalIndent(struct {
-			OK     bool      `json:"ok"`
-			Errors []MDError `json:"errors"`
+			OK     bool    `json:"ok"`
+			Errors []Issue `json:"errors"`
 		}{false, errs}, "", "  ")
 		fmt.Fprintln(stdout, string(b))
 		return 1

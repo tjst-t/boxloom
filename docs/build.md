@@ -16,8 +16,9 @@ go run .                                                      # 従来の Go で
   unknown status "text_primary"`)。`examples/ir/invalid/` の9件は全部ここで断られる。
 - 警告(本文の埋まり具合・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名)は
   標準出力と、そのスライドのノートに書く。
-- 書き出さずに検査だけするなら `go run . check deck.json`(誤りと警告を場所つきの
-  JSON で出す。`docs/ir.md` の「意味の検査」)。
+- 書き出さずに検査だけするなら `go run . check deck.json`(`.bx.md` も可。誤りと
+  警告を `docs/content-syntax.md` の5章の形で出す。`-format json` で JSON。
+  `docs/ir.md` の「意味の検査」)。
 
 ## 流れ
 

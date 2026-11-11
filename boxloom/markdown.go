@@ -19,20 +19,35 @@ import (
 	"unicode/utf8"
 )
 
-// MDError は誤り1件(docs/content-syntax.md の5章の形)。
-type MDError struct {
+// Issue は誤り・警告の1件(docs/content-syntax.md の5章の形)。Markdown の
+// パーサー・boxloom check・tools/validate_ir.py が同じ形で出す。
+//   - line・column は Markdown の中の場所。IR(JSON)を直接検査したときは無い
+//     (0 なら JSON に出さない)。column は無くて line だけのこともある。
+//   - path は IR の中の場所(JSON Pointer)。"" は文書全体。
+//   - code は決まった一覧(5章・8章)。AI はこれで分岐できる。
+type Issue struct {
 	File     string   `json:"file"`
-	Line     int      `json:"line"`
-	Column   int      `json:"column"`
-	Path     string   `json:"path,omitempty"`
+	Line     int      `json:"line,omitempty"`
+	Column   int      `json:"column,omitempty"`
+	Path     string   `json:"path"`
 	Code     string   `json:"code"`
 	Message  string   `json:"message"`
 	Expected []string `json:"expected,omitempty"`
 	Hint     string   `json:"hint,omitempty"`
 }
 
-func (e MDError) String() string {
-	s := fmt.Sprintf("%s:%d:%d: %s: %s", e.File, e.Line, e.Column, e.Code, e.Message)
+func (e Issue) String() string {
+	loc := e.File
+	switch {
+	case e.Line > 0 && e.Column > 0:
+		loc = fmt.Sprintf("%s:%d:%d", e.File, e.Line, e.Column)
+	case e.Line > 0:
+		loc = fmt.Sprintf("%s:%d", e.File, e.Line)
+	}
+	if e.Path != "" {
+		loc += " " + e.Path
+	}
+	s := fmt.Sprintf("%s: %s: %s", loc, e.Code, e.Message)
 	if len(e.Expected) > 0 {
 		s += " (使えるもの: " + strings.Join(e.Expected, ", ") + ")"
 	}
@@ -182,12 +197,44 @@ type mdDoc struct {
 // --- 行ごとの読み取り ---
 
 type mdParser struct {
-	file string
-	errs []MDError
+	file  string
+	errs  []Issue
+	lines map[string]int // IR の場所(JSON Pointer)→ Markdown の行
+}
+
+// mark は IR の場所が Markdown の何行目から来たかを覚える(boxloom check が
+// IR に対する誤りを Markdown の行に戻すのに使う)。最初に覚えた行を残す。
+func (p *mdParser) mark(path string, line int) {
+	if line <= 0 {
+		return
+	}
+	if p.lines == nil {
+		p.lines = map[string]int{}
+	}
+	if _, ok := p.lines[path]; !ok {
+		p.lines[path] = line
+	}
+}
+
+// SourceMap は IR の場所 → Markdown の行。
+type SourceMap map[string]int
+
+// Line は path か、その一番近い親の行(無ければ 0)。
+func (m SourceMap) Line(path string) int {
+	for {
+		if l, ok := m[path]; ok {
+			return l
+		}
+		k := strings.LastIndex(path, "/")
+		if k < 0 {
+			return 0
+		}
+		path = path[:k]
+	}
 }
 
 func (p *mdParser) fail(line, col int, path, code, msg string, expected []string, hint string) {
-	p.errs = append(p.errs, MDError{File: p.file, Line: line, Column: col, Path: path, Code: code, Message: msg, Expected: expected, Hint: hint})
+	p.errs = append(p.errs, Issue{File: p.file, Line: line, Column: col, Path: path, Code: code, Message: msg, Expected: expected, Hint: hint})
 }
 
 var (
@@ -840,8 +887,20 @@ func (x *inlineParser) tryLink() (*jobj, int) {
 
 // ParseMarkdown は Boxloom Markdown を IR の JSON にする。誤りがあれば、
 // 読めたところまでの IR と誤りの一覧を返す。
-func ParseMarkdown(src []byte, file string) ([]byte, []MDError) {
+func ParseMarkdown(src []byte, file string) ([]byte, []Issue) {
+	out, errs, _ := ParseMarkdownWithMap(src, file)
+	return out, errs
+}
+
+// ParseMarkdownWithMap は ParseMarkdown と同じで、IR の場所 → Markdown の行の
+// 対応も返す。
+func ParseMarkdownWithMap(src []byte, file string) ([]byte, []Issue, SourceMap) {
 	p := &mdParser{file: file}
+	out, errs := p.parseMarkdown(src)
+	return out, errs, SourceMap(p.lines)
+}
+
+func (p *mdParser) parseMarkdown(src []byte) ([]byte, []Issue) {
 	doc := p.parseBlocks(string(src))
 	root := p.toIR(doc)
 	out, err := marshalIndent(root)
@@ -859,7 +918,7 @@ func ParseMarkdown(src []byte, file string) ([]byte, []MDError) {
 	return out, p.errs
 }
 
-func sortErrors(errs []MDError) {
+func sortErrors(errs []Issue) {
 	sort.SliceStable(errs, func(i, j int) bool {
 		if errs[i].Line != errs[j].Line {
 			return errs[i].Line < errs[j].Line
@@ -895,10 +954,12 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 	}
 	var slides []any
 	if cover && meta != nil {
+		p.mark("/slides/0", doc.fm.line)
 		slides = append(slides, obj("type", "cover"))
 	}
 	for _, s := range doc.slides {
 		path := fmt.Sprintf("/slides/%d", len(slides))
+		p.mark(path, s.line)
 		sl := obj("type", "content")
 		if s.attrs != "" {
 			attrs := p.parseAttrs(s.attrs, s.line, s.attrsCol, path, []string{"variant"})
@@ -926,6 +987,7 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 
 func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 	cover := true
+	p.mark("/meta", n.line)
 	if n.kind == 'n' {
 		p.fail(n.line, 1, "/meta", codeMissingKey, "文書の頭に title がありません", []string{"title"}, "")
 		return nil, false
@@ -941,6 +1003,11 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 		v := n.vals[k]
 		line := n.keyLine[k]
 		path := "/meta/" + key
+		if key == "template" {
+			p.mark("/template", line)
+		} else {
+			p.mark(path, line)
+		}
 		switch key {
 		case "title", "subtitle", "author":
 			if key == "title" {
@@ -1017,6 +1084,7 @@ func (p *mdParser) blocks(items []*mdItem, path string) []any {
 	out := []any{}
 	for _, it := range items {
 		bp := fmt.Sprintf("%s/%d", path, len(out))
+		p.mark(bp, it.line)
 		switch it.kind {
 		case mdPara:
 			out = append(out, obj("type", "paragraph", "content", p.parseInline(it.text.trimBR(), bp+"/content")))
@@ -1039,6 +1107,7 @@ func (p *mdParser) listItems(ents []*mdListEnt, path string, allowNest bool) []a
 	var out []any
 	for k, e := range ents {
 		ip := fmt.Sprintf("%s/%d", path, k)
+		p.mark(ip, e.line)
 		content := p.parseInline(e.text.trimBR(), ip)
 		if len(e.children) == 0 {
 			out = append(out, content)
@@ -1129,6 +1198,7 @@ func (p *mdParser) compareBlock(f *mdFenceBlk, path string) any {
 		}
 		o := it.fence
 		op := fmt.Sprintf("%s/options/%d", path, len(options))
+		p.mark(op, o.line)
 		p.fenceAttrs(o, op, nil)
 		if len(o.label.r) == 0 {
 			p.fail(o.line, 1, op, codeMisplaced, ":::option には選択肢の名前が要ります", nil, "「:::option 名前」のように書いてください")
@@ -1214,6 +1284,7 @@ func (p *mdParser) codeBlock(it *mdItem, path string) any {
 	} else if strings.TrimSpace(rest) != "" {
 		p.fail(it.line, 4+utf8.RuneCountInString(lang), path, codeUnknownAttribute, "言語名の後ろには {variant=名前} だけを書けます", []string{"variant"}, "")
 	}
+	p.mark(path+"/data", it.line)
 	node, yerrs := parseYAML(it.code, it.codeLine)
 	for _, e := range yerrs {
 		p.fail(e.line, e.col, path+"/data", codeYAML, e.msg, nil, e.hint)

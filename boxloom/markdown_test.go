@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func mdToAny(t *testing.T, src string) (any, []MDError) {
+func mdToAny(t *testing.T, src string) (any, []Issue) {
 	t.Helper()
 	ir, errs := ParseMarkdown([]byte(src), "t.bx.md")
 	if len(errs) > 0 {

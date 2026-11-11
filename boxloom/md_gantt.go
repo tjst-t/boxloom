@@ -109,6 +109,7 @@ func gObject(fields []gField) ganttConv {
 				}
 			}
 			kp := path + "/" + key
+			p.mark(kp, n.keyLine[k])
 			if field == nil {
 				hint := ""
 				switch key {
@@ -158,6 +159,7 @@ func gSeq(item ganttConv, minItems int) ganttConv {
 		}
 		out := []any{}
 		for k, it := range n.items {
+			p.mark(fmt.Sprintf("%s/%d", path, k), it.line)
 			if v := item(p, it, fmt.Sprintf("%s/%d", path, k)); v != nil {
 				out = append(out, v)
 			}

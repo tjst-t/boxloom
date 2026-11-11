@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,7 +29,7 @@ func TestCheckReportsBuildWarnings(t *testing.T) {
 		t.Fatalf("want 2 warnings, got %+v", warns)
 	}
 	for _, w := range warns {
-		if w.Rule != "fill-ratio" || (w.At != "/slides/1" && w.At != "/slides/2") {
+		if w.Code != "fill-ratio" || (w.Path != "/slides/1" && w.Path != "/slides/2") {
 			t.Errorf("unexpected warning: %+v", w)
 		}
 	}
@@ -57,7 +58,7 @@ func TestCheckInvalidSemanticExamples(t *testing.T) {
 			continue
 		}
 		errs, _ := CheckFile(f, "")
-		if len(errs) != 1 || errs[0].Rule != w.rule || errs[0].At != w.at {
+		if len(errs) != 1 || errs[0].Code != w.rule || errs[0].Path != w.at {
 			t.Errorf("%s: want one %s at %s, got %+v", name, w.rule, w.at, errs)
 		}
 	}
@@ -72,7 +73,7 @@ func TestCheckRejectsSchemaInvalidExamples(t *testing.T) {
 			t.Errorf("%s: accepted", filepath.Base(f))
 			continue
 		}
-		if errs[0].At == "" || !strings.HasPrefix(errs[0].At, "/") {
+		if errs[0].Path == "" || !strings.HasPrefix(errs[0].Path, "/") {
 			t.Errorf("%s: error should carry a location: %+v", filepath.Base(f), errs[0])
 		}
 	}
@@ -92,7 +93,7 @@ func TestCheckCollectsAllErrors(t *testing.T) {
 	errs, _ := CheckIR("x.json", []byte(src), "")
 	rules := map[string]int{}
 	for _, e := range errs {
-		rules[e.Rule]++
+		rules[e.Code]++
 	}
 	for _, r := range []string{"unique-id", "variant-exists", "date-order", "within-span", "target-exists"} {
 		if rules[r] == 0 {
@@ -146,8 +147,61 @@ func TestWarningIssueRules(t *testing.T) {
 		`slide 2: [FILL-RATIO WARNING] underfilled: 50.8% (< 65%)`:                                                 "fill-ratio",
 	}
 	for w, want := range cases {
-		if got := warningIssue("f", w).Rule; got != want {
+		if got := warningIssue("f", w).Code; got != want {
 			t.Errorf("%q: rule = %q, want %q", w, got, want)
 		}
+	}
+}
+
+// .md を検査すると、意味の誤りにも IR の場所から引いた Markdown の行が付く。
+func TestCheckMarkdownAddsLines(t *testing.T) {
+	src, err := os.ReadFile("../examples/md/gantt-full.bx.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := strings.Replace(string(src), "  - {at: 2028-05, label: ライセンス更新}", "  - {at: 2036-05, label: ライセンス更新}", 1)
+	path := filepath.Join(t.TempDir(), "bad.bx.md")
+	if err := os.WriteFile(path, []byte(s), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	errs, _ := CheckFile(path, "")
+	if len(errs) != 1 || errs[0].Code != "within-span" {
+		t.Fatalf("errs = %+v, want one within-span", errs)
+	}
+	want := 0
+	for i, l := range strings.Split(s, "\n") {
+		if strings.Contains(l, "2036-05") {
+			want = i + 1
+		}
+	}
+	if errs[0].Line != want || errs[0].Path != "/slides/0/body/0/data/milestones/0/at" {
+		t.Fatalf("line/path = %d %s, want %d", errs[0].Line, errs[0].Path, want)
+	}
+}
+
+// .md の記法の誤りは、パーサーの誤り(行と列つき)がそのまま出る。
+func TestCheckMarkdownSyntaxError(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "raw.bx.md")
+	os.WriteFile(path, []byte("---\ntitle: x\n---\n\n# A\n\n<b>raw</b>\n"), 0o644)
+	errs, _ := CheckFile(path, "")
+	if len(errs) != 1 || errs[0].Code != "raw-html" || errs[0].Line != 7 || errs[0].Column != 1 {
+		t.Fatalf("errs = %+v", errs)
+	}
+}
+
+// IR(JSON)を直接検査したときは line・column を出さず、path と code は必ず出す。
+func TestCheckJSONOmitsLineAndColumn(t *testing.T) {
+	errs, _ := CheckFile("../examples/ir/check-invalid/date-order.json", "")
+	b, _ := json.Marshal(errs[0])
+	var m map[string]any
+	json.Unmarshal(b, &m)
+	if _, ok := m["line"]; ok {
+		t.Errorf("line should be omitted: %s", b)
+	}
+	if _, ok := m["column"]; ok {
+		t.Errorf("column should be omitted: %s", b)
+	}
+	if m["path"] == nil || m["code"] != "date-order" {
+		t.Errorf("path/code missing: %s", b)
 	}
 }

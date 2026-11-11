@@ -27,14 +27,18 @@ python3 tools/validate_ir.py deck.json         # 誤りを JSON で出す(正し
 python3 tools/validate_ir.py --self-test       # 例が通り、断られるべきものが断られるか
 ```
 
-誤りは次の形で返す。`at` は IR の中の場所(JSON Pointer)で、AI に渡せばその場所を
-直せる。
+誤りは `docs/content-syntax.md` の5章の形で返す(Go の `boxloom check`・Markdown の
+パーサーと同じ形)。`path` は IR の中の場所(JSON Pointer)で、AI に渡せばその場所を
+直せる。IR を直接検査するので `line`・`column` は無い。`code` はいつも `schema` で、
+当たった Schema の規則は `hint` に、選べる値が決まっていれば `expected` に入れる。
 
 ```json
 {"file": "deck.json",
- "at": "/slides/2/body/0/data/groups/0/rows/1/segments/0/status",
+ "path": "/slides/2/body/0/data/groups/0/rows/1/segments/0/status",
+ "code": "schema",
  "message": "'#34C08F' is not one of ['support', 'conditional', 'none', 'danger']",
- "rule": "enum"}
+ "expected": ["support", "conditional", "none", "danger"],
+ "hint": "Schema の規則: enum"}
 ```
 
 ## 形の要点
@@ -151,22 +155,30 @@ JSON Schema では書けない検査は Go の `boxloom check` がする。
 ```sh
 cd boxloom
 go run . check ../examples/ir/demo-deck.json            # 誤りが無ければ exit 0
+go run . check ../examples/md/demo-deck.bx.md            # Markdown もそのまま検査する
+go run . check -format json deck.json                    # 機械が読む形(既定は1件1行の text)
 go run . check -strict deck.json                         # 警告も exit 1 にする
 go run . check -template dark deck.json                  # IR の template の代わりに
 ```
 
-出力は `validate_ir.py` と同じ欄の JSON に、組み立てまで通したときの警告を
-足したもの。誤りは最初の1件で止めず全部集める。
+誤りと警告は `docs/content-syntax.md` の5章の形(`file`・`line`・`column`・`path`・
+`code`・`message`・`expected`・`hint`)で出す。誤りは最初の1件で止めず全部集める。
+
+- IR(JSON)を検査したときは `line`・`column` を出さない。
+- Markdown を検査したときは、記法の誤りならパーサーの誤り(`line`・`column` つき)を
+  そのまま返す。記法が通れば、できた IR を同じように検査し、誤りと警告には IR の
+  場所(`path`)を作った Markdown の行を `line` に添える(`column` は無い)。
 
 ```json
 {"ok": false,
- "errors":   [{"file": "deck.json", "at": "/slides/2/body/0/data/annotations/0/target",
-               "message": "no group or row has id \"gen9\"", "rule": "target-exists"}],
- "warnings": [{"file": "deck.json", "at": "/slides/1",
-               "message": "underfilled: 50.8% (< 65%)", "rule": "fill-ratio"}]}
+ "errors":   [{"file": "deck.bx.md", "line": 23,
+               "path": "/slides/0/body/0/data/milestones/0/at", "code": "within-span",
+               "message": "2036-05 is outside the chart span 2026-09 .. 2034-11"}],
+ "warnings": [{"file": "deck.json", "path": "/slides/1", "code": "fill-ratio",
+               "message": "underfilled: 50.8% (< 65%)"}]}
 ```
 
-| rule | 見ること |
+| code | 見ること |
 |---|---|
 | `unique-id` | id は文書全体で一意(スライドやチャートをまたいでも重ならない) |
 | `target-exists` | 注釈の `target` が、同じチャートのグループか行の id を指す(別のチャートの id なら、その場所を添えて断る) |
@@ -175,11 +187,11 @@ go run . check -template dark deck.json                  # IR の template の�
 | `within-span` | Gantt の区間・リスク・注記・目盛り・節目・注釈・軸を切る日付が、`span` の中にある(外の日付は軸の端に押し込まれて、誤った絵になるため) |
 | `template-exists` | `template` の名前のテンプレートがある |
 | `variant-exists` | `variant` の名前が、そのテンプレートにある(デモのテンプレートは変種を1つも持たない) |
-| `ir-read` / `build` | Go の IR の読み込み・組み立てが断ったもの(知らないキー・知らない状態など。形の誤り) |
+| `schema` / `build` | Go の IR の読み込み・組み立てが断ったもの(知らないキー・知らない状態など。形の誤り。`schema` は Markdown のパーサー・`validate_ir.py` と同じ code) |
 
 警告(誤りではない。`-strict` のときだけ exit 1):
 
-| rule | 見ること |
+| code | 見ること |
 |---|---|
 | `fill-ratio` | 本文の箱のうち 65% より少なくしか使っていない(テンプレートの方針) |
 | `subsystem-min` | サブシステムに割り当てた大きさが、自己申告の最小を下回った |
@@ -188,11 +200,11 @@ go run . check -template dark deck.json                  # IR の template の�
 
 組み立ての警告は、意味の誤りが1件も無いときだけ出す(壊れた IR を組むと、
 的外れな警告が混ざるため)。新しい種類の警告(`[XXX WARNING]` の形)は、
-そのまま rule `xxx` になる。
+そのまま code `xxx` になる。
 
 例:`examples/ir/check-invalid/` は Schema では通り check で断られるもの
 (`validate_ir.py --self-test` は Schema で通ることを、`boxloom/check_test.go` は
-決まった rule で断られることを確かめる)。`examples/ir/invalid/` は Schema でも
+決まった code で断られることを確かめる)。`examples/ir/invalid/` は Schema でも
 check でも断られるもの。
 
 ## まだ決めていないこと
