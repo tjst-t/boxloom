@@ -1011,6 +1011,27 @@
       "updatedAt": "2026-11-11T04:51:30.633Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "item-1",
+      "number": 42,
+      "kind": "bug",
+      "title": "数字で始まる箇条の頭に余分な空白が入って見える",
+      "status": "backlog",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "SKILL.md の試験で見つかった。compare の中や論点の箇条で「2028…」のように数字で始まる項目の頭に余分な空白が見える(showcase の論点スライドの「• 2027年…」でも同じ)。和欧の間の空白の扱いか、箇条の記号との間の扱いかを調べる。",
+      "doneWhen": "数字始まりと和文始まりの箇条で、記号と文の間が同じになることを XML と LibreOffice の絵で確かめる",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T04:51:30.725Z",
+      "updatedAt": "2026-11-11T04:51:30.725Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
