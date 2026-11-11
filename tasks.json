@@ -176,7 +176,7 @@
       "number": 7,
       "kind": "task",
       "title": "パターンの語彙の文書を書く:内容の型の一覧と、ブロックかサブシステムかの線引き",
-      "status": "in-progress",
+      "status": "done",
       "parent": "agent-entry",
       "dependsOn": [],
       "milestone": null,
@@ -184,7 +184,7 @@
       "labels": [],
       "body": "Zelazny の内容の型(比較・推移・構成比・順位・相関・因果)と Minto のピラミッドを下敷きに、Boxloom が持つ型を決める。各型について:層(第1層のパターン/第3層の図)・いまあるか・IR の名前の案・優先度。表・画像をブロックにするかサブシステムにするかもここで決める(content-syntax.md 7章の未決を閉じる)。",
       "doneWhen": "docs/patterns.md に型の一覧と線引きがあり、content-syntax.md の7章の表・画像の未決が閉じている",
-      "resolution": null,
+      "resolution": "docs/patterns.md に語彙(スライドの型4・ブロック10・図8)と線引き(位置が意味を持つならサブシステム)を書いた。表と画像は第1層のブロック(table・image/gallery)に決め、content-syntax.md 7章の未決を閉じた。e1713c1。",
       "refs": [],
       "threads": [
         {
@@ -193,8 +193,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:00:29.883Z",
-      "updatedAt": "2026-11-11T02:59:19.930Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T03:02:37.582Z",
+      "closedAt": "2026-11-11T03:02:37.582Z",
       "extra": {}
     },
     {
