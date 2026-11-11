@@ -694,6 +694,27 @@
       "extra": {}
     },
     {
+      "id": "chart-powerpoint",
+      "number": 44,
+      "kind": "task",
+      "title": "chart を PowerPoint で開いて確かめる(見た目・データの編集で表が開くか)",
+      "status": "backlog",
+      "parent": "canvas-patterns",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "#38 で chart(PowerPoint の本物のグラフ+埋め込み xlsx)を入れた。LibreOffice と Google Slides では確かめたが、PowerPoint では未確認。\n\n確かめること:examples/md/charts.bx.md を `go run ./cmd/boxloom build` で light・dark の PPTX にし、PowerPoint で開く。7枚のグラフ(横棒・縦棒・折れ線・積み上げ・円・ヒストグラム・散布図)が崩れないか、強調の色・単位つきの書式・軸の題、「データの編集」で埋め込みの表が開き値を書き換えられるか。\n\nあわせて:Google Slides で円の一番小さい扇のラベルから項目の名前が落ちた(docs/subsystem.md の12節)。手当てが要るか(例:ラベルの位置を bestFit にする・凡例を出す)を決める。",
+      "doneWhen": "PowerPoint で開いた結果(崩れの有無・データの編集の可否)が docs/subsystem.md の12節の表にあり、円の小さい扇のラベルの扱いが決まっている",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T05:28:27.852Z",
+      "updatedAt": "2026-11-11T05:28:27.852Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "tokens-template",
       "number": 5,
       "kind": "story",
