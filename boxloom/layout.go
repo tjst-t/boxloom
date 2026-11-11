@@ -87,6 +87,9 @@ type Spec struct {
 	// nestedSlack は、この箱が列の中で足りないとき、中のサブシステムの縮められる
 	// 分を Phase3a で先に返すか(並列のまとまりで、画像を文字より先に縮めるため)。
 	nestedSlack bool
+	// keepLine は、1行に収めたい文字の葉(Keep の塊だけの葉)の名前(警告の文に
+	// 使う。例 "stat: items[1]")。幅に入りきらなければ stat-value の警告(keepline.go)。
+	keepLine string
 
 	Box LBox // compute_layout()実行後に確定する
 }

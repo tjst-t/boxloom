@@ -458,15 +458,20 @@ func (t *Template) takeaway(in Inline) *Spec {
 func (t *Template) stat(items []IRStatItem) *Spec {
 	v, th := t.Values, t.Theme
 	var cards []*Spec
-	for _, it := range items {
+	for i, it := range items {
 		// 数と単位は1つの文字の葉の2つの塊にする(下の線はアプリがそろえる)。
 		// 葉の大きさは大きいほう(数)で、単位の塊だけ小さくする。
-		num := []TextRun{{Text: it.Value, Color: th.c("accent"), Bold: true}}
+		// 数と単位はそれぞれ途中で折らない(Keep)。1行に入らなければ単位を次の
+		// 行へ送り、数そのものが入らなければ1行のままはみ出す。どちらも警告
+		// stat-value で知らせる(keepline.go)。
+		num := []TextRun{{Text: it.Value, Color: th.c("accent"), Bold: true, Keep: true}}
 		if it.Unit != "" {
-			num = append(num, TextRun{Text: t.Marks.Unit + it.Unit, Color: th.c("text_primary"), Bold: true, Size: v.StatUnit})
+			num = append(num, TextRun{Text: t.Marks.Unit + it.Unit, Color: th.c("text_primary"), Bold: true, Size: v.StatUnit, Keep: true})
 		}
+		value := RichTextNode(num, WithFontSize(v.StatValue))
+		value.keepLine = fmt.Sprintf("stat: items[%d]", i)
 		cards = append(cards, Col([]*Spec{
-			RichTextNode(num, WithFontSize(v.StatValue)),
+			value,
 			t.text(it.Label, v.StatLabel, th.c("text_muted"), false),
 		}, WithGap(v.ItemGap), WithPadding(v.CardPadding), WithBackground(th.c("card")), WithRadius(v.CardRadius),
 			WithGrow(1), WithBasis(0)))
@@ -589,6 +594,7 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 			// 横の余りは並べたままの Box で測る(measureBody が Box を並べ直す前に)。
 			spare := bodySpareWidths(b.Body)
 			warnings = append(warnings, spareWidthWarnings(b.Body, spare, kinds)...)
+			warnings = append(warnings, keepLineWarnings(b.Body)...)
 			// 警告と容量は同じ測り値から作る(数字が食い違わないように)。
 			if blocks, area, need, ok := measureBody(b.Root, b.Body); ok {
 				warnings = append(warnings, overflowWarnings(blocks, area, need, kinds)...)

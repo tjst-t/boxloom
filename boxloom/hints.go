@@ -22,11 +22,14 @@ const (
 		"空きを埋めるために字や図を大きくしたり、同じことを言い換えて足したりはしないでください"
 	spareWidthHint = "図・画像は縦横比(または横の上限)を保つので、横が空きます。columns に入れて図の横に" +
 		"説明の文を置くか、図を縦に大きく見せられるよう同じスライドの文を減らしてください"
+	statValueHint = "数と単位はそれぞれ途中で折らないので、カードの幅に入らないと単位が次の行に落ちるか、数がカードからはみ出します。" +
+		"値を短くする(桁を丸める・大きな単位にする)・" +
+		"単位や補足は label に移す・同じ stat の数を減らしてカードを広くする、のどれかで直してください。字は小さくしません"
 )
 
 var fillUnderRe = regexp.MustCompile(`^underfilled: ([0-9.]+)%`)
 
-// addLayoutHints は警告の fill-ratio・spare-width に hint を足す。caps は同じ
+// addLayoutHints は警告の fill-ratio・spare-width・stat-value に hint を足す。caps は同じ
 // 組み立ての容量(path が /slides/S)。
 func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 	capOf := map[string]SlideCapacity{}
@@ -50,6 +53,10 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 	for i := range warns {
 		w := &warns[i]
 		switch w.Code {
+		case "stat-value":
+			if w.Hint == "" {
+				w.Hint = statValueHint
+			}
 		case "spare-width":
 			if w.Hint == "" {
 				w.Hint = spareWidthHint

@@ -748,6 +748,7 @@ var warnColumnRe = regexp.MustCompile(`^columns\[([0-9]+)\]: body\[([0-9]+)\]: (
 var warnShapeItemRe = regexp.MustCompile(`^shapes: items\[([0-9]+)\]`)
 
 var warnGanttMilestoneRe = regexp.MustCompile(`^gantt: milestones\[([0-9]+)\]`)
+var warnStatItemRe = regexp.MustCompile(`^stat: items\[([0-9]+)\]`)
 
 var warnGanttSegRe = regexp.MustCompile(`^gantt: groups\[([0-9]+)\]\.rows\[([0-9]+)\]\.segments\[([0-9]+)\]`)
 
@@ -833,6 +834,10 @@ func warningIssue(file, w string) Issue {
 		// shapes の警告は、最初に名指しした図形まで指す。
 		if im := warnShapeItemRe.FindStringSubmatch(msg); im != nil {
 			path += "/data/items/" + im[1]
+		}
+		// stat の数と単位の警告は、その数まで指す。
+		if sm := warnStatItemRe.FindStringSubmatch(msg); sm != nil {
+			path += "/items/" + sm[1]
 		}
 		// Gantt の区間の文の警告は、その区間まで指す。
 		if mm := warnGanttMilestoneRe.FindStringSubmatch(msg); mm != nil {

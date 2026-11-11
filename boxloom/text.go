@@ -145,6 +145,11 @@ type TextRun struct {
 	// 位置から始める(描く側が和文と欧文の間に足す空き(LibreOffice の
 	// 「アジア言語と欧文の間隔」)が、印と数字・英字の間に入らないように)。
 	Mark bool
+	// Keep は塊の中で折り返さない(塊と塊の境目では折れる)。stat の数・単位の
+	// ように、途中で折れると読み違える文字に使う。1つの塊が幅に入りきらなければ
+	// 1行のまま幅からはみ出すので、使う側が幅を測って警告する(stat なら
+	// stat-value、keepline.go)。
+	Keep bool
 }
 
 // runSize は塊の字の大きさ(0 なら葉の大きさ)。
@@ -200,7 +205,7 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 		}
 		pos := start
 		lineStart, curW, curLen := start, 0.0, 0
-		for _, tok := range tokenizeLine(string(rs[start:paraEnd])) {
+		for _, tok := range keepTokens(rs[start:paraEnd], style[start:paraEnd], runs) {
 			n := len([]rune(tok))
 			tokW := 0.0
 			for k := pos; k < pos+n; k++ {
@@ -228,9 +233,32 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 				line[len(line)-1].Text += string(rs[k])
 				continue
 			}
-			line = append(line, TextRun{Text: string(rs[k]), Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark})
+			line = append(line, TextRun{Text: string(rs[k]), Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep})
 		}
 		out = append(out, line)
+	}
+	return out
+}
+
+// keepTokens は tokenizeLine と同じ区切りで、ただし Keep の塊は塊ごとに1つの
+// 区切りにする(塊の中では折らない。隣り合う Keep の塊の境目では折れる)。
+func keepTokens(rs []rune, style []int, runs []TextRun) []string {
+	var out []string
+	for i := 0; i < len(rs); {
+		j := i
+		if runs[style[i]].Keep {
+			for j < len(rs) && style[j] == style[i] {
+				j++
+			}
+			out = append(out, string(rs[i:j]))
+			i = j
+			continue
+		}
+		for j < len(rs) && !runs[style[j]].Keep {
+			j++
+		}
+		out = append(out, tokenizeLine(string(rs[i:j]))...)
+		i = j
 	}
 	return out
 }
