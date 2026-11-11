@@ -775,7 +775,7 @@
       "number": 31,
       "kind": "task",
       "title": "外のテンプレートの値の表(JSON)を -template にパスで渡せるようにする",
-      "status": "ready",
+      "status": "done",
       "parent": "tokens-template",
       "dependsOn": [
         "value-scales"
@@ -785,12 +785,12 @@
       "labels": [],
       "body": "いまは同梱の dark/light だけ。自分たちの色と字体で使いたい利用者のために、値の表のファイルを外から読む。検査は同梱のものと同じ厳しさ。",
       "doneWhen": "-template ./my.json で作れ、誤ったファイルは5章の形の誤りになり、schema の出力もそのテンプレートで絞れる",
-      "resolution": null,
+      "resolution": "-template ./my.json を build・check・schema・fonts で受ける。検査は同梱と同じで、誤りは5章の形(code template-values、path・line つき)。ライブラリは ParseTemplate・BuildOptions/CheckOptions.Values・SchemaTemplate。例 examples/templates/forest.json。commit 75a5122。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:02:59.028Z",
-      "updatedAt": "2026-11-11T02:02:59.028Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T04:54:08.828Z",
+      "closedAt": "2026-11-11T04:54:08.828Z",
       "extra": {}
     },
     {
