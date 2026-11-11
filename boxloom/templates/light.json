@@ -49,9 +49,9 @@
   "fonts": {
     "latin": "Noto Sans CJK JP",
     "eastAsian": "Noto Sans CJK JP",
-    "fallbackFonts": [],
+    "fallbackFonts": ["BIZ UDPGothic", "BIZ UDGothic", "IPAexGothic", "Liberation Sans", "DejaVu Sans"],
     "widthMargin": 1.05,
-    "fixedLineSpacing": false
+    "fixedLineSpacing": true
   },
   "variants": []
 }

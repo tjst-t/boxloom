@@ -43,7 +43,7 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
   "values": { "pageWidth": 960, "pageHeight": 540, "...": 0 },
   "marks":  { "point": "・", "subPoint": "– ", "pro": "＋ ", "con": "－ " },
   "fonts":  { "latin": "Noto Sans CJK JP", "eastAsian": "Noto Sans CJK JP",
-              "fallbackFonts": [], "widthMargin": 1.05, "fixedLineSpacing": false },
+              "fallbackFonts": ["BIZ UDPGothic", "…"], "widthMargin": 1.05, "fixedLineSpacing": true },
   "variants": [],
   "subsystems": { "gantt": { "...": "subsystems/gantt.json と同じ形" } }
 }

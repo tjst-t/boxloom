@@ -118,8 +118,9 @@ func TestPPTXFontsAndFixedLineSpacing(t *testing.T) {
 	if !strings.Contains(theme, `<a:latin typeface="Noto Sans CJK JP"/><a:ea typeface="Noto Sans CJK JP"/><a:cs typeface=""/>`) {
 		t.Errorf("theme fonts: %s", theme[strings.Index(theme, "<a:fontScheme"):strings.Index(theme, "</a:fontScheme>")])
 	}
-	if strings.Contains(read(plain, "ppt/slides/slide2.xml"), "<a:lnSpc>") {
-		t.Error("line spacing must not be fixed by default")
+	// dark・light の既定は行の送りを固定する(Backlog #36)。
+	if !strings.Contains(read(plain, "ppt/slides/slide2.xml"), `<a:lnSpc><a:spcPts val="1890"/></a:lnSpc>`) {
+		t.Error("default templates must fix line spacing")
 	}
 
 	t2 := *tm
@@ -147,7 +148,16 @@ func TestFontCheckFallbacksRemoveOverflow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tm, _ := LookupTemplate("light")
+	def, _ := LookupTemplate("light")
+	if len(def.Fonts.Fallbacks) != 5 || !def.Fonts.FixedLineSpacing {
+		t.Fatalf("light defaults: fallbacks=%d fixed=%v", len(def.Fonts.Fallbacks), def.Fonts.FixedLineSpacing)
+	}
+	// 置き換わり得る字体を持たない設定(以前の既定)から比べる。
+	tm := new(Template)
+	*tm = *def
+	nofb := *def.Fonts
+	nofb.Fallbacks = nil
+	tm.Fonts = &nofb
 	biz, _ := LookupFont("BIZ UDPGothic")
 	alt := &FontSet{Latin: biz, EastAsian: biz, WidthMargin: 1}
 

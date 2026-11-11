@@ -137,7 +137,7 @@ check-warnings/layout-overflow(文字の図形 136、行 154)。
 得る字体で文字ごとに測れば、広がるのは欧文と空白だけで、例の行の数も警告も
 変わらなかった。
 
-## 5. 推奨する値(既定にするかは人が決める)
+## 5. 推奨する値(dark・light の既定)
 
 ```json
 "fonts": {
@@ -163,9 +163,9 @@ check-warnings/layout-overflow(文字の図形 136、行 154)。
 - `verification-screenshots/fonts_compare_gantt-full.png`:注釈の箱が少し広がり、
   右上の注釈の置き場所が右へ移る(文字が箱の縁に触れなくなる)。
 
-変わる画素は1枚あたり 1〜4.5%。既定を推奨の値にすると、dark・light で作る
-PPTX はすべて変わる(従来の Go のデモ `go run .` は字体の既定の一式を使うので
-変わらない)。
+変わる画素は1枚あたり 1〜4.5%。**dark・light の既定はこの推奨の値にした**
+(人が決めた。Backlog #36)。そのため dark・light で作る PPTX は、それ以前とは
+変わっている。従来の Go のデモ `go run .` は字体の既定の一式を使うので変わらない。
 
 ## 6. 確かめていないこと
 
