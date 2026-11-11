@@ -393,7 +393,11 @@
             "points",
             "compare",
             "note",
-            "subsystem"
+            "subsystem",
+            "columns",
+            "table",
+            "image",
+            "gallery"
           ]
         }
       },
@@ -459,6 +463,66 @@
           },
           "then": {
             "$ref": "#/$defs/note"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "columns"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/columns"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "table"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/table"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "image"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/image"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "gallery"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/gallery"
           }
         },
         {
@@ -651,6 +715,285 @@
         "type",
         "subsystem",
         "data"
+      ],
+      "additionalProperties": false
+    },
+    "columns": {
+      "description": "並列のまとまり(2〜3個)。段組みの指定ではなく「並べて読ませる」という意味。幅の比は数で書かず、主のまとまりに role: main を付ける(テンプレートがそれを広く取る)。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "columns"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "columns": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/column"
+          },
+          "contains": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "const": "main"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "minContains": 0,
+          "maxContains": 1
+        }
+      },
+      "required": [
+        "type",
+        "columns"
+      ],
+      "additionalProperties": false
+    },
+    "column": {
+      "description": "並列のまとまりの1つ。title はまとまりの題(意味の一部)。role: main はこのまとまりが主で、ほかはそれを補うという意味(1つの columns に1つまで)。",
+      "type": "object",
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "role": {
+          "enum": [
+            "main"
+          ]
+        },
+        "body": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/columnBlock"
+          }
+        }
+      },
+      "required": [
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "columnBlock": {
+      "description": "まとまりの中に置けるブロック。columns・compare・gallery・サブシステムは置けない。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "paragraph",
+            "points",
+            "note",
+            "table",
+            "image"
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "paragraph"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/paragraph"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "points"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/points"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "note"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/note"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "table"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/table"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "image"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/image"
+          }
+        }
+      ]
+    },
+    "table": {
+      "description": "表。行×列の文字・数。1行目は見出しの行(header)。列の配置・幅は書かない(テンプレートが中身から決める)。セルはインラインだけ。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "table"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "caption": {
+          "$ref": "#/$defs/inline"
+        },
+        "header": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/inline"
+          }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/inline"
+            }
+          }
+        }
+      },
+      "required": [
+        "type",
+        "header",
+        "rows"
+      ],
+      "additionalProperties": false
+    },
+    "imageSrc": {
+      "description": "画像のファイル。文書のファイルからの相対パスで、区切りは /。絶対パス・URL・文書のフォルダの外(..)は書けない。PNG か JPEG(形式は中身で見る。boxloom check)。",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z][A-Za-z0-9+.-]*:)(?!/)(?!(.*/)?\\.\\.(/|$))[^\\\\]+$"
+    },
+    "imageAlt": {
+      "description": "代わりの文(読み上げと、画像が無いときのため)。必須で、空白だけは不可。",
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "image": {
+      "description": "画像1枚。縦横比を保って枠に収める(切り抜かない・引き伸ばさない)。置き方はテンプレート。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "image"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "src": {
+          "$ref": "#/$defs/imageSrc"
+        },
+        "alt": {
+          "$ref": "#/$defs/imageAlt"
+        },
+        "caption": {
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "type",
+        "src",
+        "alt"
+      ],
+      "additionalProperties": false
+    },
+    "galleryImage": {
+      "type": "object",
+      "properties": {
+        "src": {
+          "$ref": "#/$defs/imageSrc"
+        },
+        "alt": {
+          "$ref": "#/$defs/imageAlt"
+        },
+        "caption": {
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "src",
+        "alt"
+      ],
+      "additionalProperties": false
+    },
+    "gallery": {
+      "description": "画像の並び(2〜6枚)。並べ方(1段か2段か)はテンプレートが枚数から決める。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "gallery"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "images": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/galleryImage"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "images"
       ],
       "additionalProperties": false
     }

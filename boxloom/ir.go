@@ -54,6 +54,30 @@ type IRBlock struct {
 
 	Subsystem string          // subsystem: 名前(例 "gantt")
 	Data      json.RawMessage // subsystem: 中身(サブシステムが読む)
+
+	Columns []IRColumn // columns: 並列のまとまり(2〜3個)
+
+	Header  []Inline   // table: 見出しの行
+	Rows    [][]Inline // table: 本体の行(どの行もセルの数は見出しと同じ)
+	Caption Inline     // table・image: 説明の文(任意)
+
+	Src    string    // image: 文書からの相対パス
+	Alt    string    // image: 代わりの文
+	Images []IRImage // gallery: 2〜6枚
+}
+
+// IRColumn は並列のまとまりの1つ。Role は "" か "main"(主のまとまり)。
+type IRColumn struct {
+	Title Inline    `json:"title,omitempty"`
+	Role  string    `json:"role,omitempty"`
+	Body  []IRBlock `json:"-"`
+}
+
+// IRImage は画像1枚(gallery の1枚)。
+type IRImage struct {
+	Src     string `json:"src"`
+	Alt     string `json:"alt"`
+	Caption Inline `json:"caption,omitempty"`
 }
 
 type IRPointItem struct {
@@ -368,8 +392,134 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("subsystem block needs \"subsystem\" and \"data\"")
 		}
 		*k = IRBlock{Type: v.Type, Variant: v.Variant, Subsystem: v.Subsystem, Data: v.Data}
+	case "columns":
+		var v struct {
+			Type    string            `json:"type"`
+			Variant string            `json:"variant"`
+			Columns []json.RawMessage `json:"columns"`
+		}
+		if err := strictUnmarshal(b, &v); err != nil {
+			return err
+		}
+		if len(v.Columns) < 2 || len(v.Columns) > 3 {
+			return fmt.Errorf("columns needs two or three columns (got %d)", len(v.Columns))
+		}
+		out := IRBlock{Type: v.Type, Variant: v.Variant}
+		mains := 0
+		for i, r := range v.Columns {
+			var c IRColumn
+			if err := c.UnmarshalJSON(r); err != nil {
+				return fmt.Errorf("columns[%d]: %w", i, err)
+			}
+			if c.Role == "main" {
+				mains++
+			}
+			out.Columns = append(out.Columns, c)
+		}
+		if mains > 1 {
+			return fmt.Errorf("columns: at most one column can have role \"main\" (got %d)", mains)
+		}
+		*k = out
+	case "table":
+		var v struct {
+			Type    string     `json:"type"`
+			Variant string     `json:"variant"`
+			Caption Inline     `json:"caption"`
+			Header  []Inline   `json:"header"`
+			Rows    [][]Inline `json:"rows"`
+		}
+		if err := strictUnmarshal(b, &v); err != nil {
+			return err
+		}
+		if len(v.Header) == 0 || len(v.Rows) == 0 {
+			return fmt.Errorf("table needs \"header\" and at least one row in \"rows\"")
+		}
+		for i, r := range v.Rows {
+			if len(r) != len(v.Header) {
+				return fmt.Errorf("rows[%d]: row has %d cells but the header has %d", i, len(r), len(v.Header))
+			}
+		}
+		*k = IRBlock{Type: v.Type, Variant: v.Variant, Caption: v.Caption, Header: v.Header, Rows: v.Rows}
+	case "image":
+		var v struct {
+			Type    string `json:"type"`
+			Variant string `json:"variant"`
+			IRImage
+		}
+		if err := strictUnmarshal(b, &v); err != nil {
+			return err
+		}
+		if err := v.IRImage.validate(); err != nil {
+			return err
+		}
+		*k = IRBlock{Type: v.Type, Variant: v.Variant, Src: v.Src, Alt: v.Alt, Caption: v.Caption}
+	case "gallery":
+		var v struct {
+			Type    string    `json:"type"`
+			Variant string    `json:"variant"`
+			Images  []IRImage `json:"images"`
+		}
+		if err := strictUnmarshal(b, &v); err != nil {
+			return err
+		}
+		if len(v.Images) < 2 || len(v.Images) > 6 {
+			return fmt.Errorf("gallery needs two to six images (got %d)", len(v.Images))
+		}
+		for i := range v.Images {
+			if err := v.Images[i].validate(); err != nil {
+				return fmt.Errorf("images[%d]: %w", i, err)
+			}
+		}
+		*k = IRBlock{Type: v.Type, Variant: v.Variant, Images: v.Images}
 	default:
-		return fmt.Errorf("unknown block type %q (known: paragraph, points, compare, note, subsystem)", head.Type)
+		return fmt.Errorf("unknown block type %q (known: paragraph, points, compare, note, columns, table, image, gallery, subsystem)", head.Type)
+	}
+	return nil
+}
+
+// columnBlockTypes はまとまり(column)の中に置けるブロックの種類。
+var columnBlockTypes = []string{"paragraph", "points", "note", "table", "image"}
+
+func (c *IRColumn) UnmarshalJSON(b []byte) error {
+	var v struct {
+		Title Inline            `json:"title"`
+		Role  string            `json:"role"`
+		Body  []json.RawMessage `json:"body"`
+	}
+	if err := strictUnmarshal(b, &v); err != nil {
+		return err
+	}
+	if v.Role != "" && v.Role != "main" {
+		return fmt.Errorf("role: unknown role %q (known: main)", v.Role)
+	}
+	if len(v.Body) == 0 {
+		return fmt.Errorf("column needs at least one block in \"body\"")
+	}
+	out := IRColumn{Title: v.Title, Role: v.Role}
+	for i, r := range v.Body {
+		var blk IRBlock
+		if err := blk.UnmarshalJSON(r); err != nil {
+			return fmt.Errorf("body[%d]: %w", i, err)
+		}
+		if !contains(columnBlockTypes, blk.Type) {
+			return fmt.Errorf("body[%d]: a column cannot hold a %s block (allowed: %s)", i, blk.Type, strings.Join(columnBlockTypes, ", "))
+		}
+		out.Body = append(out.Body, blk)
+	}
+	*c = out
+	return nil
+}
+
+// validate は画像の欄の形を見る(ファイルがあるか・形式は check と組み立てが見る)。
+func (m IRImage) validate() error {
+	if m.Src == "" {
+		return fmt.Errorf("image needs \"src\"")
+	}
+	if strings.TrimSpace(m.Alt) == "" {
+		return fmt.Errorf("image needs a non-empty \"alt\" (the text read aloud and shown when the image is missing)")
+	}
+	if err := checkImageSrc(m.Src); err != nil {
+		return fmt.Errorf("src: %w", err)
 	}
 	return nil
 }
