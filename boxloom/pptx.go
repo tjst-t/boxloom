@@ -93,8 +93,17 @@ type PPTXBuilder struct {
 	Notes             string
 	// Fonts は書き出す字体(テーマの a:latin・a:ea)と行の送りの決め方。
 	// 作ったときの activeFonts(測った字体)を写す。
-	Fonts  *FontSet
-	nextID int
+	Fonts *FontSet
+	// ColorTheme はテーマの配色(theme1.xml の a:clrScheme)とマスターの clrMap を
+	// 作る元(テンプレートの名前と値の表の色)。nil なら固定の既定の配色。
+	ColorTheme *DeckColors
+	nextID     int
+}
+
+// DeckColors は PPTX のテーマに写すテンプレートの名前と色(役割名 → 16進)。
+type DeckColors struct {
+	Name   string
+	Colors map[string]string
 }
 
 func NewPPTXBuilder(widthPt, heightPt float64) *PPTXBuilder {
@@ -738,32 +747,23 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	fontRefs := fmt.Sprintf(`<a:latin typeface="%s"/><a:ea typeface="%s"/><a:cs typeface=""/>`,
 		escapeXML(fonts.Latin.Family), escapeXML(fonts.EastAsian.Family))
 
+	scheme := themeScheme(nil)
+	if len(slides) > 0 {
+		scheme = themeScheme(slides[0].ColorTheme)
+	}
 	theme := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="boxloom">
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="` + escapeXML(scheme.name) + `">
 <a:themeElements>
-<a:clrScheme name="boxloom">
-<a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
-<a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
-<a:dk2><a:srgbClr val="0033CC"/></a:dk2>
-<a:lt2><a:srgbClr val="EEECE1"/></a:lt2>
-<a:accent1><a:srgbClr val="0033CC"/></a:accent1>
-<a:accent2><a:srgbClr val="4472C4"/></a:accent2>
-<a:accent3><a:srgbClr val="70AD47"/></a:accent3>
-<a:accent4><a:srgbClr val="FFC000"/></a:accent4>
-<a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
-<a:accent6><a:srgbClr val="A5A5A5"/></a:accent6>
-<a:hlink><a:srgbClr val="0563C1"/></a:hlink>
-<a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
-</a:clrScheme>
-<a:fontScheme name="boxloom">
+` + scheme.clrSchemeXML() + `
+<a:fontScheme name="` + escapeXML(scheme.name) + `">
 <a:majorFont>` + fontRefs + `</a:majorFont>
 <a:minorFont>` + fontRefs + `</a:minorFont>
 </a:fontScheme>
-<a:fmtScheme name="boxloom">
+<a:fmtScheme name="` + escapeXML(scheme.name) + `">
 <a:fillStyleLst><a:solidFill><a:schemeClr val="accent1"/></a:solidFill><a:solidFill><a:schemeClr val="accent1"/></a:solidFill><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></a:fillStyleLst>
 <a:lnStyleLst><a:ln w="12700"><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></a:ln><a:ln w="12700"><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></a:ln><a:ln w="12700"><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></a:ln></a:lnStyleLst>
 <a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst>
-<a:bgFillStyleLst><a:solidFill><a:schemeClr val="lt1"/></a:solidFill><a:solidFill><a:schemeClr val="lt1"/></a:solidFill><a:solidFill><a:schemeClr val="lt1"/></a:solidFill></a:bgFillStyleLst>
+<a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst>
 </a:fmtScheme>
 </a:themeElements>
 </a:theme>`
@@ -776,10 +776,10 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	subBox := LBox{X: 48, Y: H*0.3 + 80, Width: W - 96, Height: 30}
 	master := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-<p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>
+<p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="` + scheme.bg + `"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>
 <p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>` + phSpXML(2, "Title Placeholder 1", `type="title"`, titleBox, 24, "l") + `</p:spTree>
 </p:cSld>
-<p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+` + scheme.masterClrMap() + `
 <p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/><p:sldLayoutId id="2147483650" r:id="rId2"/><p:sldLayoutId id="2147483651" r:id="rId3"/></p:sldLayoutIdLst>
 </p:sldMaster>`
 
@@ -966,4 +966,109 @@ func notesMasterPlaceholders(slideW, slideH float64) string {
 		`<p:sp><p:nvSpPr><p:cNvPr id="3" name="Notes Placeholder"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="body" sz="quarter" idx="1"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="ja-JP"/></a:p></p:txBody></p:sp>`,
 		ptToEMU(x), ptToEMU(y), ptToEMU(imgW), ptToEMU(imgH),
 		ptToEMU(x), ptToEMU(bodyY), ptToEMU(imgW), ptToEMU(bodyH))
+}
+
+// deckScheme は PPTX のテーマの配色とマスターの clrMap(docs/template-values.md の
+// 「PPTX のテーマへの写し方」)。
+type deckScheme struct {
+	name     string
+	dark     bool // 地が暗い(マスターの clrMap で bg1 を dk1 に向ける)
+	bg       string
+	slots    [12][2]string // a:clrScheme の子の名前と色(16進)
+	fallback bool          // 固定の既定(ColorTheme が nil)
+}
+
+// themeScheme は値の表の色からテーマの配色を作る。地(bg)と文字(text_primary)の
+// うち暗いほうを dk1、明るいほうを lt1 に、地の側の2つ目(card_alt)と文字の側の
+// 2つ目(text_muted)を dk2/lt2 に置く。地が暗いテーマはマスターの clrMap で
+// bg1=dk1・tx1=lt1 に向ける(PowerPoint で足した文字が地の上で読める)。
+func themeScheme(c *DeckColors) deckScheme {
+	if c == nil || len(c.Colors) == 0 {
+		return deckScheme{name: "boxloom", bg: "FFFFFF", fallback: true}
+	}
+	col := func(role, def string) string {
+		if v, ok := c.Colors[role]; ok && v != "" {
+			return hexColor(v)
+		}
+		return def
+	}
+	bg := col("bg", "FFFFFF")
+	text := col("text_primary", "000000")
+	muted := col("text_muted", text)
+	cardAlt := col("card_alt", bg)
+	dark := relLuminance(bg) < relLuminance(text)
+	s := deckScheme{name: c.Name, dark: dark, bg: bg}
+	if s.name == "" {
+		s.name = "boxloom"
+	}
+	dk1, lt1, dk2, lt2 := text, bg, muted, cardAlt
+	if dark {
+		dk1, lt1, dk2, lt2 = bg, text, cardAlt, muted
+	}
+	accent := col("accent", "0033CC")
+	s.slots = [12][2]string{
+		{"dk1", dk1}, {"lt1", lt1}, {"dk2", dk2}, {"lt2", lt2},
+		{"accent1", accent},
+		{"accent2", col("conditional", accent)},
+		{"accent3", col("support", accent)},
+		{"accent4", col("danger", accent)},
+		{"accent5", col("none", muted)},
+		{"accent6", muted},
+		{"hlink", accent},
+		{"folHlink", muted},
+	}
+	return s
+}
+
+func (s deckScheme) clrSchemeXML() string {
+	if s.fallback {
+		return `<a:clrScheme name="boxloom">
+<a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
+<a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
+<a:dk2><a:srgbClr val="0033CC"/></a:dk2>
+<a:lt2><a:srgbClr val="EEECE1"/></a:lt2>
+<a:accent1><a:srgbClr val="0033CC"/></a:accent1>
+<a:accent2><a:srgbClr val="4472C4"/></a:accent2>
+<a:accent3><a:srgbClr val="70AD47"/></a:accent3>
+<a:accent4><a:srgbClr val="FFC000"/></a:accent4>
+<a:accent5><a:srgbClr val="5B9BD5"/></a:accent5>
+<a:accent6><a:srgbClr val="A5A5A5"/></a:accent6>
+<a:hlink><a:srgbClr val="0563C1"/></a:hlink>
+<a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
+</a:clrScheme>`
+	}
+	var b strings.Builder
+	b.WriteString(`<a:clrScheme name="` + escapeXML(s.name) + `">`)
+	for _, sl := range s.slots {
+		b.WriteString(fmt.Sprintf("\n<a:%s><a:srgbClr val=\"%s\"/></a:%s>", sl[0], sl[1], sl[0]))
+	}
+	b.WriteString("\n</a:clrScheme>")
+	return b.String()
+}
+
+// masterClrMap はスライドマスターの clrMap。ノートのマスターは紙に刷る前提で
+// いつも明るい向き(bg1=lt1)のまま。
+func (s deckScheme) masterClrMap() string {
+	if s.dark {
+		return `<p:clrMap bg1="dk1" tx1="lt1" bg2="dk2" tx2="lt2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>`
+	}
+	return `<p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>`
+}
+
+// relLuminance は16進の色の相対輝度(WCAG の式)。
+func relLuminance(hex string) float64 {
+	hex = strings.TrimPrefix(hex, "#")
+	if len(hex) != 6 {
+		return 0
+	}
+	ch := func(i int) float64 {
+		var v int
+		fmt.Sscanf(hex[i:i+2], "%02x", &v)
+		c := float64(v) / 255
+		if c <= 0.03928 {
+			return c / 12.92
+		}
+		return math.Pow((c+0.055)/1.055, 2.4)
+	}
+	return 0.2126*ch(0) + 0.7152*ch(2) + 0.0722*ch(4)
 }

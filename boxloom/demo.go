@@ -163,6 +163,7 @@ func WriteDemo(w io.Writer, theme string) (*DemoResult, error) {
 	res.Warnings = lintSubsystems(spec)
 
 	p := NewPPTXBuilder(pageW, pageH)
+	p.ColorTheme = &DeckColors{Name: theme, Colors: th}
 	roles := newCheckedRoles(th)
 	renderSpec(RenderContext{Out: p, Roles: roles}, spec)
 	if missing := roles.Missing(); len(missing) > 0 {

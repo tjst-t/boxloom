@@ -485,6 +485,7 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 		warnings = append(warnings, lintBlockSubsystems(b)...)
 
 		p := NewPPTXBuilder(v.PageW, v.PageH)
+		p.ColorTheme = &DeckColors{Name: t.Name, Colors: t.Theme}
 		roles := newCheckedRoles(t.Theme)
 		renderSpec(RenderContext{Out: p, Roles: roles}, b.Root)
 		if missing := roles.Missing(); len(missing) > 0 {

@@ -140,6 +140,43 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 `bg` `card` `card_alt` `text_primary` `text_muted` `grid` `support`
 `conditional` `none` `danger` `risk` `accent` `on_conditional` の 13 個、ちょうど。
 
+#### PPTX のテーマへの写し方(Backlog #43)
+
+theme の色は、スライドの図形に直接入るほか、PPTX のテーマ(`ppt/theme/theme1.xml` の
+`a:clrScheme`)とスライドマスターにも写す。PowerPoint で人が新しく足した文字・図形・
+表が、テンプレートの色で描かれるようにするため。テーマ・配色・字体の組の名前
+(`a:theme`・`a:clrScheme`・`a:fontScheme`・`a:fmtScheme` の `name`)はテンプレートの
+名前(外の値の表ならファイル名から取った name)。
+
+| テーマの枠 | 地が明るいテーマ(light・forest) | 地が暗いテーマ(dark) |
+|---|---|---|
+| `dk1` | `text_primary` | `bg` |
+| `lt1` | `bg` | `text_primary` |
+| `dk2` | `text_muted` | `card_alt` |
+| `lt2` | `card_alt` | `text_muted` |
+| `accent1` | `accent` | 同じ |
+| `accent2` | `conditional` | 同じ |
+| `accent3` | `support` | 同じ |
+| `accent4` | `danger` | 同じ |
+| `accent5` | `none` | 同じ |
+| `accent6` | `text_muted` | 同じ |
+| `hlink` | `accent` | 同じ |
+| `folHlink` | `text_muted` | 同じ |
+
+- **明るいか暗いか**は `bg` と `text_primary` の相対輝度(WCAG の式)で決める。`bg` の
+  ほうが暗ければ暗いテーマ。テンプレートに印は持たせない(色から決まるので食い違わない)。
+- **dk/lt は「暗い色・明るい色」の枠**なので、暗いテーマでは地の色を `dk1` に置き、
+  スライドマスターの `p:clrMap` を `bg1="dk1" tx1="lt1" bg2="dk2" tx2="lt2"` に向ける
+  (PowerPoint の暗いテーマと同じ作り)。これで「背景 1」「テキスト 1」が地と文字の色に
+  なり、新しく足した文字が暗い地の上でも読める。明るいテーマは既定の向き
+  (`bg1="lt1" tx1="dk1"`)のまま。
+- **ノートのマスター**の `clrMap` はいつも明るい向き。ノートは白い紙に刷る前提のため。
+- スライドマスターの背景は `bg` の色。スライドの見た目は変わらない(各スライドが
+  自分の図形で描くため。LibreOffice の絵で、従来の PPTX と画素まで同じことを確かめた)。
+- `risk`・`grid`・`card`・`on_conditional` はテーマの枠に写さない(12枠に入らない。
+  スライドの図形には今までどおり入る)。
+- 試験は `boxloom/theme_colors_test.go`(light・dark・examples/templates/forest.json)。
+
 ### values(pt。断りの無いものは pt)
 
 | キー | 使うところ |
