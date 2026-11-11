@@ -533,7 +533,7 @@
       "number": 24,
       "kind": "task",
       "title": "サブシステム:横並びのプロセスフロー",
-      "status": "in-progress",
+      "status": "done",
       "parent": "canvas-patterns",
       "dependsOn": [
         "subsystem-fit"
@@ -543,7 +543,7 @@
       "labels": [],
       "body": "段階の列(題・短い説明・状態の役割名)を矢印で繋ぐ。段階が多いときの折り返しか警告。",
       "doneWhen": "schema/subsystems に Schema、Markdown の囲み、dark/light の描き方、試験、例があり、schema の出力に名乗っている",
-      "resolution": null,
+      "resolution": "process サブシステム(段階・補足・状態・強調、狭いときは行を揃えて折り返し、figure-text-overflow 警告)。main aacaef4。",
       "refs": [],
       "threads": [
         {
@@ -552,8 +552,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:58.942Z",
-      "updatedAt": "2026-11-11T04:46:30.683Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:07:41.898Z",
+      "closedAt": "2026-11-11T05:07:41.898Z",
       "extra": {}
     },
     {
