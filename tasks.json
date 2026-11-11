@@ -1017,7 +1017,7 @@
       "number": 42,
       "kind": "bug",
       "title": "数字で始まる箇条の頭に余分な空白が入って見える",
-      "status": "backlog",
+      "status": "ready",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -1029,7 +1029,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T04:51:30.725Z",
-      "updatedAt": "2026-11-11T04:51:30.725Z",
+      "updatedAt": "2026-11-11T05:16:30.030Z",
       "closedAt": null,
       "extra": {}
     },
