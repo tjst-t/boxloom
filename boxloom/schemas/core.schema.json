@@ -282,7 +282,9 @@
         "type": {
           "enum": [
             "cover",
-            "content"
+            "content",
+            "section",
+            "statement"
           ]
         }
       },
@@ -318,6 +320,36 @@
           },
           "then": {
             "$ref": "#/$defs/contentSlide"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "section"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/sectionSlide"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "statement"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/statementSlide"
           }
         }
       ]
@@ -379,6 +411,54 @@
       ],
       "additionalProperties": false
     },
+    "sectionSlide": {
+      "description": "章の区切り(docs/patterns.md の R1)。章の題だけを持ち、本文は持たない。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "section"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "title": {
+          "description": "章の題。",
+          "$ref": "#/$defs/inline"
+        },
+        "notes": {
+          "$ref": "#/$defs/notes"
+        }
+      },
+      "required": [
+        "type",
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "statementSlide": {
+      "description": "主張(R2)。このスライドで言うことが1文だけのとき。その1文だけを持ち、題も本文も持たない(根拠はほかのスライドにある)。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "statement"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "content": {
+          "description": "言いたいことの1文。",
+          "$ref": "#/$defs/inline"
+        },
+        "notes": {
+          "$ref": "#/$defs/notes"
+        }
+      },
+      "required": [
+        "type",
+        "content"
+      ],
+      "additionalProperties": false
+    },
     "notes": {
       "description": "発表者ノート(スライドには出ない)。文字だけの文字列で、改行が段落の区切り。",
       "type": "string"
@@ -393,6 +473,9 @@
             "points",
             "compare",
             "note",
+            "takeaway",
+            "stat",
+            "quote",
             "subsystem"
           ]
         }
@@ -459,6 +542,51 @@
           },
           "then": {
             "$ref": "#/$defs/note"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "takeaway"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/takeaway"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "stat"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/stat"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "quote"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/quote"
           }
         },
         {
@@ -626,6 +754,102 @@
       "required": [
         "type",
         "content"
+      ],
+      "additionalProperties": false
+    },
+    "takeaway": {
+      "description": "結論(R2)。本文の中で言いたいことを1文で目立たせる。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "takeaway"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "content": {
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "type",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "stat": {
+      "description": "統計強調(R3)。1〜4個の数を、単位と短い説明つきで強く見せる。並べ方と数の字の大きさはテンプレートが決める。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "stat"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/statItem"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "statItem": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "description": "数を書いたとおりの文字で(例 \"12\"・\"−40\"・\"3 → 12\")。計算はしない。数字を1つ以上含む。",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "[0-9０-９]"
+        },
+        "unit": {
+          "description": "単位(例 \"%\"・\"台\")。数の後ろに置く。",
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "description": "その数が何かの短い説明。",
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "value",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "quote": {
+      "description": "引用(R11)。他人の言葉と、その出どころ。出どころは必須。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "quote"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "content": {
+          "description": "引用した言葉(引用符は書かない。付けるかはテンプレートが決める)。",
+          "$ref": "#/$defs/inline"
+        },
+        "source": {
+          "description": "出どころ(誰の・いつの言葉か)。",
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "type",
+        "content",
+        "source"
       ],
       "additionalProperties": false
     },

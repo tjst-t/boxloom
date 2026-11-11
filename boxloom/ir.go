@@ -32,13 +32,14 @@ type IRMeta struct {
 	Date     string `json:"date,omitempty"`
 }
 
-// IRSlide はスライド。Type で cover / content を選ぶ。
+// IRSlide はスライド。Type で cover / content / section / statement を選ぶ。
 type IRSlide struct {
 	Type     string
 	Variant  string
-	Title    Inline
+	Title    Inline // cover・content・section(章の題)
 	Subtitle Inline // cover だけ
 	Author   Inline // cover だけ
+	Content  Inline // statement だけ(言いたいことの1文)
 	Body     []IRBlock
 	Notes    string
 }
@@ -48,9 +49,11 @@ type IRBlock struct {
 	Type    string
 	Variant string
 
-	Content Inline            // paragraph / note
+	Content Inline            // paragraph / note / takeaway / quote
+	Source  Inline            // quote: 出どころ
 	Items   []IRPointItem     // points
 	Options []IRCompareOption // compare
+	Stats   []IRStatItem      // stat
 
 	Subsystem string          // subsystem: 名前(例 "gantt")
 	Data      json.RawMessage // subsystem: 中身(サブシステムが読む)
@@ -60,6 +63,16 @@ type IRPointItem struct {
 	Content Inline        `json:"content"`
 	Items   []IRPointItem `json:"items,omitempty"`
 }
+
+// IRStatItem は stat の1つの数。Value は書いたとおりの文字(計算はしない)。
+type IRStatItem struct {
+	Value string `json:"value"`
+	Unit  string `json:"unit,omitempty"`
+	Label Inline `json:"label"`
+}
+
+// statMaxItems は stat に置ける数の上限(Schema の maxItems と同じ)。
+const statMaxItems = 4
 
 type IRCompareOption struct {
 	Label Inline   `json:"label"`
@@ -242,6 +255,22 @@ func (o *IRCompareOption) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+func (it *IRStatItem) UnmarshalJSON(b []byte) error {
+	type plain IRStatItem
+	var v plain
+	if err := strictUnmarshal(b, &v); err != nil {
+		return err
+	}
+	if v.Value == "" || v.Label == nil {
+		return fmt.Errorf("stat item needs \"value\" and \"label\"")
+	}
+	if !strings.ContainsAny(v.Value, "0123456789０１２３４５６７８９") {
+		return fmt.Errorf("stat item value %q has no digit (a stat shows a number)", v.Value)
+	}
+	*it = IRStatItem(v)
+	return nil
+}
+
 func (m *IRMeta) UnmarshalJSON(b []byte) error {
 	type plain IRMeta
 	var v plain
@@ -303,8 +332,38 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 		}
 		*s = out
 		return nil
+	case "section":
+		var v struct {
+			Type    string `json:"type"`
+			Variant string `json:"variant"`
+			Title   Inline `json:"title"`
+			Notes   string `json:"notes"`
+		}
+		if err := strictUnmarshal(b, &v); err != nil {
+			return err
+		}
+		if v.Title == nil {
+			return fmt.Errorf("section slide needs \"title\"")
+		}
+		*s = IRSlide{Type: v.Type, Variant: v.Variant, Title: v.Title, Notes: v.Notes}
+		return nil
+	case "statement":
+		var v struct {
+			Type    string `json:"type"`
+			Variant string `json:"variant"`
+			Content Inline `json:"content"`
+			Notes   string `json:"notes"`
+		}
+		if err := strictUnmarshal(b, &v); err != nil {
+			return err
+		}
+		if v.Content == nil {
+			return fmt.Errorf("statement slide needs \"content\"")
+		}
+		*s = IRSlide{Type: v.Type, Variant: v.Variant, Content: v.Content, Notes: v.Notes}
+		return nil
 	}
-	return fmt.Errorf("unknown slide type %q (known: cover, content)", head.Type)
+	return fmt.Errorf("unknown slide type %q (known: cover, content, section, statement)", head.Type)
 }
 
 func (k *IRBlock) UnmarshalJSON(b []byte) error {
@@ -315,7 +374,7 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	switch head.Type {
-	case "paragraph", "note":
+	case "paragraph", "note", "takeaway":
 		var v struct {
 			Type    string `json:"type"`
 			Variant string `json:"variant"`
@@ -354,6 +413,33 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("compare needs at least two options")
 		}
 		*k = IRBlock{Type: v.Type, Variant: v.Variant, Options: v.Options}
+	case "stat":
+		var v struct {
+			Type    string       `json:"type"`
+			Variant string       `json:"variant"`
+			Items   []IRStatItem `json:"items"`
+		}
+		if err := strictUnmarshal(b, &v); err != nil {
+			return err
+		}
+		if len(v.Items) == 0 || len(v.Items) > statMaxItems {
+			return fmt.Errorf("stat needs 1 to %d items (got %d)", statMaxItems, len(v.Items))
+		}
+		*k = IRBlock{Type: v.Type, Variant: v.Variant, Stats: v.Items}
+	case "quote":
+		var v struct {
+			Type    string `json:"type"`
+			Variant string `json:"variant"`
+			Content Inline `json:"content"`
+			Source  Inline `json:"source"`
+		}
+		if err := strictUnmarshal(b, &v); err != nil {
+			return err
+		}
+		if v.Content == nil || v.Source == nil {
+			return fmt.Errorf("quote needs \"content\" and \"source\" (other people's words need their source)")
+		}
+		*k = IRBlock{Type: v.Type, Variant: v.Variant, Content: v.Content, Source: v.Source}
 	case "subsystem":
 		var v struct {
 			Type      string          `json:"type"`
@@ -369,7 +455,7 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		}
 		*k = IRBlock{Type: v.Type, Variant: v.Variant, Subsystem: v.Subsystem, Data: v.Data}
 	default:
-		return fmt.Errorf("unknown block type %q (known: paragraph, points, compare, note, subsystem)", head.Type)
+		return fmt.Errorf("unknown block type %q (known: paragraph, points, compare, note, takeaway, stat, quote, subsystem)", head.Type)
 	}
 	return nil
 }

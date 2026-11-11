@@ -208,11 +208,29 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		sp := fmt.Sprintf("/slides/%d", si)
 		sm, _ := s.(map[string]any)
 		c.checkVariant(sm, sp, tm)
+		switch sm["type"] {
+		case "section":
+			c.checkNotEmpty(sm, sp, "title")
+		case "statement":
+			c.checkNotEmpty(sm, sp, "content")
+		}
 		body, _ := sm["body"].([]any)
 		for bi, blk := range body {
 			bp := fmt.Sprintf("%s/body/%d", sp, bi)
 			bm, _ := blk.(map[string]any)
 			c.checkVariant(bm, bp, tm)
+			switch bm["type"] {
+			case "takeaway":
+				c.checkNotEmpty(bm, bp, "content")
+			case "quote":
+				c.checkNotEmpty(bm, bp, "content", "source")
+			case "stat":
+				items, _ := bm["items"].([]any)
+				for ii, it := range items {
+					im, _ := it.(map[string]any)
+					c.checkNotEmpty(im, fmt.Sprintf("%s/items/%d", bp, ii), "label")
+				}
+			}
 			if bm["type"] == "subsystem" && bm["subsystem"] == "gantt" {
 				if data, ok := bm["data"].(map[string]any); ok {
 					c.checkGantt(data, bp+"/data", ids)
@@ -247,6 +265,41 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		}
 	})
 	c.checkDates(doc)
+}
+
+// checkNotEmpty は、意味がその文だけで決まる欄(章の題・主張の1文・結論・引用の
+// 言葉と出どころ・数の説明)に、見える文字があるかを見る(empty-text)。Schema は
+// インラインの "" や空白だけの文字列を通してしまう。
+func (c *checker) checkNotEmpty(m map[string]any, ptr string, keys ...string) {
+	for _, k := range keys {
+		v, ok := m[k]
+		if !ok {
+			continue // 欠けた欄は Schema と IR の読み込みが断る
+		}
+		if strings.TrimSpace(inlinePlainAny(v)) == "" {
+			c.add(ptr+"/"+k, fmt.Sprintf("%s has no visible text", k), "empty-text")
+		}
+	}
+}
+
+// inlinePlainAny は JSON のままのインライン(文字列か、文字列と要素の並び)の文字。
+func inlinePlainAny(v any) string {
+	switch x := v.(type) {
+	case string:
+		return x
+	case []any:
+		var b strings.Builder
+		for _, p := range x {
+			b.WriteString(inlinePlainAny(p))
+		}
+		return b.String()
+	case map[string]any:
+		if t, ok := x["text"].(string); ok {
+			return t
+		}
+		return inlinePlainAny(x["content"])
+	}
+	return ""
 }
 
 func (c *checker) checkVariant(m map[string]any, ptr string, tm *Template) {
