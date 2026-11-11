@@ -1106,6 +1106,31 @@
       "extra": {}
     },
     {
+      "id": "type-vocabulary",
+      "number": 64,
+      "kind": "task",
+      "title": "型の語彙をプロセスに1つにする(名前・Schema・囲み・代わりの組み方)、組み方だけテンプレートごと",
+      "status": "ready",
+      "parent": "tokens-template",
+      "dependsOn": [
+        "public-measure-marks"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "docs/layers.md の 8.2 と 6章の決定を実装する。`pairs` (pairs-component) の前提。\n\n## なぜ\nIR の Schema はテンプレートで変えない、と決まった。型の意味(名前・意味の形・Markdown の囲み・代わりの組み方)はプロセスに1つにし、テンプレートが持つのは組み方(Build)だけにする。いまの componentRegistry(#62)は componentDecl と fallback を組み方と一緒に持っているので、2つに分ける。\n\n## やること\n- package の中に型の語彙を置く(layers.md 6章の TypeDecl の形。名前 → Schema・BlockDecl・Fallback)。標準の12の型を登録する(Fallback なし)。\n- componentRegistry は組み方(Build)だけを持ち、登録できるのは語彙にある型だけ。標準の型は Override だけ、標準でない型は Register。\n- 組むとき、テンプレートが組み方を持たない標準でない型は、語彙の Fallback で標準の型の IR に書き換えてから組み、警告 `component-fallback` を出す(誤りと警告の形は #1259847 の Issue。path はそのブロック)。\n- check はテンプレートを指さなければ語彙だけで検査、指せば component-fallback を足す。\n- `schema -template` は型を隠さず、型ごとに組み方を持つか・代わりで組むかを添える(docs/schema-command.md を直す)。\n- 型ごとの Schema を schema/ に型ごとのファイルで置ける形にする(正本は schema/、boxloom/schemas/ は go generate の写し)。\n- 公開 API は増やさない(package の中だけ)。\n\n## 確かめ方\n試験用に標準でない型を1つ登録して、組み方あり/なし・テンプレートの指定あり/なしで check と build を流す。",
+      "doneWhen": "既存の examples の出力が変わらない(TestOutputsGolden の記録が同じ。ただし schema -template の出力に型ごとの組み方の有無が増える分は記録を更新し、差分がその欄だけであることを確かめる)。試験用の標準でない型で、組み方の無いテンプレートでは component-fallback の警告1件と代わりの組み方の出力、組み方のあるテンプレートでは警告なし、知らない type は誤り、を試験で確かめる。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [
+        "docs/layers.md"
+      ],
+      "threads": [],
+      "createdAt": "2026-11-11T23:50:24.521Z",
+      "updatedAt": "2026-11-11T23:50:24.521Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "oss-release-prep",
       "number": 6,
       "kind": "story",
