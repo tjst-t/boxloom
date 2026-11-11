@@ -71,10 +71,11 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
 
 **データとコードの混ぜ方(合意済み)**: 値の表・スタイル規則・骨組みはデータ
 (宣言ファイル)で書き、部品とサブシステムはコードで書く。いまデータに
-なっているのは値の表(色・大きさ・印の文字、Gantt の寸法)で、
+なっているのは値の表(色・大きさ・印の文字・字体、Gantt の寸法)で、
 `boxloom/templates/<名前>.json` と `boxloom/subsystems/gantt.json`・`shapes.json`(同梱。
 知らないキー・欠けたキーは誤り)。骨組みはまだコード。詳細は
-`docs/template-values.md`。
+`docs/template-values.md`。字体はテンプレートが選び、字体ごとの寸法
+(`boxloom/fonts/*.json`)で測る。置き換わったときの余裕は `docs/fonts.md`。
 
 **プラグイン(候補・未決定)**: こだわりたいテンプレート開発者向けに、コードを
 書いてコアの決められた範囲をオーバーライドできる仕組みを持つ案がある。
@@ -166,8 +167,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   確認済み。
   - `layout.go` = outer engineの移植(box_engine.py相当)
   - `text.go` = テキスト計測(Pillowの代わりに、事前計測した「1emあたりの
-    グリフ幅」テーブル`metrics_gen.go`を使う。`export_font_metrics.py`で
-    生成)
+    グリフ幅」を使う。字体ごとに `boxloom/fonts/<slug>.json`、
+    `tools/export_font_metrics.py` で作る。どの字体で測るかはテンプレートの
+    値の表の `fonts`、`fonts.go`)
+  - `fontcheck.go` = `go run . fonts`:字体が置き換わったときのはみ出しを測る
   - `gantt.go` = inner canvas sub-engineの移植(render_gantt()相当)。
     `GanttSubsystem` として `Subsystem` interface を満たす
   - `shapes.go` / `md_shapes.go` = shapes サブシステム(生の図形への逃げ道)。

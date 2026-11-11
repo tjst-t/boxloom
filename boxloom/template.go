@@ -23,6 +23,7 @@ type Template struct {
 	Theme      Theme
 	Values     TemplateValues
 	Marks      TemplateMarks
+	Fonts      *FontSet // 字体と幅の余裕(値の表の fonts)
 	Subsystems *SubsystemRegistry
 	// Variants はこのテンプレートが用意した変種の名前(IR の variant)。
 	// いまのデモのテンプレートは1つも持たない。
@@ -50,6 +51,10 @@ type BuiltSlide struct {
 
 // BuildDeck は IR の全スライドを組む。誤りは IR の中の場所を添えて返す。
 func (t *Template) BuildDeck(d *IRDeck) ([]*BuiltSlide, error) {
+	// 文字はこのテンプレートの字体で測る(fonts.go の activeFonts)。
+	if t.Fonts != nil {
+		activeFonts = t.Fonts
+	}
 	var out []*BuiltSlide
 	for i := range d.Slides {
 		s, err := t.BuildSlide(d, i)
@@ -292,9 +297,23 @@ func lintBlockSubsystems(b *BuiltSlide) []string {
 // サブシステムの最小の大きさ・テーマに無い役割名・はみ出し)は返り値で返し、
 // ノートには入れない(ノートは作者の文だけ)。
 func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
-	built, err := t.BuildDeck(d)
+	pages, all, err := t.RenderPages(d)
 	if err != nil {
 		return nil, err
+	}
+	title := ""
+	if d.Meta != nil {
+		title = d.Meta.Title.Plain()
+	}
+	return all, SaveDeck(outPath, pages, title)
+}
+
+// RenderPages は RenderDeck のうち、ファイルに書く前まで(組み・並べ・描いた
+// スライドと警告)。字体の検査(fonts コマンド)もこれを使う。
+func (t *Template) RenderPages(d *IRDeck) ([]*PPTXBuilder, []string, error) {
+	built, err := t.BuildDeck(d)
+	if err != nil {
+		return nil, nil, err
 	}
 	var pages []*PPTXBuilder
 	var all []string
@@ -333,9 +352,5 @@ func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
 			all = append(all, fmt.Sprintf("slide %d: %s", i+1, w))
 		}
 	}
-	title := ""
-	if d.Meta != nil {
-		title = d.Meta.Title.Plain()
-	}
-	return all, SaveDeck(outPath, pages, title)
+	return pages, all, nil
 }

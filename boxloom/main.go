@@ -166,6 +166,9 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "check" {
 		os.Exit(runCheck(os.Args[2:]))
 	}
+	if len(os.Args) > 1 && os.Args[1] == "fonts" {
+		os.Exit(runFonts(os.Args[2:], os.Stdout, os.Stderr))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "schema" {
 		os.Exit(runSchema(os.Args[2:], os.Stdout, os.Stderr))
 	}

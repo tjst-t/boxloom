@@ -129,6 +129,6 @@ Cowork(claude.ai)上での長い議論からClaude Codeへ作業を引き継ぐ�
 
 - Go版をPython版の正式な後継にするか、両方並行保守するかは未決定
 - OSS公開時のライセンスは未決定(リポジトリ名/パッケージ名は`boxloom`で確定)
-- `export_font_metrics.py`のCONTENT_STRINGS(文字カバレッジ)は現在のデモ
-  コンテンツに合わせて手動管理している。コンテンツを増やす場合はこの
-  リストも更新して再生成する必要がある
+- (解決済み)字体の寸法は `tools/export_font_metrics.py` が字体ごとに作り、
+  ASCII・仮名・記号・全角形などを範囲で測るようになった(デモの文字に
+  合わせた手動の一覧は無くなった。`docs/fonts.md`)

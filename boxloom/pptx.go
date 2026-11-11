@@ -72,11 +72,14 @@ type PPTXBuilder struct {
 	WidthPt, HeightPt float64
 	Shapes            []shape
 	Notes             string
-	nextID            int
+	// Fonts は書き出す字体(テーマの a:latin・a:ea)と行の送りの決め方。
+	// 作ったときの activeFonts(測った字体)を写す。
+	Fonts  *FontSet
+	nextID int
 }
 
 func NewPPTXBuilder(widthPt, heightPt float64) *PPTXBuilder {
-	return &PPTXBuilder{WidthPt: widthPt, HeightPt: heightPt, nextID: 2}
+	return &PPTXBuilder{WidthPt: widthPt, HeightPt: heightPt, Fonts: activeFonts, nextID: 2}
 }
 
 func (p *PPTXBuilder) allocID() int {
@@ -226,6 +229,28 @@ func alignAttr(a string) string {
 	}
 }
 
+// textLines は文字の図形を書く行に分ける(自前で折り返し、wrap="none" で
+// 書くため)。折り返しはこのスライドを組んだときの字体の一式で測る。
+func (p *PPTXBuilder) textLines(s *shape) [][]TextRun {
+	if p.Fonts != nil {
+		defer useFonts(p.Fonts)()
+	}
+	var lines [][]TextRun
+	switch {
+	case len(s.runs) > 0:
+		lines = wrapRuns(s.runs, s.fontSize, s.box.Width)
+	case s.wrap:
+		for _, l := range wrapText(s.text, s.fontSize, s.box.Width, s.bold) {
+			lines = append(lines, []TextRun{{Text: l, Color: s.color, Bold: s.bold}})
+		}
+	default:
+		for _, l := range strings.Split(s.text, "\n") {
+			lines = append(lines, []TextRun{{Text: l, Color: s.color, Bold: s.bold}})
+		}
+	}
+	return lines
+}
+
 func (p *PPTXBuilder) shapeXML(s *shape) string {
 	switch s.kind {
 	case skRect, skRoundRect:
@@ -290,20 +315,8 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 `, s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), fillXML)
 
 	case skText:
-		var lines [][]TextRun
-		switch {
-		case len(s.runs) > 0:
-			lines = wrapRuns(s.runs, s.fontSize, s.box.Width)
-		case s.wrap:
-			for _, l := range wrapText(s.text, s.fontSize, s.box.Width, s.bold) {
-				lines = append(lines, []TextRun{{Text: l, Color: s.color, Bold: s.bold}})
-			}
-		default:
-			for _, l := range strings.Split(s.text, "\n") {
-				lines = append(lines, []TextRun{{Text: l, Color: s.color, Bold: s.bold}})
-			}
-		}
-		paras := parasXML(s, lines)
+		lines := p.textLines(s)
+		paras := p.parasXML(s, lines)
 		return fmt.Sprintf(`<p:sp>
 <p:nvSpPr><p:cNvPr id="%d" name="TextBox %d"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
 <p:spPr>
@@ -349,7 +362,7 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 `, s.id, s.id, flipH, flipV, ptToEMU(x0), ptToEMU(y0), ptToEMU(w), ptToEMU(h), ptToEMU(s.lineWidthPt), hexColor(s.lineColor), dashXML)
 
 	case skShape:
-		return shapeWithTextXML(s)
+		return p.shapeWithTextXML(s)
 
 	case skConnector:
 		return connectorXML(s)
@@ -357,15 +370,21 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 	return ""
 }
 
-// parasXML は折り返し済みの行を段落(a:p)にする。
-func parasXML(s *shape, lines [][]TextRun) string {
+// parasXML は折り返し済みの行を段落(a:p)にする。fonts.fixedLineSpacing なら
+// 行の送りを測ったとおり(字の大きさ×lineHeightMult)に pt で書く。
+func (p *PPTXBuilder) parasXML(s *shape, lines [][]TextRun) string {
 	var paras strings.Builder
 	szHundredths := int(s.fontSize * 100)
 	for _, line := range lines {
 		if len(line) == 0 {
 			line = []TextRun{{Color: s.color, Bold: s.bold}}
 		}
-		paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"/>`, alignAttr(s.align)))
+		if p.Fonts != nil && p.Fonts.FixedLineSpacing {
+			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"><a:lnSpc><a:spcPts val="%d"/></a:lnSpc></a:pPr>`,
+				alignAttr(s.align), int(math.Round(s.fontSize*lineHeightMult*100))))
+		} else {
+			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr algn="%s"/>`, alignAttr(s.align)))
+		}
 		for _, r := range line {
 			boldAttr := ""
 			if r.Bold {
@@ -390,7 +409,7 @@ func shapeTextRect(prst string, box LBox) LBox {
 }
 
 // shapeWithTextXML は塗り・枠線・中の文字を持つ図形(skShape)。
-func shapeWithTextXML(s *shape) string {
+func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 	adj := "<a:avLst/>"
 	if s.prst == "roundRect" {
 		minSide := s.box.Width
@@ -418,7 +437,13 @@ func shapeWithTextXML(s *shape) string {
 	paras := "<a:p/>"
 	if len(s.runs) > 0 {
 		tr := shapeTextRect(s.prst, s.box)
-		paras = parasXML(s, wrapRuns(s.runs, s.fontSize, tr.Width-2*s.insetX))
+		restore := func() {}
+		if p.Fonts != nil {
+			restore = useFonts(p.Fonts)
+		}
+		lines := wrapRuns(s.runs, s.fontSize, tr.Width-2*s.insetX)
+		restore()
+		paras = p.parasXML(s, lines)
 	}
 	return fmt.Sprintf(`<p:sp>
 <p:nvSpPr><p:cNvPr id="%d" name="Shape %d"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
@@ -572,6 +597,15 @@ func SaveDeck(path string, slides []*PPTXBuilder, title string) error {
 	presRels += `
 </Relationships>`
 
+	// テーマの字体:欧文(a:latin)と和文(a:ea)を分けて書く。a:ea が無いと
+	// PowerPoint は和文を既定の字体で描き、測った字体と食い違う(docs/fonts.md)。
+	fonts := p.Fonts
+	if fonts == nil {
+		fonts = defaultFontSet()
+	}
+	fontRefs := fmt.Sprintf(`<a:latin typeface="%s"/><a:ea typeface="%s"/><a:cs typeface=""/>`,
+		escapeXML(fonts.Latin.Family), escapeXML(fonts.EastAsian.Family))
+
 	theme := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="boxloom">
 <a:themeElements>
@@ -590,8 +624,8 @@ func SaveDeck(path string, slides []*PPTXBuilder, title string) error {
 <a:folHlink><a:srgbClr val="954F72"/></a:folHlink>
 </a:clrScheme>
 <a:fontScheme name="boxloom">
-<a:majorFont><a:latin typeface="Noto Sans CJK JP"/></a:majorFont>
-<a:minorFont><a:latin typeface="Noto Sans CJK JP"/></a:minorFont>
+<a:majorFont>` + fontRefs + `</a:majorFont>
+<a:minorFont>` + fontRefs + `</a:minorFont>
 </a:fontScheme>
 <a:fmtScheme name="boxloom">
 <a:fillStyleLst><a:solidFill><a:schemeClr val="accent1"/></a:solidFill><a:solidFill><a:schemeClr val="accent1"/></a:solidFill><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></a:fillStyleLst>

@@ -2,9 +2,10 @@
 // _natural_text_width)のGo移植。本物のPythonソース(box_engine.py)を見ながら
 // 移植し直したバージョン。
 //
-// フォントファイルは一切読まない。metrics_gen.go に埋め込まれた「1emあたりの
-// グリフ幅」テーブル(Pillowで事前計測済み)だけを使う。テーブルに無い文字は
-// 全角相当(1.0em)にフォールバックする(export_font_metrics.py のコメント通りの割り切り)。
+// フォントファイルは一切読まない。fonts/<slug>.json に同梱した「1emあたりの
+// グリフ幅」(tools/export_font_metrics.py が Pillow で測ったもの)だけを使う。
+// どの字体で測るか・幅の余裕は、いまの字体の一式(activeFonts、fonts.go)が持つ。
+// 表に無い文字はその字体の default(漢字の幅)を使う。
 //
 // 唯一の意図的な相違点: 本物はwrap_text()自体では明示的な改行("\n")を
 // 特別扱いしない(Ganttサブエンジン内の複数行ラベルはbox_engine.wrap_text()を
@@ -22,10 +23,12 @@ import (
 )
 
 const (
-	lineHeightMult      = 1.35 // 行間。box_engine.py の LINE_HEIGHT_MULT と同じ。
-	measureSafetyMargin = 1.05 // 実測値への安全マージン。box_engine.py の MEASURE_SAFETY_MARGIN と同じ。
-	fallbackEmWidth     = 1.0  // テーブルに無い文字のフォールバック(全角相当)。
+	lineHeightMult = 1.35 // 行間。box_engine.py の LINE_HEIGHT_MULT と同じ。
 )
+
+// measureSafetyMargin は測った幅に掛ける余裕(既定 1.05。box_engine.py の
+// MEASURE_SAFETY_MARGIN と同じ)。テンプレートの fonts.widthMargin で決まる。
+func measureSafetyMargin() float64 { return activeFonts.WidthMargin }
 
 // 本物の _tokens() と同じトークン化: 英数字記号の塊はひとつのトークンとして
 // 分割しない(単語の途中で折り返さない)。空白の連続もひとつのトークン。
@@ -42,14 +45,7 @@ func charEmWidth(ch rune, bold bool) float64 {
 	if ch == '\n' {
 		return 0
 	}
-	table := glyphWidthRegular
-	if bold {
-		table = glyphWidthBold
-	}
-	if w, ok := table[ch]; ok {
-		return w
-	}
-	return fallbackEmWidth
+	return activeFonts.emWidth(ch, bold)
 }
 
 // runWidthPt は文字列全体の幅(pt)を安全マージン込みで返す(トークン化せず、
@@ -59,7 +55,7 @@ func runWidthPt(s string, fontSizePt float64, bold bool) float64 {
 	for _, ch := range s {
 		total += charEmWidth(ch, bold) * fontSizePt
 	}
-	return total * measureSafetyMargin
+	return total * measureSafetyMargin()
 }
 
 // tokenWidthPt は1トークン分の幅(pt)。安全マージン込み。
@@ -69,7 +65,7 @@ func tokenWidthPt(tok string, fontSizePt float64, bold bool) float64 {
 	for _, ch := range tok {
 		total += charEmWidth(ch, bold) * fontSizePt
 	}
-	return total * measureSafetyMargin
+	return total * measureSafetyMargin()
 }
 
 // naturalTextWidth はテキストノードの「折り返さない場合の自然な幅」。
@@ -82,7 +78,7 @@ func naturalTextWidth(s *Spec) float64 {
 			total += charEmWidth(ch, s.Bold)
 		}
 	}
-	return total * s.FontSize * measureSafetyMargin
+	return total * s.FontSize * measureSafetyMargin()
 }
 
 // wrapText はテキストを maxWidthPt に収まるよう折り返す。
@@ -169,7 +165,7 @@ func naturalRunsWidth(runs []TextRun, fontSizePt float64) float64 {
 			total += charEmWidth(ch, r.Bold)
 		}
 	}
-	return total * fontSizePt * measureSafetyMargin
+	return total * fontSizePt * measureSafetyMargin()
 }
 
 // wrapRuns は wrapText と同じ規則(トークン単位・空白では折り返さない・"\n" は
@@ -190,7 +186,7 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 			for k := pos; k < pos+n; k++ {
 				tokW += charEmWidth(rs[k], runs[style[k]].Bold) * fontSizePt
 			}
-			tokW *= measureSafetyMargin
+			tokW *= measureSafetyMargin()
 			const wrapEps = 1e-6
 			if curLen > 0 && curW+tokW > maxWidthPt+wrapEps && strings.TrimSpace(tok) != "" {
 				lines = append(lines, [2]int{lineStart, pos})

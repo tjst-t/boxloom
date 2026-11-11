@@ -4,7 +4,8 @@
 // コード」のうち、値の表をここで読む。
 //
 //   - templates/<名前>.json … テンプレートの色(theme)・大きさ(values)・
-//     印の文字(marks)・変種(variants)、サブシステムの値の差し替え(subsystems)
+//     印の文字(marks)・字体(fonts。寸法は fonts/*.json、fonts.go)・
+//     変種(variants)、サブシステムの値の差し替え(subsystems)
 //   - subsystems/gantt.json  … Gantt の既定の寸法(テンプレートが差し替えなければ
 //     これを使う)
 //
@@ -125,6 +126,7 @@ type templateFile struct {
 	Theme    map[string]string `json:"theme"`
 	Values   TemplateValues    `json:"values"`
 	Marks    TemplateMarks     `json:"marks"`
+	Fonts    TemplateFonts     `json:"fonts"`
 	Variants []string          `json:"variants"`
 	// Subsystems はサブシステムの値の差し替え(任意)。書くなら全部の値を書く。
 	Subsystems *templateSubsystems `json:"subsystems,omitempty"`
@@ -238,6 +240,10 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	if err := checkMarks(f.Marks); err != nil {
 		return nil, err
 	}
+	fonts, err := resolveFonts(f.Fonts)
+	if err != nil {
+		return nil, err
+	}
 	variants := map[string]bool{}
 	for _, v := range f.Variants {
 		if v == "" || variants[v] {
@@ -250,6 +256,7 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		Theme:      Theme(f.Theme),
 		Values:     f.Values,
 		Marks:      f.Marks,
+		Fonts:      fonts,
 		Subsystems: DefaultSubsystems().Clone(),
 		Variants:   variants,
 		// 名乗る囲みは部品(コード)と対になるので、まだコードの一式を使う。

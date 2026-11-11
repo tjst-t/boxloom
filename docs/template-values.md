@@ -42,6 +42,8 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
   "theme":  { "bg": "FFFFFF", "card": "F7F9FD", "...": "..." },
   "values": { "pageWidth": 960, "pageHeight": 540, "...": 0 },
   "marks":  { "point": "・", "subPoint": "– ", "pro": "＋ ", "con": "－ " },
+  "fonts":  { "latin": "Noto Sans CJK JP", "eastAsian": "Noto Sans CJK JP",
+              "fallbackFonts": [], "widthMargin": 1.05, "fixedLineSpacing": false },
   "variants": [],
   "subsystems": { "gantt": { "...": "subsystems/gantt.json と同じ形" } }
 }
@@ -78,6 +80,14 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 
 箇条(`point`、入れ子は `subPoint`)、比較の利点(`pro`)・欠点(`con`)の頭に置く
 文字。後ろの空きも含めて書く。
+
+### fonts(字体)
+
+欧文の字体(`latin`)・和文の字体(`eastAsian`)・置き換わり得る字体
+(`fallbackFonts`)・幅の余裕(`widthMargin`)・行の送りを固定するか
+(`fixedLineSpacing`)。字体は寸法(`boxloom/fonts/*.json`)を持つものだけ選べ、
+無ければ誤り。和文の字体は仮名と漢字を持つ字体に限る。`widthMargin` は 1〜1.5。
+意味・測った数字・推奨する値は `docs/fonts.md`。
 
 ### variants
 

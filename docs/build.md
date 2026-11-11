@@ -19,6 +19,8 @@ go run .                                                      # 従来の Go で
 - IR の `notes`(発表者ノート)は、改行ごとに1段落でそのスライドのノートに入る。
   ノートのページにはスライドの縮図と文の置き場を置く(LibreOffice のノートの
   ページでも見える)。
+- 字体が置き換わったときに文字がはみ出すかは `go run . fonts deck.json`
+  (`docs/fonts.md`)。`go run . fonts -list` で寸法を持つ字体の一覧。
 - 書き出さずに検査だけするなら `go run . check deck.json`(`.bx.md` も可。誤りと
   警告を `docs/content-syntax.md` の5章の形で出す。`-format json` で JSON。
   `docs/ir.md` の「意味の検査」)。

@@ -46,5 +46,12 @@
     "pro": "＋ ",
     "con": "－ "
   },
+  "fonts": {
+    "latin": "Noto Sans CJK JP",
+    "eastAsian": "Noto Sans CJK JP",
+    "fallbackFonts": [],
+    "widthMargin": 1.05,
+    "fixedLineSpacing": false
+  },
   "variants": []
 }
