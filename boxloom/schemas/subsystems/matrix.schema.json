@@ -109,6 +109,11 @@
           "additionalProperties": {
             "$ref": "#/$defs/inline"
           }
+        },
+        "emphasis": {
+          "description": "推す列(おすすめの選択肢)。columns の見出しの文(文中の記法を除いた文字)と同じ文字列。見出しと列がアクセントの色で目立つ。見出しに無い名前は boxloom check が matrix-emphasis の誤りにする。",
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [

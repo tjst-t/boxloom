@@ -13,5 +13,11 @@
   "minWidth": 240,
   "textInsetX": 8,
   "textInsetY": 4,
-  "outlineWidth": 1.25
+  "outlineWidth": 1.25,
+  "legendGap": 12,
+  "legendItemGap": 20,
+  "legendSwatchWidth": 16,
+  "legendSwatchHeight": 10,
+  "legendSwatchGap": 8,
+  "rateGap": 12
 }

@@ -103,11 +103,36 @@ type Tick struct {
 	MainLabel string
 	SubLabel  string
 	Role      string
+	// AutoDate なら MainLabel の代わりに Date を値の表の dateFormat で書く
+	// (IR から作った Gantt)。
+	AutoDate bool
 }
 
 type Milestone struct {
 	Date  time.Time
 	Label string
+	// AutoDate なら Label の前に Date を値の表の dateFormat で書く(IR から作った Gantt)。
+	AutoDate bool
+}
+
+// mainText は目盛りの上の段の文字。
+func (t Tick) mainText(gv *GanttValues) string {
+	if t.AutoDate {
+		return formatGanttDate(t.Date, gv.DateFormat)
+	}
+	return t.MainLabel
+}
+
+// text は節目の文字(★ の後ろ)。
+func (m Milestone) text(gv *GanttValues) string {
+	if !m.AutoDate {
+		return m.Label
+	}
+	d := formatGanttDate(m.Date, gv.DateFormat)
+	if m.Label == "" {
+		return d
+	}
+	return d + " " + m.Label
 }
 
 type LegendItem struct {
@@ -548,13 +573,13 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 	// --- ★マイルストーン ---
 	for _, m := range chart.Milestones {
 		mx := sx(m.Date)
-		p.AddTextBoxNoWrap(LBox{X: mx - 74, Y: milestoneY, Width: 148, Height: gv.MilestoneH}, "★ "+m.Label, gv.SmallText, c("accent"), true, "center", "middle")
+		p.AddTextBoxNoWrap(LBox{X: mx - 74, Y: milestoneY, Width: 148, Height: gv.MilestoneH}, "★ "+m.text(gv), gv.SmallText, c("accent"), true, "center", "middle")
 	}
 
 	// --- 軸目盛り ---
 	for _, t := range chart.Ticks {
 		tx := sx(t.Date)
-		p.AddTextBoxNoWrap(LBox{X: tx - 32, Y: axisLabelY, Width: 64, Height: 13}, t.MainLabel, gv.LabelText, c(t.Role), true, "center", "top")
+		p.AddTextBoxNoWrap(LBox{X: tx - 32, Y: axisLabelY, Width: 64, Height: 13}, t.mainText(gv), gv.LabelText, c(t.Role), true, "center", "top")
 		if t.SubLabel != "" {
 			p.AddTextBoxNoWrap(LBox{X: tx - 40, Y: axisLabelY + 12, Width: 80, Height: 12}, t.SubLabel, gv.SmallText, c("text_muted"), false, "center", "top")
 		}
@@ -785,12 +810,12 @@ func ganttLabelRects(gv *GanttValues, chart *GanttChart, f ganttFrame) []placedB
 	}
 	var out []placedBox
 	for _, m := range chart.Milestones {
-		out = append(out, ink(sx(m.Date), f.milestoneY, gv.MilestoneH, "★ "+m.Label, gv.SmallText, true, true))
+		out = append(out, ink(sx(m.Date), f.milestoneY, gv.MilestoneH, "★ "+m.text(gv), gv.SmallText, true, true))
 	}
 	for _, t := range chart.Ticks {
 		tx := sx(t.Date)
-		if t.MainLabel != "" {
-			out = append(out, ink(tx, f.axisLabelY, 13, t.MainLabel, gv.LabelText, true, false))
+		if mt := t.mainText(gv); mt != "" {
+			out = append(out, ink(tx, f.axisLabelY, 13, mt, gv.LabelText, true, false))
 		}
 		if t.SubLabel != "" {
 			out = append(out, ink(tx, f.axisLabelY+12, 12, t.SubLabel, gv.SmallText, false, false))
@@ -1087,19 +1112,19 @@ func buildChart() *GanttChart {
 	}}
 
 	ticks := []Tick{
-		{d(2026, time.September, 1), "26/9", "現在", "text_primary"},
-		{d(2027, time.October, 1), "27/10", "Loom 3", "conditional"},
-		{d(2028, time.August, 1), "28/8", "Loom 4(予)", "conditional"},
-		{d(2029, time.December, 1), "29/12", "Board A・Store X", "danger"},
-		{d(2031, time.February, 1), "31/2", "Board B(予)", "danger"},
-		{d(2031, time.June, 1), "31/6", "Loom 5(予)", "conditional"},
-		{d(2031, time.October, 1), "31/10", "OS 22", "text_primary"},
-		{d(2034, time.November, 1), "34/11", "OS 25", "support"},
+		{d(2026, time.September, 1), "26/9", "現在", "text_primary", false},
+		{d(2027, time.October, 1), "27/10", "Loom 3", "conditional", false},
+		{d(2028, time.August, 1), "28/8", "Loom 4(予)", "conditional", false},
+		{d(2029, time.December, 1), "29/12", "Board A・Store X", "danger", false},
+		{d(2031, time.February, 1), "31/2", "Board B(予)", "danger", false},
+		{d(2031, time.June, 1), "31/6", "Loom 5(予)", "conditional", false},
+		{d(2031, time.October, 1), "31/10", "OS 22", "text_primary", false},
+		{d(2034, time.November, 1), "34/11", "OS 25", "support", false},
 	}
 
 	milestones := []Milestone{
-		{d(2028, time.May, 1), "28/5 ライセンス更新"},
-		{d(2031, time.May, 1), "31/5 ライセンス更新"},
+		{d(2028, time.May, 1), "28/5 ライセンス更新", false},
+		{d(2031, time.May, 1), "31/5 ライセンス更新", false},
 	}
 
 	const support, cond, none = "support", "conditional", "none"

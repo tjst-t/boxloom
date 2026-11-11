@@ -81,6 +81,21 @@
           "items": {
             "$ref": "#/$defs/step"
           }
+        },
+        "legend": {
+          "description": "凡例の文(状態の名前 → 文)。箱の枠線の色の意味を作者の言葉で書く。凡例には、使った状態のうち文のあるものだけが図の下に出る。status を使ったのに文が無い状態は boxloom check が figure-legend で警告する。",
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "support",
+              "conditional",
+              "none",
+              "danger"
+            ]
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/inline"
+          }
         }
       },
       "required": [

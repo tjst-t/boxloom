@@ -94,6 +94,8 @@ steps:
   - {title: 導入, detail: ["**最も時間がかかる**", 平均5営業日], emphasis: true}
   - {title: 試験運用, detail: [2週間、, 実データの一部で]}
   - {title: 本番, detail: [保守契約を, 開始], status: support}
+legend:
+  support: 保守の係に引き継ぐ
 ```
 
 - 申し込みから本番まで、いまは **平均4週間**
@@ -136,6 +138,7 @@ legend:
   support: 良い
   conditional: 条件つき
   danger: 悪い
+emphasis: コンテナ
 ```
 
 # 限定公開は3つに絞り、残りは一般公開に回す
@@ -181,11 +184,9 @@ units:
     members:
       - {title: 提案, detail: 2名}
       - {title: 契約, detail: 1名}
+legend:
+  conditional: 限定公開までに2名を増やす
 ```
-
-:::note
-枠で強調した導入支援は、限定公開までに2名を増やす
-:::
 
 # 見込み客のファネル
 
@@ -194,9 +195,11 @@ unit: 社
 stages:
   - {label: 説明会の参加, value: 400, note: 展示会と紹介が主な入口}
   - {label: 資料の請求, value: 180}
-  - {label: 環境の確認, value: 60, note: "環境の確認で **3社に2社** が脱落"}
+  - {label: 環境の確認, value: 60, note: "ここで **3社に2社** が脱落"}
   - {label: 試験運用, value: 24, status: conditional}
   - {label: 契約, value: 10, emphasis: true, note: 限定公開の目標は10社}
+legend:
+  conditional: 導入支援の人手で詰まる段
 ```
 
 # 改善のサイクル

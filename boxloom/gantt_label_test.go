@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func ganttForLabelTest(t *testing.T, label, to string) *GanttSubsystem {
@@ -83,5 +84,27 @@ func TestCheckGanttSegmentLabelExample(t *testing.T) {
 				t.Fatalf("line %d, want %d", got[0].Line, l)
 			}
 		}
+	}
+}
+
+// 目盛りと節目の日付は値の表の dateFormat で書く。月を含まない形・崩れた年は誤り。
+func TestGanttDateFormat(t *testing.T) {
+	d := time.Date(2026, time.December, 1, 0, 0, 0, 0, time.UTC)
+	for f, want := range map[string]string{"YYYY/M": "2026/12", "YY/M": "26/12", "YYYY年M月": "2026年12月", "YYYY-MM": "2026-12"} {
+		if got := formatGanttDate(d, f); got != want {
+			t.Errorf("formatGanttDate(%q) = %q, want %q", f, got, want)
+		}
+		if err := checkDateFormat("gantt", f); err != nil {
+			t.Errorf("checkDateFormat(%q) = %v", f, err)
+		}
+	}
+	for _, f := range []string{"", "YYYY", "YYY/M"} {
+		if checkDateFormat("gantt", f) == nil {
+			t.Errorf("checkDateFormat(%q) accepted a bad format", f)
+		}
+	}
+	m := Milestone{Date: d, Label: "外部監査", AutoDate: true}
+	if got := m.text(defaultGanttValues()); got != "2026/12 外部監査" {
+		t.Errorf("milestone = %q", got)
 	}
 }

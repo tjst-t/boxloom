@@ -17,25 +17,35 @@ import (
 
 // ProcessValues は process の寸法(pt)。既定は subsystems/process.json。
 type ProcessValues struct {
-	Padding      float64 `json:"padding" scale:"space"`
-	CaptionGap   float64 `json:"captionGap" scale:"space"` // 説明の文と箱の間
-	ArrowGap     float64 `json:"arrowGap" scale:"space"`   // 箱と箱の間(矢印の長さ)の最小
-	MinStepW     float64 `json:"minStepWidth"`             // これより狭くなるなら次の行へ折り返す
-	MaxStepW     float64 `json:"maxStepWidth"`             // 箱の幅の上限(余りは矢印を長くする)
-	MinBoxH      float64 `json:"minBoxHeight"`
-	NaturalBoxH  float64 `json:"naturalBoxHeight"`
-	MaxBoxH      float64 `json:"maxBoxHeight"`
-	DetailGap    float64 `json:"detailGap" scale:"space"` // 箱と補足の間
-	MinRowGap    float64 `json:"minRowGap" scale:"space"` // 折り返した行の間
-	NaturalRowG  float64 `json:"naturalRowGap" scale:"space"`
-	MaxRowGap    float64 `json:"maxRowGap" scale:"space"`
-	NaturalWidth float64 `json:"naturalWidth"`
-	MinWidth     float64 `json:"minWidth"`
-	TextInsetX   float64 `json:"textInsetX" scale:"space"`
-	TextInsetY   float64 `json:"textInsetY" scale:"space"`
-	LineWidth    float64 `json:"lineWidth"`
-	OutlineWidth float64 `json:"outlineWidth"`
-	CornerRadius float64 `json:"cornerRadius"`
+	Padding       float64 `json:"padding" scale:"space"`
+	CaptionGap    float64 `json:"captionGap" scale:"space"` // 説明の文と箱の間
+	ArrowGap      float64 `json:"arrowGap" scale:"space"`   // 箱と箱の間(矢印の長さ)の最小
+	MinStepW      float64 `json:"minStepWidth"`             // これより狭くなるなら次の行へ折り返す
+	MaxStepW      float64 `json:"maxStepWidth"`             // 箱の幅の上限(余りは矢印を長くする)
+	MinBoxH       float64 `json:"minBoxHeight"`
+	NaturalBoxH   float64 `json:"naturalBoxHeight"`
+	MaxBoxH       float64 `json:"maxBoxHeight"`
+	DetailGap     float64 `json:"detailGap" scale:"space"` // 箱と補足の間
+	MinRowGap     float64 `json:"minRowGap" scale:"space"` // 折り返した行の間
+	NaturalRowG   float64 `json:"naturalRowGap" scale:"space"`
+	MaxRowGap     float64 `json:"maxRowGap" scale:"space"`
+	NaturalWidth  float64 `json:"naturalWidth"`
+	MinWidth      float64 `json:"minWidth"`
+	TextInsetX    float64 `json:"textInsetX" scale:"space"`
+	TextInsetY    float64 `json:"textInsetY" scale:"space"`
+	LineWidth     float64 `json:"lineWidth"`
+	OutlineWidth  float64 `json:"outlineWidth"`
+	CornerRadius  float64 `json:"cornerRadius"`
+	LegendGap     float64 `json:"legendGap" scale:"space"` // 図と凡例の間
+	LegendItemGap float64 `json:"legendItemGap" scale:"space"`
+	LegendSwatchW float64 `json:"legendSwatchWidth"` // 凡例の見本の箱
+	LegendSwatchH float64 `json:"legendSwatchHeight"`
+	LegendSwatchG float64 `json:"legendSwatchGap" scale:"space"` // 見本と文の間
+}
+
+func (v *ProcessValues) legendValues(radius float64) figureLegendValues {
+	return figureLegendValues{gap: v.LegendGap, itemGap: v.LegendItemGap, swatchW: v.LegendSwatchW, swatchH: v.LegendSwatchH,
+		swatchGap: v.LegendSwatchG, outlineW: v.OutlineWidth, radius: radius}
 }
 
 // ProcessData は IR の data を読んだもの。
@@ -43,6 +53,16 @@ type ProcessData struct {
 	Caption  Inline
 	Numbered bool // 題の前に「1. 」を付ける(既定 true)
 	Steps    []FigureNode
+	Legend   []LegendItem // 状態の凡例の文(書いた順)
+}
+
+// legend は凡例の項目と、使ったのに文の無い状態。
+func (s *ProcessSubsystem) legend() ([]LegendItem, []string) {
+	used := map[string]bool{}
+	for _, st := range s.Data.Steps {
+		used[st.Status] = true
+	}
+	return figureLegendItems(used, s.Data.Legend)
 }
 
 // ProcessSubsystem は ProcessData を描くサブシステム。
@@ -115,6 +135,7 @@ type processGeom struct {
 	needH    float64 // 箱の題が収まる高さ(全部の箱で同じ)
 	detailH  []float64
 	parts    []flexPart
+	legend   figureLegendLayout
 	// parts の中の場所
 	boxPart, gapPart []int
 }
@@ -172,6 +193,9 @@ func (s *ProcessSubsystem) geom(width float64) *processGeom {
 			g.parts = append(g.parts, fixedPart(v.DetailGap+g.detailH[r]))
 		}
 	}
+	items, _ := s.legend()
+	g.legend = layoutFigureLegend(items, g.inner, tx.Small, v.legendValues(v.CornerRadius/2))
+	g.parts = append(g.parts, g.legend.part(v.legendValues(0))...)
 	g.parts = append(g.parts, fixedPart(v.Padding))
 	return g
 }
@@ -198,6 +222,7 @@ type processPlaced struct {
 	details []LBox
 	rowGapY []float64 // 行 r と r+1 の間の真ん中の y
 	caption LBox
+	legend  LBox // 凡例の左上(幅は内側の幅)
 }
 
 func (s *ProcessSubsystem) place(box LBox) (*processGeom, *processPlaced) {
@@ -232,6 +257,7 @@ func (s *ProcessSubsystem) place(box LBox) (*processGeom, *processPlaced) {
 			y += v.DetailGap + g.detailH[r]
 		}
 	}
+	pl.legend = LBox{X: x0, Y: y + v.LegendGap, Width: g.inner, Height: g.legend.h}
 	return g, pl
 }
 
@@ -253,6 +279,7 @@ func (s *ProcessSubsystem) Render(ctx RenderContext, box LBox) {
 			p.AddRichTextBox(pl.details[i], itemRuns(st.Detail, "text_muted", ctx.Roles), tx.Detail, "left", "top")
 		}
 	}
+	drawFigureLegend(ctx, pl.legend.X, pl.legend.Y, g.legend, tx.Small, v.legendValues(v.CornerRadius/2))
 	color := ctx.Roles.Color("text_muted")
 	for i := 0; i+1 < len(s.Data.Steps); i++ {
 		a, b := pl.boxes[i], pl.boxes[i+1]
@@ -295,7 +322,8 @@ func (s *ProcessSubsystem) Lint(box LBox) []string {
 			}
 		}
 	}
-	return out
+	_, missing := s.legend()
+	return append(out, legendMissingWarnings("process", missing)...)
 }
 
 // --- IR から読む ---
@@ -304,6 +332,7 @@ type processIR struct {
 	Caption  Inline         `json:"caption"`
 	Numbered *bool          `json:"numbered"`
 	Steps    []figureNodeIR `json:"steps"`
+	Legend   orderedLegend  `json:"legend"`
 }
 
 func processFromIR(raw json.RawMessage) (*ProcessData, error) {
@@ -322,6 +351,11 @@ func processFromIR(raw json.RawMessage) (*ProcessData, error) {
 		}
 		d.Steps = append(d.Steps, n)
 	}
+	lg, err := figureLegendIR("process", in.Legend)
+	if err != nil {
+		return nil, err
+	}
+	d.Legend = lg
 	return d, nil
 }
 
@@ -329,5 +363,6 @@ func processDecl() SubsystemDecl {
 	return figureDecl("subsystems/process.schema.json",
 		"日付の無い、方向のある段階の列(3〜7段階)。段階は左から右へ並び、矢印で繋がる。幅が足りなければ次の行へ折り返す",
 		"題の前の番号(1. 2. …)はサブシステムが付ける。付けないときは numbered: false",
+		"status を使ったら legend: {conditional: 意味, …} で枠線の色の意味を書く(凡例が図の下に出る。無ければ figure-legend の警告)",
 	)
 }

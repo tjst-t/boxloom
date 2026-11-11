@@ -617,6 +617,15 @@ func (c *checker) checkMatrix(data map[string]any, ptr string) {
 		c.add(fmt.Sprintf("%s/rows/%d/cells", ptr, i),
 			fmt.Sprintf("row has %d cells but there are %d columns (one cell per column)", len(cells), len(cols)), "matrix-cells")
 	}
+	if e, ok := data["emphasis"].(string); ok {
+		var names []string
+		for _, col := range cols {
+			names = append(names, inlinePlainAny(col))
+		}
+		if j, msg := matrixEmphasisColumn(names, e); j < 0 {
+			c.add(ptr+"/emphasis", msg, "matrix-emphasis")
+		}
+	}
 }
 
 // checkChart は比べ方とデータの組み合わせを見る(chart-values・chart-emphasis)。
@@ -790,6 +799,9 @@ func warningIssue(file, w string) Issue {
 	}
 	if figure && strings.Contains(m[3], "label does not fit its place on the category axis") {
 		rule = "chart-labels" // グラフの項目の名前がアプリの置く場所に入りきらない
+	}
+	if figure && strings.Contains(m[3], "has no legend text") {
+		rule = "figure-legend" // 図の箱の状態を使ったのに凡例の文が無い
 	}
 	if figure && strings.Contains(m[3], "a funnel is for values that decrease") {
 		rule = "funnel-increase" // funnel の数が前の段より増えた

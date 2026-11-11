@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -159,19 +160,19 @@ func ganttFromIR(raw json.RawMessage) (*GanttChart, error) {
 		if t.Status != "" {
 			role = status(fmt.Sprintf("ticks[%d].status", i), t.Status)
 		}
-		chart.Ticks = append(chart.Ticks, Tick{Date: at, MainLabel: shortYM(at), SubLabel: t.Label.Plain(), Role: role})
+		chart.Ticks = append(chart.Ticks, Tick{Date: at, AutoDate: true, SubLabel: t.Label.Plain(), Role: role})
 		tickAt[at] = true
 	}
 	for _, end := range []time.Time{from, to} {
 		if !tickAt[end] {
-			chart.Ticks = append(chart.Ticks, Tick{Date: end, MainLabel: shortYM(end), Role: "text_muted"})
+			chart.Ticks = append(chart.Ticks, Tick{Date: end, AutoDate: true, Role: "text_muted"})
 		}
 	}
 	sort.SliceStable(chart.Ticks, func(i, j int) bool { return chart.Ticks[i].Date.Before(chart.Ticks[j].Date) })
 
 	for i, m := range in.Milestones {
 		at := date(fmt.Sprintf("milestones[%d].at", i), m.At)
-		chart.Milestones = append(chart.Milestones, Milestone{Date: at, Label: shortYM(at) + " " + m.Label.Plain()})
+		chart.Milestones = append(chart.Milestones, Milestone{Date: at, Label: m.Label.Plain(), AutoDate: true})
 	}
 
 	// 軸を切る印。
@@ -271,9 +272,27 @@ func ganttFromIR(raw json.RawMessage) (*GanttChart, error) {
 	return chart, nil
 }
 
-// shortYM は "29/12" の形(西暦の下2桁/月)。
-func shortYM(t time.Time) string {
-	return fmt.Sprintf("%d/%d", t.Year()%100, int(t.Month()))
+// formatGanttDate は日付を値の表の dateFormat で書く(YYYY・YY・MM・M を置き換える)。
+func formatGanttDate(t time.Time, format string) string {
+	if format == "" {
+		format = "YYYY/M"
+	}
+	r := strings.NewReplacer("YYYY", fmt.Sprintf("%04d", t.Year()), "YY", fmt.Sprintf("%02d", t.Year()%100),
+		"MM", fmt.Sprintf("%02d", int(t.Month())), "M", fmt.Sprint(int(t.Month())))
+	return r.Replace(format)
+}
+
+// checkDateFormat は dateFormat が月(M か MM)を含み、年・月を YYYY・YY・MM・M
+// だけで書いているかを見る(YYY のような書き方は誤り)。
+func checkDateFormat(at, f string) error {
+	rest := strings.NewReplacer("YYYY", "", "YY", "", "MM", "\x00", "M", "\x00").Replace(f)
+	if !strings.Contains(rest, "\x00") {
+		return fmt.Errorf("%s.dateFormat: must contain the month (M or MM), got %q", at, f)
+	}
+	if strings.ContainsAny(rest, "Y") {
+		return fmt.Errorf("%s.dateFormat: write the year as YYYY or YY, got %q", at, f)
+	}
+	return nil
 }
 
 // sqrtScale は from〜to を cuts の日付で区切り、区間ごとに「日数の平方根」に

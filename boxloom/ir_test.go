@@ -91,9 +91,9 @@ func TestGanttFromIR(t *testing.T) {
 	}
 	var labels []string
 	for _, tk := range c.Ticks {
-		labels = append(labels, tk.MainLabel)
+		labels = append(labels, tk.mainText(defaultGanttValues()))
 	}
-	if strings.Join(labels, ",") != "26/9,29/12,34/11" {
+	if strings.Join(labels, ",") != "2026/9,2029/12,2034/11" {
 		t.Fatalf("ticks = %v, want span ends added", labels)
 	}
 	if c.Ticks[1].Role != "danger" || c.Ticks[1].SubLabel != "Board A・Store X" {
@@ -106,8 +106,8 @@ func TestGanttFromIR(t *testing.T) {
 	if a.Direction != "" || a.TargetGroup != 0 || a.TargetRow != -1 || a.Text != "ここまでに全利用者を\nBoard B/C へ移行予定" {
 		t.Fatalf("annotation = %+v", a)
 	}
-	if c.Milestones[0].Label != "28/5 ライセンス更新" {
-		t.Fatalf("milestone = %q", c.Milestones[0].Label)
+	if got := c.Milestones[0].text(defaultGanttValues()); got != "2028/5 ライセンス更新" {
+		t.Fatalf("milestone = %q", got)
 	}
 }
 

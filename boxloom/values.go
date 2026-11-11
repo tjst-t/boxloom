@@ -151,6 +151,10 @@ type GanttValues struct {
 
 	LabelText float64 `json:"labelText" scale:"type"` // 凡例・行の名前・目盛り
 	SmallText float64 `json:"smallText" scale:"type"` // グループ名・区間の文字・節目
+
+	// DateFormat は目盛りと節目の日付の書き方(IR から作った Gantt)。YYYY・YY・
+	// M・MM を年と月に置き換え、ほかの文字はそのまま(例 "YYYY/M" → 2026/12)。
+	DateFormat string `json:"dateFormat"`
 }
 
 // ShapesValues は shapes サブシステムの寸法(pt。DefaultAspect は幅÷高さ)。
@@ -366,6 +370,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		if err := checkPositive("subsystems.gantt", gv); err != nil {
 			return nil, err
 		}
+		if err := checkDateFormat("subsystems.gantt", gv.DateFormat); err != nil {
+			return nil, err
+		}
 		if err := checkOnScale("subsystems.gantt", gv, f.Scale); err != nil {
 			return nil, err
 		}
@@ -577,7 +584,10 @@ func parseGanttValues(data []byte) (GanttValues, error) {
 	if err := decodeStrict(data, &gv); err != nil {
 		return gv, err
 	}
-	return gv, checkPositive("gantt", gv)
+	if err := checkPositive("gantt", gv); err != nil {
+		return gv, err
+	}
+	return gv, checkDateFormat("gantt", gv.DateFormat)
 }
 
 // defaultGanttValues は subsystems/gantt.json(Gantt の既定の寸法)の写し。

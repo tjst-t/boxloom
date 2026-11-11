@@ -3,8 +3,8 @@
   "cellGap": 4,
   "headerHeight": 32,
   "minRowHeight": 28,
-  "naturalRowHeight": 40,
-  "maxRowHeight": 64,
+  "naturalRowHeight": 36,
+  "maxRowHeight": 44,
   "maxRowHeaderFraction": 0.3,
   "dotSize": 10,
   "dotGap": 8,
@@ -15,5 +15,6 @@
   "minWidth": 240,
   "textInsetX": 12,
   "textInsetY": 4,
-  "cellCornerRadius": 4
+  "cellCornerRadius": 4,
+  "emphasisLineWidth": 2
 }

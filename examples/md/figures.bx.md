@@ -17,6 +17,9 @@ steps:
   - {title: 承認, detail: 2営業日, status: conditional}
   - {title: 発注, detail: 即日}
   - {title: 受け取り, detail: 1〜2週間, status: support}
+legend:
+  conditional: 金額で承認者が変わる
+  support: 取引先が受け持つ
 ```
 
 - 申請から受け取りまで、いまは **平均3週間**
@@ -45,6 +48,8 @@ units:
       - {title: 切り替え, detail: 2名}
   - title: 窓口
     detail: 2名
+legend:
+  danger: 担当が足りない
 ```
 
 # 案 B だけが3つの要件を満たす
@@ -75,6 +80,7 @@ rows:
 legend:
   support: 満たす
   danger: 満たさない
+emphasis: 案 B(段階移行)
 ```
 
 # 見積もりの依頼のうち、契約まで進むのは 2%
@@ -86,4 +92,6 @@ stages:
   - {label: 資料の請求, value: 1500}
   - {label: 見積もりの依頼, value: 480, note: "ここから **商談** に入る", status: conditional}
   - {label: 契約, value: 9, emphasis: true, note: 今期の目標は12件}
+legend:
+  conditional: 担当を増やして立て直す段
 ```

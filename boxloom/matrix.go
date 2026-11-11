@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 )
 
 // MatrixValues は matrix の寸法(pt)。既定は subsystems/matrix.json。
@@ -34,6 +35,7 @@ type MatrixValues struct {
 	TextInsetX     float64 `json:"textInsetX" scale:"space"`
 	TextInsetY     float64 `json:"textInsetY" scale:"space"`
 	CellCornerRadi float64 `json:"cellCornerRadius"`
+	EmphasisLineW  float64 `json:"emphasisLineWidth"` // 推す列の枠線の太さ
 }
 
 // MatrixCell は1つのセル。
@@ -53,6 +55,8 @@ type MatrixData struct {
 	Columns []Inline
 	Rows    []MatrixRow
 	Legend  []LegendItem // 書いた順(状態 → 文)
+	// Emphasis は推す列(columns の位置)。無ければ -1。
+	Emphasis int
 }
 
 // matrixDefaultLegend は legend に書いていない状態の凡例の文。
@@ -96,6 +100,18 @@ func (s *MatrixSubsystem) text() FigureText {
 		return *s.Text
 	}
 	return defaultFigureText()
+}
+
+// headerRuns は列の見出しの文。推す列は太字で、色はアクセント。
+func (s *MatrixSubsystem) headerRuns(j int, color string, roles Roles) []TextRun {
+	if j != s.Data.Emphasis {
+		return itemRuns(s.Data.Columns[j], color, roles)
+	}
+	runs := itemRuns(s.Data.Columns[j], "accent", roles)
+	for k := range runs {
+		runs[k].Bold = true
+	}
+	return runs
 }
 
 // legend は凡例: 使った状態を support・conditional・none・danger の順に、文は
@@ -157,8 +173,8 @@ func (s *MatrixSubsystem) geom(width float64) *matrixGeom {
 	g.headW = math.Min(g.headW, g.inner*v.RowHeaderFrac)
 	g.colW = math.Max(0, (g.inner-g.headW-C*v.CellGap)/C)
 
-	for _, c := range s.Data.Columns {
-		_, h := runsBox(itemRuns(c, "", nil), tx.Title, g.colW-2*v.TextInsetX)
+	for j := range s.Data.Columns {
+		_, h := runsBox(s.headerRuns(j, "", nil), tx.Title, g.colW-2*v.TextInsetX)
 		g.headerNeed = math.Max(g.headerNeed, h+2*v.TextInsetY)
 	}
 	for _, r := range s.Data.Rows {
@@ -254,15 +270,15 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 	v, tx := s.vals(), s.text()
 	pl := s.place(box)
 	p := ctx.Out
-	header := func(b LBox, in Inline, align string) {
-		p.AddShape(b, ShapeOpts{Prst: "rect", Runs: itemRuns(in, "text_primary", ctx.Roles), FontSize: tx.Title,
+	header := func(b LBox, runs []TextRun, align string) {
+		p.AddShape(b, ShapeOpts{Prst: "rect", Runs: runs, FontSize: tx.Title,
 			InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: align})
 	}
-	for j, c := range s.Data.Columns {
-		header(pl.header[j], c, "center")
+	for j := range s.Data.Columns {
+		header(pl.header[j], s.headerRuns(j, "text_primary", ctx.Roles), "center")
 	}
 	for i, r := range s.Data.Rows {
-		header(pl.heads[i], r.Label, "left")
+		header(pl.heads[i], itemRuns(r.Label, "text_primary", ctx.Roles), "left")
 		for j, c := range r.Cells {
 			b := pl.cells[i][j]
 			o := ShapeOpts{Prst: "roundRect", Fill: ctx.Roles.Color("card_alt"), Radius: v.CellCornerRadi, FontSize: tx.Sub,
@@ -276,6 +292,13 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 			p.AddShape(b, o)
 			p.AddDot(dotX+v.DotSize/2, b.Y+b.Height/2, v.DotSize/2, ctx.Roles.Color(c.Status))
 		}
+	}
+	// 推す列: 見出しから最後の行までを、アクセントの色の枠で囲む(塗らない)。
+	if j := s.Data.Emphasis; j >= 0 {
+		top, last := pl.header[j], pl.cells[len(pl.cells)-1][j]
+		pad := v.CellGap / 2 // 枠はセルとセルの間の真ん中に
+		p.AddShape(LBox{X: top.X - pad, Y: top.Y, Width: top.Width + 2*pad, Height: last.Y + last.Height + pad - top.Y},
+			ShapeOpts{Prst: "roundRect", Outline: ctx.Roles.Color("accent"), OutlineWidthPt: v.EmphasisLineW, Radius: v.CellCornerRadi + pad})
 	}
 	// 凡例(1列目のセルの左端から)。
 	legend := s.legend()
@@ -313,6 +336,9 @@ func (s *MatrixSubsystem) Lint(box LBox) []string {
 	}
 	for j, c := range s.Data.Columns {
 		b := pl.header[j]
+		if j == s.Data.Emphasis {
+			c = Inline{{Type: "em", Content: c}} // 太字で測る
+		}
 		check(fmt.Sprintf("columns[%d]", j), c, tx.Title, b.Width-2*v.TextInsetX, b)
 	}
 	for i, r := range s.Data.Rows {
@@ -336,7 +362,19 @@ type matrixIR struct {
 			Text   Inline `json:"text"`
 		} `json:"cells"`
 	} `json:"rows"`
-	Legend orderedLegend `json:"legend"`
+	Legend   orderedLegend `json:"legend"`
+	Emphasis *string       `json:"emphasis"`
+}
+
+// matrixEmphasisColumn は emphasis(列の見出しの文)が指す列。見つからなければ
+// 誤りの文を返す(check の matrix-emphasis と読み込みが同じものを使う)。
+func matrixEmphasisColumn(columns []string, name string) (int, string) {
+	for j, c := range columns {
+		if c == name {
+			return j, ""
+		}
+	}
+	return -1, fmt.Sprintf("emphasis %q is not one of the columns (%s)", name, strings.Join(columns, ", "))
 }
 
 func matrixFromIR(raw json.RawMessage) (*MatrixData, error) {
@@ -350,11 +388,20 @@ func matrixFromIR(raw json.RawMessage) (*MatrixData, error) {
 	if len(in.Rows) == 0 {
 		return nil, fmt.Errorf("matrix: rows needs at least one row")
 	}
-	d := &MatrixData{Columns: in.Columns}
+	d := &MatrixData{Columns: in.Columns, Emphasis: -1}
+	var names []string
 	for j, c := range in.Columns {
 		if len(c) == 0 {
 			return nil, fmt.Errorf("matrix: columns[%d]: must not be empty", j)
 		}
+		names = append(names, c.Plain())
+	}
+	if in.Emphasis != nil {
+		j, msg := matrixEmphasisColumn(names, *in.Emphasis)
+		if j < 0 {
+			return nil, fmt.Errorf("matrix: %s", msg)
+		}
+		d.Emphasis = j
 	}
 	for _, li := range in.Legend {
 		if !contains(figureStatuses, li.Role) {
@@ -390,5 +437,6 @@ func matrixDecl() SubsystemDecl {
 		"行×列の評価。セルは status(評価)と text(任意)。セルが文字・数だけなら matrix ではなく表(table)",
 		"各行の cells の数は columns の数と同じ(違えば boxloom check が matrix-cells の誤りにする)",
 		"凡例は使った状態から自動で作る。文を変えるときは legend: {support: 良い, …}",
+		"推す列(おすすめの選択肢)は emphasis: <列の見出しの文>。見出しと列がアクセントの色で目立つ。見出しに無い名前は check の matrix-emphasis の誤り",
 	)
 }

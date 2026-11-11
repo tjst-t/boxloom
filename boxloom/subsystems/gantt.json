@@ -22,5 +22,6 @@
   "annotationLaneGap": 8,
   "annotationText": 10,
   "labelText": 10,
-  "smallText": 8
+  "smallText": 8,
+  "dateFormat": "YYYY/M"
 }

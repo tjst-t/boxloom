@@ -105,7 +105,8 @@ func TestOrgChartFitsFullAndNarrowColumns(t *testing.T) {
 	  "units": [
 	    {"title": "開発", "members": [{"title": "基盤", "detail": "4名"}, {"title": "画面", "detail": "3名"}]},
 	    {"title": "運用", "members": [{"title": "導入支援", "detail": "2名", "status": "conditional"}, {"title": "監視", "detail": "2名"}]},
-	    {"title": "営業", "members": [{"title": "提案", "detail": "2名"}, {"title": "契約", "detail": "1名"}]}]}`
+	    {"title": "営業", "members": [{"title": "提案", "detail": "2名"}, {"title": "契約", "detail": "1名"}]}],
+	  "legend": {"conditional": "2名を増やす"}}`
 	for _, tmpl := range []string{"light", "dark"} {
 		full := figureFromIR(t, tmpl, "orgchart", data)
 		fullLeaf := SubsystemNode(full, WithGrow(1))
@@ -400,5 +401,130 @@ func TestFigureValuesOnScale(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "subsystems."+k+".padding: 15 is not on the spacing scale") {
 			t.Errorf("%s: err = %v", k, err)
 		}
+	}
+}
+
+// 状態の凡例: legend に文のある状態は図の下に見本つきで出る。使ったのに文の無い
+// 状態は figure-legend の警告(.md なら legend の行)。legend のキーは状態の名前だけ。
+func TestFigureLegend(t *testing.T) {
+	d := mustReadIR(t, figuresPath)
+	out := filepath.Join(t.TempDir(), "light.pptx")
+	if _, err := renderDeckToFile(mustTemplate("light"), d, out); err != nil {
+		t.Fatal(err)
+	}
+	for slide, texts := range map[string][]string{
+		"ppt/slides/slide2.xml": {"金額で承認者が変わる", "取引先が受け持つ"},
+		"ppt/slides/slide3.xml": {"担当が足りない"},
+		"ppt/slides/slide5.xml": {"担当を増やして立て直す段"},
+	} {
+		x := slideXML(t, out, slide)
+		for _, s := range texts {
+			if !strings.Contains(x, ">"+s+"<") {
+				t.Errorf("%s: legend lacks %q", slide, s)
+			}
+		}
+	}
+	for _, f := range []string{"../examples/ir/check-warnings/figure-legend.json", "../examples/md/warnings/figure-legend.bx.md"} {
+		_, warns := CheckFile(f, "")
+		var got []Issue
+		for _, w := range warns {
+			if w.Code == "figure-legend" {
+				got = append(got, w)
+			}
+		}
+		if len(got) != 1 || got[0].Path != "/slides/1/body/0/data/legend" || !strings.Contains(got[0].Message, `"conditional"`) {
+			t.Errorf("%s: figure-legend = %+v", f, got)
+		}
+		if strings.HasSuffix(f, ".md") && (len(got) != 1 || got[0].Line != 17) {
+			t.Errorf("%s: want the legend line 17, got %+v", f, got)
+		}
+	}
+	for kind, data := range map[string]string{
+		"process":  `{"steps": [{"title": "a"}, {"title": "b"}], "legend": {"risk": "r"}}`,
+		"orgchart": `{"root": {"title": "a"}, "units": [{"title": "b"}], "legend": {"accent": "r"}}`,
+		"funnel":   `{"stages": [{"label": "a", "value": 2}, {"label": "b", "value": 1}], "legend": {"bad": "r"}}`,
+	} {
+		if _, err := mustTemplate("light").Subsystems.Build(kind, json.RawMessage(data)); err == nil || !strings.Contains(err.Error(), "legend: unknown key") {
+			t.Errorf("%s: err = %v", kind, err)
+		}
+	}
+}
+
+// funnel の転換率: 前後の値が数で、前が 0 より大きく後が前を越えないときだけ、
+// 境目の高さに「↓ 割合%」を書く(10% 未満は小数1桁)。
+func TestFunnelRates(t *testing.T) {
+	sub := figureFromIR(t, "light", "funnel", `{"unit": "社", "stages": [
+	  {"label": "参加", "value": 400}, {"label": "請求", "value": 180}, {"label": "確認", "value": "約 60"},
+	  {"label": "試験", "value": 24}, {"label": "契約", "value": 30}, {"label": "継続", "value": 1}]}`).(*FunnelSubsystem)
+	want := []string{"↓ 45%", "", "", "", "↓ 3.3%"}
+	if got := sub.rates(); strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("rates = %q, want %q", got, want)
+	}
+	box := LBox{X: 0, Y: 0, Width: 912, Height: 380}
+	g, pl := sub.place(box)
+	for i, r := range want {
+		if r == "" {
+			continue
+		}
+		b := pl.rates[i]
+		mid := b.Y + b.Height/2
+		if mid < pl.bars[i].Y+pl.bars[i].Height-0.01 || mid > pl.bars[i+1].Y+0.01 {
+			t.Errorf("rate %d is not between the bars", i)
+		}
+		for _, bar := range pl.bars {
+			if boxesOverlap(b, bar) {
+				t.Errorf("rate %d overlaps a bar", i)
+			}
+		}
+		if b.X < box.X+g.barArea {
+			t.Errorf("rate %d is inside the bar column", i)
+		}
+	}
+	// 例の funnel: 12000 → 1500 → 480 → 9 件。
+	d := mustReadIR(t, figuresPath)
+	out := filepath.Join(t.TempDir(), "dark.pptx")
+	if _, err := renderDeckToFile(mustTemplate("dark"), d, out); err != nil {
+		t.Fatal(err)
+	}
+	x := slideXML(t, out, "ppt/slides/slide5.xml")
+	for _, s := range []string{"↓ 13%", "↓ 32%", "↓ 1.9%"} {
+		if !strings.Contains(x, ">"+s+"<") {
+			t.Errorf("funnel lacks the rate %q", s)
+		}
+	}
+}
+
+// matrix の推す列: 見出しは太字のアクセントの色、列は見出しから最後の行まで
+// アクセントの色の枠(塗らない)で囲む。見出しに無い名前は誤り。
+func TestMatrixEmphasisColumn(t *testing.T) {
+	sub := figureFromIR(t, "light", "matrix", `{"columns": ["A", "B", "C"], "emphasis": "B",
+	  "rows": [{"label": "x", "cells": [{"status": "support"}, {"status": "support"}, {"status": "none"}]},
+	           {"label": "y", "cells": [{"status": "danger"}, {"status": "support"}, {"status": "none"}]}]}`).(*MatrixSubsystem)
+	if sub.Data.Emphasis != 1 {
+		t.Fatalf("emphasis = %d", sub.Data.Emphasis)
+	}
+	leaf := SubsystemNode(sub, WithGrow(1))
+	p := figureSlide(t, "light", leaf, "matrix-emphasis-light")
+	accent := mustTemplate("light").Theme.c("accent")
+	var frame *shape
+	for i := range p.Shapes {
+		s := &p.Shapes[i]
+		if s.hasOutline && s.outlineColor == accent && s.fill == "" {
+			frame = s
+		}
+	}
+	if frame == nil {
+		t.Fatal("no accent frame around the column")
+	}
+	pl := sub.place(subsystemDrawBox(leaf))
+	head, last := pl.header[1], pl.cells[1][1]
+	if frame.box.X > head.X || frame.box.X+frame.box.Width < head.X+head.Width || frame.box.Y > head.Y || frame.box.Y+frame.box.Height < last.Y+last.Height {
+		t.Errorf("frame %+v does not surround the column", frame.box)
+	}
+	if frame.box.X < pl.header[0].X+pl.header[0].Width || frame.box.X+frame.box.Width > pl.header[2].X {
+		t.Errorf("frame %+v reaches the next columns", frame.box)
+	}
+	if _, err := matrixFromIR(json.RawMessage(`{"columns": ["A"], "emphasis": "Z", "rows": [{"label": "x", "cells": [{"status": "support"}]}]}`)); err == nil || !strings.Contains(err.Error(), `emphasis "Z" is not one of the columns`) {
+		t.Errorf("err = %v", err)
 	}
 }

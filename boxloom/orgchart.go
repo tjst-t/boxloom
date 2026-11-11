@@ -18,25 +18,35 @@ import (
 
 // OrgChartValues は orgchart の寸法(pt)。既定は subsystems/orgchart.json。
 type OrgChartValues struct {
-	Padding      float64 `json:"padding" scale:"space"`
-	UnitGap      float64 `json:"unitGap" scale:"space"`   // 2段目の列と列の間
-	MemberGap    float64 `json:"memberGap" scale:"space"` // 同じ列の3段目の箱の間
-	MaxRootW     float64 `json:"maxRootWidth"`
-	MaxUnitW     float64 `json:"maxUnitWidth"`
-	MaxMemberW   float64 `json:"maxMemberWidth"`
-	MinBoxH      float64 `json:"minBoxHeight"`
-	NaturalBoxH  float64 `json:"naturalBoxHeight"`
-	MaxBoxH      float64 `json:"maxBoxHeight"`
-	MinLevelGap  float64 `json:"minLevelGap" scale:"space"` // 段と段の間(コネクタが曲がる)
-	NaturalLevel float64 `json:"naturalLevelGap" scale:"space"`
-	MaxLevelGap  float64 `json:"maxLevelGap" scale:"space"`
-	NaturalWidth float64 `json:"naturalWidth"`
-	MinWidth     float64 `json:"minWidth"`
-	TextInsetX   float64 `json:"textInsetX" scale:"space"`
-	TextInsetY   float64 `json:"textInsetY" scale:"space"`
-	LineWidth    float64 `json:"lineWidth"`
-	OutlineWidth float64 `json:"outlineWidth"`
-	CornerRadius float64 `json:"cornerRadius"`
+	Padding       float64 `json:"padding" scale:"space"`
+	UnitGap       float64 `json:"unitGap" scale:"space"`   // 2段目の列と列の間
+	MemberGap     float64 `json:"memberGap" scale:"space"` // 同じ列の3段目の箱の間
+	MaxRootW      float64 `json:"maxRootWidth"`
+	MaxUnitW      float64 `json:"maxUnitWidth"`
+	MaxMemberW    float64 `json:"maxMemberWidth"`
+	MinBoxH       float64 `json:"minBoxHeight"`
+	NaturalBoxH   float64 `json:"naturalBoxHeight"`
+	MaxBoxH       float64 `json:"maxBoxHeight"`
+	MinLevelGap   float64 `json:"minLevelGap" scale:"space"` // 段と段の間(コネクタが曲がる)
+	NaturalLevel  float64 `json:"naturalLevelGap" scale:"space"`
+	MaxLevelGap   float64 `json:"maxLevelGap" scale:"space"`
+	NaturalWidth  float64 `json:"naturalWidth"`
+	MinWidth      float64 `json:"minWidth"`
+	TextInsetX    float64 `json:"textInsetX" scale:"space"`
+	TextInsetY    float64 `json:"textInsetY" scale:"space"`
+	LineWidth     float64 `json:"lineWidth"`
+	OutlineWidth  float64 `json:"outlineWidth"`
+	CornerRadius  float64 `json:"cornerRadius"`
+	LegendGap     float64 `json:"legendGap" scale:"space"` // 図と凡例の間
+	LegendItemGap float64 `json:"legendItemGap" scale:"space"`
+	LegendSwatchW float64 `json:"legendSwatchWidth"` // 凡例の見本の箱
+	LegendSwatchH float64 `json:"legendSwatchHeight"`
+	LegendSwatchG float64 `json:"legendSwatchGap" scale:"space"` // 見本と文の間
+}
+
+func (v *OrgChartValues) legendValues(radius float64) figureLegendValues {
+	return figureLegendValues{gap: v.LegendGap, itemGap: v.LegendItemGap, swatchW: v.LegendSwatchW, swatchH: v.LegendSwatchH,
+		swatchGap: v.LegendSwatchG, outlineW: v.OutlineWidth, radius: radius}
 }
 
 // OrgUnit は2段目の箱と、その下の3段目。
@@ -47,8 +57,21 @@ type OrgUnit struct {
 
 // OrgChartData は IR の data を読んだもの。
 type OrgChartData struct {
-	Root  FigureNode
-	Units []OrgUnit
+	Root   FigureNode
+	Units  []OrgUnit
+	Legend []LegendItem // 状態の凡例の文(書いた順)
+}
+
+// legend は凡例の項目と、使ったのに文の無い状態。
+func (s *OrgChartSubsystem) legend() ([]LegendItem, []string) {
+	used := map[string]bool{s.Data.Root.Status: true}
+	for _, u := range s.Data.Units {
+		used[u.Status] = true
+		for _, m := range u.Members {
+			used[m.Status] = true
+		}
+	}
+	return figureLegendItems(used, s.Data.Legend)
 }
 
 // OrgChartSubsystem は OrgChartData を描くサブシステム。
@@ -112,6 +135,7 @@ type orgGeom struct {
 	needRoot     float64
 	needUnit     float64
 	needMember   float64
+	legend       figureLegendLayout
 	parts        []flexPart
 }
 
@@ -177,6 +201,9 @@ func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
 	if s.hasMembers() {
 		g.parts = append(g.parts, gap, box(g.needMember))
 	}
+	items, _ := s.legend()
+	g.legend = layoutFigureLegend(items, inner, tx.Small, v.legendValues(0))
+	g.parts = append(g.parts, g.legend.part(v.legendValues(0))...)
 	g.parts = append(g.parts, fixedPart(v.Padding))
 	return g
 }
@@ -201,6 +228,8 @@ type orgPlaced struct {
 	root    LBox
 	units   []LBox
 	members [][]LBox
+	g       *orgGeom
+	legend  LBox // 凡例の左上
 }
 
 func (s *OrgChartSubsystem) place(box LBox) *orgPlaced {
@@ -211,7 +240,12 @@ func (s *OrgChartSubsystem) place(box LBox) *orgPlaced {
 	for i, h := range sizes {
 		y[i+1] = y[i] + h
 	}
-	pl := &orgPlaced{root: LBox{X: box.X + g.rootX, Y: y[orgPartRoot], Width: g.rootW, Height: sizes[orgPartRoot]}}
+	pl := &orgPlaced{g: g, root: LBox{X: box.X + g.rootX, Y: y[orgPartRoot], Width: g.rootW, Height: sizes[orgPartRoot]}}
+	// 凡例は最後の段の箱の下(下の余白の手前の部品)。
+	if g.legend.h > 0 {
+		k := len(sizes) - 2
+		pl.legend = LBox{X: box.X + s.vals().Padding, Y: y[k] + s.vals().LegendGap, Height: g.legend.h}
+	}
 	for i, u := range s.Data.Units {
 		pl.units = append(pl.units, LBox{X: box.X + g.unitX[i], Y: y[orgPartUnit], Width: g.unitW[i], Height: sizes[orgPartUnit]})
 		var ms []LBox
@@ -237,6 +271,7 @@ func (s *OrgChartSubsystem) Render(ctx RenderContext, box LBox) {
 			memberIDs[i] = append(memberIDs[i], drawFigureNode(ctx, pl.members[i][j], &u.Members[j], tx.Sub, tx.Detail, s.boxValues("roundRect")))
 		}
 	}
+	drawFigureLegend(ctx, pl.legend.X, pl.legend.Y, pl.g.legend, tx.Small, v.legendValues(v.CornerRadius/2))
 	color := ctx.Roles.Color("text_muted")
 	link := func(a, b LBox, ida, idb int) {
 		p.AddElbowConnector(a.X+a.Width/2, a.Y+a.Height, b.X+b.Width/2, b.Y, v.LineWidth, color, false,
@@ -271,7 +306,8 @@ func (s *OrgChartSubsystem) Lint(box LBox) []string {
 			check(fmt.Sprintf("units[%d].members[%d]", i, j), &u.Members[j], pl.members[i][j], tx.Sub, tx.Detail, s.boxValues("roundRect"))
 		}
 	}
-	return out
+	_, missing := s.legend()
+	return append(out, legendMissingWarnings("orgchart", missing)...)
 }
 
 // --- IR から読む ---
@@ -282,8 +318,9 @@ type orgUnitIR struct {
 }
 
 type orgChartIR struct {
-	Root  figureNodeIR `json:"root"`
-	Units []orgUnitIR  `json:"units"`
+	Root   figureNodeIR  `json:"root"`
+	Units  []orgUnitIR   `json:"units"`
+	Legend orderedLegend `json:"legend"`
 }
 
 func orgChartFromIR(raw json.RawMessage) (*OrgChartData, error) {
@@ -315,6 +352,9 @@ func orgChartFromIR(raw json.RawMessage) (*OrgChartData, error) {
 		}
 		d.Units = append(d.Units, ou)
 	}
+	if d.Legend, err = figureLegendIR("orgchart", in.Legend); err != nil {
+		return nil, err
+	}
 	return d, nil
 }
 
@@ -322,5 +362,6 @@ func orgChartDecl() SubsystemDecl {
 	return figureDecl("subsystems/orgchart.schema.json",
 		"上下の関係(親1つ・子 2〜8)。root の下に units、各 unit の下に members(3段まで)",
 		"箱の文は title(1行目)と detail(その下。人の名前・人数など)",
+		"status を使ったら legend: {conditional: 意味, …} で枠線の色の意味を書く(凡例が図の下に出る。無ければ figure-legend の警告)",
 	)
 }

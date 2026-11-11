@@ -437,3 +437,112 @@ func figureDecl(schema string, extra ...string) SubsystemDecl {
 		}, extra...),
 	}
 }
+
+// --- 状態の凡例(process・orgchart・funnel) ---
+//
+// 箱の枠線の色(状態)の意味は作者の言葉でしか書けないので、data の legend
+// (状態の名前 → 文)に書いた状態だけを凡例に出す。使った状態に文が無ければ
+// 警告 figure-legend(読み手は色の意味が分からない)。matrix は評価の既定の文が
+// あるので別(matrix.go)。
+
+// figureLegendValues は凡例の寸法(各サブシステムの値の表から入れる)。
+type figureLegendValues struct {
+	gap, itemGap     float64 // 図と凡例の間・項目の間
+	swatchW, swatchH float64 // 見本の箱
+	swatchGap        float64 // 見本と文の間
+	outlineW, radius float64
+}
+
+// figureLegendIR は IR の legend を読む(キーは状態の名前だけ)。
+func figureLegendIR(kind string, l orderedLegend) ([]LegendItem, error) {
+	for _, li := range l {
+		if !contains(figureStatuses, li.Role) {
+			return nil, fmt.Errorf("%s: legend: unknown key %q (known: %s)", kind, li.Role, strings.Join(figureStatuses, ", "))
+		}
+	}
+	return []LegendItem(l), nil
+}
+
+// figureLegendItems は描く項目(使った状態のうち文のあるもの、状態の順)と、
+// 使ったのに文の無い状態。
+func figureLegendItems(used map[string]bool, legend []LegendItem) (items []LegendItem, missing []string) {
+	label := map[string]string{}
+	for _, li := range legend {
+		label[li.Role] = li.Label
+	}
+	for _, st := range figureStatuses {
+		if !used[st] {
+			continue
+		}
+		if l, ok := label[st]; ok && l != "" {
+			items = append(items, LegendItem{Role: st, Label: l})
+		} else {
+			missing = append(missing, st)
+		}
+	}
+	return items, missing
+}
+
+// figureLegendLayout は凡例を幅 avail に並べたもの(越えたら次の行へ)。
+type figureLegendLayout struct {
+	items []LegendItem
+	rows  [][]int
+	h     float64 // 凡例の高さ(項目が無ければ 0)
+}
+
+func (lv figureLegendValues) itemW(li LegendItem, size float64) float64 {
+	return lv.swatchW + lv.swatchGap + runWidthPt(li.Label, size, false)
+}
+
+func layoutFigureLegend(items []LegendItem, avail, size float64, lv figureLegendValues) figureLegendLayout {
+	l := figureLegendLayout{items: items}
+	x := 0.0
+	for i, li := range items {
+		w := lv.itemW(li, size)
+		if len(l.rows) == 0 || (x > 0 && x+w > avail) {
+			l.rows = append(l.rows, nil)
+			x = 0
+		}
+		l.rows[len(l.rows)-1] = append(l.rows[len(l.rows)-1], i)
+		x += w + lv.itemGap
+	}
+	l.h = float64(len(l.rows)) * size * lineHeightMult
+	return l
+}
+
+// part は凡例が縦に取る大きさ(図の下の余白の手前に足す)。無ければ nil。
+func (l figureLegendLayout) part(lv figureLegendValues) []flexPart {
+	if l.h == 0 {
+		return nil
+	}
+	return []flexPart{fixedPart(lv.gap + l.h)}
+}
+
+// drawFigureLegend は凡例を (x, y) から描く。見本は箱と同じ形(地の塗りに状態の
+// 色の枠線)。
+func drawFigureLegend(ctx RenderContext, x0, y0 float64, l figureLegendLayout, size float64, lv figureLegendValues) {
+	lineH := size * lineHeightMult
+	for k, row := range l.rows {
+		x, y := x0, y0+float64(k)*lineH
+		for _, i := range row {
+			li := l.items[i]
+			ctx.Out.AddShape(LBox{X: x, Y: y + (lineH-lv.swatchH)/2, Width: lv.swatchW, Height: lv.swatchH},
+				ShapeOpts{Prst: "roundRect", Fill: ctx.Roles.Color("card_alt"), Outline: ctx.Roles.Color(li.Role),
+					OutlineWidthPt: lv.outlineW, Radius: lv.radius})
+			lx := x + lv.swatchW + lv.swatchGap
+			w := runWidthPt(li.Label, size, false)
+			ctx.Out.AddTextBoxNoWrap(LBox{X: lx, Y: y, Width: w + 4, Height: lineH}, li.Label, size, ctx.Roles.Color("text_muted"), false, "left", "top")
+			x += lv.itemW(li, size) + lv.itemGap
+		}
+	}
+}
+
+// legendMissingWarnings は使ったのに凡例の文が無い状態の警告(figure-legend)。
+func legendMissingWarnings(kind string, missing []string) []string {
+	var out []string
+	for _, st := range missing {
+		out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] %s: legend: status %q is used but has no legend text (write legend: {%s: …}); the reader cannot tell what the outline color means",
+			kind, st, st))
+	}
+	return out
+}

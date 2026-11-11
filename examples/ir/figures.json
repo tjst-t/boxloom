@@ -60,7 +60,11 @@
                 "detail": "1〜2週間",
                 "status": "support"
               }
-            ]
+            ],
+            "legend": {
+              "conditional": "金額で承認者が変わる",
+              "support": "取引先が受け持つ"
+            }
           }
         },
         {
@@ -134,7 +138,10 @@
                 "title": "窓口",
                 "detail": "2名"
               }
-            ]
+            ],
+            "legend": {
+              "danger": "担当が足りない"
+            }
           }
         }
       ]
@@ -224,7 +231,8 @@
             "legend": {
               "support": "満たす",
               "danger": "満たさない"
-            }
+            },
+            "emphasis": "案 B(段階移行)"
           }
         }
       ]
@@ -267,7 +275,10 @@
                 "emphasis": true,
                 "note": "今期の目標は12件"
               }
-            ]
+            ],
+            "legend": {
+              "conditional": "担当を増やして立て直す段"
+            }
           }
         }
       ]

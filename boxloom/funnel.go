@@ -21,21 +21,32 @@ import (
 // FunnelValues は funnel の寸法(pt。割合は内側の幅に対するもの)。既定は
 // subsystems/funnel.json。
 type FunnelValues struct {
-	Padding      float64 `json:"padding" scale:"space"`
-	NoteFrac     float64 `json:"noteFraction"` // 注記の列の幅(注記があるとき)
-	NoteGap      float64 `json:"noteGap" scale:"space"`
-	MinWidthFrac float64 `json:"minWidthFraction"` // 一番下の帯の幅(帯の列の幅に対する割合)
-	MinBarH      float64 `json:"minBarHeight"`
-	NaturalBarH  float64 `json:"naturalBarHeight"`
-	MaxBarH      float64 `json:"maxBarHeight"`
-	MinGap       float64 `json:"minGap" scale:"space"` // 帯と帯の間
-	NaturalGap   float64 `json:"naturalGap" scale:"space"`
-	MaxGap       float64 `json:"maxGap" scale:"space"`
-	NaturalWidth float64 `json:"naturalWidth"`
-	MinWidth     float64 `json:"minWidth"`
-	TextInsetX   float64 `json:"textInsetX" scale:"space"`
-	TextInsetY   float64 `json:"textInsetY" scale:"space"`
-	OutlineWidth float64 `json:"outlineWidth"`
+	Padding       float64 `json:"padding" scale:"space"`
+	NoteFrac      float64 `json:"noteFraction"` // 注記の列の幅(注記があるとき)
+	NoteGap       float64 `json:"noteGap" scale:"space"`
+	MinWidthFrac  float64 `json:"minWidthFraction"` // 一番下の帯の幅(帯の列の幅に対する割合)
+	MinBarH       float64 `json:"minBarHeight"`
+	NaturalBarH   float64 `json:"naturalBarHeight"`
+	MaxBarH       float64 `json:"maxBarHeight"`
+	MinGap        float64 `json:"minGap" scale:"space"` // 帯と帯の間
+	NaturalGap    float64 `json:"naturalGap" scale:"space"`
+	MaxGap        float64 `json:"maxGap" scale:"space"`
+	NaturalWidth  float64 `json:"naturalWidth"`
+	MinWidth      float64 `json:"minWidth"`
+	TextInsetX    float64 `json:"textInsetX" scale:"space"`
+	TextInsetY    float64 `json:"textInsetY" scale:"space"`
+	OutlineWidth  float64 `json:"outlineWidth"`
+	LegendGap     float64 `json:"legendGap" scale:"space"` // 図と凡例の間
+	LegendItemGap float64 `json:"legendItemGap" scale:"space"`
+	LegendSwatchW float64 `json:"legendSwatchWidth"` // 凡例の見本の箱
+	LegendSwatchH float64 `json:"legendSwatchHeight"`
+	LegendSwatchG float64 `json:"legendSwatchGap" scale:"space"` // 見本と文の間
+	RateGap       float64 `json:"rateGap" scale:"space"`         // 帯の列と転換率の列の間
+}
+
+func (v *FunnelValues) legendValues() figureLegendValues {
+	return figureLegendValues{gap: v.LegendGap, itemGap: v.LegendItemGap, swatchW: v.LegendSwatchW, swatchH: v.LegendSwatchH,
+		swatchGap: v.LegendSwatchG, outlineW: v.OutlineWidth}
 }
 
 // FunnelStage は1つの段。
@@ -52,6 +63,40 @@ type FunnelStage struct {
 type FunnelData struct {
 	Unit   string
 	Stages []FunnelStage
+	Legend []LegendItem // 状態の凡例の文(書いた順)
+}
+
+// legend は凡例の項目と、使ったのに文の無い状態。
+func (s *FunnelSubsystem) legend() ([]LegendItem, []string) {
+	used := map[string]bool{}
+	for _, st := range s.Data.Stages {
+		used[st.Status] = true
+	}
+	return figureLegendItems(used, s.Data.Legend)
+}
+
+// rates は段 i と i+1 の間の転換率(前の段に対する割合)の文。前後の値が数で、
+// 前が 0 より大きく、後が前を越えないときだけ(それ以外は "")。作者の数から
+// 一つに決まる値なので、図が書き足す。
+func (s *FunnelSubsystem) rates() []string {
+	n := len(s.Data.Stages)
+	out := make([]string, max(n-1, 0))
+	for i := 0; i+1 < n; i++ {
+		a, b := s.Data.Stages[i].Number, s.Data.Stages[i+1].Number
+		if a == nil || b == nil || *a <= 0 || *b < 0 || *b > *a {
+			continue
+		}
+		out[i] = "↓ " + formatRate(*b / *a * 100) + "%"
+	}
+	return out
+}
+
+// formatRate は割合を書く(10 以上は整数、それより小さければ小数1桁。末尾の .0 は省く)。
+func formatRate(p float64) string {
+	if p >= 10 {
+		return strconv.FormatFloat(math.Round(p), 'f', -1, 64)
+	}
+	return strconv.FormatFloat(math.Round(p*10)/10, 'f', -1, 64)
 }
 
 // FunnelSubsystem は FunnelData を描くサブシステム。
@@ -113,6 +158,10 @@ func barRuns(st *FunnelStage, color string, roles Roles) []TextRun {
 
 type funnelGeom struct {
 	barArea  float64 // 帯の列の幅
+	rateX    float64 // 転換率の列の左端(内側の左端から)。無ければ 0
+	rateW    float64
+	inner    float64
+	legend   figureLegendLayout
 	noteX    float64 // 注記の列の左端(内側の左端から)
 	noteW    float64
 	widths   []float64
@@ -124,11 +173,21 @@ type funnelGeom struct {
 func (s *FunnelSubsystem) geom(width float64) *funnelGeom {
 	v, tx := s.vals(), s.text()
 	inner := math.Max(0, width-2*v.Padding)
-	g := &funnelGeom{barArea: inner}
+	g := &funnelGeom{barArea: inner, inner: inner}
 	if s.hasNotes() {
 		g.noteW = inner * v.NoteFrac
 		g.barArea = math.Max(0, inner-g.noteW-v.NoteGap)
 		g.noteX = g.barArea + v.NoteGap
+	}
+	for _, r := range s.rates() {
+		if r != "" {
+			g.rateW = math.Max(g.rateW, runWidthPt(r, tx.Sub, false))
+		}
+	}
+	if g.rateW > 0 {
+		// 転換率の列は帯の列の右(注記の列の手前)に取る。
+		g.barArea = math.Max(0, g.barArea-g.rateW-v.RateGap)
+		g.rateX = g.barArea + v.RateGap
 	}
 	n := len(s.Data.Stages)
 	g.widths = make([]float64, n)
@@ -162,6 +221,9 @@ func (s *FunnelSubsystem) geom(width float64) *funnelGeom {
 		g.barParts = append(g.barParts, len(g.parts))
 		g.parts = append(g.parts, bar)
 	}
+	items, _ := s.legend()
+	g.legend = layoutFigureLegend(items, inner, tx.Small, v.legendValues())
+	g.parts = append(g.parts, g.legend.part(v.legendValues())...)
 	g.parts = append(g.parts, fixedPart(v.Padding))
 	return g
 }
@@ -183,6 +245,8 @@ func (s *FunnelSubsystem) Measure(c Constraint) Measurement {
 
 type funnelPlaced struct {
 	bars, notes []LBox
+	rates       []LBox // 段 i と i+1 の境目の高さの真ん中に置く文の枠
+	legend      LBox
 }
 
 func (s *FunnelSubsystem) place(box LBox) (*funnelGeom, *funnelPlaced) {
@@ -202,13 +266,28 @@ func (s *FunnelSubsystem) place(box LBox) (*funnelGeom, *funnelPlaced) {
 		}
 		y += h
 	}
+	lineH := s.text().Sub * lineHeightMult
+	for i := 0; i+1 < len(pl.bars); i++ {
+		mid := (pl.bars[i].Y + pl.bars[i].Height + pl.bars[i+1].Y) / 2
+		pl.rates = append(pl.rates, LBox{X: x0 + g.rateX, Y: mid - lineH/2, Width: g.rateW + 4, Height: lineH})
+	}
+	if g.legend.h > 0 {
+		last := pl.bars[len(pl.bars)-1]
+		pl.legend = LBox{X: x0, Y: last.Y + last.Height + v.LegendGap, Width: g.inner, Height: g.legend.h}
+	}
 	return g, pl
 }
 
 func (s *FunnelSubsystem) Render(ctx RenderContext, box LBox) {
 	v, tx := s.vals(), s.text()
-	_, pl := s.place(box)
+	g, pl := s.place(box)
 	p := ctx.Out
+	for i, r := range s.rates() {
+		if r != "" {
+			p.AddTextBoxNoWrap(pl.rates[i], r, tx.Sub, ctx.Roles.Color("text_muted"), true, "left", "middle")
+		}
+	}
+	drawFigureLegend(ctx, pl.legend.X, pl.legend.Y, g.legend, tx.Small, v.legendValues())
 	for i := range s.Data.Stages {
 		st := &s.Data.Stages[i]
 		fill, outline, text := figureStyle(st.Status, st.Emphasis)
@@ -256,7 +335,8 @@ func (s *FunnelSubsystem) Lint(box LBox) []string {
 				i, s.Data.Stages[i].Value, s.Data.Stages[i-1].Value))
 		}
 	}
-	return out
+	_, missing := s.legend()
+	return append(out, legendMissingWarnings("funnel", missing)...)
 }
 
 // --- IR から読む ---
@@ -270,6 +350,7 @@ type funnelIR struct {
 		Status   string          `json:"status"`
 		Emphasis bool            `json:"emphasis"`
 	} `json:"stages"`
+	Legend orderedLegend `json:"legend"`
 }
 
 // formatFunnelNumber は数を3桁ごとの区切りつきで書く(小数はそのまま)。
@@ -334,6 +415,11 @@ func funnelFromIR(raw json.RawMessage) (*FunnelData, error) {
 		}
 		d.Stages = append(d.Stages, fs)
 	}
+	lg, err := figureLegendIR("funnel", in.Legend)
+	if err != nil {
+		return nil, err
+	}
+	d.Legend = lg
 	return d, nil
 }
 
@@ -342,5 +428,7 @@ func funnelDecl() SubsystemDecl {
 		"段階ごとに数が減る流れ。帯の幅は値に比例しない(上から等しい刻みで狭まる)。値は帯の中に書く",
 		"value は数(引用しない。unit を後ろに付けて書く)か文字列。数が前の段より増えると警告",
 		"note は帯の右に、その段に揃えて置く",
+		"段と段の間の転換率(前の段に対する %)は、前後の値が数ならサブシステムが帯の右に書く。note に転換率を書かない",
+		"status を使ったら legend: {conditional: 意味, …} で枠線の色の意味を書く(凡例が図の下に出る。無ければ figure-legend の警告)",
 	)
 }

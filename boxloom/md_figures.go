@@ -45,6 +45,7 @@ func processDataFromYAML(p *mdParser, n *yNode, path string) any {
 		{"caption", gInline, false},
 		{"numbered", gBool, false},
 		{"steps", gSeq(gObject(figureNodeFields), 2), true},
+		{"legend", gStatusLegend, false},
 	})(p, n, path)
 }
 
@@ -52,6 +53,7 @@ func orgChartDataFromYAML(p *mdParser, n *yNode, path string) any {
 	return gObject([]gField{
 		{"root", gObject(figureNodeFields), true},
 		{"units", gSeq(gObject(orgUnitFields), 1), true},
+		{"legend", gStatusLegend, false},
 	})(p, n, path)
 }
 
@@ -60,6 +62,7 @@ func matrixDataFromYAML(p *mdParser, n *yNode, path string) any {
 		{"columns", gSeq(gInline, 1), true},
 		{"rows", gSeq(gObject(matrixRowFields), 1), true},
 		{"legend", gStatusLegend, false},
+		{"emphasis", gString, false},
 	})(p, n, path)
 }
 
@@ -67,6 +70,7 @@ func funnelDataFromYAML(p *mdParser, n *yNode, path string) any {
 	return gObject([]gField{
 		{"unit", gString, false},
 		{"stages", gSeq(gObject(funnelStageField), 2), true},
+		{"legend", gStatusLegend, false},
 	})(p, n, path)
 }
 

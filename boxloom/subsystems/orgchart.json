@@ -17,5 +17,10 @@
   "textInsetY": 4,
   "lineWidth": 1.25,
   "outlineWidth": 1.25,
-  "cornerRadius": 8
+  "cornerRadius": 8,
+  "legendGap": 12,
+  "legendItemGap": 20,
+  "legendSwatchWidth": 16,
+  "legendSwatchHeight": 10,
+  "legendSwatchGap": 8
 }

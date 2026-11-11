@@ -1,0 +1,60 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "図の凡例が足りない例",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "承認(4)だけが、金額によって長くなる",
+      "body": [
+        {
+          "type": "subsystem",
+          "subsystem": "process",
+          "data": {
+            "caption": "架空の会社の、経費の精算の流れ",
+            "steps": [
+              {
+                "title": "申請",
+                "detail": "申請者が書く"
+              },
+              {
+                "title": "上長の確認",
+                "detail": "1営業日"
+              },
+              {
+                "title": "経理の点検",
+                "detail": "2営業日",
+                "status": "support"
+              },
+              {
+                "title": "承認",
+                "detail": "金額で変わる",
+                "status": "conditional"
+              },
+              {
+                "title": "支払い",
+                "detail": "月末にまとめて"
+              }
+            ],
+            "legend": {
+              "support": "経理の係が受け持つ"
+            }
+          }
+        },
+        {
+          "type": "points",
+          "items": [
+            "承認(4)の枠線の色には凡例の文が無いので、読み手は色の意味が分からない",
+            "経理の点検(3)は legend に文があるので、図の下の凡例に出る"
+          ]
+        }
+      ]
+    }
+  ]
+}
