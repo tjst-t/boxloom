@@ -259,6 +259,7 @@ type ShapeOpts struct {
 	Prst           string // rect | roundRect | ellipse
 	Fill           string
 	Outline        string
+	OutlineDash    string // "" | "dash"
 	OutlineWidthPt float64
 	Radius         float64 // roundRect の角
 	Runs           []TextRun
@@ -288,7 +289,7 @@ func (p *PPTXBuilder) AddShape(box LBox, o ShapeOpts) int {
 	}
 	p.Shapes = append(p.Shapes, shape{
 		id: id, kind: skShape, box: box, prst: o.Prst, fill: o.Fill, radius: o.Radius,
-		hasOutline: o.Outline != "", outlineColor: o.Outline, outlineWidthPt: o.OutlineWidthPt,
+		hasOutline: o.Outline != "", outlineColor: o.Outline, outlineDash: o.OutlineDash, outlineWidthPt: o.OutlineWidthPt,
 		runs: o.Runs, text: text, fontSize: o.FontSize, insetX: o.InsetX, insetY: o.InsetY,
 		align: align, anchor: anchor, paras: o.Paras, paraSizes: o.ParaSizes,
 	})
@@ -841,8 +842,12 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 	}
 	lnXML := "<a:ln><a:noFill/></a:ln>"
 	if s.hasOutline {
-		lnXML = fmt.Sprintf(`<a:ln w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:ln>`,
-			ptToEMU(s.outlineWidthPt), hexColor(s.outlineColor))
+		dashXML := ""
+		if s.outlineDash == "dash" {
+			dashXML = `<a:prstDash val="dash"/>`
+		}
+		lnXML = fmt.Sprintf(`<a:ln w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill>%s</a:ln>`,
+			ptToEMU(s.outlineWidthPt), hexColor(s.outlineColor), dashXML)
 	}
 	paras := "<a:p/>"
 	if len(s.list) > 0 {

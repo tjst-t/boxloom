@@ -629,8 +629,11 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 			p.AddRect(LBox{X: rb0, Y: groupTop, Width: rb1 - rb0, Height: groupH}, c("risk"), 0)
 		}
 
-		p.AddRect(LBox{X: x0, Y: groupTop, Width: gv.GutterGroupW - 4, Height: groupH}, c("card_alt"), 6)
-		p.AddTextBox(LBox{X: x0 + 3, Y: groupTop, Width: gv.GutterGroupW - 10, Height: groupH}, group.Label, gv.SmallText, c("text_primary"), true, "center", "middle")
+		p.AddShape(LBox{X: x0, Y: groupTop, Width: gv.GutterGroupW - 4, Height: groupH}, ShapeOpts{
+			Prst: "roundRect", Fill: c("card_alt"), Radius: 6,
+			Runs: []TextRun{{Text: group.Label, Color: c("text_primary"), Bold: true}}, FontSize: gv.SmallText,
+			InsetX: 3 - roundRectTextInset(6), Align: "center", Anchor: "middle",
+		})
 
 		rowTops := make([]float64, len(group.Rows))
 		for i := range group.Rows {
@@ -668,8 +671,11 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 				if ww < 1.0 {
 					ww = 1.0
 				}
-				p.AddRectFull(LBox{X: nx1, Y: barY, Width: ww, Height: barH}, "", 3, c("text_muted"), "dash", 0.75)
-				p.AddTextBox(LBox{X: nx1 + 5, Y: barY, Width: ww - 10, Height: barH}, row.NoteText, gv.SmallText, c("text_muted"), false, "left", "middle")
+				p.AddShape(LBox{X: nx1, Y: barY, Width: ww, Height: barH}, ShapeOpts{
+					Prst: "roundRect", Radius: 3, Outline: c("text_muted"), OutlineDash: "dash", OutlineWidthPt: 0.75,
+					Runs: []TextRun{{Text: row.NoteText, Color: c("text_muted")}}, FontSize: gv.SmallText,
+					InsetX: 5 - roundRectTextInset(3), Align: "left", Anchor: "middle",
+				})
 				continue
 			}
 
@@ -735,13 +741,16 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 		p.AddDot(lg.ax, lg.ay, 3.0, annColor)
 
 		b := lg.box
-		p.AddRectFull(LBox{X: b.x, Y: b.y, Width: b.w, Height: b.h}, c("card_alt"), 8, annColor, "", 1.25)
+		padX, padY := gv.AnnPadX, gv.AnnPadY
 		if ann.Direction != "" {
 			// 手で置いた注釈は従来どおりの余白。
-			p.AddTextBox(LBox{X: b.x + 8, Y: b.y + 4, Width: b.w - 16, Height: b.h - 8}, ann.Text, gv.AnnText, c("text_primary"), false, "left", "top")
-		} else {
-			p.AddTextBox(LBox{X: b.x + gv.AnnPadX, Y: b.y + gv.AnnPadY, Width: b.w - 2*gv.AnnPadX, Height: b.h - 2*gv.AnnPadY}, ann.Text, gv.AnnText, c("text_primary"), false, "left", "top")
+			padX, padY = 8, 4
 		}
+		p.AddShape(LBox{X: b.x, Y: b.y, Width: b.w, Height: b.h}, ShapeOpts{
+			Prst: "roundRect", Fill: c("card_alt"), Radius: 8, Outline: annColor, OutlineWidthPt: 1.25,
+			Runs: []TextRun{{Text: ann.Text, Color: c("text_primary")}}, FontSize: gv.AnnText,
+			InsetX: padX - roundRectTextInset(8), InsetY: padY - roundRectTextInset(8), Align: "left", Anchor: "top",
+		})
 		// 引き出し線は、目盛りと節目の文字を横切るところを空けて描く(文字に線を重ねない)。
 		for _, sg := range lg.leader {
 			p.AddLine(sg.x1, sg.y1, sg.x2, sg.y2, 1.0, annColor, "dash")
@@ -1289,4 +1298,12 @@ func buildChart() *GanttChart {
 		HasExtNote: true, ExtNoteStart: d(2031, time.February, 1), ExtNoteYFrac: 0.27,
 		ExtNoteLabel: "Board B保守延長予定(デモ)", ExtNoteRole: "danger",
 	}
+}
+
+// roundRectTextInset は角丸(roundRect)の図形の文字の枠が、図形の外形から内へ
+// 寄る分(角の半径 × (1 − 1/√2))。枠と文字の枠を別々に描いていたころと文字の
+// 置き場所を同じにするため、その分を内側の余白から引く。半径は短辺の半分より
+// 小さい前提(Gantt の箱はどれもそう)。
+func roundRectTextInset(radius float64) float64 {
+	return radius * 0.29289
 }
