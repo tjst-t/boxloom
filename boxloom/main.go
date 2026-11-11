@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const (
@@ -152,9 +151,6 @@ func generate(outPath string, th Theme, subtitle string) {
 	}
 	for _, w := range warnings[boolToInt(warning != ""):] {
 		fmt.Printf("[%s] %s\n", outPath, w)
-	}
-	if len(warnings) > 0 {
-		p.SetNotes(strings.Join(warnings, "\n"))
 	}
 
 	if err := p.Save(outPath); err != nil {

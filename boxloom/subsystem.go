@@ -207,7 +207,7 @@ func (c *checkedRoles) Missing() []string {
 
 // SubsystemLinter は、描く前に自分の中身を検査できるサブシステムが満たす
 // (任意の interface。満たさなければ検査しない)。box は割り当てられた矩形で、
-// 返す文は警告としてスライドのノートと標準出力に出る。
+// 返す文は警告として標準出力(check・build の出力)に出る。ノートには入れない。
 type SubsystemLinter interface {
 	Lint(box LBox) []string
 }

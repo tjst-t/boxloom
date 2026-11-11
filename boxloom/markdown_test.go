@@ -315,6 +315,7 @@ func TestSpeakerNotes(t *testing.T) {
 }
 
 // ノートは1行ずつ段落になり、ノートのページにはスライドの縮図と文の置き場がある。
+// 組み立ての警告は返り値にだけ出て、ノートには入らない。
 func TestSpeakerNotesPPTX(t *testing.T) {
 	d, err := readDeck("../examples/md/speaker-notes.bx.md")
 	if err != nil {
@@ -325,8 +326,12 @@ func TestSpeakerNotesPPTX(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := t.TempDir() + "/n.pptx"
-	if _, err := tm.RenderDeck(d, out); err != nil {
+	warnings, err := tm.RenderDeck(d, out)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(warnings) == 0 {
+		t.Fatal("expected build warnings (fill-ratio) for this example")
 	}
 	zr, err := zip.OpenReader(out)
 	if err != nil {
@@ -353,6 +358,14 @@ func TestSpeakerNotesPPTX(t *testing.T) {
 	}
 	if !strings.Contains(read("ppt/notesSlides/notesSlide1.xml"), "挨拶のあと") {
 		t.Error("cover notes missing")
+	}
+	// 組み立ての警告はノートに入れない(ノートは作者の文だけ)。
+	for _, f := range zr.File {
+		if strings.HasPrefix(f.Name, "ppt/notesSlides/notesSlide") {
+			if c := read(f.Name); strings.Contains(c, "WARNING") {
+				t.Errorf("%s contains a build warning", f.Name)
+			}
+		}
 	}
 	nm := read("ppt/notesMasters/notesMaster1.xml")
 	if !strings.Contains(nm, `type="sldImg"`) || !strings.Contains(nm, `type="body"`) {

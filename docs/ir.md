@@ -53,8 +53,8 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 ```
 
 `notes` は発表者ノート。文字だけの文字列で、改行(`\n`)が段落の区切り。PPTX では
-そのスライドのノートに1行1段落で入る(空の行は空の段落)。組み立ての警告がある
-スライドでは、ノートの後ろに警告の行が続く(`docs/build.md`)。Markdown では
+そのスライドのノートに1行1段落で入る(空の行は空の段落)。ノートに入るのは作者の
+文だけで、組み立ての警告は check・build の出力にだけ出る(`docs/build.md`)。Markdown では
 `:::notes` で書く(`docs/content-syntax.md` の3.6)。
 
 例(論点のスライドの一部):

@@ -14,7 +14,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 )
 
 // Template は名前のついた方針の一式。
@@ -270,8 +269,8 @@ func bodyFillRatio(body *Spec) float64 {
 // --- 書き出し ---
 
 // RenderDeck は IR を組み、並べ、描いて pptx に書く。警告(本文の埋まり具合・
-// サブシステムの最小の大きさ・テーマに無い役割名)は返り値と各スライドの
-// ノートに入れる。
+// サブシステムの最小の大きさ・テーマに無い役割名・はみ出し)は返り値で返し、
+// ノートには入れない(ノートは作者の文だけ)。
 func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
 	built, err := t.BuildDeck(d)
 	if err != nil {
@@ -307,14 +306,8 @@ func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
 			warnings = append(warnings, lintBodyOverflow(b.Root, b.Body, kinds)...)
 		}
 
-		notes := b.Notes
-		if len(warnings) > 0 {
-			if notes != "" {
-				notes += "\n"
-			}
-			notes += strings.Join(warnings, "\n")
-		}
-		p.SetNotes(notes)
+		// ノートには作者の文だけを入れる。警告は返り値(check・build の出力)で知らせる。
+		p.SetNotes(b.Notes)
 		pages = append(pages, p)
 		for _, w := range warnings {
 			all = append(all, fmt.Sprintf("slide %d: %s", i+1, w))

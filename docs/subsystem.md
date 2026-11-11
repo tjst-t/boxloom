@@ -78,7 +78,7 @@ CSS の min-content / max-content と同じ考え方を、PPT のスライドの
   見出しなどのテキストはここでは縮みません。
 - **最小でも足りないとき**:従来どおり全員が比例して縮み、検査
   (`lintSubsystemMin`)が `[SUBSYSTEM WARNING] gantt: needs at least …pt height`
-  を出して、スライドのノートにも書きます。黙って潰しません。
+  を check・build の出力に出します(ノートには書きません)。黙って潰しません。
 
 **理由**:サブシステムを入れた最初の試みで、Gantt の自然な高さ(446pt)が
 デモのスライドの空き(414pt)より大きく、従来の比例の縮めで **見出しまで
@@ -175,8 +175,8 @@ type SubsystemLinter interface {
 ```
 
 レイアウトのあと、描く前に `lintSubsystems` が木をたどり、最小の大きさの検査と
-一緒に `Lint` を呼ぶ。返った文は、ほかの警告と同じくスライドのノートと標準出力に
-出る。Gantt は、注釈を重ねて置くしかなかったとき
+一緒に `Lint` を呼ぶ。返った文は、ほかの警告と同じく標準出力(check・build の出力)に
+出る。スライドのノートには入れない。Gantt は、注釈を重ねて置くしかなかったとき
 `[SUBSYSTEM WARNING] gantt: annotation 3 ("…") has no free place and overlaps another annotation`
 を返す。
 
