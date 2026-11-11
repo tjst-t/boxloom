@@ -453,7 +453,7 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 			level := len(m[1])
 			if level >= 2 {
 				if level == 2 {
-					p.fail(no, ind+1, "", codePlannedSyntax, "小見出し(##)はまだ使えません(予定)", nil, "スライドを分けるなら # を、強調したいなら **…** を使ってください")
+					p.fail(no, ind+1, "", codeUnsupportedSyntax, "小見出し(##)は使えません(IR は小見出しを持たない)", nil, "スライドを分けるなら # を、まとまりの題なら囲みの見出しの文(:::名前 見出し)を、強調したいなら **…** を使ってください")
 				} else {
 					p.fail(no, ind+1, "", codeUnsupportedSyntax, fmt.Sprintf("見出しの段(%s)は使えません", m[1]), []string{"#"}, "スライドの題は # で書きます")
 				}

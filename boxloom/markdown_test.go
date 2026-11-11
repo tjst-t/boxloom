@@ -146,7 +146,7 @@ func TestMarkdownErrors(t *testing.T) {
 		{"raw html inline", "# A\n改行<br>です\n", codeRawHTML, 2},
 		{"italic", "# A\n*斜体*\n", codeUnsupportedSyntax, 2},
 		{"strike", "# A\n~~x~~\n", codeUnsupportedSyntax, 2},
-		{"subheading", "# A\n## B\n", codePlannedSyntax, 2},
+		{"subheading", "# A\n## B\n", codeUnsupportedSyntax, 2},
 		{"h3", "# A\n### B\n", codeUnsupportedSyntax, 2},
 		{"hr", "# A\n\n---\n", codeUnsupportedSyntax, 3},
 		{"quote", "# A\n> [!NOTE] x\n", codeUnsupportedSyntax, 2},
