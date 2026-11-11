@@ -1003,7 +1003,7 @@
       "number": 59,
       "kind": "task",
       "title": "フッターのページ番号を PowerPoint のスライド番号(sldNum のプレースホルダーと a:fld slidenum)で書く",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -1015,7 +1015,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T08:55:52.789Z",
-      "updatedAt": "2026-11-11T08:55:52.789Z",
+      "updatedAt": "2026-11-11T09:05:11.002Z",
       "closedAt": null,
       "extra": {}
     },
