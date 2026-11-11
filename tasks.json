@@ -26,6 +26,31 @@
       "updatedAt": "2026-11-11T02:00:01.545Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "agent-entry",
+      "number": 2,
+      "kind": "story",
+      "title": "AI エージェントから使う入口:Skill・パターンを選ぶ規則・容量の計測",
+      "status": "backlog",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [
+        "vision",
+        "agent",
+        "m1"
+      ],
+      "body": "## なぜ\n狙う立ち位置は「AI エージェントや開発者が呼び、意味の入力から本物の PPTX を作るエンジン」。\n\n## いまあるもの\n- `schema` コマンド(語彙と Schema を AI に渡す)\n- `check`(誤りと警告を5章の形で出す)\n- fill-ratio と layout-overflow の警告(できた後の判定)\n\n## 足りないもの\n- **パターンを選ぶ規則:** 内容の構造からパターンへの道筋が明文化されていない。曖昧だと失敗は両方向に起きる。簡単な内容までキャンバスで自由に描くか、図が要る内容をパターンへ無理に押し込むか。\n- **書く前・直す前に使える容量の数字:** 「このブロックにあと何行入るか」「何 pt 余っているか」を機械で読める形で出していない。いまは「はみ出した」と「埋まりが少ない」の2値に近い。\n- **分割の流れ:** はみ出したらスライドを分ける。Memory では「エンジンは自動で縮めたり送ったりしない」と決めてある。だから、分けるのは AI/Skill の側で、計測の数字を頼りに行う形になる。\n- **AI に渡す Skill 文書:** 書き方、選ぶ規則、密度の数値の目安、check を受けて直す手順。\n- **呼び方:** Go が package main のままで、ライブラリとして呼べない。MCP サーバも無い。",
+      "doneWhen": "Skill 文書と選ぶ規則の文書があり、check が容量の数字を JSON で出し、Go のパッケージとして外から呼べる",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T02:00:01.638Z",
+      "updatedAt": "2026-11-11T02:00:01.638Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
