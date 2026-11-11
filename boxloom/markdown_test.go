@@ -41,6 +41,7 @@ func TestMarkdownExamplesMatchIR(t *testing.T) {
 	pairs := [][2]string{
 		{"../examples/md/demo-deck.bx.md", "../examples/ir/demo-deck.json"},
 		{"../examples/md/gantt-full.bx.md", "../examples/ir/gantt-full.json"},
+		{"../examples/md/gantt-leader.bx.md", "../examples/ir/gantt-leader.json"},
 		{"../examples/md/speaker-notes.bx.md", "../examples/ir/speaker-notes.json"},
 		{"../examples/md/shapes.bx.md", "../examples/ir/shapes.json"},
 		{"../examples/md/text-patterns.bx.md", "../examples/ir/text-patterns.json"},
