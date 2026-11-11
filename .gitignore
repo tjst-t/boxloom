@@ -1,3 +1,5 @@
 # go build の実行ファイル
 /boxloom/boxloom
+/boxloom/cmd/boxloom/boxloom
+/boxloom/examples/libuse/libuse
 tools/.ooxml-schemas/

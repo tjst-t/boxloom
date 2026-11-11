@@ -7,7 +7,8 @@
 // 流れ: 行を読んで「文書の頭 / スライド / 段落・箇条・囲み・コードブロック」の
 // 木を作る(parseBlocks)→ 木を IR の JSON に変える(toIR)。サブシステムの
 // コードブロックの中身は yaml.go で読み、md_gantt.go が IR の data に変える。
-package main
+
+package boxloom
 
 import (
 	"bytes"
@@ -889,14 +890,14 @@ func (x *inlineParser) tryLink() (*jobj, int) {
 
 // --- 木 → IR ---
 
-// ParseMarkdown は Boxloom Markdown を IR の JSON にする。誤りがあれば、
-// 読めたところまでの IR と誤りの一覧を返す。
-func ParseMarkdown(src []byte, file string) ([]byte, []Issue) {
+// MarkdownToIR は Boxloom Markdown を IR の JSON にする。誤りがあれば、
+// 読めたところまでの IR と誤りの一覧を返す。file は誤りの場所に添える名前。
+func MarkdownToIR(file string, src []byte) ([]byte, []Issue) {
 	out, errs, _ := ParseMarkdownWithMap(src, file)
 	return out, errs
 }
 
-// ParseMarkdownWithMap は ParseMarkdown と同じで、IR の場所 → Markdown の行の
+// ParseMarkdownWithMap は MarkdownToIR と同じで、IR の場所 → Markdown の行の
 // 対応も返す。
 func ParseMarkdownWithMap(src []byte, file string) ([]byte, []Issue, SourceMap) {
 	p := &mdParser{file: file}

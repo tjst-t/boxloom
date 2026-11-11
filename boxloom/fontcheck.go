@@ -10,10 +10,10 @@
 // 字体の寸法で測り直す。あわせて、幅の余裕(fonts.widthMargin)をいくつに
 // すれば右へのはみ出しが無くなるかを、余裕を変えて組み直して探す。
 // 方針と測った数字は docs/fonts.md。
-package main
+
+package boxloom
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"math"
@@ -231,111 +231,109 @@ func parseScenarios(s string) ([]fontScenario, error) {
 	return out, nil
 }
 
-func runFonts(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("fonts", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	tmpl := fs.String("template", "", "テンプレート(省けば文書の template か light)")
-	against := fs.String("against", "", `試す置き換わり方。"欧文/和文" か "字体" を ; で区切る(省けば既定の5つ)`)
-	list := fs.Bool("list", false, "寸法を持つ字体の一覧を出して終わる")
-	verbose := fs.Bool("v", false, "はみ出す行を1行ずつ出す")
-	fs.Usage = func() {
-		fmt.Fprintln(stderr, "usage: boxloom fonts [-template 名前] [-against \"欧文/和文;…\"] deck.json|deck.bx.md …")
-		fmt.Fprintln(stderr, "       boxloom fonts -list")
-		fs.PrintDefaults()
+// WriteFontList は寸法を持つ字体の一覧を w に書く(`boxloom fonts -list`)。
+func WriteFontList(w io.Writer) {
+	for _, f := range FontFamilies() {
+		m, _ := LookupFont(f)
+		fmt.Fprintf(w, "%-20s japanese=%-5v line-height=%.3fem license=%s\n", f, m.Japanese, m.LineHeightEm(), m.License)
 	}
-	if err := fs.Parse(args); err != nil {
-		return 2
-	}
-	if *list {
-		for _, f := range FontFamilies() {
-			m, _ := LookupFont(f)
-			fmt.Fprintf(stdout, "%-20s japanese=%-5v line-height=%.3fem license=%s\n", f, m.Japanese, m.LineHeightEm(), m.License)
-		}
-		return 0
-	}
-	if fs.NArg() == 0 {
-		fs.Usage()
-		return 2
-	}
-	scs, err := parseScenarios(*against)
+}
+
+// FontCheck は `boxloom fonts` の測り(文書を1つずつ Deck に渡し、最後に
+// Summary)。against は試す置き換わり方("欧文/和文" か "字体" を ; で区切る。
+// 空なら既定の5つ)。
+type FontCheck struct {
+	// Template は文書の template より優先するテンプレートの名前。
+	Template string
+	// Verbose ははみ出す行を1行ずつ出す。
+	Verbose bool
+
+	scenarios   []fontScenario
+	worstNeeded map[string]float64
+	decks       int
+}
+
+// NewFontCheck は against を読んで FontCheck を作る。
+func NewFontCheck(against string) (*FontCheck, error) {
+	scs, err := parseScenarios(against)
 	if err != nil {
-		fmt.Fprintln(stderr, "error:", err)
-		return 2
+		return nil, err
 	}
-	worstNeeded := map[string]float64{}
-	for _, in := range fs.Args() {
-		d, err := readDeck(in)
+	return &FontCheck{scenarios: scs, worstNeeded: map[string]float64{}}, nil
+}
+
+// Deck は1つの文書(file は表に出す名前)を測って w に書く。組めなかった
+// ときの誤りには file を添える。
+func (fc *FontCheck) Deck(w io.Writer, file string, d *IRDeck) error {
+	fc.decks++
+	name := d.Template
+	if fc.Template != "" {
+		name = fc.Template
+	}
+	t, err := LookupTemplate(name)
+	if err != nil {
+		return err
+	}
+	pages, _, err := t.RenderPages(d)
+	if err != nil {
+		return fmt.Errorf("%s: %w", file, err)
+	}
+	var fb []string
+	for _, m := range t.Fonts.Fallbacks {
+		fb = append(fb, m.Family)
+	}
+	fmt.Fprintf(w, "%s (template %s: latin %q, eastAsian %q, fallbackFonts %q, widthMargin %.2f, fixedLineSpacing %v)\n",
+		file, t.Name, t.Fonts.Latin.Family, t.Fonts.EastAsian.Family, fb, t.Fonts.WidthMargin, t.Fonts.FixedLineSpacing)
+	rows := append([]fontScenario{{Label: "(測った字体のまま)", Latin: t.Fonts.Latin.Family, EA: t.Fonts.EastAsian.Family}}, fc.scenarios...)
+	for _, sc := range rows {
+		alt, err := scenarioFonts(sc, t.Fonts)
 		if err != nil {
-			fmt.Fprintln(stderr, "error:", err)
-			return 1
+			return err
 		}
-		name := d.Template
-		if *tmpl != "" {
-			name = *tmpl
-		}
-		t, err := LookupTemplate(name)
+		st := measurePages(pages, alt)
+		need, err := neededMargin(t, d, alt)
 		if err != nil {
-			fmt.Fprintln(stderr, "error:", err)
-			return 1
+			return err
 		}
-		pages, _, err := t.RenderPages(d)
-		if err != nil {
-			fmt.Fprintf(stderr, "error: %s: %v\n", in, err)
-			return 1
+		needS := fmt.Sprintf("%.2f", need)
+		if need == 0 {
+			needS = "> 1.50"
+			need = 9
 		}
-		var fb []string
-		for _, m := range t.Fonts.Fallbacks {
-			fb = append(fb, m.Family)
+		if need > fc.worstNeeded[sc.Label] {
+			fc.worstNeeded[sc.Label] = need
 		}
-		fmt.Fprintf(stdout, "%s (template %s: latin %q, eastAsian %q, fallbackFonts %q, widthMargin %.2f, fixedLineSpacing %v)\n",
-			in, t.Name, t.Fonts.Latin.Family, t.Fonts.EastAsian.Family, fb, t.Fonts.WidthMargin, t.Fonts.FixedLineSpacing)
-		rows := append([]fontScenario{{Label: "(測った字体のまま)", Latin: t.Fonts.Latin.Family, EA: t.Fonts.EastAsian.Family}}, scs...)
-		for _, sc := range rows {
-			alt, err := scenarioFonts(sc, t.Fonts)
-			if err != nil {
-				fmt.Fprintln(stderr, "error:", err)
-				return 1
-			}
-			st := measurePages(pages, alt)
-			need, err := neededMargin(t, d, alt)
-			if err != nil {
-				fmt.Fprintln(stderr, "error:", err)
-				return 1
-			}
-			needS := fmt.Sprintf("%.2f", need)
-			if need == 0 {
-				needS = "> 1.50"
-				need = 9
-			}
-			if need > worstNeeded[sc.Label] {
-				worstNeeded[sc.Label] = need
-			}
-			fmt.Fprintf(stdout, "  %-32s boxes %3d lines %3d | wider lines %3d (worst +%.1fpt, %.1f%%) | rewrap changes %3d | taller boxes %3d (worst +%.0f%%) | widthMargin needed %s\n",
-				sc.Label, st.Boxes, st.Lines, st.WidthOver, st.WorstOverPt, st.WorstOverPct, st.RewrapChanged, st.HeightOver, st.WorstHeightPct, needS)
-			if st.WorstLine != "" && !*verbose {
-				fmt.Fprintf(stdout, "  %-32s   worst line: %q\n", "", st.WorstLine)
-			}
-			if *verbose {
-				for _, o := range st.Over {
-					kind := "label"
-					if o.Wrapped {
-						kind = "wrapped"
-					}
-					fmt.Fprintf(stdout, "      +%5.1fpt box %6.1fpt %-7s align=%-5s %q\n", o.OverPt, o.BoxW, kind, o.Align, o.Text)
+		fmt.Fprintf(w, "  %-32s boxes %3d lines %3d | wider lines %3d (worst +%.1fpt, %.1f%%) | rewrap changes %3d | taller boxes %3d (worst +%.0f%%) | widthMargin needed %s\n",
+			sc.Label, st.Boxes, st.Lines, st.WidthOver, st.WorstOverPt, st.WorstOverPct, st.RewrapChanged, st.HeightOver, st.WorstHeightPct, needS)
+		if st.WorstLine != "" && !fc.Verbose {
+			fmt.Fprintf(w, "  %-32s   worst line: %q\n", "", st.WorstLine)
+		}
+		if fc.Verbose {
+			for _, o := range st.Over {
+				kind := "label"
+				if o.Wrapped {
+					kind = "wrapped"
 				}
+				fmt.Fprintf(w, "      +%5.1fpt box %6.1fpt %-7s align=%-5s %q\n", o.OverPt, o.BoxW, kind, o.Align, o.Text)
 			}
 		}
 	}
-	if len(fs.Args()) > 1 {
-		fmt.Fprintln(stdout, "widthMargin needed over all decks:")
-		for _, sc := range append([]fontScenario{{Label: "(測った字体のまま)"}}, scs...) {
-			v := worstNeeded[sc.Label]
-			s := fmt.Sprintf("%.2f", v)
-			if v >= 9 {
-				s = "> 1.50"
-			}
-			fmt.Fprintf(stdout, "  %-32s %s\n", sc.Label, s)
-		}
+	return nil
+}
+
+// Summary は2つ以上の文書を測ったとき、全部を通して要る幅の余裕を w に書く
+// (1つなら何も書かない)。
+func (fc *FontCheck) Summary(w io.Writer) {
+	if fc.decks <= 1 {
+		return
 	}
-	return 0
+	fmt.Fprintln(w, "widthMargin needed over all decks:")
+	for _, sc := range append([]fontScenario{{Label: "(測った字体のまま)"}}, fc.scenarios...) {
+		v := fc.worstNeeded[sc.Label]
+		s := fmt.Sprintf("%.2f", v)
+		if v >= 9 {
+			s = "> 1.50"
+		}
+		fmt.Fprintf(w, "  %-32s %s\n", sc.Label, s)
+	}
 }

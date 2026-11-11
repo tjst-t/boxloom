@@ -1,4 +1,4 @@
-package main
+package boxloom
 
 // 図(サブシステム)の大きさと、割り当てられた矩形のあいだの橋渡し。
 //

@@ -8,7 +8,8 @@
 // Taffy(Rust)のflexible lengths反復凍結アルゴリズムは実装していない。これは
 // Python版で実際のコンテンツに対して無害であることを数値比較で確認済みの割り切りを
 // そのまま引き継いでいる。
-package main
+
+package boxloom
 
 type AlignItems int
 

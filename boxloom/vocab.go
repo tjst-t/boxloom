@@ -7,7 +7,8 @@
 //   - 文書の頭・文中の記法はコアの記法(docs/content-syntax.md の3章)。
 //
 // `boxloom schema`(schema_cmd.go)はここから1つの JSON を組む。
-package main
+
+package boxloom
 
 import (
 	"embed"

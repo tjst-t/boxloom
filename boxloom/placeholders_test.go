@@ -1,4 +1,4 @@
-package main
+package boxloom
 
 import (
 	"archive/zip"
@@ -18,7 +18,7 @@ func TestTitlesArePlaceholders(t *testing.T) {
 	}
 	tm, _ := LookupTemplate("light")
 	out := filepath.Join(t.TempDir(), "p.pptx")
-	if _, err := tm.RenderDeck(d, out); err != nil {
+	if _, err := renderDeckToFile(tm, d, out); err != nil {
 		t.Fatal(err)
 	}
 	zr, err := zip.OpenReader(out)

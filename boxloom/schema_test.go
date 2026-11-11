@@ -1,8 +1,9 @@
-package main
+package boxloom
 
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"net/url"
 	"os"
@@ -47,25 +48,25 @@ func TestEmbeddedSchemasInSync(t *testing.T) {
 	}
 }
 
-func schemaOut(t *testing.T, args ...string) map[string]any {
+func schemaOut(t *testing.T, template string) map[string]any {
 	t.Helper()
-	var out, errb bytes.Buffer
-	if code := runSchema(args, &out, &errb); code != 0 {
-		t.Fatalf("runSchema(%v) = %d: %s", args, code, errb.String())
+	b, err := Schema(template)
+	if err != nil {
+		t.Fatalf("Schema(%q): %v", template, err)
 	}
 	var m map[string]any
-	if err := json.Unmarshal(out.Bytes(), &m); err != nil {
+	if err := json.Unmarshal(b, &m); err != nil {
 		t.Fatal(err)
 	}
 	return m
 }
 
 func TestSchemaCommandTemplates(t *testing.T) {
-	all := schemaOut(t)
+	all := schemaOut(t, "")
 	if n := len(all["templates"].([]any)); n != len(TemplateNames) {
 		t.Fatalf("templates = %d, want %d", n, len(TemplateNames))
 	}
-	dark := schemaOut(t, "-template", "dark")
+	dark := schemaOut(t, "dark")
 	ts := dark["templates"].([]any)
 	if len(ts) != 1 || ts[0].(map[string]any)["name"] != "dark" {
 		t.Fatalf("-template dark: %v", ts)
@@ -74,9 +75,8 @@ func TestSchemaCommandTemplates(t *testing.T) {
 	if !strings.HasSuffix(id.(string), "/bundle/dark.schema.json") {
 		t.Errorf("$id = %v", id)
 	}
-	var out, errb bytes.Buffer
-	if code := runSchema([]string{"-template", "nope"}, &out, &errb); code != 1 {
-		t.Errorf("unknown template: exit %d, want 1", code)
+	if _, err := Schema("nope"); !errors.Is(err, ErrUnknownTemplate) {
+		t.Errorf("unknown template: err %v, want ErrUnknownTemplate", err)
 	}
 }
 
@@ -98,12 +98,12 @@ func TestSchemaMatchesParser(t *testing.T) {
 		}
 	}
 	// 名乗っていない囲みを書くと、expected に名乗る囲みの一覧が返る。
-	_, issues := ParseMarkdown([]byte("# 題\n\n:::nope\n文\n:::\n"), "x.bx.md")
+	_, issues := MarkdownToIR("x.bx.md", []byte("# 題\n\n:::nope\n文\n:::\n"))
 	if len(issues) == 0 || strings.Join(issues[0].Expected, ",") != strings.Join(knownFences, ",") {
 		t.Errorf("unknown block issues = %+v", issues)
 	}
 	// 文書の頭のキーも同じ表から。
-	_, issues = ParseMarkdown([]byte("---\ntitle: 題\nnope: 1\n---\n# 題\n\n文\n"), "x.bx.md")
+	_, issues = MarkdownToIR("x.bx.md", []byte("---\ntitle: 題\nnope: 1\n---\n# 題\n\n文\n"))
 	if len(issues) == 0 || strings.Join(issues[0].Expected, ",") != strings.Join(frontMatterNames(), ",") {
 		t.Errorf("unknown front matter key issues = %+v", issues)
 	}
@@ -111,7 +111,7 @@ func TestSchemaMatchesParser(t *testing.T) {
 
 // irSchema の $ref がすべて、同梱した文書($id)の中で解決できるか。
 func TestSchemaBundleIsSelfContained(t *testing.T) {
-	m := schemaOut(t)
+	m := schemaOut(t, "")
 	root := m["irSchema"].(map[string]any)
 	docs := map[string]any{} // $id → 文書
 	var collect func(v any)

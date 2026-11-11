@@ -5,13 +5,13 @@
 // Schema の全部(文字列の形・enum など)をここで繰り返し検査はしない。細かい
 // 検査は tools/validate_ir.py(Schema)と、これから作る boxloom check の仕事。
 // ここで見るのは、組み立てるのに要ること(必須の欄・種類の名前)だけ。
-package main
+
+package boxloom
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 )
@@ -376,15 +376,15 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 
 // --- 読み込みの入口 ---
 
-// ReadIR はファイルから IR を読む。
-func ReadIR(path string) (*IRDeck, error) {
-	b, err := os.ReadFile(path)
+// ReadIR は IR(JSON)を読む。知らないキー・足りない欄は断る。誤りは
+// 「file: 場所: 文」の形(file が空なら場所から)。
+func ReadIR(file string, data []byte) (*IRDeck, error) {
+	d, err := ParseIR(data)
 	if err != nil {
-		return nil, err
-	}
-	d, err := ParseIR(b)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		if file == "" {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%s: %w", file, err)
 	}
 	return d, nil
 }

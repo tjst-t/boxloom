@@ -1,4 +1,4 @@
-package main
+package boxloom
 
 import (
 	"archive/zip"
@@ -52,7 +52,7 @@ func TestShapesExampleBuilds(t *testing.T) {
 			t.Fatal(err)
 		}
 		out := filepath.Join(t.TempDir(), name+".pptx")
-		warnings, err := tm.RenderDeck(d, out)
+		warnings, err := renderDeckToFile(tm, d, out)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -288,7 +288,7 @@ func TestShapesYAMLErrors(t *testing.T) {
 		{"font size", "  - {kind: text, x: 0, y: 0, w: 0.1, h: 0.1, text: a, textStyle: 18}\n", codeInvalidValue, 4},
 	}
 	for _, c := range cases {
-		_, errs := ParseMarkdown([]byte(head+c.yaml+"```\n"), "t.bx.md")
+		_, errs := MarkdownToIR("t.bx.md", []byte(head+c.yaml+"```\n"))
 		found := false
 		for _, e := range errs {
 			if e.Code == c.code && e.Line == c.line && strings.HasPrefix(e.Path, "/slides/0/body/0/data") {
@@ -303,7 +303,7 @@ func TestShapesYAMLErrors(t *testing.T) {
 
 // `boxloom schema` は dark・light の両方で shapes を名乗り、irSchema に同梱する。
 func TestSchemaDeclaresShapes(t *testing.T) {
-	m := schemaOut(t)
+	m := schemaOut(t, "")
 	for _, ts := range m["templates"].([]any) {
 		tm := ts.(map[string]any)
 		found := false

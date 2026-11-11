@@ -10,7 +10,8 @@
 //   - 図形どうしの重なりは誤りにせず、check の警告(shapes-overlap)にする。
 //
 // IR の data の形は schema/subsystems/shapes.schema.json。
-package main
+
+package boxloom
 
 import (
 	"bytes"

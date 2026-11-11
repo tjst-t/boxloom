@@ -1,4 +1,4 @@
-package main
+package boxloom
 
 import (
 	"encoding/json"
@@ -121,7 +121,7 @@ func TestTemplateOverridesGanttValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deck, err := ReadIR("../examples/ir/gantt-full.json")
+	deck, err := readIRFile("../examples/ir/gantt-full.json")
 	if err != nil {
 		t.Fatal(err)
 	}

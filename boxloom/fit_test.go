@@ -1,4 +1,4 @@
-package main
+package boxloom
 
 import (
 	"math"
@@ -146,7 +146,7 @@ func TestGanttNoteRowGrowsToFitText(t *testing.T) {
 	if got := rows.bodyHeight(gaps); !nearPt(got, bodyH) {
 		t.Errorf("rows sum to %.2f, body is %.2f", got, bodyH)
 	}
-	if ws, _ := tm.RenderDeck(d, t.TempDir()+"/g.pptx"); len(ws) != 0 {
+	if ws, _ := renderDeckToFile(tm, d, t.TempDir()+"/g.pptx"); len(ws) != 0 {
 		t.Errorf("unexpected warnings: %v", ws)
 	}
 }

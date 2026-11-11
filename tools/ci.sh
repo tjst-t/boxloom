@@ -30,7 +30,7 @@ step_python() {
   echo "== python"
   python3 tools/validate_ir.py --self-test
   bundle=$(mktemp)
-  (cd boxloom && go run . schema) > "$bundle"
+  (cd boxloom && go run ./cmd/boxloom schema) > "$bundle"
   python3 tools/validate_ir.py --bundle "$bundle" --self-test
   rm -f "$bundle"
 }

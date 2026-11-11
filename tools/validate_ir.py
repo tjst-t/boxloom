@@ -9,7 +9,7 @@
         # 外を参照しない1つの文書なので、registry を使わずに読めることも確かめる
 
 Schema で書けない検査(id の一意性・target の指す先・日付の前後など)は
-Go の `go run . check deck.json`(boxloom/check.go)がする。
+Go の `go run ./cmd/boxloom check deck.json`(boxloom/check.go)がする。
 
 要るもの: pip install jsonschema (4.18 以降。referencing を使う)
 

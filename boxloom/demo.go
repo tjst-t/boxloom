@@ -1,17 +1,17 @@
 // boxloom のデモ: box_engine.py(layout.go)+ Ganttサブエンジン(gantt.go)+
-// 自前OOXMLライター(pptx.go)を組み合わせて、テーマ別に2枚のpptxを生成する。
+// 自前OOXMLライター(pptx.go)を組み合わせて、テーマ別に1枚の pptx を書く
+// (WriteDemo。コマンドは引数なしで out/ に dark と light の2つを書く)。
 //
 // 本物のPythonソース(layout_pptx_poc_v11.py)を見ながら移植し直したバージョン。
 // 構成はbuild_slide_spec()と1:1対応: header(title+subtitle) / chart_canvas
 // (grow=1, basis=0) / footer(SPACE_BETWEEN)。凡例・注釈はすべてrender_gantt()
 // 側(canvasの中)に属するので、outerのflexツリーには登場しない。
-package main
+
+package boxloom
 
 import (
-	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
+	"io"
 )
 
 const (
@@ -129,117 +129,47 @@ func lintFillRatioMin(ratio, minRatio float64) string {
 const pageW = 960.0 // 13.333in widescreen
 const pageH = 540.0 // 7.5in
 
-func generate(outPath string, th Theme, subtitle string) {
+// DemoResult は WriteDemo の結果。
+type DemoResult struct {
+	// FillRatio は本文の埋まり具合(0〜1)。
+	FillRatio float64
+	// FillWarning は埋まり具合の警告(無ければ空)。
+	FillWarning string
+	// Warnings はそれ以外の警告(サブシステムの最小の大きさ・テーマに無い役割名)。
+	Warnings []string
+}
+
+// demoSubtitles はデモのテーマごとの副題。
+var demoSubtitles = map[string]string{
+	"dark":  "boxloom: v11(Python)をGoへ移植。box_engine.pyの箱配置アルゴリズムと意味役割名によるテーマ分離をそのまま踏襲",
+	"light": "boxloom: 自作エンジン + ブルー基調の明るいテーマ(内容は一切変更していない)",
+}
+
+// WriteDemo は従来の Go で組んだデモ(Gantt の1枚。v11 の再現)を、theme
+// ("dark" か "light")の色で w に書く。安定した API ではない(docs/library.md)。
+func WriteDemo(w io.Writer, theme string) (*DemoResult, error) {
+	subtitle, ok := demoSubtitles[theme]
+	if !ok {
+		return nil, unknownTemplateError{theme}
+	}
+	th := mustTemplate(theme).Theme
+	// v11 の再現なので、テンプレートの字体ではなく既定の一式で測る。
+	defer useFonts(defaultFontSet())()
 	spec := buildSlideSpec(th, subtitle)
 	computeLayout(spec, 0, 0, pageW, pageH)
 
 	ratio := contentFillRatio(spec)
-	warning := lintFillRatio(ratio)
-	if warning != "" {
-		fmt.Printf("[%s] content fill ratio: %.1f%%  %s\n", outPath, ratio*100, warning)
-	} else {
-		fmt.Printf("[%s] content fill ratio: %.1f%%  OK\n", outPath, ratio*100)
-	}
-
-	warnings := lintSubsystems(spec)
-	if warning != "" {
-		warnings = append([]string{warning}, warnings...)
-	}
+	res := &DemoResult{FillRatio: ratio, FillWarning: lintFillRatio(ratio)}
+	res.Warnings = lintSubsystems(spec)
 
 	p := NewPPTXBuilder(pageW, pageH)
 	roles := newCheckedRoles(th)
 	renderSpec(RenderContext{Out: p, Roles: roles}, spec)
 	if missing := roles.Missing(); len(missing) > 0 {
-		warnings = append(warnings, fmt.Sprintf("[ROLE WARNING] theme has no value for roles: %v", missing))
+		res.Warnings = append(res.Warnings, fmt.Sprintf("[ROLE WARNING] theme has no value for roles: %v", missing))
 	}
-	for _, w := range warnings[boolToInt(warning != ""):] {
-		fmt.Printf("[%s] %s\n", outPath, w)
+	if err := WriteDeck(w, []*PPTXBuilder{p}, ""); err != nil {
+		return nil, err
 	}
-
-	if err := p.Save(outPath); err != nil {
-		panic(err)
-	}
-	fmt.Println("saved:", outPath)
-}
-
-func main() {
-	if len(os.Args) > 1 && os.Args[1] == "build" {
-		os.Exit(runBuild(os.Args[2:]))
-	}
-	if len(os.Args) > 1 && os.Args[1] == "check" {
-		os.Exit(runCheck(os.Args[2:]))
-	}
-	if len(os.Args) > 1 && os.Args[1] == "fonts" {
-		os.Exit(runFonts(os.Args[2:], os.Stdout, os.Stderr))
-	}
-	if len(os.Args) > 1 && os.Args[1] == "schema" {
-		os.Exit(runSchema(os.Args[2:], os.Stdout, os.Stderr))
-	}
-	if len(os.Args) > 1 && os.Args[1] == "parse" {
-		os.Exit(runParse(os.Args[2:], os.Stdout, os.Stderr))
-	}
-	if err := os.MkdirAll("out", 0o755); err != nil {
-		panic(err)
-	}
-	generate("out/boxloom_dark.pptx", themeDark(),
-		"boxloom: v11(Python)をGoへ移植。box_engine.pyの箱配置アルゴリズムと意味役割名によるテーマ分離をそのまま踏襲")
-	generate("out/boxloom_light.pptx", themeLight(),
-		"boxloom: 自作エンジン + ブルー基調の明るいテーマ(内容は一切変更していない)")
-}
-
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-// runBuild は「boxloom build」: IR(JSON)か Boxloom Markdown を読んで pptx を書く。
-//
-//	go run . build [-o out.pptx] [-template dark|light] deck.json
-//
-// テンプレートは -template > IR の template > light の順で決まる。
-func runBuild(args []string) int {
-	fs := flag.NewFlagSet("build", flag.ContinueOnError)
-	out := fs.String("o", "", "書き出す pptx(省くと out/<IR の名前>.pptx)")
-	tmpl := fs.String("template", "", "テンプレートの名前(省くと IR の template)")
-	if err := fs.Parse(args); err != nil {
-		return 2
-	}
-	if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: boxloom build [-o out.pptx] [-template dark|light] deck.json|deck.bx.md")
-		return 2
-	}
-	in := fs.Arg(0)
-	deck, err := readDeck(in)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
-		return 1
-	}
-	name := deck.Template
-	if *tmpl != "" {
-		name = *tmpl
-	}
-	t, err := LookupTemplate(name)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
-		return 1
-	}
-	if *out == "" {
-		*out = filepath.Join("out", deckBaseName(in)+".pptx")
-	}
-	if err := os.MkdirAll(filepath.Dir(*out), 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
-		return 1
-	}
-	warnings, err := t.RenderDeck(deck, *out)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %s: %v\n", in, err)
-		return 1
-	}
-	for _, w := range warnings {
-		fmt.Println(w)
-	}
-	fmt.Printf("saved: %s (%d slides, template %s)\n", *out, len(deck.Slides), t.Name)
-	return 0
+	return res, nil
 }

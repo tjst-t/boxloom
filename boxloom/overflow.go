@@ -15,7 +15,8 @@
 //
 // 警告の文は "[LAYOUT-OVERFLOW WARNING] body[2]: ..." の形。check は
 // body[N] を IR の場所(/slides/S/body/N)に変える。
-package main
+
+package boxloom
 
 import "fmt"
 

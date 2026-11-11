@@ -9,7 +9,8 @@
 //   - 行の配列の値(グループの label)は、文字列か YAML の列。
 //
 // 知らないキー・型の違う値・知らない状態の名前は、行と列つきの誤りにする。
-package main
+
+package boxloom
 
 import (
 	"fmt"

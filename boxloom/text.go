@@ -15,7 +15,8 @@
 // "\n"を段落境界として扱う機能が必要。そのため wrapText() は "\n" で
 // 段落分割してから、各段落に対して本物と同じトークン化・折り返しロジックを
 // 適用する。
-package main
+
+package boxloom
 
 import (
 	"regexp"

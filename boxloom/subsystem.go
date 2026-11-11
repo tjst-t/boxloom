@@ -10,7 +10,8 @@
 // サブシステムは座標の計算をすべて自分の中で閉じる。役割名(support / danger …)
 // から実際の色を引くのは Roles だけで、サブシステムは16進の色を知らない。
 // 設計の理由は docs/subsystem.md を参照。
-package main
+
+package boxloom
 
 import (
 	"encoding/json"
