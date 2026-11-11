@@ -84,6 +84,10 @@ sh tools/ci.sh go python pptx      # add `readers` if LibreOffice is installed
 
 ## 5. Commits and PRs
 
+- By contributing, you agree that your contribution is licensed under the
+  [Apache License, Version 2.0](LICENSE), the license of this project (Section 5 of the
+  license). No separate CLA is required.
+
 - Keep commits focused. Write the message in English and explain *why*.
 - One topic per PR. Update the documentation in the same PR as the code.
 - Design documents under `docs/` are currently written in Japanese. You may write new
