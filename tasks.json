@@ -32,7 +32,7 @@
       "number": 13,
       "kind": "task",
       "title": "字体の方針を決めて実装する(測る字体と開く環境の字体を揃える)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "verify-hypothesis",
       "dependsOn": [],
       "milestone": null,
@@ -42,9 +42,14 @@
       "doneWhen": "docs に方針があり、テンプレートの値の表で字体が決まり、その字体の寸法で測っている。最悪の置き換えで折り返しがいくつ変わるかの数字がある",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "0d5c04a5-6a7a-4131-bbd1-1943cc5d46a4"
+        }
+      ],
       "createdAt": "2026-11-11T02:02:58.763Z",
-      "updatedAt": "2026-11-11T02:03:05.301Z",
+      "updatedAt": "2026-11-11T02:26:34.874Z",
       "closedAt": null,
       "extra": {}
     },
