@@ -147,6 +147,33 @@
       "extra": {}
     },
     {
+      "id": "ai",
+      "number": 50,
+      "kind": "task",
+      "title": "見本の文書:「AI が社会に与える影響」を調べて全部の語彙を使ったデッキを作る",
+      "status": "ready",
+      "parent": "verify-hypothesis",
+      "dependsOn": [
+        "light-conditional-1",
+        "process-orgchart-funnel-funnel-gantt-mat",
+        "source",
+        "item-2",
+        "fill-ratio-hint-capacity-skill"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "人の依頼:内容が微妙だと出来も微妙になるので、しっかりした題材で見本を作る。題材は「AI が社会に与える影響」。インターネットで調べ(出典つき)、全サブシステム(gantt・shapes・process・orgchart・matrix・funnel・chart)と全ブロック・スライドの型を使う。作るのは Fable(claude-fable-5-1)のサブエージェント。#45〜#49 が入ってから。業務に関係する固有名は書かない(BOXLOOM_FORBIDDEN_TERMS の検査を通す)。check の警告0件(fill-ratio を含む)を目標。",
+      "doneWhen": "examples/md/ に .bx.md、out/ に light・dark の PPTX があり、check の誤り0件・警告0件(残すなら理由を書く)、LibreOffice の絵を人に見せた。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T05:56:10.642Z",
+      "updatedAt": "2026-11-11T05:56:10.642Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "agent-entry",
       "number": 2,
       "kind": "story",
