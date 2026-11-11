@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"path"
 	"reflect"
 	"regexp"
@@ -38,25 +39,25 @@ type TemplateValues struct {
 	PageW float64 `json:"pageWidth"`
 	PageH float64 `json:"pageHeight"`
 
-	PagePadding  float64 `json:"pagePadding"`  // 本文のスライドの外周
-	CoverPadding float64 `json:"coverPadding"` // 表紙の外周
-	SectionGap   float64 `json:"sectionGap"`   // 見出し・本文・フッターの間
-	BlockGap     float64 `json:"blockGap"`     // 本文のブロックの間
-	ItemGap      float64 `json:"itemGap"`      // 箇条の項目の間
+	PagePadding  float64 `json:"pagePadding" scale:"space"`  // 本文のスライドの外周
+	CoverPadding float64 `json:"coverPadding" scale:"space"` // 表紙の外周
+	SectionGap   float64 `json:"sectionGap" scale:"space"`   // 見出し・本文・フッターの間
+	BlockGap     float64 `json:"blockGap" scale:"space"`     // 本文のブロックの間
+	ItemGap      float64 `json:"itemGap" scale:"space"`      // 箇条の項目の間
 
-	CoverTitle    float64 `json:"coverTitle"`
-	CoverSubtitle float64 `json:"coverSubtitle"`
-	CoverAuthor   float64 `json:"coverAuthor"`
-	SlideTitle    float64 `json:"slideTitle"`
-	Body          float64 `json:"body"`
-	SubPoint      float64 `json:"subPoint"`    // 入れ子の箇条
-	OptionLabel   float64 `json:"optionLabel"` // 比較の選択肢の名前
-	OptionItem    float64 `json:"optionItem"`  // 比較の利点・欠点
-	Small         float64 `json:"small"`       // 注記・フッター
+	CoverTitle    float64 `json:"coverTitle" scale:"type"`
+	CoverSubtitle float64 `json:"coverSubtitle" scale:"type"`
+	CoverAuthor   float64 `json:"coverAuthor" scale:"type"`
+	SlideTitle    float64 `json:"slideTitle" scale:"type"`
+	Body          float64 `json:"body" scale:"type"`
+	SubPoint      float64 `json:"subPoint" scale:"type"`    // 入れ子の箇条
+	OptionLabel   float64 `json:"optionLabel" scale:"type"` // 比較の選択肢の名前
+	OptionItem    float64 `json:"optionItem" scale:"type"`  // 比較の利点・欠点
+	Small         float64 `json:"small" scale:"type"`       // 注記・フッター
 
 	PointIndentEm float64 `json:"pointIndentEm"` // 入れ子の箇条の字下げ(親の字の大きさの倍)
 
-	CardPadding     float64 `json:"cardPadding"`
+	CardPadding     float64 `json:"cardPadding" scale:"space"`
 	CardRadius      float64 `json:"cardRadius"`
 	SubsystemRadius float64 `json:"subsystemRadius"` // サブシステムを載せるカードの角
 
@@ -64,6 +65,18 @@ type TemplateValues struct {
 	CoverRuleH float64 `json:"coverRuleHeight"`
 
 	FillRatioMin float64 `json:"fillRatioMin"` // 本文の埋まりがこれ未満なら警告
+}
+
+// TemplateScale は値の表の段階(見た目のトークンの刻み)。
+//
+//   - SpacingUnit:余白・間隔(json タグに scale:"space" の付いた値)はこの倍数だけ
+//   - TypeSizes:字の大きさ(scale:"type" の付いた値)はこの中の値だけ。小さい順
+//
+// 値の表(values)と、このテンプレートで使うサブシステムの寸法(Gantt・shapes)の
+// どちらにも効く。段から外れた値は読み込みで誤り(docs/template-values.md)。
+type TemplateScale struct {
+	SpacingUnit float64   `json:"spacingUnit"`
+	TypeSizes   []float64 `json:"typeSizes"`
 }
 
 // TemplateMarks は部品が文の頭に置く印の文字(スタイル規則)。
@@ -76,15 +89,15 @@ type TemplateMarks struct {
 
 // GanttValues は Gantt サブシステムの寸法(pt)。既定は subsystems/gantt.json。
 type GanttValues struct {
-	Padding      float64 `json:"padding"`      // 箱の内側の余白
-	LegendH      float64 `json:"legendHeight"` // 凡例の行
-	LegendGap    float64 `json:"legendGap"`    // 凡例と上の注釈のレーンの間
+	Padding      float64 `json:"padding" scale:"space"`   // 箱の内側の余白
+	LegendH      float64 `json:"legendHeight"`            // 凡例の行
+	LegendGap    float64 `json:"legendGap" scale:"space"` // 凡例と上の注釈のレーンの間
 	GutterGroupW float64 `json:"gutterGroupWidth"`
 	GutterSubW   float64 `json:"gutterSubgroupWidth"`
 	GutterLabelW float64 `json:"gutterLabelWidth"`
 	MilestoneH   float64 `json:"milestoneHeight"`
 	AxisLabelH   float64 `json:"axisLabelHeight"`
-	GroupGap     float64 `json:"groupGap"`
+	GroupGap     float64 `json:"groupGap" scale:"space"`
 
 	MinRowH       float64 `json:"minRowHeight"`     // 文字とバーが重ならない下限
 	NaturalRowH   float64 `json:"naturalRowHeight"` // 詰まって見えない高さ
@@ -96,25 +109,25 @@ type GanttValues struct {
 	AnnBoxH    float64 `json:"annotationFixedHeight"`
 	AnnBoxMinW float64 `json:"annotationMinWidth"` // 自動の注釈の箱の幅の範囲
 	AnnBoxMaxW float64 `json:"annotationMaxWidth"`
-	AnnPadX    float64 `json:"annotationPaddingX"`
-	AnnPadY    float64 `json:"annotationPaddingY"`
-	AnnLaneGap float64 `json:"annotationLaneGap"`
-	AnnText    float64 `json:"annotationText"`
+	AnnPadX    float64 `json:"annotationPaddingX" scale:"space"`
+	AnnPadY    float64 `json:"annotationPaddingY" scale:"space"`
+	AnnLaneGap float64 `json:"annotationLaneGap" scale:"space"`
+	AnnText    float64 `json:"annotationText" scale:"type"`
 
-	LabelText float64 `json:"labelText"` // 凡例・行の名前・目盛り
-	SmallText float64 `json:"smallText"` // グループ名・区間の文字・節目
+	LabelText float64 `json:"labelText" scale:"type"` // 凡例・行の名前・目盛り
+	SmallText float64 `json:"smallText" scale:"type"` // グループ名・区間の文字・節目
 }
 
 // ShapesValues は shapes サブシステムの寸法(pt。DefaultAspect は幅÷高さ)。
 // 既定は subsystems/shapes.json。
 type ShapesValues struct {
-	Padding       float64 `json:"padding"`       // 枠の内側の余白(相対座標の 0〜1 はその内側)
-	NaturalWidth  float64 `json:"naturalWidth"`  // 幅が分からないときの自然な幅
-	DefaultAspect float64 `json:"defaultAspect"` // aspect を省いたときの内側の縦横比
+	Padding       float64 `json:"padding" scale:"space"` // 枠の内側の余白(相対座標の 0〜1 はその内側)
+	NaturalWidth  float64 `json:"naturalWidth"`          // 幅が分からないときの自然な幅
+	DefaultAspect float64 `json:"defaultAspect"`         // aspect を省いたときの内側の縦横比
 	MinWidth      float64 `json:"minWidth"`
 	MinHeight     float64 `json:"minHeight"`
-	TextInsetX    float64 `json:"textInsetX"` // 図形の中の文字の余白
-	TextInsetY    float64 `json:"textInsetY"`
+	TextInsetX    float64 `json:"textInsetX" scale:"space"` // 図形の中の文字の余白
+	TextInsetY    float64 `json:"textInsetY" scale:"space"`
 	LineWidth     float64 `json:"lineWidth"`    // line・arrow・connector の太さ
 	OutlineWidth  float64 `json:"outlineWidth"` // 図形の枠線の太さ
 	CornerRadius  float64 `json:"cornerRadius"` // roundRect の角
@@ -124,6 +137,7 @@ type ShapesValues struct {
 type templateFile struct {
 	Name     string            `json:"name"`
 	Theme    map[string]string `json:"theme"`
+	Scale    TemplateScale     `json:"scale"`
 	Values   TemplateValues    `json:"values"`
 	Marks    TemplateMarks     `json:"marks"`
 	Fonts    TemplateFonts     `json:"fonts"`
@@ -237,6 +251,12 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	if err := checkPositive("values", f.Values); err != nil {
 		return nil, err
 	}
+	if err := checkScaleDef(f.Scale); err != nil {
+		return nil, err
+	}
+	if err := checkOnScale("values", f.Values, f.Scale); err != nil {
+		return nil, err
+	}
 	if err := checkMarks(f.Marks); err != nil {
 		return nil, err
 	}
@@ -254,6 +274,7 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	t := &Template{
 		Name:       name,
 		Theme:      Theme(f.Theme),
+		Scale:      f.Scale,
 		Values:     f.Values,
 		Marks:      f.Marks,
 		Fonts:      fonts,
@@ -262,9 +283,24 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		// 名乗る囲みは部品(コード)と対になるので、まだコードの一式を使う。
 		Blocks: defaultBlocks(),
 	}
+	// サブシステムの寸法も、このテンプレートの段に載っていなければならない
+	// (差し替えないときは既定の寸法を見る)。
+	if f.Subsystems == nil || f.Subsystems.Gantt == nil {
+		if err := checkOnScale("subsystems/gantt.json", *defaultGanttValues(), f.Scale); err != nil {
+			return nil, err
+		}
+	}
+	if f.Subsystems == nil || f.Subsystems.Shapes == nil {
+		if err := checkOnScale("subsystems/shapes.json", *defaultShapesValues(), f.Scale); err != nil {
+			return nil, err
+		}
+	}
 	if f.Subsystems != nil && f.Subsystems.Gantt != nil {
 		gv := *f.Subsystems.Gantt
 		if err := checkPositive("subsystems.gantt", gv); err != nil {
+			return nil, err
+		}
+		if err := checkOnScale("subsystems.gantt", gv, f.Scale); err != nil {
 			return nil, err
 		}
 		must(t.Subsystems.Override("gantt", func(data any) (Subsystem, error) {
@@ -281,6 +317,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	if f.Subsystems != nil && f.Subsystems.Shapes != nil {
 		v := *f.Subsystems.Shapes
 		if err := checkPositive("subsystems.shapes", v); err != nil {
+			return nil, err
+		}
+		if err := checkOnScale("subsystems.shapes", v, f.Scale); err != nil {
 			return nil, err
 		}
 		sv = &v
@@ -316,6 +355,79 @@ func checkPositive(at string, v any) error {
 		}
 	}
 	return nil
+}
+
+// checkScaleDef は段階そのものを見る:刻みは 0 より大きく、字の大きさの段は
+// 1つ以上で、0 より大きく、小さい順に重ならずに並ぶ。
+func checkScaleDef(sc TemplateScale) error {
+	if !(sc.SpacingUnit > 0) {
+		return fmt.Errorf("scale.spacingUnit: must be greater than 0 (got %v)", sc.SpacingUnit)
+	}
+	if len(sc.TypeSizes) == 0 {
+		return fmt.Errorf("scale.typeSizes: must list at least one size")
+	}
+	for i, x := range sc.TypeSizes {
+		if !(x > 0) {
+			return fmt.Errorf("scale.typeSizes[%d]: must be greater than 0 (got %v)", i, x)
+		}
+		if i > 0 && !(x > sc.TypeSizes[i-1]) {
+			return fmt.Errorf("scale.typeSizes[%d]: sizes must be in increasing order without repeats (%v after %v)", i, x, sc.TypeSizes[i-1])
+		}
+	}
+	return nil
+}
+
+const scaleEps = 1e-9
+
+// checkOnScale は json タグに scale:"space" / scale:"type" の付いた値が段に
+// 載っているかを見る。外れていれば、近い段の値を添えて誤りにする。
+func checkOnScale(at string, v any, sc TemplateScale) error {
+	rv := reflect.ValueOf(v)
+	rt := rv.Type()
+	for i := 0; i < rt.NumField(); i++ {
+		kind := rt.Field(i).Tag.Get("scale")
+		if kind == "" {
+			continue
+		}
+		x := rv.Field(i).Float()
+		name, _, _ := strings.Cut(rt.Field(i).Tag.Get("json"), ",")
+		switch kind {
+		case "space":
+			q := x / sc.SpacingUnit
+			if math.Abs(q-math.Round(q)) > scaleEps {
+				lo := math.Floor(q) * sc.SpacingUnit
+				return fmt.Errorf("%s.%s: %v is not on the spacing scale (multiples of %v); nearest: %v or %v",
+					at, name, x, sc.SpacingUnit, lo, lo+sc.SpacingUnit)
+			}
+		case "type":
+			on := false
+			for _, t := range sc.TypeSizes {
+				if math.Abs(t-x) <= scaleEps {
+					on = true
+				}
+			}
+			if !on {
+				return fmt.Errorf("%s.%s: %v is not on the type scale %v; nearest: %s",
+					at, name, x, sc.TypeSizes, nearestSizes(x, sc.TypeSizes))
+			}
+		default:
+			panic("unknown scale tag " + kind)
+		}
+	}
+	return nil
+}
+
+// nearestSizes は x をはさむ段の値(端なら1つ)を返す。
+func nearestSizes(x float64, sizes []float64) string {
+	for i, t := range sizes {
+		if t > x {
+			if i == 0 {
+				return fmt.Sprint(t)
+			}
+			return fmt.Sprintf("%v or %v", sizes[i-1], t)
+		}
+	}
+	return fmt.Sprint(sizes[len(sizes)-1])
 }
 
 func checkMarks(m TemplateMarks) error {

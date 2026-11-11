@@ -62,9 +62,12 @@ func renderSpec(ctx RenderContext, s *Spec) {
 	case KindText:
 		if len(s.Runs) > 0 {
 			p.AddRichTextBox(s.Box, s.Runs, s.FontSize, s.Align, s.Anchor)
-			return
+		} else {
+			p.AddTextBox(s.Box, s.Text, s.FontSize, s.Color, s.Bold, s.Align, s.Anchor)
 		}
-		p.AddTextBox(s.Box, s.Text, s.FontSize, s.Color, s.Bold, s.Align, s.Anchor)
+		if s.Placeholder != "" {
+			p.Shapes[len(p.Shapes)-1].ph = s.Placeholder
+		}
 		return
 	case KindSubsystem:
 		if s.Subsystem != nil {

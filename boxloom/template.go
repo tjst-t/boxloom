@@ -21,6 +21,7 @@ import (
 type Template struct {
 	Name       string
 	Theme      Theme
+	Scale      TemplateScale // 値の表の段階(余白の刻み・字の大きさの段)
 	Values     TemplateValues
 	Marks      TemplateMarks
 	Fonts      *FontSet // 字体と幅の余裕(値の表の fonts)
@@ -114,8 +115,8 @@ func (t *Template) runs(in Inline, color string, bold bool) []TextRun {
 	return out
 }
 
-func (t *Template) text(in Inline, size float64, color string, bold bool) *Spec {
-	return RichTextNode(t.runs(in, color, bold), WithFontSize(size))
+func (t *Template) text(in Inline, size float64, color string, bold bool, opts ...SpecOpt) *Spec {
+	return RichTextNode(t.runs(in, color, bold), append([]SpecOpt{WithFontSize(size)}, opts...)...)
 }
 
 func plainInline(s string) Inline { return Inline{{Text: s}} }
@@ -139,11 +140,11 @@ func (t *Template) buildCover(d *IRDeck, s *IRSlide) *BuiltSlide {
 	var kids []*Spec
 	kids = append(kids, Col(nil, WithGrow(1))) // 上の余白
 	if title != nil {
-		kids = append(kids, t.text(title, v.CoverTitle, th.c("text_primary"), true))
+		kids = append(kids, t.text(title, v.CoverTitle, th.c("text_primary"), true, WithPlaceholder("ctrTitle")))
 	}
 	kids = append(kids, Col(nil, WithWidth(v.CoverRuleW), WithHeight(v.CoverRuleH), WithBackground(th.c("accent"))))
 	if subtitle != nil {
-		kids = append(kids, t.text(subtitle, v.CoverSubtitle, th.c("text_muted"), false))
+		kids = append(kids, t.text(subtitle, v.CoverSubtitle, th.c("text_muted"), false, WithPlaceholder("subTitle")))
 	}
 	kids = append(kids, Col(nil, WithGrow(2))) // 下の余白(題を少し上に置く)
 	if author != nil {
@@ -177,7 +178,7 @@ func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, erro
 	}, WithJustify(JustifySpaceBetween))
 
 	root := Col([]*Spec{
-		t.text(s.Title, v.SlideTitle, th.c("text_primary"), true),
+		t.text(s.Title, v.SlideTitle, th.c("text_primary"), true, WithPlaceholder("title")),
 		body,
 		footer,
 	}, WithGap(v.SectionGap), WithPadding(v.PagePadding), WithBackground(th.c("bg")))

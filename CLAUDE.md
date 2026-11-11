@@ -60,7 +60,8 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
 テンプレートが手を入れられる段階を、軽いものから順に重ねる。
 
 1. **値の表(トークン/テーマ)**: 役割名に実際の色・文字サイズ・余白を当てる。
-   16進の色を知っているのはここだけ。
+   16進の色を知っているのはここだけ。余白と字の大きさは値の表の段階(`scale`:
+   余白の刻みと字の大きさの段)に載っていなければ読み込みで誤り。
 2. **スタイル規則**: 意味の種類と入れ子の位置で見た目を決める(CSS のセレクタに
    近いもの)。
 3. **スライドの骨組み**: 名前つきの枠(title / body / aside / footer …)を持つ
@@ -200,8 +201,11 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     から作る残りの高さ・行の数)も付く。誤りの形はパーサー・`validate_ir.py` と共通の
     `Issue`(`docs/content-syntax.md` の5章。IR を直接検査したときは行と列を省く)
   - `values.go` + `templates/*.json` + `subsystems/gantt.json` = 値の表(データ)の
-    読み込みと厳しい検査。テンプレートの一覧は `templates/` のファイルから作る
-    (`docs/template-values.md`)
+    読み込みと厳しい検査(段階 `scale` から外れた余白・字の大きさも誤り)。
+    テンプレートの一覧は `templates/` のファイルから作る(`docs/template-values.md`)
+  - 題はスライドのレイアウトのプレースホルダー(表紙は `ctrTitle`・`subTitle` で
+    「Title Slide」、本文は `title` で「Title Only」、題の無いスライドは「Blank」)。
+    位置と字の大きさは図形の側に書いたままなので、見た目は変わらない(`docs/build.md`)
   - `markdown.go` / `md_gantt.go` / `yaml.go` = Boxloom Markdown → IR の
     パーサー(YAML の部分集合も自前)。`go run . parse deck.bx.md`、`build` は
     `.md` もそのまま受け取る。詳細は `docs/content-syntax.md` の8章。

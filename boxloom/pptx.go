@@ -30,6 +30,9 @@ const (
 type shape struct {
 	id   int
 	kind shapeKind
+	// ph は文字の図形をプレースホルダーとして書く種類("title" | "ctrTitle" |
+	// "subTitle"。空ならテキストボックス)。
+	ph string
 
 	box    LBox
 	fill   string // "" = 塗りなし
@@ -318,7 +321,7 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 		lines := p.textLines(s)
 		paras := p.parasXML(s, lines)
 		return fmt.Sprintf(`<p:sp>
-<p:nvSpPr><p:cNvPr id="%d" name="TextBox %d"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+%s
 <p:spPr>
 <a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm>
 <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
@@ -326,7 +329,7 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 </p:spPr>
 <p:txBody><a:bodyPr wrap="none" anchor="%s" lIns="0" tIns="0" rIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>%s</p:txBody>
 </p:sp>
-`, s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), anchorAttr(s.anchor), paras)
+`, textNvSpPr(s), ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), anchorAttr(s.anchor), paras)
 
 	case skLine:
 		dashXML := ""
@@ -396,6 +399,44 @@ func (p *PPTXBuilder) parasXML(s *shape, lines [][]TextRun) string {
 		paras.WriteString(`</a:p>`)
 	}
 	return paras.String()
+}
+
+// textNvSpPr は文字の図形の名前の部分。プレースホルダーなら p:ph を書き、
+// スライドのレイアウトの同じ種類の置き場に結び付ける(PowerPoint のアウトライン・
+// 読み上げ・レイアウトの差し替えが題として扱う)。位置・字の大きさ・色は図形の
+// 側に書いたままなので、見た目は変わらない。
+func textNvSpPr(s *shape) string {
+	switch s.ph {
+	case "":
+		return fmt.Sprintf(`<p:nvSpPr><p:cNvPr id="%d" name="TextBox %d"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>`, s.id, s.id)
+	case "title", "ctrTitle":
+		return fmt.Sprintf(`<p:nvSpPr><p:cNvPr id="%d" name="Title %d"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="%s"/></p:nvPr></p:nvSpPr>`, s.id, s.id, s.ph)
+	case "subTitle":
+		return fmt.Sprintf(`<p:nvSpPr><p:cNvPr id="%d" name="Subtitle %d"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="subTitle" idx="1"/></p:nvPr></p:nvSpPr>`, s.id, s.id)
+	default:
+		panic("unknown placeholder " + s.ph)
+	}
+}
+
+// slideLayoutNum はスライドが使うレイアウト(1 白紙・2 題だけ・3 表紙)。
+// 持っているプレースホルダーで決める。
+func slideLayoutNum(p *PPTXBuilder) int {
+	n := 1
+	for _, s := range p.Shapes {
+		switch s.ph {
+		case "ctrTitle", "subTitle":
+			return 3
+		case "title":
+			n = 2
+		}
+	}
+	return n
+}
+
+// phSpXML はマスター・レイアウトのプレースホルダー(中身の無い置き場)。
+func phSpXML(id int, name, phAttrs string, box LBox, sz float64, algn string) string {
+	return fmt.Sprintf(`<p:sp><p:nvSpPr><p:cNvPr id="%d" name="%s"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph %s/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm></p:spPr><p:txBody><a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle><a:lvl1pPr algn="%s"><a:defRPr sz="%d"/></a:lvl1pPr></a:lstStyle><a:p><a:endParaRPr lang="ja-JP"/></a:p></p:txBody></p:sp>`,
+		id, name, phAttrs, ptToEMU(box.X), ptToEMU(box.Y), ptToEMU(box.Width), ptToEMU(box.Height), algn, int(sz*100))
 }
 
 // shapeTextRect は図形の文字の枠(prstGeom の文字の矩形)。楕円は内接する矩形。
@@ -549,7 +590,9 @@ func SaveDeck(path string, slides []*PPTXBuilder, title string) error {
 <Default Extension="xml" ContentType="application/xml"/>
 <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
 <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
-<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>` + slideTypes.String() + `
+<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
+<Override PartName="/ppt/slideLayouts/slideLayout2.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
+<Override PartName="/ppt/slideLayouts/slideLayout3.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>` + slideTypes.String() + `
 <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
 <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
 <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>`
@@ -636,26 +679,42 @@ func SaveDeck(path string, slides []*PPTXBuilder, title string) error {
 </a:themeElements>
 </a:theme>`
 
+	// マスターと3つのレイアウト(白紙・題だけ・表紙)。置き場の位置は目安で、
+	// スライドの図形は自分の位置を持つ(エンジンの座標)。
+	W, H := p.WidthPt, p.HeightPt
+	titleBox := LBox{X: 24, Y: 24, Width: W - 48, Height: 40}
+	ctrBox := LBox{X: 48, Y: H * 0.3, Width: W - 96, Height: 60}
+	subBox := LBox{X: 48, Y: H*0.3 + 80, Width: W - 96, Height: 30}
 	master := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
 <p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>
-<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree>
+<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>` + phSpXML(2, "Title Placeholder 1", `type="title"`, titleBox, 24, "l") + `</p:spTree>
 </p:cSld>
 <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
-<p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>
+<p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/><p:sldLayoutId id="2147483650" r:id="rId2"/><p:sldLayoutId id="2147483651" r:id="rId3"/></p:sldLayoutIdLst>
 </p:sldMaster>`
 
 	masterRels := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout2.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout3.xml"/>
+<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
 </Relationships>`
 
-	layout := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" type="blank" preserve="1">
-<p:cSld name="Blank"><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld>
+	layoutXML := func(typ, name, phs string) string {
+		return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" type="` + typ + `" preserve="1">
+<p:cSld name="` + name + `"><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>` + phs + `</p:spTree></p:cSld>
 <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
 </p:sldLayout>`
+	}
+	layouts := []string{
+		layoutXML("blank", "Blank", ""),
+		layoutXML("titleOnly", "Title Only", phSpXML(2, "Title 1", `type="title"`, titleBox, 24, "l")),
+		layoutXML("title", "Title Slide", phSpXML(2, "Title 1", `type="ctrTitle"`, ctrBox, 36, "l")+
+			phSpXML(3, "Subtitle 2", `type="subTitle" idx="1"`, subBox, 16, "l")),
+	}
 
 	layoutRels := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -689,11 +748,13 @@ func SaveDeck(path string, slides []*PPTXBuilder, title string) error {
 	if err := write("ppt/slideMasters/_rels/slideMaster1.xml.rels", masterRels); err != nil {
 		return err
 	}
-	if err := write("ppt/slideLayouts/slideLayout1.xml", layout); err != nil {
-		return err
-	}
-	if err := write("ppt/slideLayouts/_rels/slideLayout1.xml.rels", layoutRels); err != nil {
-		return err
+	for i, l := range layouts {
+		if err := write(fmt.Sprintf("ppt/slideLayouts/slideLayout%d.xml", i+1), l); err != nil {
+			return err
+		}
+		if err := write(fmt.Sprintf("ppt/slideLayouts/_rels/slideLayout%d.xml.rels", i+1), layoutRels); err != nil {
+			return err
+		}
 	}
 	for i, sl := range slides {
 		if err := writeSlide(write, i+1, sl); err != nil {
@@ -739,9 +800,9 @@ func writeSlide(write func(name, content string) error, num int, p *PPTXBuilder)
 <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
 </p:sld>`, shapesXML.String())
 
-	slideRels := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+	slideRels := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>`
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout%d.xml"/>`, slideLayoutNum(p))
 	if p.Notes != "" {
 		slideRels += fmt.Sprintf(`
 <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide%d.xml"/>`, num)

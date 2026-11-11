@@ -4,7 +4,7 @@
   "defaultAspect": 2.4,
   "minWidth": 160,
   "minHeight": 80,
-  "textInsetX": 6,
+  "textInsetX": 8,
   "textInsetY": 4,
   "lineWidth": 1.5,
   "outlineWidth": 1.25,

@@ -66,6 +66,10 @@ type Spec struct {
 	Bold     bool
 	Align    string // "left" | "center" | "right"
 	Anchor   string // "top" | "middle" | "bottom"
+	// Placeholder は文字の葉を PPTX のスライドのレイアウトのプレースホルダーとして
+	// 書く種類("title" | "ctrTitle" | "subTitle"。空ならただのテキストボックス)。
+	// 位置と字の大きさはエンジンの決めたままで、見た目は変わらない。
+	Placeholder string
 
 	Subsystem Subsystem // KindSubsystem のときだけ
 	Place     Place     // KindSubsystem: 割り当てが図より大きいときの置き方(既定は左上)
@@ -94,6 +98,7 @@ func WithBold(v bool) SpecOpt              { return func(s *Spec) { s.Bold = v }
 func WithAlign(v string) SpecOpt           { return func(s *Spec) { s.Align = v } }
 func WithAnchor(v string) SpecOpt          { return func(s *Spec) { s.Anchor = v } }
 func WithPlace(x, y PlaceAlign) SpecOpt    { return func(s *Spec) { s.Place = Place{X: x, Y: y} } }
+func WithPlaceholder(v string) SpecOpt     { return func(s *Spec) { s.Placeholder = v } }
 
 func apply(s *Spec, opts []SpecOpt) *Spec {
 	for _, o := range opts {

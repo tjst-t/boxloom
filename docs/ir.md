@@ -244,7 +244,7 @@ go run . check -template dark deck.json                  # IR の template の�
 
 ```json
 {"file": "layout-overflow.bx.md", "line": 38, "path": "/slides/1/body/2", "code": "layout-overflow",
- "message": "block (points) overflows the body area by 47.8pt (block needs 168.3pt; body area 413.4pt, all blocks need 491.4pt)"}
+ "message": "block (points) overflows the body area by 75.1pt (block needs 180.3pt; body area 414.1pt, all blocks need 518.7pt)"}
 ```
 
 文字の高さはレイアウトエンジン自身の測り方(字体の幅の表と行の高さの倍率)で

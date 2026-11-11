@@ -58,6 +58,28 @@ func TestTemplateFileStrict(t *testing.T) {
 		{"unknown top key", func(m map[string]any) { m["colour"] = 1 }, `unknown field "colour"`},
 		{"unknown value key", func(m map[string]any) { sub(m, "values")["bodyy"] = 14 }, `unknown field "bodyy"`},
 		{"missing value", func(m map[string]any) { delete(sub(m, "values"), "body") }, `missing key "values.body"`},
+		{"missing scale", func(m map[string]any) { delete(m, "scale") }, `missing key "scale"`},
+		{"zero spacing unit", func(m map[string]any) { sub(m, "scale")["spacingUnit"] = 0 }, `scale.spacingUnit: must be greater than 0`},
+		{"empty type scale", func(m map[string]any) { sub(m, "scale")["typeSizes"] = []any{} }, `scale.typeSizes: must list at least one size`},
+		{"type scale not increasing", func(m map[string]any) { sub(m, "scale")["typeSizes"] = []any{10, 14, 12} }, `scale.typeSizes[2]: sizes must be in increasing order`},
+		{"spacing off scale", func(m map[string]any) { sub(m, "values")["itemGap"] = 6 }, `values.itemGap: 6 is not on the spacing scale (multiples of 4); nearest: 4 or 8`},
+		{"type off scale", func(m map[string]any) { sub(m, "values")["subPoint"] = 12.5 }, `values.subPoint: 12.5 is not on the type scale [8 10 12 14 16 24 36]; nearest: 12 or 14`},
+		{"type below scale", func(m map[string]any) { sub(m, "values")["small"] = 6 }, `nearest: 8`},
+		{"gantt default off a narrowed scale", func(m map[string]any) { sub(m, "scale")["typeSizes"] = []any{10, 12, 14, 16, 24, 36} }, `subsystems/gantt.json.annotationText: 8 is not on the type scale`},
+		{"gantt override off scale", func(m map[string]any) {
+			var gv map[string]any
+			raw, _ := valueFiles.ReadFile("subsystems/gantt.json")
+			_ = json.Unmarshal(raw, &gv)
+			gv["annotationPaddingY"] = 6
+			m["subsystems"] = map[string]any{"gantt": gv}
+		}, `subsystems.gantt.annotationPaddingY: 6 is not on the spacing scale`},
+		{"shapes override off scale", func(m map[string]any) {
+			var sv map[string]any
+			raw, _ := valueFiles.ReadFile("subsystems/shapes.json")
+			_ = json.Unmarshal(raw, &sv)
+			sv["textInsetX"] = 5
+			m["subsystems"] = map[string]any{"shapes": sv}
+		}, `subsystems.shapes.textInsetX: 5 is not on the spacing scale`},
 		{"missing marks", func(m map[string]any) { delete(m, "marks") }, `missing key "marks"`},
 		{"null variants", func(m map[string]any) { m["variants"] = nil }, `"variants" must not be null`},
 		{"wrong type", func(m map[string]any) { sub(m, "values")["body"] = "14" }, `cannot unmarshal string`},
@@ -131,7 +153,7 @@ func TestTemplateOverridesShapesValues(t *testing.T) {
 		_ = json.Unmarshal(raw, &sv)
 		sv["defaultAspect"] = 1.2
 		m["subsystems"] = map[string]any{"shapes": sv}
-		m["values"].(map[string]any)["small"] = 9
+		m["values"].(map[string]any)["small"] = 8
 	})
 	tp, err := parseTemplateFile("light", data)
 	if err != nil {
@@ -151,8 +173,8 @@ func TestTemplateOverridesShapesValues(t *testing.T) {
 	if hc <= hp {
 		t.Errorf("natural height custom=%v plain=%v", hc, hp)
 	}
-	if got := custom.(*ShapesSubsystem).textSize("small"); got != 9 {
-		t.Errorf("small = %v, want 9", got)
+	if got := custom.(*ShapesSubsystem).textSize("small"); got != 8 {
+		t.Errorf("small = %v, want 8", got)
 	}
 	if defaultShapesValues().DefaultAspect != 2.4 {
 		t.Errorf("default shapes values were modified")

@@ -18,9 +18,9 @@
   "annotationMinWidth": 96,
   "annotationMaxWidth": 240,
   "annotationPaddingX": 8,
-  "annotationPaddingY": 6,
+  "annotationPaddingY": 4,
   "annotationLaneGap": 8,
-  "annotationText": 8.5,
-  "labelText": 9,
+  "annotationText": 8,
+  "labelText": 10,
   "smallText": 8
 }
