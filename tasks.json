@@ -1087,7 +1087,7 @@
       "number": 63,
       "kind": "task",
       "title": "計測の印を配置の段の語彙にする(irType・columns・cards・keepLine・nestedSlack・List・card)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "tokens-template",
       "dependsOn": [
         "component-registry"
@@ -1097,12 +1097,12 @@
       "labels": [],
       "body": "docs/layers.md の2.1の表・7章の2段目。\n\n- いま Spec の非公開の欄で持っている計測と書き出しの印を、部品が付けられる語彙(SpecOpt など)にする:はみ出しの警告に出す IR の種類と場所(irType)、測る単位(columns のまとまり・cards のカード、並びの名前つき)、1行に収めたい文字(keepLine)、中の図を先に縮める箱(nestedSlack)、箱の種類(箇条 List・カード card)。\n- 部品(登録簿の Build)はこの語彙だけで印を付け、overflow.go・capacity.go・keepline.go・pptx.go は印を読むだけにする。\n- 出力は変えない。package の外へは公開しない(公開は後で決める)。\n\n確かめ方:component-registry と同じ、examples の全 deck で PPTX・check -format json が変更前と一致。",
       "doneWhen": "標準の部品が非公開の欄に直接書かず、語彙(SpecOpt 等)で印を付けている。examples の全 deck で PPTX・check -format json(capacity・layout-overflow を含む)が変更前と一致する試験があり、tools/ci.sh go python pptx が通る。docs/layers.md の7章の2段目に「済み」を書く。",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/public-measure-marks）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T13:58:39.286Z",
-      "updatedAt": "2026-11-11T14:57:04.052Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T15:00:49.806Z",
+      "closedAt": "2026-11-11T15:00:49.806Z",
       "extra": {}
     },
     {
