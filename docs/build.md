@@ -9,12 +9,14 @@ cd boxloom
 go run ./cmd/boxloom build ../examples/ir/demo-deck.json                  # → out/demo-deck.pptx
 go run ./cmd/boxloom build ../examples/md/demo-deck.bx.md                 # Markdown からも同じものができる
 go run ./cmd/boxloom build -template dark -o out/x.pptx ../examples/ir/gantt-full.json
+go run ./cmd/boxloom build -template dark -o out/text_patterns_dark.pptx ../examples/md/text-patterns.bx.md   # 文字のパターン(light も同じく)
 go run ./cmd/boxloom                                                      # 従来の Go で組んだデモ(変わらない)
 ```
 
-- テンプレートは `-template` > IR の `template` > `light` の順で決まる。
+- テンプレートは `-template` > IR の `template` > `light` の順で決まる。`-template` には
+  外の値の表のファイル(`./my.json`)も渡せる(`docs/template-values.md` の「外の値の表を使う」)。
 - 誤りは IR の中の場所を添えて止まる(例 `slides[2]: body[0]: gantt: ticks[0].status:
-  unknown status "text_primary"`)。`examples/ir/invalid/` の18件は全部ここで断られる。
+  unknown status "text_primary"`)。`examples/ir/invalid/` の24件は全部ここで断られる。
 - 画像(`image`・`gallery`)は、文書のファイルのフォルダから `src` の相対パスで読む
   (ライブラリには `BuildOptions.Assets` で渡す。`docs/library.md` の「画像」)。PPTX では
   本物の画像(`p:pic`、`ppt/media/`)になり、代わりの文は画像の `descr` に入る。
@@ -25,7 +27,9 @@ go run ./cmd/boxloom                                                      # 従�
   標準出力にだけ書く。スライドのノートには入れない(ノートは作者の文だけ)。
 - 題はスライドのレイアウトのプレースホルダーとして書く。表紙の題と副題は
   `ctrTitle`・`subTitle`(レイアウト「Title Slide」)、本文のスライドの題は `title`
-  (レイアウト「Title Only」)。題を持たないスライド(従来のデモ)は「Blank」。
+  (レイアウト「Title Only」)。区切りの章の題と主張の1文も `title`(「Title Only」)。
+  レイアウトを足す(「Section Header」など)と、全部の PPTX の雛形が変わって
+  既存の出力が変わるので、いまある3つで済ませた。題を持たないスライド(従来のデモ)は「Blank」。
   位置・字の大きさ・色は図形の側に書いたままで、見た目はテキストボックスのときと
   同じ(画像で確かめた)。PowerPoint のアウトライン表示・読み上げ・レイアウトの
   差し替えが題として扱う。LibreOffice は `presentation:class="title"` として読む。
@@ -50,7 +54,7 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 | ファイル | 役目 |
 |---|---|
 | `ir.go` | IR を読む。知らないキーは断る(Schema と同じ方針)。インライン・行の配列・箇条の入れ子を Go の型にする |
-| `template.go` | テンプレート(骨組み・部品。値の表は `templates/<名前>.json` を `values.go` が読む。`docs/template-values.md`)。表紙と本文のスライド、ブロック(段落・箇条・比較・注記・サブシステム)を Spec に組む |
+| `template.go` | テンプレート(骨組み・部品。値の表は `templates/<名前>.json` を `values.go` が読む。`docs/template-values.md`)。表紙・本文・区切り・主張のスライド、ブロック(段落・箇条・比較・注記・結論・統計強調・引用・サブシステム)を Spec に組む |
 | `gantt_ir.go` | Gantt の `data` から `GanttChart` を組む(軸の圧縮・目盛りの文字・注釈の指す先) |
 | `gantt.go` | 注釈の置き場所と箱の大きさを決める(`planAnnotations`)。置けない注釈は警告(`Lint`)。確定していない区間を破線で描く |
 | `overflow.go` | 本文のはみ出しの検査(`layout-overflow`)。縮めなければ要る高さを測り直し、本文の領域と比べる |
@@ -59,15 +63,29 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 ## テンプレートが決めていること(dark / light)
 
 - **骨組み**:表紙は題・アクセントの線・副題・作者を左に寄せて置く。本文のスライドは
-  題 / 本文 / フッター(作者と「何枚目 / 全部」)。
+  題 / 本文 / フッター(作者と「何枚目 / 全部」)。区切り(section)は背景を一段違う色
+  (`card_alt`)にし、アクセントの線と大きな太字の章の題を左に寄せ、中ほどより少し下
+  (上の余白 3 : 下の余白 2)に置く。フッターは無い(表紙と同じく流れの外のページ)。
+  主張(statement)は本文のスライドと同じ背景とフッターで、アクセントの線と大きな太字の
+  1文を、外周よりさらに内(`statementInset`)に左に寄せ、中ほどより少し上(2 : 3)に置く。
+  どちらも中央揃えは使わない(上下の余白の比で置く。表紙と同じ)。
 - **意味から見た目へ**:`em` はアクセントの色の太字。`link` はアクセントの色(押せる
   リンクにはまだしない)。`code` は控えめな色(等幅の字体にはまだしない)。`br` は改行。
 - **部品**:箇条は「・」の印(入れ子は字下げして「–」)。比較は選択肢ごとに同じ幅の
   カードを横に並べ、良い点を「＋」(support の色)、悪い点を「－」(danger の色)で示す。
   注記は小さく控えめな色。サブシステムはカードの上に置き、自己申告の上限まで伸ばす。
+  結論(takeaway)は左にアクセントの帯、カードの色の上に一段大きな太字。統計強調(stat)は
+  数の数にかかわらず同じ幅のカードを1行に並べ(1個なら本文の幅いっぱい)、カードの中に
+  大きなアクセントの色の数と小さな単位(1つの文字の図形の2つの塊。下の線はアプリが
+  そろえる)、その下に控えめな色の説明。引用(quote)は頭に大きなアクセントの色の引用の印、
+  右に言葉、下に「— 出どころ」を控えめな色で。
 - **方針**:本文が少なくても引き伸ばして埋めない。本文の箱のうち `fillRatioMin`(dark / light は 65%)より少なくしか
   使っていなければ `[FILL-RATIO WARNING] underfilled` を出す(例のデッキの
-  2・3枚目はこれが出る)。
+  2・3枚目はこれが出る)。本文を持たない表紙・区切り・主張には出さない(区切り・主張は
+  ページに収まるかだけを `layout-overflow` で見る)。
+- 文字のパターン(区切り・主張・結論・統計強調・引用)の見た目は
+  `verification-screenshots/text_patterns_light.png`・`text_patterns_dark.png`(LibreOffice で
+  `out/text_patterns_*.pptx` を描いたもの。左上から右へ1枚ずつ)。
 - **変種(variant)**:デモのテンプレートは1つも持たないので、`variant` を書くと断る。
 
 ## コアに足したもの
@@ -77,8 +95,11 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 - **折り返しを含む高さ**:列の中に置いた入れ子の箱(行など)の高さを、中の文字の
   折り返しまで含めて測る(`heightForWidth`)。いままでは文字を1行と見なしていたので、
   比較のカードのように横に並べた文字が折り返すと高さが足りなかった。
-- どちらも、従来の Go で組んだデモ(`go run ./cmd/boxloom`)の出力を変えない(展開して `diff -r` で
-  同じことを確かめた)。
+- **塊ごとの字の大きさ**:`TextRun.Size`(0 なら文字の図形の大きさ)。統計強調の数と単位の
+  ように、1つの文字の中で大きさを変えるため。測るのも描くのも塊ごとの大きさで、行の高さは
+  文字の図形の大きさで測る(図形の大きさを一番大きい塊に合わせる)。
+- どれも、従来の Go で組んだデモ(`go run ./cmd/boxloom`)の出力を変えない(展開して `diff -r` で
+  同じことを確かめた。塊ごとの大きさは、既存の PPTX がバイト単位で同じことを確かめた)。
 
 ## PPTX の検査(tools/validate_pptx.py)
 
@@ -104,7 +125,7 @@ python3 tools/validate_pptx.py --self-test    # examples を dark/light で作�
 - **別の実装で読めるか**:`--python-pptx` で python-pptx で開き直して全部の文字を読み、
   `--soffice` で LibreOffice で PDF に変換してページの数がスライドの数と合うかを見る。
   `--self-test` は python-pptx があれば必ず使う。
-- **自分の試験**:examples の IR・Markdown(警告の例も含む)を dark/light で作った32個と、
+- **自分の試験**:examples の IR・Markdown(警告の例も含む)を dark/light で作った46個と、
   従来のデモ2枚が全部通ること。それを壊した19通り(XML の誤り・Schema 外の要素と値・
   部品の削除・内容の種類の抜けと余り・関係の無い r:id・図形の id の重複・コネクタの
   指す先・スライドの id の重複・レイアウトの無いスライド・種類違いの関係・

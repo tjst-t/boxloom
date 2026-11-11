@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/process.schema.json",
+  "title": "Boxloom IR: process subsystem (0.1)",
+  "description": "日付の無い、方向のある段階の列(docs/patterns.md の R7)。段階は左から右へ並び、本物のコネクタの矢印で繋がる。幅が足りなければサブシステムが次の行へ折り返す。置き場所・大きさ・色は書けない。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "subsystem"
+    },
+    "subsystem": {
+      "const": "process"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "data": {
+      "$ref": "#/$defs/process"
+    }
+  },
+  "required": [
+    "type",
+    "subsystem",
+    "data"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "inline": {
+      "$ref": "../core.schema.json#/$defs/inline"
+    },
+    "status": {
+      "description": "状態の意味の名前。色はテンプレートが決める(16進の色・役割名は書けない)。",
+      "enum": [
+        "support",
+        "conditional",
+        "none",
+        "danger"
+      ]
+    },
+    "emphasis": {
+      "description": "目立たせる(塗りがアクセントの色になる)。既定 false。",
+      "type": "boolean"
+    },
+    "step": {
+      "description": "段階。title は箱の中、detail は箱の下に書く。",
+      "type": "object",
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "detail": {
+          "$ref": "#/$defs/inline"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "emphasis": {
+          "$ref": "#/$defs/emphasis"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "process": {
+      "type": "object",
+      "properties": {
+        "caption": {
+          "description": "図の上に置く短い説明。",
+          "$ref": "#/$defs/inline"
+        },
+        "numbered": {
+          "description": "題の前に 1. 2. … の番号を付ける(既定 true)。",
+          "type": "boolean"
+        },
+        "steps": {
+          "description": "段階。書いた順に左から右へ並ぶ(3〜7段階が目安)。",
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      },
+      "required": [
+        "steps"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

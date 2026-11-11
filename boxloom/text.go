@@ -130,10 +130,23 @@ func measureTextHeight(text string, fontSizePt, maxWidthPt float64, bold bool) f
 
 // TextRun は同じ見た目が続く文字の塊。意味(強調など)を見た目(色・太さ)に
 // 変えるのはテンプレートで、ここには見た目だけが入る。
+//
+// Size は塊の字の大きさ(pt)。0 なら文字の葉の大きさ(FontSize)。行の高さは葉の
+// 大きさで測るので、大きさの違う塊を混ぜるときは、葉の大きさを一番大きい塊に
+// 合わせる(例 統計強調の数と、その後ろの小さな単位)。
 type TextRun struct {
 	Text  string
 	Color string
 	Bold  bool
+	Size  float64
+}
+
+// runSize は塊の字の大きさ(0 なら葉の大きさ)。
+func runSize(r TextRun, fontSizePt float64) float64 {
+	if r.Size > 0 {
+		return r.Size
+	}
+	return fontSizePt
 }
 
 // runsText は塊をつないだ文字列。
@@ -163,10 +176,10 @@ func naturalRunsWidth(runs []TextRun, fontSizePt float64) float64 {
 	total := 0.0
 	for _, r := range runs {
 		for _, ch := range r.Text {
-			total += charEmWidth(ch, r.Bold)
+			total += charEmWidth(ch, r.Bold) * runSize(r, fontSizePt)
 		}
 	}
-	return total * fontSizePt * measureSafetyMargin()
+	return total * measureSafetyMargin()
 }
 
 // wrapRuns は wrapText と同じ規則(トークン単位・空白では折り返さない・"\n" は
@@ -185,7 +198,7 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 			n := len([]rune(tok))
 			tokW := 0.0
 			for k := pos; k < pos+n; k++ {
-				tokW += charEmWidth(rs[k], runs[style[k]].Bold) * fontSizePt
+				tokW += charEmWidth(rs[k], runs[style[k]].Bold) * runSize(runs[style[k]], fontSizePt)
 			}
 			tokW *= measureSafetyMargin()
 			const wrapEps = 1e-6
@@ -209,7 +222,7 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 				line[len(line)-1].Text += string(rs[k])
 				continue
 			}
-			line = append(line, TextRun{Text: string(rs[k]), Color: r.Color, Bold: r.Bold})
+			line = append(line, TextRun{Text: string(rs[k]), Color: r.Color, Bold: r.Bold, Size: r.Size})
 		}
 		out = append(out, line)
 	}

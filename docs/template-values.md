@@ -11,11 +11,39 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 | `boxloom/templates/<名前>.json` | テンプレート1つ(`dark.json`・`light.json`)。名前はファイル名 |
 | `boxloom/subsystems/gantt.json` | Gantt の既定の寸法。テンプレートが差し替えなければこれ |
 | `boxloom/subsystems/shapes.json` | shapes(生の図形への逃げ道)の既定の寸法 |
+| `boxloom/subsystems/process.json`・`orgchart.json`・`matrix.json`・`funnel.json` | 箱と線の図(`docs/subsystem.md` の11節)の既定の寸法 |
 | `boxloom/values.go` | 読み込みと検査 |
 
-どちらも `go:embed` でバイナリに同梱する(外のファイルを指定して読む口はまだ無い)。
-テンプレートの一覧はこのフォルダのファイルから作るので、`templates/` に
-ファイルを1つ足せば `-template <名前>` で選べる。
+どちらも `go:embed` でバイナリに同梱する。テンプレートの一覧はこのフォルダの
+ファイルから作るので、`templates/` にファイルを1つ足せば `-template <名前>` で選べる。
+
+## 外の値の表を使う(Backlog #31)
+
+自分たちの色と字体で使いたいときは、同梱のものと同じ形の JSON を作り、
+`-template` にファイルのパスを渡す(`build`・`check`・`schema`・`fonts` のどれでも)。
+
+```
+go run ./cmd/boxloom build -template ./my-brand.json deck.bx.md
+go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレートが名乗るものだけ
+```
+
+- `-template` の値が `.json` で終わるか、パスの区切り(`/`・`\`)を含めばファイル、
+  そうでなければ同梱の名前として引く。
+- 検査は同梱のものと**同じ**(次の節)。`name` はファイル名(拡張子を除いた最後の
+  部分)と同じでなければならない。IR の `template` より `-template` が優先する。
+- 誤りは5章の形の1件(`code` は `template-values`、`file` は値の表のファイル、
+  `path` は値の表の中の場所、`line` はその行の目安)。`check` は値の表に誤りが
+  あれば文書を検査せず、その1件だけを返す(終了コード 1)。
+
+  ```
+  error: ./my-brand.json:36 /values/blockGap: template-values: values.blockGap: 13 is not on the spacing scale (multiples of 4); nearest: 12 or 16
+  ```
+- 囲み・部品・骨組みはまだコードなので、外の値の表で変えられるのは値の表の中身
+  (色・余白・字の大きさ・字体・印・サブシステムの寸法)だけ。囲みの一覧は同梱の
+  テンプレートと同じ。
+- ライブラリでは `ParseTemplate(file, data)` で読み、`BuildOptions.Values`・
+  `CheckOptions.Values`・`SchemaTemplate` に渡す(`docs/library.md`)。
+- 例は `examples/templates/forest.json`(架空の緑の配色)。
 
 ## 読み込みの検査
 
@@ -65,8 +93,8 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 
 | 種類 | values | subsystems/gantt.json | subsystems/shapes.json |
 |---|---|---|---|
-| 余白 | `pagePadding` `coverPadding` `sectionGap` `blockGap` `itemGap` `cardPadding` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
-| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
+| 余白 | `pagePadding` `coverPadding` `sectionGap` `blockGap` `itemGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
+| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` `sectionTitle` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
 ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率は段階に載せない
 (図の寸法で、刻みに合わせても読みやすさは変わらないため)。
@@ -78,9 +106,11 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
   ときは既定のファイル(`subsystems/gantt.json` など)の値を見る。段を狭めた
   テンプレートは、既定の Gantt の字が段から外れれば読み込みで断られる。
 - dark / light は `spacingUnit` 4、`typeSizes` [8, 10, 12, 14, 16, 24, 36] の7段。
-  段の役割はおおむね 36 表紙の題・24 スライドの題・16 小見出し(表紙の副題・
-  比較の選択肢の名前)・14 本文・12 従の文(入れ子の箇条・利点と欠点・表紙の作者)・
-  10 注(注記・フッター・Gantt の目盛りと行の名前)・8 図の中の細かい字。
+  段の役割はおおむね 36 表紙の題・区切りの題・主張の1文・統計強調の数・引用の印、
+  24 スライドの題、16 小見出し(表紙の副題・比較の選択肢の名前・結論・引用の言葉・
+  数の単位)、14 本文、12 従の文(入れ子の箇条・利点と欠点・表紙の作者・数の説明・
+  引用の出どころ)、10 注(注記・フッター・Gantt の目盛りと行の名前)、8 図の中の細かい字。
+  文字のパターン(#17〜#19)のために段は足していない(36 を数と主張に使う)。
 
 **段階に寄せたとき(Backlog #29)に変えた値**(dark / light 共通):
 
@@ -126,10 +156,17 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 | `subPoint` | 入れ子の箇条 |
 | `optionLabel` `optionItem` | 比較の選択肢の名前、利点・欠点 |
 | `small` | 注記・フッター |
+| `sectionTitle` | 区切り(section)の章の題 |
+| `statementText` | 主張(statement)の1文 |
+| `takeawayText` | 結論(takeaway)の1文 |
+| `statValue` `statUnit` `statLabel` | 統計強調(stat)の数・単位・説明 |
+| `quoteText` `quoteMark` `quoteSource` | 引用(quote)の言葉・頭の印・出どころ |
 | `pointIndentEm` | 入れ子の箇条の字下げ。親の字の大きさに掛ける倍率 |
 | `cardPadding` `cardRadius` | 比較のカード |
 | `subsystemRadius` | サブシステムを載せるカードの角 |
-| `coverRuleWidth` `coverRuleHeight` | 表紙の題の下の線 |
+| `coverRuleWidth` `coverRuleHeight` | 表紙の題の下の線。区切りの題・主張の1文の上の線にも使う |
+| `statementInset` | 主張のスライドの文を、本文のスライドの外周(`pagePadding`)よりさらに内へ下げる幅 |
+| `accentBarWidth` | 結論(takeaway)の左のアクセントの帯の幅 |
 | `fillRatioMin` | 本文の埋まりがこの割合(0〜1)未満なら `fill-ratio` の警告 |
 | `columnTitle` | 並列のまとまりの題(dark / light は 16) |
 | `columnGap` | 並列のまとまりの間(32) |
@@ -143,7 +180,8 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 ### marks(印の文字)
 
 箇条(`point`、入れ子は `subPoint`)、比較の利点(`pro`)・欠点(`con`)の頭に置く
-文字。後ろの空きも含めて書く。
+文字、引用の言葉の頭(`quote`)と出どころの頭(`quoteSource`)、統計強調の数と単位の
+間(`statUnit`。dark / light は半角の空白1つ)。後ろの空きも含めて書く。
 
 ### fonts(字体)
 
@@ -171,6 +209,17 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 shapes の文字の大きさは、作者が `textStyle` に書く段の名前で values から引く:
 `small`・`subPoint`・`optionItem`・`body`・`optionLabel`(`docs/subsystem.md` の8節)。
 テーマに無い役割名を shapes が使うと、このテンプレートの組み立てが断る。
+
+### subsystems.process・orgchart・matrix・funnel(任意)
+
+同じく、書くとこのテンプレートのその図だけがその寸法になる。全部のキーが要り、`padding`・
+間隔・文字の余白(Go の json タグに `scale:"space"` の付いたもの)は段階の刻みに載って
+いなければ誤り。差し替えないときは既定のファイルの値を、そのテンプレートの段階で見る。
+dark / light は書いていない。図の字の大きさはファイルに持たず、values の `body`(題)・
+`subPoint`(2段目・セル・注記)・`small`(補足・説明・凡例)から引く。キーの意味は
+各ファイルと Go の型(`ProcessValues`・`OrgChartValues`・`MatrixValues`・`FunnelValues`)の
+注釈に書いた。最小・自然・上限の3つ組(`minBoxHeight`・`naturalBoxHeight`・
+`maxBoxHeight` など)は Measure の Min・Natural・Max になる。
 
 ## subsystems/gantt.json の形
 

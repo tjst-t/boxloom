@@ -261,7 +261,7 @@ var (
 
 // 囲みの名前。
 var (
-	plannedFences = map[string]bool{"takeaway": true}
+	plannedFences = map[string]bool{}
 )
 
 func leadingSpaces(s string) int {
@@ -459,7 +459,7 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 			level := len(m[1])
 			if level >= 2 {
 				if level == 2 {
-					p.fail(no, ind+1, "", codePlannedSyntax, "小見出し(##)はまだ使えません(予定)", nil, "スライドを分けるなら # を、強調したいなら **…** を使ってください")
+					p.fail(no, ind+1, "", codeUnsupportedSyntax, "小見出し(##)は使えません(IR は小見出しを持たない)", nil, "スライドを分けるなら # を、まとまりの題なら囲みの見出しの文(:::名前 見出し)を、強調したいなら **…** を使ってください")
 				} else {
 					p.fail(no, ind+1, "", codeUnsupportedSyntax, fmt.Sprintf("見出しの段(%s)は使えません", m[1]), []string{"#"}, "スライドの題は # で書きます")
 				}
@@ -563,8 +563,8 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 
 		case strings.HasPrefix(t, ">"):
 			flush()
-			hint := "注記なら :::note … ::: で囲んでください"
-			p.fail(no, ind+1, "", codeUnsupportedSyntax, "引用(>)は使えません", nil, hint)
+			hint := "他人の言葉なら :::quote 出どころ … :::、注記なら :::note … ::: で囲んでください"
+			p.fail(no, ind+1, "", codeUnsupportedSyntax, "引用(>)は使えません", []string{"quote", "note"}, hint)
 
 		case strings.HasPrefix(t, "|") && ind < 4:
 			flush()
@@ -996,16 +996,27 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 	for _, s := range doc.slides {
 		path := fmt.Sprintf("/slides/%d", len(slides))
 		p.mark(path, s.line)
-		sl := obj("type", "content")
+		attrs := map[string]string{}
 		if s.attrs != "" {
-			attrs := p.parseAttrs(s.attrs, s.line, s.attrsCol, path, []string{"variant"})
-			if v, ok := attrs["variant"]; ok {
-				sl.set("variant", v)
-			}
+			attrs = p.parseAttrs(s.attrs, s.line, s.attrsCol, path, slideAttributeNames)
 		}
-		sl.set("title", p.parseInline(s.title, path+"/title"))
+		typ := p.slideType(attrs, s, path)
+		sl := obj("type", typ)
+		if v, ok := attrs["variant"]; ok {
+			sl.set("variant", v)
+		}
 		body, notes := splitNotes(s.items)
-		sl.set("body", p.blocks(body, path+"/body"))
+		switch typ {
+		case "content":
+			sl.set("title", p.parseInline(s.title, path+"/title"))
+			sl.set("body", p.blocks(body, path+"/body"))
+		case "section":
+			sl.set("title", p.parseInline(s.title, path+"/title"))
+			p.noSlideBody(body, path, typ)
+		case "statement":
+			sl.set("content", p.parseInline(s.title, path+"/content"))
+			p.noSlideBody(body, path, typ)
+		}
 		if n, ok := p.notesText(notes, path+"/notes"); ok {
 			sl.set("notes", n)
 		}
@@ -1023,6 +1034,45 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 	}
 	root.set("slides", slides)
 	return root
+}
+
+// slideAttributeNames は「# 題 {…}」に書ける属性。
+var slideAttributeNames = []string{"type", "variant"}
+
+// slideType は「# 題 {type=…}」のスライドの種類(省けば content)。表紙は文書の頭から
+// 作るので type=cover は誤り。
+func (p *mdParser) slideType(attrs map[string]string, s *mdSlide, path string) string {
+	typ, ok := attrs["type"]
+	if !ok {
+		return "content"
+	}
+	names := slideTypeNames()
+	for _, n := range names {
+		if n == typ {
+			return typ
+		}
+	}
+	hint := ""
+	if typ == "cover" {
+		hint = "表紙は文書の頭(--- で囲んだ title など)から作ります"
+	}
+	p.fail(s.line, s.attrsCol, path+"/type", codeInvalidValue, fmt.Sprintf("スライドの種類 %q はありません", typ), names, hint)
+	return "content"
+}
+
+// noSlideBody は本文を持たないスライド(区切り・主張)に本文を書いた誤りを出す。
+// :::notes は splitNotes が先に外している。
+func (p *mdParser) noSlideBody(items []*mdItem, path, typ string) {
+	for _, it := range items {
+		switch typ {
+		case "section":
+			p.fail(it.line, 1, path, codeMisplaced, "区切りのスライド(type=section)には本文を書けません。章の題は # の行に書きます",
+				nil, "章の目次を見せたいなら、本文のスライドに箇条で書いてください(docs/patterns.md の R1)")
+		default:
+			p.fail(it.line, 1, path, codeMisplaced, "主張のスライド(type=statement)には本文を書けません。言いたい1文は # の行に書きます",
+				nil, "根拠を並べたいなら、本文のスライド(題に結論、本文に箇条)にしてください。本文の中で1文を目立たせるなら :::takeaway(docs/patterns.md の R2)")
+		}
+	}
 }
 
 func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
@@ -1199,16 +1249,8 @@ func (p *mdParser) fenceBlock(f *mdFenceBlk, path string) any {
 	case f.name == "note":
 		attrs := p.fenceAttrs(f, path, []string{"variant"})
 		p.noLabel(f, path)
-		var para *mdItem
-		for _, it := range f.items {
-			if it.kind == mdPara && para == nil {
-				para = it
-				continue
-			}
-			p.fail(it.line, 1, path, codeMisplaced, ":::note の中には段落を1つだけ書けます", nil, "改行したいなら行末に \\ を付けてください")
-		}
+		para := p.onePara(f, path)
 		if para == nil {
-			p.fail(f.line, 1, path, codeMisplaced, ":::note の中が空です", nil, "")
 			return nil
 		}
 		b := obj("type", "note")
@@ -1217,8 +1259,28 @@ func (p *mdParser) fenceBlock(f *mdFenceBlk, path string) any {
 		}
 		b.set("content", p.parseInline(para.text.trimBR(), path+"/content"))
 		return b
+	case f.name == "takeaway":
+		attrs := p.fenceAttrs(f, path, []string{"variant"})
+		p.noLabel(f, path)
+		para := p.onePara(f, path)
+		if para == nil {
+			return nil
+		}
+		b := obj("type", "takeaway")
+		if v, ok := attrs["variant"]; ok {
+			b.set("variant", v)
+		}
+		b.set("content", p.parseInline(para.text.trimBR(), path+"/content"))
+		return b
+	case f.name == "quote":
+		return p.quoteBlock(f, path)
+	case f.name == "stat":
+		return p.statBlock(f, path)
 	case f.name == "notes":
 		p.fail(f.line, 1, path, codeMisplaced, "発表者ノート(:::notes)はスライドの一番外側にだけ書けます", nil, "ほかの囲みの外に出してください")
+		return nil
+	case f.name == "value":
+		p.fail(f.line, 1, path, codeMisplaced, "囲み :::value は :::stat の中にだけ書けます", nil, "")
 		return nil
 	case f.name == "option" || f.name == "pros" || f.name == "cons":
 		where := ":::compare の中の :::option"
@@ -1230,6 +1292,101 @@ func (p *mdParser) fenceBlock(f *mdFenceBlk, path string) any {
 	}
 	p.fail(f.line, 1, path, codeUnknownBlock, fmt.Sprintf("囲み :::%s はありません", f.name), fenceExpected(), "見た目を変えたいときはテンプレートの variant を選んでください")
 	return nil
+}
+
+// onePara は囲みの中のただ1つの段落(中が空・段落でないもの・2つ目は誤り)。
+func (p *mdParser) onePara(f *mdFenceBlk, path string) *mdItem {
+	var para *mdItem
+	for _, it := range f.items {
+		if it.kind == mdPara && para == nil {
+			para = it
+			continue
+		}
+		p.fail(it.line, 1, path, codeMisplaced, fmt.Sprintf(":::%s の中には段落を1つだけ書けます", f.name), nil, "改行したいなら行末に \\ を付けてください")
+	}
+	if para == nil {
+		p.fail(f.line, 1, path, codeMisplaced, fmt.Sprintf(":::%s の中が空です", f.name), nil, "")
+	}
+	return para
+}
+
+// quoteBlock は :::quote 出どころ … ::: を IR の quote にする。見出しの文が
+// 出どころ(必須)、中の段落が引用した言葉。
+func (p *mdParser) quoteBlock(f *mdFenceBlk, path string) any {
+	attrs := p.fenceAttrs(f, path, []string{"variant"})
+	ok := true
+	if len(f.label.r) == 0 {
+		p.fail(f.line, 1, path+"/source", codeMissingKey, ":::quote には出どころが要ります", nil,
+			"「:::quote 利用者 A、2026 年 9 月」のように、囲みの名前の後ろに誰の・いつの言葉かを書いてください")
+		ok = false
+	}
+	para := p.onePara(f, path)
+	if para == nil || !ok {
+		return nil
+	}
+	b := obj("type", "quote")
+	if v, ok := attrs["variant"]; ok {
+		b.set("variant", v)
+	}
+	b.set("content", p.parseInline(para.text.trimBR(), path+"/content"))
+	b.set("source", p.parseInline(f.label, path+"/source"))
+	return b
+}
+
+// statBlock は ::::stat の中の :::value(1〜4個)を IR の stat にする。:::value の
+// 見出しの文が数(書いたとおりの文字)、属性 unit が単位、中の段落が説明。
+func (p *mdParser) statBlock(f *mdFenceBlk, path string) any {
+	attrs := p.fenceAttrs(f, path, []string{"variant"})
+	p.noLabel(f, path)
+	var items []any
+	for _, it := range f.items {
+		if it.kind != mdFence || it.fence.name != "value" {
+			p.fail(it.line, 1, path, codeMisplaced, ":::stat の中には :::value だけを書けます", []string{"value"}, "数ごとに「:::value 12 {unit=台}」の囲みを書き、中に説明を書いてください")
+			continue
+		}
+		vf := it.fence
+		ip := fmt.Sprintf("%s/items/%d", path, len(items))
+		p.mark(ip, vf.line)
+		va := p.fenceAttrs(vf, ip, []string{"unit"})
+		value := strings.TrimSpace(string(vf.label.r))
+		if value == "" {
+			p.fail(vf.line, 1, ip+"/value", codeMissingKey, ":::value には数が要ります", nil, "「:::value 12 {unit=台}」のように、囲みの名前の後ろに数を書いてください")
+			continue
+		}
+		if !strings.ContainsAny(value, "0123456789０１２３４５６７８９") {
+			p.fail(vf.line, vf.label.pos[0].col, ip+"/value", codeInvalidValue, fmt.Sprintf("%q に数字がありません。stat は数を見せるブロックです", value), nil, "数でない言葉を目立たせたいなら :::takeaway を使ってください")
+			continue
+		}
+		para := p.onePara(vf, ip)
+		if para == nil {
+			continue
+		}
+		item := obj("value", value)
+		if u, ok := va["unit"]; ok {
+			if u == "" {
+				p.fail(vf.line, vf.attrsCol, ip+"/unit", codeInvalidValue, "単位が空です", nil, "単位が無いなら unit を書かないでください")
+				continue
+			}
+			item.set("unit", u)
+		}
+		item.set("label", p.parseInline(para.text.trimBR(), ip+"/label"))
+		items = append(items, item)
+	}
+	if len(items) == 0 {
+		p.fail(f.line, 1, path, codeMisplaced, ":::stat には :::value が1つ以上要ります", []string{"value"}, "")
+		return nil
+	}
+	if len(items) > statMaxItems {
+		p.fail(f.line, 1, path, codeMisplaced, fmt.Sprintf(":::stat に置ける :::value は %d つまでです(いま %d つ)", statMaxItems, len(items)), nil,
+			"5つ以上の数や推移は系列なので、表(table)かグラフ(chart)で見せます(docs/patterns.md の R3・R4)")
+		return nil
+	}
+	b := obj("type", "stat")
+	if v, ok := attrs["variant"]; ok {
+		b.set("variant", v)
+	}
+	b.set("items", items)
+	return b
 }
 
 func (p *mdParser) fenceAttrs(f *mdFenceBlk, path string, allowed []string) map[string]string {
@@ -1311,8 +1468,12 @@ func (p *mdParser) compareBlock(f *mdFenceBlk, path string) any {
 
 // mdSubsystems はコードブロックの言語名 → IR の data を作るもの。
 var mdSubsystems = map[string]func(p *mdParser, n *yNode, path string) any{
-	"gantt":  ganttDataFromYAML,
-	"shapes": shapesDataFromYAML,
+	"gantt":    ganttDataFromYAML,
+	"shapes":   shapesDataFromYAML,
+	"process":  processDataFromYAML,
+	"orgchart": orgChartDataFromYAML,
+	"matrix":   matrixDataFromYAML,
+	"funnel":   funnelDataFromYAML,
 }
 
 func (p *mdParser) codeBlock(it *mdItem, path string) any {

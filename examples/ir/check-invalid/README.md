@@ -1,6 +1,6 @@
 # Schema では通るが、boxloom check で断られる IR の例
 
-どれも `../demo-deck.json`・`../gantt-full.json`・`../shapes.json` のどれかを1か所だけ変えたもの。
+どれも `../demo-deck.json`・`../gantt-full.json`・`../shapes.json`・`../text-patterns.json`・`../figures.json` のどれかを1か所だけ変えたもの。
 表と画像の例(`table-shape.json`・`image-*.json`)は、`../blocks.json` の表紙とスライド1枚
 だけを取り出して1か所変えたもの(画像の src はこのフォルダからの相対パス)。
 形(キー・型・enum)は正しいので `tools/validate_ir.py` は通す(`--self-test` は
@@ -20,6 +20,8 @@
 | `shapes-out-of-frame.json` | shapes の図形の幅を広げ、x+w が 1 を超えた | `shape-bounds` |
 | `shapes-unknown-connector.json` | shapes のコネクタの to を、どこにも無い id にした | `target-exists` |
 | `shapes-unknown-role.json` | shapes の図形の塗りを、テーマに無い役割名にした | `role-exists` |
+| `quote-empty-source.json` | 引用の出どころを空白だけにした | `empty-text` |
+| `matrix-cells.json` | matrix の2行目のセルを1つ減らした(列は3つ) | `matrix-cells` |
 | `table-shape.json` | 表の2行目のセルを1つ減らした(見出しは4つ) | `table-shape` |
 | `image-missing.json` | 画像の src を、無いファイルにした | `image-missing` |
 | `image-format.json` | 画像の src を、画像でないファイル(`README.md`)にした | `image-format` |

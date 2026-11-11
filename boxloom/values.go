@@ -56,14 +56,27 @@ type TemplateValues struct {
 	OptionItem    float64 `json:"optionItem" scale:"type"`  // 比較の利点・欠点
 	Small         float64 `json:"small" scale:"type"`       // 注記・フッター
 
+	SectionTitle  float64 `json:"sectionTitle" scale:"type"`  // 区切り(section)の章の題
+	StatementText float64 `json:"statementText" scale:"type"` // 主張(statement)の1文
+	TakeawayText  float64 `json:"takeawayText" scale:"type"`  // 結論(takeaway)の1文
+	StatValue     float64 `json:"statValue" scale:"type"`     // 統計強調(stat)の数
+	StatUnit      float64 `json:"statUnit" scale:"type"`      // 数の単位
+	StatLabel     float64 `json:"statLabel" scale:"type"`     // 数の説明
+	QuoteText     float64 `json:"quoteText" scale:"type"`     // 引用(quote)の言葉
+	QuoteMark     float64 `json:"quoteMark" scale:"type"`     // 引用の頭の印
+	QuoteSource   float64 `json:"quoteSource" scale:"type"`   // 引用の出どころ
+
 	PointIndentEm float64 `json:"pointIndentEm"` // 入れ子の箇条の字下げ(親の字の大きさの倍)
 
 	CardPadding     float64 `json:"cardPadding" scale:"space"`
 	CardRadius      float64 `json:"cardRadius"`
 	SubsystemRadius float64 `json:"subsystemRadius"` // サブシステムを載せるカードの角
 
-	CoverRuleW float64 `json:"coverRuleWidth"` // 表紙の題の下の線
+	CoverRuleW float64 `json:"coverRuleWidth"` // 表紙の題の下の線(区切り・主張の文の上の線も)
 	CoverRuleH float64 `json:"coverRuleHeight"`
+
+	StatementInset float64 `json:"statementInset" scale:"space"` // 主張のスライドの文を本文の外周からさらに内へ
+	AccentBarWidth float64 `json:"accentBarWidth"`               // 結論の左の帯の幅
 
 	FillRatioMin float64 `json:"fillRatioMin"` // 本文の埋まりがこれ未満なら警告
 
@@ -98,6 +111,9 @@ type TemplateMarks struct {
 	SubPoint string `json:"subPoint"`
 	Pro      string `json:"pro"`
 	Con      string `json:"con"`
+	Quote    string `json:"quote"`       // 引用の言葉の頭
+	Source   string `json:"quoteSource"` // 引用の出どころの頭
+	Unit     string `json:"statUnit"`    // 統計強調の数と単位の間
 }
 
 // GanttValues は Gantt サブシステムの寸法(pt)。既定は subsystems/gantt.json。
@@ -162,6 +178,11 @@ type templateFile struct {
 type templateSubsystems struct {
 	Gantt  *GanttValues  `json:"gantt,omitempty"`
 	Shapes *ShapesValues `json:"shapes,omitempty"`
+	// 図のサブシステム(figures.go)
+	Process  *ProcessValues  `json:"process,omitempty"`
+	OrgChart *OrgChartValues `json:"orgchart,omitempty"`
+	Matrix   *MatrixValues   `json:"matrix,omitempty"`
+	Funnel   *FunnelValues   `json:"funnel,omitempty"`
 }
 
 // themeRoles はテーマが持たなければならない役割名(コア・デモのテンプレートの
@@ -295,6 +316,7 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		Variants:   variants,
 		// 名乗る囲みは部品(コード)と対になるので、まだコードの一式を使う。
 		Blocks: defaultBlocks(),
+		Slides: defaultSlides(),
 	}
 	// サブシステムの寸法も、このテンプレートの段に載っていなければならない
 	// (差し替えないときは既定の寸法を見る)。
@@ -350,6 +372,11 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		}
 		return ss, nil
 	}))
+	// 図のサブシステム(process・orgchart・matrix・funnel)も字の段をこのテンプレートの
+	// values から引き、寸法をこの段で確かめる。
+	if err := templateFigures(t, &f); err != nil {
+		return nil, err
+	}
 	return t, nil
 }
 

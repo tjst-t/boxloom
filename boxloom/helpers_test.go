@@ -20,7 +20,7 @@ func CheckFileCapacity(path, templateOverride string) (errs, warns []Issue, caps
 	if err != nil {
 		return []Issue{{File: path, Message: err.Error(), Code: "read"}}, nil, nil
 	}
-	return checkCapacity(path, b, templateOverride, os.DirFS(filepath.Dir(path)))
+	return checkCapacity(path, b, templateOverride, nil, os.DirFS(filepath.Dir(path)))
 }
 
 // readDeck は path を拡張子で選んで読む。

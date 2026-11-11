@@ -1,0 +1,79 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "区間の文の置き方の例",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "content",
+      "title": "区間の文:収まる・折り返す・置けない",
+      "body": [
+        {
+          "type": "subsystem",
+          "subsystem": "gantt",
+          "data": {
+            "span": {
+              "from": "2026-01",
+              "to": "2030-12"
+            },
+            "legend": {
+              "support": "予定どおり",
+              "conditional": "要調整"
+            },
+            "groups": [
+              {
+                "id": "g1",
+                "label": [
+                  "架空の計画"
+                ],
+                "rows": [
+                  {
+                    "label": "収まる",
+                    "segments": [
+                      {
+                        "from": "2026-01",
+                        "to": "2028-06",
+                        "status": "support",
+                        "label": "帯の中に1行で収まる文"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "折り返す",
+                    "segments": [
+                      {
+                        "from": "2026-01",
+                        "to": "2026-12",
+                        "status": "conditional",
+                        "label": "帯より長い文は帯の中で折り返して行を高くする"
+                      }
+                    ]
+                  },
+                  {
+                    "label": "置けない",
+                    "segments": [
+                      {
+                        "from": "2026-01",
+                        "to": "2026-03",
+                        "status": "support",
+                        "label": "帯が狭すぎて置けない文"
+                      },
+                      {
+                        "from": "2026-03",
+                        "to": "2030-12",
+                        "status": "support",
+                        "label": "後ろの区間"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

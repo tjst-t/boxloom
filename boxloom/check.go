@@ -56,6 +56,9 @@ type CheckOptions struct {
 	// Template は IR の template より優先するテンプレートの名前(空なら IR の
 	// template、それも無ければ light)。
 	Template string
+	// Values は外から読んだテンプレートの値の表(ParseTemplate)。nil でなければ
+	// Template と IR の template より優先する。
+	Values *Template
 	// Strict は警告も誤りとして扱う(CheckResult.OK が false になる)。
 	Strict bool
 	// Assets は画像(image・gallery の src)を読む fs.FS。根は文書のフォルダ。
@@ -72,7 +75,7 @@ type CheckOptions struct {
 // 返す CheckResult の切れ端は nil にならない(JSON で [] になる)。
 func Check(file string, data []byte, opt CheckOptions) *CheckResult {
 	defer useFonts(activeFonts)() // 組み立てが替えた字体を、終わったら戻す
-	errs, warns, caps := checkCapacity(file, data, opt.Template, opt.Assets)
+	errs, warns, caps := checkCapacity(file, data, opt.Template, opt.Values, opt.Assets)
 	res := &CheckResult{Errors: []Issue{}, Warnings: []Issue{}, Capacity: []SlideCapacity{}}
 	res.Errors = append(res.Errors, errs...)
 	res.Warnings = append(res.Warnings, warns...)
@@ -83,15 +86,15 @@ func Check(file string, data []byte, opt CheckOptions) *CheckResult {
 
 // checkCapacity は Check の中身。.md なら容量のスライドとブロックにも
 // Markdown の行を添える。
-func checkCapacity(file string, b []byte, templateOverride string, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
+func checkCapacity(file string, b []byte, templateOverride string, values *Template, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
 	if !isMarkdownPath(file) {
-		return checkIR(file, b, templateOverride, assets)
+		return checkIRCapacity(file, b, templateOverride, values, assets)
 	}
 	ir, mdErrs, lines := ParseMarkdownWithMap(b, file)
 	if len(mdErrs) > 0 {
 		return mdErrs, nil, nil
 	}
-	errs, warns, caps = checkIR(file, ir, templateOverride, assets)
+	errs, warns, caps = checkIRCapacity(file, ir, templateOverride, values, assets)
 	for _, list := range [][]Issue{errs, warns} {
 		for i := range list {
 			list[i].Line = lines.Line(list[i].Path)
@@ -124,10 +127,12 @@ func CheckIR(file string, b []byte, templateOverride string) (errs, warns []Issu
 // 画像のファイルは読めない(画像を使う文書は image-missing。読ませるなら Check と
 // CheckOptions.Assets を使う)。
 func CheckIRCapacity(file string, b []byte, templateOverride string) (errs, warns []Issue, caps []SlideCapacity) {
-	return checkIR(file, b, templateOverride, nil)
+	return checkIRCapacity(file, b, templateOverride, nil, nil)
 }
 
-func checkIR(file string, b []byte, templateOverride string, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
+// checkIRCapacity は CheckIRCapacity の中身。values(外から読んだ値の表)が
+// あれば、名前より優先する。assets は画像を読む fs.FS。
+func checkIRCapacity(file string, b []byte, templateOverride string, values *Template, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
 	var doc any
 	if err := json.Unmarshal(b, &doc); err != nil {
 		return []Issue{{File: file, Path: "", Message: "not JSON: " + err.Error(), Code: "json"}}, nil, nil
@@ -140,7 +145,10 @@ func checkIR(file string, b []byte, templateOverride string, assets fs.FS) (errs
 	if templateOverride != "" {
 		name, at = templateOverride, ""
 	}
-	tm, terr := LookupTemplate(name)
+	tm, terr := values, error(nil)
+	if tm == nil {
+		tm, terr = LookupTemplate(name)
+	}
 	if terr != nil {
 		c.add(at, terr.Error(), "template-exists")
 	}
@@ -216,12 +224,30 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		sp := fmt.Sprintf("/slides/%d", si)
 		sm, _ := s.(map[string]any)
 		c.checkVariant(sm, sp, tm)
+		switch sm["type"] {
+		case "section":
+			c.checkNotEmpty(sm, sp, "title")
+		case "statement":
+			c.checkNotEmpty(sm, sp, "content")
+		}
 		body, _ := sm["body"].([]any)
 		for bi, blk := range body {
 			bp := fmt.Sprintf("%s/body/%d", sp, bi)
 			bm, _ := blk.(map[string]any)
 			c.checkVariant(bm, bp, tm)
 			c.checkBlock(bm, bp, tm)
+			switch bm["type"] {
+			case "takeaway":
+				c.checkNotEmpty(bm, bp, "content")
+			case "quote":
+				c.checkNotEmpty(bm, bp, "content", "source")
+			case "stat":
+				items, _ := bm["items"].([]any)
+				for ii, it := range items {
+					im, _ := it.(map[string]any)
+					c.checkNotEmpty(im, fmt.Sprintf("%s/items/%d", bp, ii), "label")
+				}
+			}
 			if bm["type"] == "subsystem" && bm["subsystem"] == "gantt" {
 				if data, ok := bm["data"].(map[string]any); ok {
 					c.checkGantt(data, bp+"/data", ids)
@@ -230,6 +256,11 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 			if bm["type"] == "subsystem" && bm["subsystem"] == "shapes" {
 				if data, ok := bm["data"].(map[string]any); ok {
 					c.checkShapes(data, bp+"/data", ids, tm)
+				}
+			}
+			if bm["type"] == "subsystem" && bm["subsystem"] == "matrix" {
+				if data, ok := bm["data"].(map[string]any); ok {
+					c.checkMatrix(data, bp+"/data")
 				}
 			}
 		}
@@ -317,6 +348,41 @@ func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
 			}
 		}
 	}
+}
+
+// checkNotEmpty は、意味がその文だけで決まる欄(章の題・主張の1文・結論・引用の
+// 言葉と出どころ・数の説明)に、見える文字があるかを見る(empty-text)。Schema は
+// インラインの "" や空白だけの文字列を通してしまう。
+func (c *checker) checkNotEmpty(m map[string]any, ptr string, keys ...string) {
+	for _, k := range keys {
+		v, ok := m[k]
+		if !ok {
+			continue // 欠けた欄は Schema と IR の読み込みが断る
+		}
+		if strings.TrimSpace(inlinePlainAny(v)) == "" {
+			c.add(ptr+"/"+k, fmt.Sprintf("%s has no visible text", k), "empty-text")
+		}
+	}
+}
+
+// inlinePlainAny は JSON のままのインライン(文字列か、文字列と要素の並び)の文字。
+func inlinePlainAny(v any) string {
+	switch x := v.(type) {
+	case string:
+		return x
+	case []any:
+		var b strings.Builder
+		for _, p := range x {
+			b.WriteString(inlinePlainAny(p))
+		}
+		return b.String()
+	case map[string]any:
+		if t, ok := x["text"].(string); ok {
+			return t
+		}
+		return inlinePlainAny(x["content"])
+	}
+	return ""
 }
 
 func (c *checker) checkVariant(m map[string]any, ptr string, tm *Template) {
@@ -529,6 +595,24 @@ func (c *checker) checkShapes(data map[string]any, ptr string, docIDs map[string
 	}
 }
 
+// checkMatrix は matrix の各行のセルの数が列の数と同じかを見る(matrix-cells)。
+func (c *checker) checkMatrix(data map[string]any, ptr string) {
+	cols, ok := data["columns"].([]any)
+	if !ok {
+		return
+	}
+	rows, _ := data["rows"].([]any)
+	for i, r := range rows {
+		rm, _ := r.(map[string]any)
+		cells, ok := rm["cells"].([]any)
+		if !ok || len(cells) == len(cols) {
+			continue
+		}
+		c.add(fmt.Sprintf("%s/rows/%d/cells", ptr, i),
+			fmt.Sprintf("row has %d cells but there are %d columns (one cell per column)", len(cells), len(cols)), "matrix-cells")
+	}
+}
+
 func dateAt(m map[string]any, k string) (time.Time, error) {
 	s, ok := m[k].(string)
 	if !ok {
@@ -589,7 +673,7 @@ var locPartRe = regexp.MustCompile(`([A-Za-z]+)|\[([0-9]+)\]`)
 func locationToPointer(msg string) string {
 	ptr := ""
 	for _, seg := range strings.Split(msg, ": ") {
-		if seg == "gantt" || seg == "shapes" {
+		if seg == "gantt" || seg == "shapes" || contains(figureKinds, seg) {
 			ptr += "/data"
 			continue
 		}
@@ -624,7 +708,27 @@ var warnColumnRe = regexp.MustCompile(`^columns\[([0-9]+)\]: body\[([0-9]+)\]: (
 
 var warnShapeItemRe = regexp.MustCompile(`^shapes: items\[([0-9]+)\]`)
 
+var warnGanttSegRe = regexp.MustCompile(`^gantt: groups\[([0-9]+)\]\.rows\[([0-9]+)\]\.segments\[([0-9]+)\]`)
+
+// warnFigureRe は図のサブシステム(process・orgchart・matrix・funnel)の警告の
+// 頭の場所(steps[2]・units[0].members[1]・rows[1].cells[2] など)。
+var warnFigureRe = regexp.MustCompile(`^(?:process|orgchart|matrix|funnel): ([a-z]+(?:\[[0-9]+\])?(?:\.[a-z]+(?:\[[0-9]+\])?)*)`)
+
 var warnRuleNames = map[string]string{"SUBSYSTEM": "subsystem-min", "ROLE": "theme-role"}
+
+// figureWarnPointer は警告の頭の場所(units[0].members[1])を JSON Pointer
+// (/units/0/members/1)にする。
+func figureWarnPointer(loc string) string {
+	ptr := ""
+	for _, m := range locPartRe.FindAllStringSubmatch(loc, -1) {
+		if m[1] != "" {
+			ptr += "/" + m[1]
+		} else {
+			ptr += "/" + m[2]
+		}
+	}
+	return ptr
+}
 
 func warningIssue(file, w string) Issue {
 	m := warnRe.FindStringSubmatch(w)
@@ -637,12 +741,27 @@ func warningIssue(file, w string) Issue {
 		// Gantt の注釈の置き場所が無かった(lintSubsystems が拾う SubsystemLinter の警告)
 		rule = "annotation-overlap"
 	}
+	if m[2] == "SUBSYSTEM" && strings.Contains(m[3], "gantt: groups[") && strings.Contains(m[3], "is not drawn") {
+		// Gantt の区間の文を帯が狭すぎて置けなかった(GanttSubsystem.Lint)
+		rule = "gantt-segment-label"
+	}
 	shapes := m[2] == "SUBSYSTEM" && strings.Contains(m[3], "shapes: items[")
 	if shapes && strings.Contains(m[3], ") overlaps items[") {
 		rule = "shapes-overlap" // shapes の図形どうしが重なった
 	}
 	if shapes && strings.Contains(m[3], "text does not fit") {
 		rule = "shapes-text-overflow" // shapes の図形の文が収まらない
+	}
+	inBlock := m[3] // 本文の中の場所(body[2]: …)を除いた文
+	if bm := warnBlockRe.FindStringSubmatch(inBlock); bm != nil {
+		inBlock = bm[2]
+	}
+	figure := m[2] == "SUBSYSTEM" && warnFigureRe.MatchString(inBlock)
+	if figure && strings.Contains(m[3], "text does not fit") {
+		rule = "figure-text-overflow" // 図のサブシステムの箱・セルの文が収まらない
+	}
+	if figure && strings.Contains(m[3], "a funnel is for values that decrease") {
+		rule = "funnel-increase" // funnel の数が前の段より増えた
 	}
 	if rule == "" {
 		rule = strings.ToLower(m[2])
@@ -658,6 +777,14 @@ func warningIssue(file, w string) Issue {
 		// shapes の警告は、最初に名指しした図形まで指す。
 		if im := warnShapeItemRe.FindStringSubmatch(msg); im != nil {
 			path += "/data/items/" + im[1]
+		}
+		// Gantt の区間の文の警告は、その区間まで指す。
+		if gm := warnGanttSegRe.FindStringSubmatch(msg); gm != nil {
+			path += "/data/groups/" + gm[1] + "/rows/" + gm[2] + "/segments/" + gm[3]
+		}
+		// 図のサブシステムの警告は、名指しした要素まで指す。
+		if fm := warnFigureRe.FindStringSubmatch(msg); fm != nil {
+			path += "/data" + figureWarnPointer(fm[1])
 		}
 	}
 	return Issue{File: file, Path: path, Message: msg, Code: rule}

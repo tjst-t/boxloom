@@ -39,6 +39,8 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 | `Check` | `(file string, data []byte, CheckOptions) *CheckResult` | 意味の検査と組み立ての警告と本文の容量(`boxloom check` の1ファイル分) |
 | `Build` | `(w io.Writer, *IRDeck, BuildOptions) (*BuildResult, error)` | テンプレートで組んで PPTX を w に書く |
 | `Schema` | `(template string) ([]byte, error)` | AI に渡す一覧の JSON(`boxloom schema`。空なら全部のテンプレート) |
+| `ParseTemplate` | `(file string, data []byte) (*Template, error)` | 外のテンプレートの値の表(JSON)を読む。検査は同梱のものと同じ。誤りは `*TemplateError`(`docs/template-values.md`) |
+| `SchemaTemplate` | `(*Template) ([]byte, error)` | `Schema` の、`ParseTemplate` で読んだテンプレート版 |
 | `Templates` | `() []string` | 同梱したテンプレートの名前(並べたもの。既定は light) |
 
 型と値:
@@ -48,10 +50,12 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 | `IRDeck` | 読んだ IR(`docs/ir.md`)。中の欄は IR の形のまま |
 | `Issue` | 誤りと警告の1件(`docs/content-syntax.md` の5章の形。`File`・`Line`・`Column`・`Path`・`Code`・`Message`・`Expected`・`Hint`)。`String()` で1行の文 |
 | `MarkdownErrors` | `[]Issue` の error。`errors.As` で取り出す |
-| `CheckOptions` | `Template`(IR の template より優先)・`Strict`(警告も誤り扱い)・`Assets`(画像を読む `fs.FS`) |
+| `CheckOptions` | `Template`(IR の template より優先)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Strict`(警告も誤り扱い)・`Assets`(画像を読む `fs.FS`) |
 | `CheckResult` | `OK`・`Errors`・`Warnings`・`Capacity`。JSON にすると `boxloom check -format json` と同じ形(切れ端は nil にならない) |
 | `SlideCapacity` | 本文を持つスライドごとの容量(`docs/ir.md` の「容量の計測」) |
-| `BuildOptions` | `Template`(空なら IR の template、それも無ければ light)・`Assets`(画像を読む `fs.FS`) |
+| `BuildOptions` | `Template`(空なら IR の template、それも無ければ light)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Assets`(画像を読む `fs.FS`) |
+| `Template` | 読んだテンプレート。`ParseTemplate` の返り値を `Values` に渡すためのもので、中の欄は安定させない |
+| `TemplateError` | `ParseTemplate` の誤り。`Issue`(code は `template-values`、path は値の表の中の場所)を持つ。`errors.As` で取り出す |
 | `BuildResult` | `Template`(使った名前)・`Slides`(枚数)・`Warnings`(`"slide 2: [FILL-RATIO WARNING] …"` の文) |
 | `ErrUnknownTemplate` | テンプレートの名前が無いとき。`Build`・`Schema` の誤りを `errors.Is` で見分ける |
 
@@ -85,6 +89,7 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 | `WriteDemo(w, theme)` | 従来の Go で組んだデモ(引数なしの `boxloom`)。v11 の再現 |
 | `NewFontCheck`・`FontCheck`・`WriteFontList` | `boxloom fonts`(`docs/fonts.md`)の測りと一覧 |
 | `WriteDeck` | 組んだスライド(`PPTXBuilder`)を PPTX にする低い層 |
+| `IsTemplateFile` | `-template` の値がファイルのパスか(`.json` で終わるか、パスの区切りを含む) |
 
 ## 別のモジュールから使う
 

@@ -13,7 +13,11 @@
         "subsystem": {
           "enum": [
             "gantt",
-            "shapes"
+            "shapes",
+            "process",
+            "orgchart",
+            "matrix",
+            "funnel"
           ]
         }
       },
@@ -49,6 +53,66 @@
           },
           "then": {
             "$ref": "subsystems/shapes.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subsystem": {
+                "const": "process"
+              }
+            },
+            "required": [
+              "subsystem"
+            ]
+          },
+          "then": {
+            "$ref": "subsystems/process.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subsystem": {
+                "const": "orgchart"
+              }
+            },
+            "required": [
+              "subsystem"
+            ]
+          },
+          "then": {
+            "$ref": "subsystems/orgchart.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subsystem": {
+                "const": "matrix"
+              }
+            },
+            "required": [
+              "subsystem"
+            ]
+          },
+          "then": {
+            "$ref": "subsystems/matrix.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subsystem": {
+                "const": "funnel"
+              }
+            },
+            "required": [
+              "subsystem"
+            ]
+          },
+          "then": {
+            "$ref": "subsystems/funnel.schema.json"
           }
         }
       ]

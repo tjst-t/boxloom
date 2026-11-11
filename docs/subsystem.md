@@ -106,7 +106,8 @@ CSS の min-content / max-content と同じ考え方を、PPT のスライドの
 
 ## 4. テンプレートによる差し替え(SubsystemRegistry)
 
-- コアは既定の表(`DefaultSubsystems()`:いまは `gantt` と `shapes`)を持ちます。
+- コアは既定の表(`DefaultSubsystems()`:いまは `gantt`・`shapes` と、11節の図
+  `process`・`orgchart`・`matrix`・`funnel`)を持ちます。
 - テンプレートは `Clone()` した表に `Override` で自分の描き方を入れます。
   コンテンツのデータ(`GanttChart`)は変わらず、描き方だけが変わります。
 - 種類は `Declare(kind, SubsystemDecl{Schema, Markdown})` で、作者に見せるもの
@@ -363,8 +364,184 @@ Measure の Natural・Min・Max にもこの高さを入れるので、枠が足
 
 注記の無い・収まる図は以前と同じ数で描くので、PPTX は変わりません(変わったのは
 `gantt-full` だけ。比較の画像は `verification-screenshots/gantt_note_fit_compare.png`、
-左が以前・右が直したもの)。区間(segment)の文は以前どおり折り返さず、帯の幅が
-46pt 以下なら文を出しません(これは黙って消している。まだ直していない)。
+左が以前・右が直したもの)。区間(segment)の文は 11節。
+
+## 11. Gantt の区間の文が帯に収まらないとき(Backlog #39)
+
+以前は、区間(segment)の文を折り返さずに帯へ置き、帯の幅が 46pt 以下なら文を
+出していませんでした(黙って消す・帯からはみ出す、のどちらも警告が無かった)。
+いまは、帯の中で文に使える幅(帯の幅 − 8pt)で、次の順に決めます
+(`planSegmentLabel`。Measure・Lint・描画が同じ計算を使う)。
+
+| 場合 | 置き方 |
+|---|---|
+| 1行で収まる | 以前と同じ(帯の中に1行) |
+| 収まらないが、折り返せば **3行まで** で、文に使える幅が字2つ分以上ある | 帯の中で折り返す。行の注記(10節)と同じく、その行だけを収まる高さまで高くし、ほかの行が譲る。Measure にも入るので、枠が足りなければ `subsystem-min` |
+| それ以外(帯が狭すぎる・切れない語が帯より長い) | 文を描かず、check・build に `gantt-segment-label` の警告を出す。path はその区間(`…/data/groups/G/rows/R/segments/S`)、.md ならその区間の行 |
+
+**帯の外に置く案を採らなかった理由**:帯の外(右隣・上下)はほかの区間・注釈・
+目盛りの場所で、置き場所を探す仕組み(注釈の置き場所の計画)を区間にも広げる
+ことになる。狭い区間の説明は、作者が注釈(`annotations`)か行の注記に移すのが
+意味として正しいので、警告で知らせて作者に選ばせる。3行の上限は、細長い文の柱を
+作らないための目安(値の表には出していない)。
+
+1行で収まる文の描き方は以前と同じなので、従来のデモの PPTX は変わらない。例は
+`examples/md/warnings/gantt-segment-label.bx.md`(↔ `examples/ir/check-warnings/gantt-segment-label.json`)。
+
+## 11. 図のサブシステム(process・orgchart・matrix・funnel)
+
+`docs/patterns.md` の語彙の第3層のうち、**箱と線で描く4つの図**(Backlog #24〜#27)。
+shapes で手で置いていた形(箱を矢印で並べる・親と子の箱・格子に評価・減っていく帯)を、
+意味だけのデータから描く。実装は `boxloom/process.go`・`orgchart.go`・`matrix.go`・
+`funnel.go`(共通の部分は `figures.go`、Markdown は `md_figures.go`)、Schema は
+`schema/subsystems/<名前>.schema.json`、寸法は `boxloom/subsystems/<名前>.json`。例は
+`examples/md/figures.bx.md`(↔ `examples/ir/figures.json`)と、
+`examples/md/subsystems-showcase.bx.md` の4〜7枚目。
+
+### 共通の決まり
+
+- **作者が書けるのは意味だけ**:座標・大きさ・色・字の大きさは書けない(shapes と違う)。
+  書けるのは文(title・detail・note・セルの text)と、状態 `status`
+  (`support`・`conditional`・`none`・`danger`)、目立たせる `emphasis`(真偽値)だけ。
+- **色**:状態と強調から役割名を決める。強調は塗り `accent`・文字 `on_conditional`。
+  状態は塗り `card_alt` と状態の色の枠線(役割名は状態の名前そのもの)。どちらも無ければ
+  塗り `card_alt` だけ。補足の文は `text_muted`、強調(`**…**`)は `accent` の太字。
+- **字の大きさ**:テンプレートの values の段から引く(題 `body`、2段目・セル・注記
+  `subPoint`、補足・説明・凡例 `small`)。テンプレートが values を変えれば図の字も変わる。
+- **大きさの申告(Measure)**:縦に積む部品(箱の行・段の間・補足の文)ごとに
+  「最小・自然・上限」を持ち、その和を Min・Natural・Max として申告する。箱の最小は
+  「その幅で中の文を折り返して収まる高さ」なので、狭い枠ほど高くなる(幅から高さを
+  決める。9節)。割り当てられた高さは、最小〜自然の間なら(自然−最小)に比例して、
+  自然〜上限の間なら(上限−自然)に比例して配る(`flexSizes`)。上限より大きい枠は
+  上限で止まり(`fitBox`)、余りは空きとして残る。どれも形(縦横比)は保たない。
+- **本物のコネクタ**:箱と箱の線は `p:cxnSp` で、`a:stCxn`・`a:endCxn` で両端の箱に
+  繋ぐ(PowerPoint で箱を動かすと線が付いてくる)。曲がる線は `bentConnector3` を
+  90° 回して「縦 → 横 → 縦」にしたもの(`AddElbowConnector`)。横にずれていなければ
+  直線(`straightConnector1`)にする。
+- **文は黙って削らない**:箱の中の文は幅で折り返し、そのぶん箱を高くする。折り返せない
+  語(長い英単語など)が箱より広い、または割り当てられた高さが足りないときは
+  `[SUBSYSTEM WARNING] process: steps[2] ("…"): text does not fit (…)` を出す。check は
+  `figure-text-overflow` とし、path をその要素(`…/data/steps/2`)にする。
+- 箱の中の文は中央に置く(shapes と同じく、図の中の札には「中央揃え禁止」を当てない)。
+
+### process(段階の流れ)
+
+```yaml
+caption: 利用者が使い始めるまでの5段階     # 任意。図の上の短い説明
+numbered: true                           # 任意(既定 true)。題の前に 1. 2. …
+steps:
+  - {title: 申し込み, detail: [窓口で受付, 1営業日]}
+  - {title: 導入, detail: 平均5営業日, emphasis: true}
+  - {title: 本番, status: support}
+```
+
+- 段階は左から右へ角丸の箱で並べ、右の辺の真ん中から次の箱の左の辺の真ん中へ、矢印の
+  コネクタで繋ぐ。`detail` は箱の下に、箱の左端に揃えて置く。箱の高さは全部同じ。
+- **幅が足りないときは折り返す**(警告ではなく): 箱の幅が `minStepWidth`(88pt)より
+  狭くなるなら1行の段階の数を減らし、行の長さを揃える(7段階は 6+1 ではなく 4+3)。
+  行の終わりの箱の下の辺から、次の行の始めの箱の上の辺へ、行の間で曲がるコネクタで
+  繋ぐ(曲がる高さは上の行の補足より下)。折り返しても文が収まらなければ
+  `figure-text-overflow`。
+- 箱の幅は `maxStepWidth`(200pt)まで。余りは矢印を長くして、図の幅いっぱいに並べる。
+- 「1. 題」が1行に収まらず題だけなら収まるときは、番号の後ろで改行する(題が語の途中で
+  折り返さないように)。
+
+### orgchart(組織図)
+
+```yaml
+root: {title: 責任者, detail: 架空 太郎, emphasis: true}
+units:
+  - title: 開発
+    members:
+      - {title: 基盤, detail: 4名}
+      - {title: 画面, detail: 3名, status: conditional}
+  - title: 営業                        # members は任意
+```
+
+- 3段まで(root・units・members)。親の下の辺の真ん中から子の上の辺の真ん中へ、
+  段の間の真ん中で曲がるコネクタで繋ぐ(同じ親の子への線は同じ高さで曲がり、
+  横の1本の線に見える)。
+- **横の幅の配り方**:3段目の箱はどれも同じ幅。各 unit の列の幅は、その unit の
+  members の数(無ければ1)に比例する。3段目の箱の幅は `maxMemberWidth`(120pt)まで、
+  2段目は `maxUnitWidth`、root は `maxRootWidth`。余りは列の両側に等しく置く。
+  root・unit は列の真ん中に置く。
+- **狭い枠**:箱が狭くなると文を折り返して箱が高くなる(縦に積む・横にずらす、と
+  いった組み替えはしない)。全幅と右の 60% の列で、箱が枠に収まり重ならず警告も
+  出ないことを `TestOrgChartFitsFullAndNarrowColumns` で確かめ、PPTX を描いて目で見た
+  (下の「確かめ方」)。
+
+### matrix(評価の表)
+
+```yaml
+columns: [コンテナ, 仮想マシン, 専用の機器]
+rows:
+  - label: 導入の速さ
+    cells:
+      - {status: support, text: 速い(1日)}
+      - {status: conditional, text: 中(3日)}
+      - {status: danger}                      # text は任意(丸だけ)
+legend: {support: 良い, danger: 悪い}          # 任意
+```
+
+- 列の見出しは列の真ん中に、行の見出しは左に揃えて行の縦の真ん中に置く(shapes の
+  文字が左上か図形の真ん中にしか置けなかった問題を、図形の文字の揃えの指定
+  `ShapeOpts.Align`・`Anchor` で直した)。行の見出しの列は一番長い見出しの幅
+  (内側の幅の 30% まで)、残りを列で等しく分ける。
+- セルは `card_alt` の角の小さい箱に、状態の色の丸と文(左揃え・縦の真ん中)。
+- **凡例は自動**:使った状態を support・conditional・none・danger の順に、セルの1列目の
+  左端から並べる。文は `legend` に書いたもの、無ければ既定の「対応・条件つき・非対応・
+  問題あり」。`legend` に書いても使っていない状態は出さない。
+- 各行の `cells` の数は `columns` の数と同じ(Schema では書けないので check の
+  `matrix-cells`。path は `…/rows/N/cells`)。セルの `status` は必須(評価の無い表は
+  第1層の `table`。`docs/patterns.md` の2.1・R6)。
+
+### funnel(減っていく段階)
+
+```yaml
+unit: 社                                       # 任意。数の値の後ろに付ける
+stages:
+  - {label: 説明会の参加, value: 400, note: 展示会と紹介が主な入口}
+  - {label: 環境の確認, value: 60}
+  - {label: 契約, value: 10, emphasis: true}
+  - {label: 見込み, value: 約 5}               # 値は文字列でもよい
+```
+
+- **帯の幅は値に比例させない**:一番上を帯の列の幅いっぱい、一番下を
+  `minWidthFraction`(36%)にして、等しい刻みで狭める。値は帯の中に太字で書く
+  (数は3桁ごとに区切り、`unit` を付ける)。比例させると小さい段が読めない細さになり、
+  文の幅で下駄を履かせると比例が嘘になるため。数の大きさを見せたいなら数のグラフ
+  (`chart`、`docs/patterns.md` の R4)。
+- 帯は中の文が収まる幅より狭くせず、上の帯より広くもしない。帯は帯の列の真ん中に置く。
+- `note` は帯の右の列(内側の幅の 36%)に、その段の縦の真ん中に揃えて左揃えで置く。
+- 数の値が前の段より増えたら警告 `funnel-increase`(funnel は減っていく段階に使う。
+  減らない手順は `process`)。
+
+### 確かめ方
+
+- `go test ./...`(`figures_test.go`):例を dark・light で組んで警告が無い・コネクタの
+  数と接続・凡例の文・見出しの揃え/組織図が全幅と 60% の列で枠に収まり重ならない/
+  process が 500pt の幅で 4+3 に折り返し、曲がるコネクタが補足の下で曲がる/
+  Min ≤ Natural ≤ Max、狭いほど高い/収まらない文と増える数の警告と check の code・path/
+  読み込みと Markdown の誤り/`schema` が4つを名乗る/寸法が段から外れると誤り。
+- 目で見る:`BOXLOOM_FIGURE_SHOTS=<dir> go test -run 'TestOrgChartFits|TestProcessWraps' .` が
+  試験の PPTX(組織図の全幅・右 60%、折り返した process)を `<dir>` に書くので、
+  `soffice --headless --convert-to pdf` と `pdftoppm -r 60 -png` で絵にして見る。
+  IR にはまだ段組み(columns)が無いので、60% の列は試験の中で Row を組んで作る。
+- showcase の4〜7枚目を shapes で手で置いた版と並べて見て、見劣りしないことを確かめた
+  (LibreOffice)。
+
+### まだやっていないこと
+
+- PowerPoint で開いて、曲がるコネクタが箱に付いてくることは確かめていない
+  (LibreOffice では回した `bentConnector3` が正しい道筋で描かれる)。
+- process は横向きだけ(縦に並べる形は無い)。8段階以上でも警告しない(R7 は分けるよう
+  勧める)。
+- orgchart は3段まで。members が多くて箱が狭くなりすぎるとき、縦に積む形に組み替えない
+  (文を折り返して高くなるだけ。語が収まらなければ警告)。
+- matrix の状態は色の丸だけで見分ける(形や印での区別は無い)。列の強調(推す案)は無い。
+- 状態の色を凡例で説明するのは matrix だけ。process・orgchart・funnel の状態の枠線の
+  意味は、作者が注記などで書く。
+- 図の寸法の数(箱の高さの最小・自然・上限など)は目安で決めた値。
 
 ## 確かめたこと
 
@@ -386,8 +563,7 @@ Measure の Natural・Min・Max にもこの高さを入れるので、枠が足
   `subsystems.gantt` で差し替えられる(`docs/template-values.md`)。
 - 横に並べたとき(Row の中)のサブシステムの幅の申告は、試験の
   `fixedSub`・`aspectSub` でしか確かめていない(Gantt を横に並べる例が無い)。
-- Gantt の区間の文は、帯が狭い(46pt 以下)と黙って出さず、帯より長い文は帯から
-  はみ出す(折り返さない)。警告もまだ無い。
+- Gantt の区間の文を帯の外に出すことはしない(置けなければ警告するだけ。11節)。
 - サブシステムが入れ子の Box を中に持つ(サブシステムの中で outer engine を
   呼ぶ)形は扱っていない。
 - 注釈の箱の大きさの上限(幅 240pt)を超える長い文は、高さで受けるだけで

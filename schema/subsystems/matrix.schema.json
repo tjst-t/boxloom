@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/matrix.schema.json",
+  "title": "Boxloom IR: matrix subsystem (0.1)",
+  "description": "行×列の評価(docs/patterns.md の R6)。セルは評価(status)と短い文。セルが文字・数だけなら matrix ではなく表(table)。各行の cells の数は columns の数と同じ(boxloom check が matrix-cells で見る)。凡例は使った状態から自動で付く。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "subsystem"
+    },
+    "subsystem": {
+      "const": "matrix"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "data": {
+      "$ref": "#/$defs/matrix"
+    }
+  },
+  "required": [
+    "type",
+    "subsystem",
+    "data"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "inline": {
+      "$ref": "../core.schema.json#/$defs/inline"
+    },
+    "status": {
+      "description": "状態の意味の名前。色はテンプレートが決める(16進の色・役割名は書けない)。",
+      "enum": [
+        "support",
+        "conditional",
+        "none",
+        "danger"
+      ]
+    },
+    "emphasis": {
+      "description": "目立たせる(塗りがアクセントの色になる)。既定 false。",
+      "type": "boolean"
+    },
+    "cell": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "text": {
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "row": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/inline"
+        },
+        "cells": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/cell"
+          }
+        }
+      },
+      "required": [
+        "label",
+        "cells"
+      ],
+      "additionalProperties": false
+    },
+    "matrix": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "description": "列の見出し(比べる選択肢)。",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/inline"
+          }
+        },
+        "rows": {
+          "description": "行(観点)。",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/row"
+          }
+        },
+        "legend": {
+          "description": "凡例の文(状態の名前 → 文)。書かない状態は既定の文(対応・条件つき・非対応・問題あり)。凡例には使った状態だけが出る。",
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "support",
+              "conditional",
+              "none",
+              "danger"
+            ]
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/inline"
+          }
+        }
+      },
+      "required": [
+        "columns",
+        "rows"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

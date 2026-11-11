@@ -16,10 +16,13 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `schema/core.schema.json` | コア:文書・スライド・ブロック・インライン・サブシステムの差し込み口 |
 | `schema/subsystems/gantt.schema.json` | Gantt サブシステムのブロック |
 | `schema/subsystems/shapes.schema.json` | shapes サブシステム(生の図形への逃げ道。`docs/subsystem.md` の8節)のブロック |
+| `schema/subsystems/process.schema.json`・`orgchart`・`matrix`・`funnel` | 箱と線の図のサブシステム(`docs/subsystem.md` の11節)のブロック |
 | `schema/boxloom-ir.schema.json` | 検査の入口。コアに同梱のサブシステムを差し込んだもの |
 | `examples/ir/demo-deck.json` | お題3枚を IR で書いた例 |
 | `examples/ir/gantt-full.json` | デモの Gantt 全体(3グループ・9行・注釈4つ)を IR で書いた例 |
 | `examples/ir/shapes.json` | shapes で描いた架空のシステム構成図の例 |
+| `examples/ir/text-patterns.json` | 文字のパターン(区切り・主張・結論・統計強調・引用)の例(`examples/md/text-patterns.bx.md` の IR) |
+| `examples/ir/figures.json` | process・orgchart・matrix・funnel の例(`examples/md/figures.bx.md` と同じ IR) |
 | `examples/ir/blocks.json` | 並列のまとまり・表・画像・画像の並びの例(画像は `examples/ir/images/`。`tools/gen_example_images.go` で作った架空の図) |
 | `examples/ir/invalid/` | 断られるべき例(色・位置・見た目の装飾などを1か所だけ足したもの) |
 | `tools/validate_ir.py` | 検査のコマンド |
@@ -48,14 +51,19 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 
 ```
 文書   { boxloom: "0.1", template?, meta?, slides: [スライド] }
-スライド  { type: "cover",   variant?, title?, subtitle?, author?, notes? }
-         { type: "content", variant?, title, body: [ブロック], notes? }
-ブロック  paragraph | points | compare | note | columns | table | image | gallery | subsystem   (どれも type で選ぶ)
+スライド  { type: "cover",     variant?, title?, subtitle?, author?, notes? }
+         { type: "content",   variant?, title, body: [ブロック], notes? }
+         { type: "section",   variant?, title, notes? }          章の区切り(本文なし)
+         { type: "statement", variant?, content, notes? }        言うことが1文だけ(本文なし)
+ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem   (どれも type で選ぶ)
+         takeaway { content }                                     本文の中の結論の1文
+         stat     { items: [{ value: "3 → 12", unit?: "機種", label }] }   1〜4個
+         quote    { content, source }                             出どころは必須
 並列     { type: "columns", columns: [{ title?, role?: "main", body: [paragraph|points|note|table|image] }] }  (2〜3個)
 表       { type: "table", header: [セル], rows: [[セル]], caption? }   (セルはインライン。どの行も見出しと同じ数)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
-サブシステム { type: "subsystem", subsystem: "gantt" | "shapes", variant?, data: {…} }
+サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel", variant?, data: {…} }
 ```
 
 `notes` は発表者ノート。文字だけの文字列で、改行(`\n`)が段落の区切り。PPTX では
@@ -173,7 +181,27 @@ IR は座標・色を持たない(設計判断1)が、shapes サブシステム�
 (`docs/subsystem.md` の8節)。範囲(和が 1 以下)・役割名・コネクタの指す先は、
 Schema では書けないので `boxloom check` が見る。
 
-### 9. 並列のまとまり・表・画像(#20・#21・#22)
+### 9. 文字のパターン(section・statement・takeaway・stat・quote)
+
+`docs/patterns.md` の R1〜R3・R11 の型。意味から形を決めた(記法は
+`docs/content-syntax.md` の3.2・3.4、決めたことの一覧は `docs/patterns.md` の3.2.1)。
+
+- **区切り・主張は本文(`body`)を持たない。** 持てないことを Schema の
+  `additionalProperties: false` で表す(主張に理由の箇条を足す、区切りに目次を足す、という
+  R1・R2 の悪い例を形で断る)。
+- **区切りは `title`、主張は `content`。** 区切りの文は章の「題」。主張の1文は題ではなく
+  中身そのもの(段落・結論と同じ `content`)。どちらも PPTX では題のプレースホルダーに
+  書く(テンプレートの決めごと。`docs/build.md`)。
+- **`stat` の `value` は文字列。** 書いたとおりに出し(`"3 → 12"`・`"−40"`・`"1,200"`)、
+  計算しない。数字(0〜9 か全角の0〜9)を1つ以上含むことを Schema の `pattern` で見る。
+  `unit` は飾りの無い文字列、`label` はインライン。並べ方(1〜4個を1行に)と数の字の大きさ
+  (値の表の `statValue`、段は `scale.typeSizes`)はテンプレートが決める。個数の 1〜4 は
+  Schema の `minItems`・`maxItems`。
+- **`quote` の `source` は必須。** 出どころの無い他人の言葉は R11 の悪い例になるため。
+  引用符は IR に書かない(付けるか・何を付けるかはテンプレートの印 `marks.quote`)。
+- Schema で書けない「見える文字があるか」は `boxloom check` の `empty-text`(下の表)。
+
+### 10. 並列のまとまり・表・画像(#20・#21・#22)
 
 - **並列のまとまり**の幅の比は数で持たない。主のまとまりに `role: "main"` を付ける
   (意味)と、テンプレートが広く取る。2個以上の `main` は Schema(`maxContains`)と
@@ -232,6 +260,8 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `shape-bounds` | shapes の座標・大きさ・線の点が 0〜1 にあり、`x+w`・`y+h` が 1 以下(path は和が越えた `w`・`h`) |
 | `role-exists` | shapes の色(`fill`・`line`・`textColor`・`color`)の役割名が、そのテンプレートのテーマにある |
 | `connector-self` | shapes のコネクタの `from` と `to` が同じ図形 |
+| `empty-text` | 区切りの `title`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label` に、見える文字がある(Schema は `""` や空白だけを通す) |
+| `matrix-cells` | matrix の各行の `cells` の数が `columns` の数と同じ(path はその行の `cells`) |
 | `table-shape` | 表の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R`) |
 | `image-path` | 画像の `src` が文書からの相対パス(URL・絶対パス・`..`・`\` は断る) |
 | `image-missing` | 画像のファイルが読める(`CheckOptions.Assets` から。コマンドは文書のフォルダ) |
@@ -243,12 +273,15 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 
 | code | 見ること |
 |---|---|
-| `fill-ratio` | 本文の箱のうち 65% より少なくしか使っていない(テンプレートの方針) |
-| `layout-overflow` | 本文のブロックが本文の領域に収まらない。はみ出したブロックごとに1件で、`path` はそのブロック(`/slides/S/body/N`)、文にはみ出した高さ(pt)を書く(下の節)。並列のまとまりは、まとまりの中のはみ出したブロック(`/slides/S/body/N/columns/C/body/K`) |
+| `fill-ratio` | 本文の箱のうち 65% より少なくしか使っていない(テンプレートの方針)。本文を持たない表紙・区切り・主張には出さない |
+| `layout-overflow` | 本文のブロックが本文の領域に収まらない。はみ出したブロックごとに1件で、`path` はそのブロック(`/slides/S/body/N`)、文にはみ出した高さ(pt)を書く(下の節)。区切りの題・主張の1文がページに収まらないときも出し、`path` はそのスライド(`/slides/S`)。並列のまとまりは、まとまりの中のはみ出したブロック(`/slides/S/body/N/columns/C/body/K`) |
 | `subsystem-min` | サブシステムに割り当てた大きさが、自己申告の最小を下回った(サブシステムの警告の path は、そのブロック `/slides/S/body/N`) |
 | `annotation-overlap` | Gantt の注釈に空いた置き場所が無く、ほかの注釈に重ねて置いた |
+| `gantt-segment-label` | Gantt の区間の文が、帯が狭すぎて置けない(描かなかった)。path はその区間(`…/data/groups/G/rows/R/segments/S`)。折り返して収まる文は警告にならない(`docs/subsystem.md` の11節) |
 | `shapes-overlap` | shapes の図形どうしが重なった。path は後から置いた図形(`…/data/items/N`) |
 | `shapes-text-overflow` | shapes の図形の文が、割り当てられた大きさに収まらない。path はその図形 |
+| `figure-text-overflow` | process・orgchart・matrix・funnel の箱・セル・注記の文が収まらない(折り返せない語が箱より広い・高さが足りない)。path はその要素(`…/data/steps/2` など) |
+| `funnel-increase` | funnel の数の値が前の段より増えた。path はその段の `value` |
 | `theme-role` | テーマに値の無い役割名をサブシステムが使った |
 
 ### はみ出し(layout-overflow)の測り方
@@ -281,6 +314,10 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 はみ出しは、描いた絵では目立たないことがある。直し方は作者の側(ブロックを減らす・
 スライドを分ける)で、テンプレートは勝手に縮めたり次のページへ送ったりしない。
 
+区切り・主張(本文を持たないスライド)は、題・1文とその上下の余白の箱を同じ測り方で
+積み、ページの内側(主張はフッターと gap を引いた残り)を越えたら
+`statement overflows the slide by …pt` の形で1件出す(`examples/ir/check-warnings/statement-overflow.json`)。
+
 例:`examples/ir/check-warnings/layout-overflow.json`(と同じ中身の
 `examples/md/warnings/layout-overflow.bx.md`)は誤り0件で、2つのブロックに
 `layout-overflow` が出る(`boxloom/overflow_test.go`)。
@@ -298,7 +335,7 @@ check でも断られるもの。
 
 はみ出す前に「あとどれだけ入るか」を数字で知るために、`check -format json` の
 結果には `capacity` が付く(`boxloom/capacity.go`)。本文を持つスライドごとに1件
-(表紙は出ない)。誤りがあって組み立てまで通らなかったファイルの分は入らない。
+(表紙・区切り・主張は本文を持たないので出ない)。誤りがあって組み立てまで通らなかったファイルの分は入らない。
 `-format text` でも `-capacity` を付ければ同じ数字を1行ずつ出す。
 
 測り方は上の `layout-overflow` と**同じ1回の測り値**から作るので、数字は警告と

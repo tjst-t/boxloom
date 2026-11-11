@@ -44,7 +44,10 @@ type MarkdownSyntax struct {
 type TemplateSchema struct {
 	Name string `json:"name"`
 	// Variants は variant 属性に書ける名前(スライド・囲み・サブシステムで共通)。
-	Variants   []string          `json:"variants"`
+	Variants []string `json:"variants"`
+	// Slides はスライドの種類(# 題 {type=名前} の名前。IR の slides[].type)。
+	// 表紙は文書の頭から作るので入らない。
+	Slides     []SlideDecl       `json:"slides"`
 	Blocks     []BlockDecl       `json:"blocks"`
 	Subsystems []SubsystemSchema `json:"subsystems"`
 }
@@ -65,6 +68,19 @@ type SubsystemSchema struct {
 
 // BuildSchemaOutput は names のテンプレートが名乗るものをまとめる。
 func BuildSchemaOutput(names []string) (*SchemaOutput, error) {
+	var ts []*Template
+	for _, name := range names {
+		t, err := LookupTemplate(name)
+		if err != nil {
+			return nil, err
+		}
+		ts = append(ts, t)
+	}
+	return buildSchemaOutput(ts)
+}
+
+// buildSchemaOutput は読んだテンプレートの一覧から一覧を作る。
+func buildSchemaOutput(templates []*Template) (*SchemaOutput, error) {
 	out := &SchemaOutput{
 		Boxloom: schemaVersion,
 		About: "Boxloom の文書の書き方。作者は意味だけを書き、見た目はテンプレートが決める。" +
@@ -78,19 +94,15 @@ func BuildSchemaOutput(names []string) (*SchemaOutput, error) {
 		},
 		Markdown: MarkdownSyntax{
 			FrontMatter:     frontMatterKeys(),
-			SlideAttributes: []string{"variant"},
+			SlideAttributes: append([]string{}, slideAttributeNames...),
 			Blocks:          coreBlocks(),
 			Body:            bodySyntax(),
 			Rules:           markdownRules(),
 		},
 	}
 	subs := map[string]SubsystemDecl{} // 全テンプレートの和(irSchema に同梱する)
-	for _, name := range names {
-		t, err := LookupTemplate(name)
-		if err != nil {
-			return nil, err
-		}
-		ts := TemplateSchema{Name: t.Name, Variants: []string{}, Blocks: t.Blocks}
+	for _, t := range templates {
+		ts := TemplateSchema{Name: t.Name, Variants: []string{}, Slides: t.Slides, Blocks: t.Blocks}
 		for v := range t.Variants {
 			ts.Variants = append(ts.Variants, v)
 		}
@@ -124,8 +136,8 @@ func BuildSchemaOutput(names []string) (*SchemaOutput, error) {
 		out.Templates = append(out.Templates, ts)
 	}
 	bundleName := "all"
-	if len(names) == 1 {
-		bundleName = names[0]
+	if len(templates) == 1 {
+		bundleName = templates[0].Name
 	}
 	ir, err := bundleIRSchema(bundleName, subs)
 	if err != nil {

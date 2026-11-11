@@ -1,6 +1,6 @@
 ---
 title: 新サービス「Kumo」立ち上げ計画
-subtitle: サブシステム(Gantt・図形)をふんだんに使ったデモ(すべて架空)
+subtitle: サブシステム(Gantt・プロセス・組織図・ファネル・マトリクス・図形)をふんだんに使ったデモ(すべて架空)
 author: Boxloom デモ
 template: light
 ---
@@ -45,24 +45,14 @@ items:
 
 # 導入の流れ
 
-```shapes
-aspect: 4
-items:
-  - {kind: text, x: 0, y: 0, w: 0.6, h: 0.14, text: 利用者が Kumo を使い始めるまでの5段階, color: text_muted}
-  - {id: flow-1, kind: roundRect, x: 0, y: 0.22, w: 0.16, h: 0.4, text: 1. 申し込み, textStyle: body, fill: card_alt}
-  - {id: flow-2, kind: roundRect, x: 0.21, y: 0.22, w: 0.16, h: 0.4, text: 2. 環境の確認, textStyle: body, fill: card_alt}
-  - {id: flow-3, kind: roundRect, x: 0.42, y: 0.22, w: 0.16, h: 0.4, text: 3. 導入, textStyle: body, fill: accent, textColor: on_conditional}
-  - {id: flow-4, kind: roundRect, x: 0.63, y: 0.22, w: 0.16, h: 0.4, text: 4. 試験運用, textStyle: body, fill: card_alt}
-  - {id: flow-5, kind: roundRect, x: 0.84, y: 0.22, w: 0.16, h: 0.4, text: 5. 本番, textStyle: body, line: support}
-  - {kind: connector, from: flow-1, to: flow-2, arrow: true}
-  - {kind: connector, from: flow-2, to: flow-3, arrow: true}
-  - {kind: connector, from: flow-3, to: flow-4, arrow: true}
-  - {kind: connector, from: flow-4, to: flow-5, arrow: true}
-  - {kind: text, x: 0, y: 0.7, w: 0.16, h: 0.3, text: [窓口で受付, 1営業日], textStyle: small, color: text_muted}
-  - {kind: text, x: 0.21, y: 0.7, w: 0.16, h: 0.3, text: [OS・メモリを, 自動で点検], textStyle: small, color: text_muted}
-  - {kind: text, x: 0.42, y: 0.7, w: 0.16, h: 0.3, text: ["**最も時間がかかる**", 平均5営業日], textStyle: small}
-  - {kind: text, x: 0.63, y: 0.7, w: 0.16, h: 0.3, text: [2週間、, 実データの一部で], textStyle: small, color: text_muted}
-  - {kind: text, x: 0.84, y: 0.7, w: 0.16, h: 0.3, text: [保守契約を, 開始], textStyle: small, color: text_muted}
+```process
+caption: 利用者が Kumo を使い始めるまでの5段階
+steps:
+  - {title: 申し込み, detail: [窓口で受付, 1営業日]}
+  - {title: 環境の確認, detail: [OS・メモリを, 自動で点検]}
+  - {title: 導入, detail: ["**最も時間がかかる**", 平均5営業日], emphasis: true}
+  - {title: 試験運用, detail: [2週間、, 実データの一部で]}
+  - {title: 本番, detail: [保守契約を, 開始], status: support}
 ```
 
 - 申し込みから本番まで、いまは **平均4週間**
@@ -74,28 +64,21 @@ items:
 
 # 立ち上げの体制
 
-```shapes
-aspect: 2.6
-items:
-  - {id: org-lead, kind: rect, x: 0.4, y: 0, w: 0.2, h: 0.18, text: [責任者, 架空 太郎], textStyle: body, fill: accent, textColor: on_conditional}
-  - {id: org-dev, kind: rect, x: 0.05, y: 0.38, w: 0.2, h: 0.18, text: 開発, textStyle: body, fill: card_alt}
-  - {id: org-ops, kind: rect, x: 0.4, y: 0.38, w: 0.2, h: 0.18, text: 運用, textStyle: body, fill: card_alt}
-  - {id: org-biz, kind: rect, x: 0.75, y: 0.38, w: 0.2, h: 0.18, text: 営業, textStyle: body, fill: card_alt}
-  - {id: org-dev-a, kind: roundRect, x: 0.01, y: 0.76, w: 0.13, h: 0.18, text: [基盤, 4名], line: grid}
-  - {id: org-dev-b, kind: roundRect, x: 0.16, y: 0.76, w: 0.13, h: 0.18, text: [画面, 3名], line: grid}
-  - {id: org-ops-a, kind: roundRect, x: 0.36, y: 0.76, w: 0.13, h: 0.18, text: [導入支援, 2名], line: conditional}
-  - {id: org-ops-b, kind: roundRect, x: 0.51, y: 0.76, w: 0.13, h: 0.18, text: [監視, 2名], line: grid}
-  - {id: org-biz-a, kind: roundRect, x: 0.71, y: 0.76, w: 0.13, h: 0.18, text: [提案, 2名], line: grid}
-  - {id: org-biz-b, kind: roundRect, x: 0.86, y: 0.76, w: 0.13, h: 0.18, text: [契約, 1名], line: grid}
-  - {kind: connector, from: org-lead, to: org-dev}
-  - {kind: connector, from: org-lead, to: org-ops}
-  - {kind: connector, from: org-lead, to: org-biz}
-  - {kind: connector, from: org-dev, to: org-dev-a}
-  - {kind: connector, from: org-dev, to: org-dev-b}
-  - {kind: connector, from: org-ops, to: org-ops-a}
-  - {kind: connector, from: org-ops, to: org-ops-b}
-  - {kind: connector, from: org-biz, to: org-biz-a}
-  - {kind: connector, from: org-biz, to: org-biz-b}
+```orgchart
+root: {title: 責任者, detail: 架空 太郎, emphasis: true}
+units:
+  - title: 開発
+    members:
+      - {title: 基盤, detail: 4名}
+      - {title: 画面, detail: 3名}
+  - title: 運用
+    members:
+      - {title: 導入支援, detail: 2名, status: conditional}
+      - {title: 監視, detail: 2名}
+  - title: 営業
+    members:
+      - {title: 提案, detail: 2名}
+      - {title: 契約, detail: 1名}
 ```
 
 :::note
@@ -104,49 +87,45 @@ items:
 
 # 見込み客のファネル
 
-```shapes
-aspect: 2.6
-items:
-  - {kind: rect, x: 0, y: 0, w: 0.6, h: 0.17, text: 説明会の参加 400社, textStyle: body, fill: card_alt}
-  - {kind: rect, x: 0.05, y: 0.2, w: 0.5, h: 0.17, text: 資料の請求 180社, textStyle: body, fill: card_alt}
-  - {kind: rect, x: 0.1, y: 0.4, w: 0.4, h: 0.17, text: 環境の確認 60社, textStyle: body, fill: card_alt}
-  - {kind: rect, x: 0.15, y: 0.6, w: 0.3, h: 0.17, text: 試験運用 24社, textStyle: body, line: conditional}
-  - {kind: rect, x: 0.2, y: 0.8, w: 0.2, h: 0.17, text: 契約 10社, textStyle: body, fill: accent, textColor: on_conditional}
-  - {kind: text, x: 0.66, y: 0.02, w: 0.34, h: 0.15, text: 展示会と紹介が主な入口, textStyle: small, color: text_muted}
-  - {kind: text, x: 0.66, y: 0.42, w: 0.34, h: 0.15, text: "環境の確認で **3社に2社** が脱落", textStyle: small}
-  - {kind: text, x: 0.66, y: 0.82, w: 0.34, h: 0.15, text: 限定公開の目標は10社, textStyle: small, color: text_muted}
+```funnel
+unit: 社
+stages:
+  - {label: 説明会の参加, value: 400, note: 展示会と紹介が主な入口}
+  - {label: 資料の請求, value: 180}
+  - {label: 環境の確認, value: 60, note: "環境の確認で **3社に2社** が脱落"}
+  - {label: 試験運用, value: 24, status: conditional}
+  - {label: 契約, value: 10, emphasis: true, note: 限定公開の目標は10社}
 ```
 
 # 配布の形の比較
 
-```shapes
-aspect: 2.4
-items:
-  - {kind: rect, x: 0.27, y: 0, w: 0.21, h: 0.12, text: コンテナ, textStyle: body, fill: card}
-  - {kind: rect, x: 0.5, y: 0, w: 0.21, h: 0.12, text: 仮想マシン, textStyle: body, fill: card}
-  - {kind: rect, x: 0.73, y: 0, w: 0.21, h: 0.12, text: 専用の機器, textStyle: body, fill: card}
-  - {kind: rect, x: 0, y: 0.14, w: 0.25, h: 0.16, text: 導入の速さ, textStyle: body, fill: card}
-  - {kind: rect, x: 0.27, y: 0.14, w: 0.21, h: 0.16, text: 速い(1日), line: support}
-  - {kind: rect, x: 0.5, y: 0.14, w: 0.21, h: 0.16, text: 中(3日), line: conditional}
-  - {kind: rect, x: 0.73, y: 0.14, w: 0.21, h: 0.16, text: 遅い(2週間), line: danger}
-  - {kind: rect, x: 0, y: 0.33, w: 0.25, h: 0.16, text: 利用者の負担, textStyle: body, fill: card}
-  - {kind: rect, x: 0.27, y: 0.33, w: 0.21, h: 0.16, text: 運用の知識が要る, line: conditional}
-  - {kind: rect, x: 0.5, y: 0.33, w: 0.21, h: 0.16, text: 中, line: conditional}
-  - {kind: rect, x: 0.73, y: 0.33, w: 0.21, h: 0.16, text: 小さい, line: support}
-  - {kind: rect, x: 0, y: 0.52, w: 0.25, h: 0.16, text: 監査の通しやすさ, textStyle: body, fill: card}
-  - {kind: rect, x: 0.27, y: 0.52, w: 0.21, h: 0.16, text: 要確認, line: conditional}
-  - {kind: rect, x: 0.5, y: 0.52, w: 0.21, h: 0.16, text: 通しやすい, line: support}
-  - {kind: rect, x: 0.73, y: 0.52, w: 0.21, h: 0.16, text: 通しやすい, line: support}
-  - {kind: rect, x: 0, y: 0.71, w: 0.25, h: 0.16, text: 原価, textStyle: body, fill: card}
-  - {kind: rect, x: 0.27, y: 0.71, w: 0.21, h: 0.16, text: 低い, line: support}
-  - {kind: rect, x: 0.5, y: 0.71, w: 0.21, h: 0.16, text: 中, line: conditional}
-  - {kind: rect, x: 0.73, y: 0.71, w: 0.21, h: 0.16, text: 高い, line: danger}
-  - {kind: rect, x: 0.27, y: 0.92, w: 0.03, h: 0.07, fill: support}
-  - {kind: text, x: 0.31, y: 0.92, w: 0.1, h: 0.08, text: 良い, textStyle: small, color: text_muted}
-  - {kind: rect, x: 0.43, y: 0.92, w: 0.03, h: 0.07, fill: conditional}
-  - {kind: text, x: 0.47, y: 0.92, w: 0.1, h: 0.08, text: 条件つき, textStyle: small, color: text_muted}
-  - {kind: rect, x: 0.59, y: 0.92, w: 0.03, h: 0.07, fill: danger}
-  - {kind: text, x: 0.63, y: 0.92, w: 0.1, h: 0.08, text: 悪い, textStyle: small, color: text_muted}
+```matrix
+columns: [コンテナ, 仮想マシン, 専用の機器]
+rows:
+  - label: 導入の速さ
+    cells:
+      - {status: support, text: 速い(1日)}
+      - {status: conditional, text: 中(3日)}
+      - {status: danger, text: 遅い(2週間)}
+  - label: 利用者の負担
+    cells:
+      - {status: conditional, text: 運用の知識が要る}
+      - {status: conditional, text: 中}
+      - {status: support, text: 小さい}
+  - label: 監査の通しやすさ
+    cells:
+      - {status: conditional, text: 要確認}
+      - {status: support, text: 通しやすい}
+      - {status: support, text: 通しやすい}
+  - label: 原価
+    cells:
+      - {status: support, text: 低い}
+      - {status: conditional, text: 中}
+      - {status: danger, text: 高い}
+legend:
+  support: 良い
+  conditional: 条件つき
+  danger: 悪い
 ```
 
 # 改善のサイクル
