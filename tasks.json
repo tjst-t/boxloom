@@ -969,6 +969,27 @@
       "updatedAt": "2026-11-11T03:06:08.319Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "gantt",
+      "number": 40,
+      "kind": "bug",
+      "title": "Gantt の目盛りの文字が注釈の引き出し線の真下に来て一部隠れる",
+      "status": "backlog",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "SKILL.md の試験(サブエージェントが書いた架空の .bx.md)で見つかった。目盛りの文字(例「目標期限」)が、注釈の引き出し線と重なって一部隠れることがある。",
+      "doneWhen": "再現する例を examples に足し、目盛りの文字と引き出し線が重ならない(または check が警告する)ことを試験と LibreOffice の絵で確かめる",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T04:51:30.541Z",
+      "updatedAt": "2026-11-11T04:51:30.541Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
