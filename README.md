@@ -159,4 +159,4 @@ maintainers who own the visual direction.
 
 ## License
 
-See [`LICENSE`](LICENSE).
+Boxloom is licensed under the [Apache License, Version 2.0](LICENSE).
