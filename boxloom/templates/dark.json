@@ -1,0 +1,50 @@
+{
+  "name": "dark",
+  "theme": {
+    "bg": "12151C",
+    "card": "1C212C",
+    "card_alt": "232939",
+    "text_primary": "F5F7FA",
+    "text_muted": "97A1B3",
+    "grid": "2E3444",
+    "support": "34C08F",
+    "conditional": "4C8DFF",
+    "none": "3A4150",
+    "danger": "E0555A",
+    "risk": "6B3540",
+    "accent": "F2A93B",
+    "on_conditional": "F5F7FA"
+  },
+  "values": {
+    "pageWidth": 960,
+    "pageHeight": 540,
+    "pagePadding": 24,
+    "coverPadding": 48,
+    "sectionGap": 16,
+    "blockGap": 16,
+    "itemGap": 6,
+    "coverTitle": 36,
+    "coverSubtitle": 16,
+    "coverAuthor": 11.5,
+    "slideTitle": 24,
+    "body": 14,
+    "subPoint": 12.5,
+    "optionLabel": 15,
+    "optionItem": 13,
+    "small": 10.5,
+    "pointIndentEm": 1.5,
+    "cardPadding": 14,
+    "cardRadius": 10,
+    "subsystemRadius": 12,
+    "coverRuleWidth": 64,
+    "coverRuleHeight": 4,
+    "fillRatioMin": 0.65
+  },
+  "marks": {
+    "point": "・",
+    "subPoint": "– ",
+    "pro": "＋ ",
+    "con": "－ "
+  },
+  "variants": []
+}

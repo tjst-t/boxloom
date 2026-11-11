@@ -15,26 +15,6 @@ import (
 	"strings"
 )
 
-func themeDark() Theme {
-	return Theme{
-		"bg": "12151C", "card": "1C212C", "card_alt": "232939",
-		"text_primary": "F5F7FA", "text_muted": "97A1B3", "grid": "2E3444",
-		"support": "34C08F", "conditional": "4C8DFF", "none": "3A4150",
-		"danger": "E0555A", "risk": "6B3540", "accent": "F2A93B",
-		"on_conditional": "F5F7FA",
-	}
-}
-
-func themeLight() Theme {
-	return Theme{
-		"bg": "FFFFFF", "card": "F7F9FD", "card_alt": "E7EDFA",
-		"text_primary": "12203D", "text_muted": "5C6B85", "grid": "D7E0F2",
-		"support": "1E9E6B", "conditional": "0033CC", "none": "AAB4C6",
-		"danger": "C0293C", "risk": "F4D9DE", "accent": "0033CC",
-		"on_conditional": "FFFFFF",
-	}
-}
-
 const (
 	typeTitle   = 30.0
 	typeCaption = 10.5
@@ -131,12 +111,15 @@ const (
 	floatEps     = 0.01
 )
 
-func lintFillRatio(ratio float64) string {
+func lintFillRatio(ratio float64) string { return lintFillRatioMin(ratio, fillRatioMin) }
+
+// lintFillRatioMin は下限をテンプレートの値の表(fillRatioMin)から受け取る形。
+func lintFillRatioMin(ratio, minRatio float64) string {
 	if ratio > fillRatioMax+floatEps {
 		return fmt.Sprintf("[FILL-RATIO WARNING] overflow: %.1f%% (> %.0f%%)", ratio*100, fillRatioMax*100)
 	}
-	if ratio < fillRatioMin {
-		return fmt.Sprintf("[FILL-RATIO WARNING] underfilled: %.1f%% (< %.0f%%)", ratio*100, fillRatioMin*100)
+	if ratio < minRatio {
+		return fmt.Sprintf("[FILL-RATIO WARNING] underfilled: %.1f%% (< %.0f%%)", ratio*100, minRatio*100)
 	}
 	return ""
 }

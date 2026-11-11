@@ -33,7 +33,7 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 | ファイル | 役目 |
 |---|---|
 | `ir.go` | IR を読む。知らないキーは断る(Schema と同じ方針)。インライン・行の配列・箇条の入れ子を Go の型にする |
-| `template.go` | テンプレート(値の表・骨組み・部品)。表紙と本文のスライド、ブロック(段落・箇条・比較・注記・サブシステム)を Spec に組む |
+| `template.go` | テンプレート(骨組み・部品。値の表は `templates/<名前>.json` を `values.go` が読む。`docs/template-values.md`)。表紙と本文のスライド、ブロック(段落・箇条・比較・注記・サブシステム)を Spec に組む |
 | `gantt_ir.go` | Gantt の `data` から `GanttChart` を組む(軸の圧縮・目盛りの文字・注釈の指す先) |
 | `gantt.go` | 注釈の置き場所と箱の大きさを決める(`planAnnotations`)。置けない注釈は警告(`Lint`)。確定していない区間を破線で描く |
 | `overflow.go` | 本文のはみ出しの検査(`layout-overflow`)。縮めなければ要る高さを測り直し、本文の領域と比べる |
@@ -48,7 +48,7 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 - **部品**:箇条は「・」の印(入れ子は字下げして「–」)。比較は選択肢ごとに同じ幅の
   カードを横に並べ、良い点を「＋」(support の色)、悪い点を「－」(danger の色)で示す。
   注記は小さく控えめな色。サブシステムはカードの上に置き、自己申告の上限まで伸ばす。
-- **方針**:本文が少なくても引き伸ばして埋めない。本文の箱のうち 65% より少なくしか
+- **方針**:本文が少なくても引き伸ばして埋めない。本文の箱のうち `fillRatioMin`(dark / light は 65%)より少なくしか
   使っていなければ `[FILL-RATIO WARNING] underfilled` を出す(例のデッキの
   2・3枚目はこれが出る)。
 - **変種(variant)**:デモのテンプレートは1つも持たないので、`variant` を書くと断る。
@@ -65,7 +65,6 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 
 ## まだやっていないこと
 
-- テンプレートの値の表(色・大きさ)をデータ(ファイル)にすること。いまは Go のコード。
 - 押せるリンク、`code` の等幅の字体。
 - 本文の高さがページに収まらないときの自動の扱い(いまは比例で縮むだけ)。
   はみ出しは `layout-overflow` の警告で知らせ、直すのは作者(`docs/ir.md` の

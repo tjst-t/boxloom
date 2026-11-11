@@ -1,7 +1,8 @@
 // テンプレート: IR(意味)を Box の木(Spec)に組む。
 //
 // 三層の分け方(CLAUDE.md)のうち「テンプレート=方針」にあたる。
-//   - 値の表(Theme の色・TemplateValues の大きさ)はデータ。
+//   - 値の表(Theme の色・TemplateValues の大きさ・TemplateMarks の印)は
+//     データ(templates/<名前>.json。読み込みは values.go)。
 //   - スライドの骨組み(表紙・本文)とブロックの部品(箇条・比較・注記)は
 //     ここのコード。
 //   - サブシステムは登録簿(Subsystems)から引く。テンプレートは Override で
@@ -16,39 +17,12 @@ import (
 	"strings"
 )
 
-// TemplateValues はテンプレートの大きさの値の表(pt)。
-type TemplateValues struct {
-	PageW, PageH float64
-
-	PagePadding float64 // ページの外周
-	SectionGap  float64 // 見出し・本文・フッターの間
-	BlockGap    float64 // 本文のブロックの間
-	ItemGap     float64 // 箇条の項目の間
-
-	CoverTitle    float64
-	CoverSubtitle float64
-	SlideTitle    float64
-	Body          float64
-	Small         float64 // 注記・フッター
-
-	CardPadding float64
-	CardRadius  float64
-}
-
-func defaultValues() TemplateValues {
-	return TemplateValues{
-		PageW: pageW, PageH: pageH,
-		PagePadding: spaceLG, SectionGap: spaceMD, BlockGap: spaceMD, ItemGap: 6,
-		CoverTitle: 36, CoverSubtitle: 16, SlideTitle: typeTitle - 6, Body: 14, Small: typeCaption,
-		CardPadding: 14, CardRadius: 10,
-	}
-}
-
 // Template は名前のついた方針の一式。
 type Template struct {
 	Name       string
 	Theme      Theme
 	Values     TemplateValues
+	Marks      TemplateMarks
 	Subsystems *SubsystemRegistry
 	// Variants はこのテンプレートが用意した変種の名前(IR の variant)。
 	// いまのデモのテンプレートは1つも持たない。
@@ -57,21 +31,13 @@ type Template struct {
 	Blocks []BlockDecl
 }
 
-// TemplateNames は LookupTemplate が引けるテンプレートの名前(既定は light)。
-var TemplateNames = []string{"dark", "light"}
-
-// LookupTemplate は名前からテンプレートを引く。
+// LookupTemplate は名前からテンプレートを引く(templates/<名前>.json を読む。
+// 空の名前は light)。
 func LookupTemplate(name string) (*Template, error) {
-	var th Theme
-	switch name {
-	case "dark":
-		th = themeDark()
-	case "light", "":
-		name, th = "light", themeLight()
-	default:
-		return nil, fmt.Errorf("unknown template %q (known: dark, light)", name)
+	if name == "" {
+		name = "light"
 	}
-	return &Template{Name: name, Theme: th, Values: defaultValues(), Subsystems: DefaultSubsystems().Clone(), Variants: map[string]bool{}, Blocks: defaultBlocks()}, nil
+	return loadTemplate(name)
 }
 
 // BuiltSlide は1枚分の組み立ての結果。
@@ -170,15 +136,15 @@ func (t *Template) buildCover(d *IRDeck, s *IRSlide) *BuiltSlide {
 	if title != nil {
 		kids = append(kids, t.text(title, v.CoverTitle, th.c("text_primary"), true))
 	}
-	kids = append(kids, Col(nil, WithWidth(64), WithHeight(4), WithBackground(th.c("accent"))))
+	kids = append(kids, Col(nil, WithWidth(v.CoverRuleW), WithHeight(v.CoverRuleH), WithBackground(th.c("accent"))))
 	if subtitle != nil {
 		kids = append(kids, t.text(subtitle, v.CoverSubtitle, th.c("text_muted"), false))
 	}
 	kids = append(kids, Col(nil, WithGrow(2))) // 下の余白(題を少し上に置く)
 	if author != nil {
-		kids = append(kids, t.text(author, v.Small+1, th.c("text_muted"), false))
+		kids = append(kids, t.text(author, v.CoverAuthor, th.c("text_muted"), false))
 	}
-	root := Col(kids, WithGap(v.SectionGap), WithPadding(v.PagePadding*2), WithBackground(th.c("bg")))
+	root := Col(kids, WithGap(v.SectionGap), WithPadding(v.CoverPadding), WithBackground(th.c("bg")))
 	return &BuiltSlide{Root: root, Notes: s.Notes}
 }
 
@@ -235,7 +201,7 @@ func (t *Template) buildBlock(b *IRBlock) (*Spec, error) {
 			return nil, err
 		}
 		// 高さは自己申告(自然な高さ)が出発点で、余りは grow で受け取る。
-		return SubsystemNode(sub, WithGrow(1), WithBackground(th.c("card")), WithRadius(12)), nil
+		return SubsystemNode(sub, WithGrow(1), WithBackground(th.c("card")), WithRadius(v.SubsystemRadius)), nil
 	}
 	return nil, fmt.Errorf("unknown block type %q", b.Type)
 }
@@ -243,10 +209,10 @@ func (t *Template) buildBlock(b *IRBlock) (*Spec, error) {
 // points は箇条。印は先頭の文字に入れる(折り返した行は印の下に戻る)。
 func (t *Template) points(items []IRPointItem, depth int) *Spec {
 	v, th := t.Values, t.Theme
-	mark := "・"
+	mark := t.Marks.Point
 	size := v.Body
 	if depth > 0 {
-		mark, size = "– ", v.Body-1.5
+		mark, size = t.Marks.SubPoint, v.SubPoint
 	}
 	var kids []*Spec
 	for _, it := range items {
@@ -254,7 +220,7 @@ func (t *Template) points(items []IRPointItem, depth int) *Spec {
 		kids = append(kids, RichTextNode(runs, WithFontSize(size)))
 		if len(it.Items) > 0 {
 			// 字下げ: 左に固定幅の空き + 入れ子の箇条(残りの幅をもらう)。
-			kids = append(kids, Row([]*Spec{Col(nil, WithWidth(size*1.5)), t.points(it.Items, depth+1)}))
+			kids = append(kids, Row([]*Spec{Col(nil, WithWidth(size*v.PointIndentEm)), t.points(it.Items, depth+1)}))
 		}
 	}
 	col := Col(kids, WithGap(v.ItemGap))
@@ -269,14 +235,14 @@ func (t *Template) compare(opts []IRCompareOption) *Spec {
 	v, th := t.Values, t.Theme
 	var cards []*Spec
 	for _, o := range opts {
-		kids := []*Spec{t.text(o.Label, v.Body+1, th.c("text_primary"), true)}
+		kids := []*Spec{t.text(o.Label, v.OptionLabel, th.c("text_primary"), true)}
 		for _, p := range o.Pros {
-			runs := append([]TextRun{{Text: "＋ ", Color: th.c("support"), Bold: true}}, t.runs(p, th.c("text_primary"), false)...)
-			kids = append(kids, RichTextNode(runs, WithFontSize(v.Body-1)))
+			runs := append([]TextRun{{Text: t.Marks.Pro, Color: th.c("support"), Bold: true}}, t.runs(p, th.c("text_primary"), false)...)
+			kids = append(kids, RichTextNode(runs, WithFontSize(v.OptionItem)))
 		}
 		for _, c := range o.Cons {
-			runs := append([]TextRun{{Text: "－ ", Color: th.c("danger"), Bold: true}}, t.runs(c, th.c("text_primary"), false)...)
-			kids = append(kids, RichTextNode(runs, WithFontSize(v.Body-1)))
+			runs := append([]TextRun{{Text: t.Marks.Con, Color: th.c("danger"), Bold: true}}, t.runs(c, th.c("text_primary"), false)...)
+			kids = append(kids, RichTextNode(runs, WithFontSize(v.OptionItem)))
 		}
 		cards = append(cards, Col(kids, WithGap(v.ItemGap), WithPadding(v.CardPadding),
 			WithBackground(th.c("card")), WithRadius(v.CardRadius), WithGrow(1), WithBasis(0)))
@@ -320,7 +286,7 @@ func (t *Template) RenderDeck(d *IRDeck, outPath string) ([]string, error) {
 		warnings := append([]string{}, b.Warnings...)
 		if b.Body != nil {
 			ratio := bodyFillRatio(b.Body)
-			if w := lintFillRatio(ratio); w != "" {
+			if w := lintFillRatioMin(ratio, v.FillRatioMin); w != "" {
 				warnings = append(warnings, w)
 			}
 		}

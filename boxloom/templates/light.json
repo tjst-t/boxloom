@@ -1,0 +1,50 @@
+{
+  "name": "light",
+  "theme": {
+    "bg": "FFFFFF",
+    "card": "F7F9FD",
+    "card_alt": "E7EDFA",
+    "text_primary": "12203D",
+    "text_muted": "5C6B85",
+    "grid": "D7E0F2",
+    "support": "1E9E6B",
+    "conditional": "0033CC",
+    "none": "AAB4C6",
+    "danger": "C0293C",
+    "risk": "F4D9DE",
+    "accent": "0033CC",
+    "on_conditional": "FFFFFF"
+  },
+  "values": {
+    "pageWidth": 960,
+    "pageHeight": 540,
+    "pagePadding": 24,
+    "coverPadding": 48,
+    "sectionGap": 16,
+    "blockGap": 16,
+    "itemGap": 6,
+    "coverTitle": 36,
+    "coverSubtitle": 16,
+    "coverAuthor": 11.5,
+    "slideTitle": 24,
+    "body": 14,
+    "subPoint": 12.5,
+    "optionLabel": 15,
+    "optionItem": 13,
+    "small": 10.5,
+    "pointIndentEm": 1.5,
+    "cardPadding": 14,
+    "cardRadius": 10,
+    "subsystemRadius": 12,
+    "coverRuleWidth": 64,
+    "coverRuleHeight": 4,
+    "fillRatioMin": 0.65
+  },
+  "marks": {
+    "point": "・",
+    "subPoint": "– ",
+    "pro": "＋ ",
+    "con": "－ "
+  },
+  "variants": []
+}

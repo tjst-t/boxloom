@@ -65,7 +65,11 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
 5. **サブシステム**: Gantt のような独立した図の描き手。
 
 **データとコードの混ぜ方(合意済み)**: 値の表・スタイル規則・骨組みはデータ
-(宣言ファイル)で書き、部品とサブシステムはコードで書く。
+(宣言ファイル)で書き、部品とサブシステムはコードで書く。いまデータに
+なっているのは値の表(色・大きさ・印の文字、Gantt の寸法)で、
+`boxloom/templates/<名前>.json` と `boxloom/subsystems/gantt.json`(同梱。
+知らないキー・欠けたキーは誤り)。骨組みはまだコード。詳細は
+`docs/template-values.md`。
 
 **プラグイン(候補・未決定)**: こだわりたいテンプレート開発者向けに、コードを
 書いてコアの決められた範囲をオーバーライドできる仕組みを持つ案がある。
@@ -175,6 +179,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     検査(id の一意性・target の指す先・日付の前後と範囲・variant)と組み立ての
     警告(はみ出しの `layout-overflow` は `overflow.go`)を出す(`docs/ir.md`)。誤りの形はパーサー・`validate_ir.py` と共通の
     `Issue`(`docs/content-syntax.md` の5章。IR を直接検査したときは行と列を省く)
+  - `values.go` + `templates/*.json` + `subsystems/gantt.json` = 値の表(データ)の
+    読み込みと厳しい検査。テンプレートの一覧は `templates/` のファイルから作る
+    (`docs/template-values.md`)
   - `markdown.go` / `md_gantt.go` / `yaml.go` = Boxloom Markdown → IR の
     パーサー(YAML の部分集合も自前)。`go run . parse deck.bx.md`、`build` は
     `.md` もそのまま受け取る。詳細は `docs/content-syntax.md` の8章。

@@ -130,7 +130,7 @@ func TestGanttFromIRRejects(t *testing.T) {
 func TestAutoAnnotationsDoNotOverlap(t *testing.T) {
 	c := demoGanttChart(t, ganttFullPath, 0)
 	x0, w := 40.0, 880.0
-	plan := planAnnotations(c, x0, w)
+	plan := planAnnotations(defaultGanttValues(), c, x0, w)
 	for i := range plan {
 		if plan[i].overlap {
 			t.Errorf("annotation %d marked as overlapping", i)
@@ -155,7 +155,7 @@ func TestGanttMeasureMatchesPlan(t *testing.T) {
 	c := demoGanttChart(t, demoDeckPath, 2)
 	g := &GanttSubsystem{Chart: c}
 	m := g.Measure(Constraint{Width: 912})
-	gm := ganttMetricsFor(c, 912)
+	gm := ganttMetricsFor(defaultGanttValues(), c, 912)
 	if gm.annTopH != 0 || gm.annBottomH == 0 {
 		t.Fatalf("one annotation at the middle should use only the lower lane: %+v", gm)
 	}

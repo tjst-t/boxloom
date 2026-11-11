@@ -21,23 +21,23 @@ func annChart(anns ...Annotation) *GanttChart {
 
 // 自動の注釈の箱は文に合わせる: 短い文は狭く、長い1行は上限の幅で折り返して高くなる。
 func TestAnnotationBoxFitsText(t *testing.T) {
-	sw, sh := annBoxSize(autoAnn(d(2027, 1, 1), "短い"))
-	if !near(sw, annBoxMinW) {
-		t.Fatalf("short text width = %v, want min %v", sw, annBoxMinW)
+	sw, sh := annBoxSize(defaultGanttValues(), autoAnn(d(2027, 1, 1), "短い"))
+	if !near(sw, defaultGanttValues().AnnBoxMinW) {
+		t.Fatalf("short text width = %v, want min %v", sw, defaultGanttValues().AnnBoxMinW)
 	}
 	long := strings.Repeat("とても長い注釈の文", 8)
-	lw, lh := annBoxSize(autoAnn(d(2027, 1, 1), long))
-	if !near(lw, annBoxMaxW) || lh <= sh {
-		t.Fatalf("long text box = %vx%v, want width %v and taller than %v", lw, lh, annBoxMaxW, sh)
+	lw, lh := annBoxSize(defaultGanttValues(), autoAnn(d(2027, 1, 1), long))
+	if !near(lw, defaultGanttValues().AnnBoxMaxW) || lh <= sh {
+		t.Fatalf("long text box = %vx%v, want width %v and taller than %v", lw, lh, defaultGanttValues().AnnBoxMaxW, sh)
 	}
-	mw, _ := annBoxSize(autoAnn(d(2027, 1, 1), "ここまでに全利用者を\nBoard B/C へ移行予定"))
-	if mw <= annBoxMinW || mw >= annBoxMaxW {
+	mw, _ := annBoxSize(defaultGanttValues(), autoAnn(d(2027, 1, 1), "ここまでに全利用者を\nBoard B/C へ移行予定"))
+	if mw <= defaultGanttValues().AnnBoxMinW || mw >= defaultGanttValues().AnnBoxMaxW {
 		t.Fatalf("two-line text width = %v, want between min and max", mw)
 	}
 	// 手で置いた注釈は従来の固定の大きさ。
 	m := autoAnn(d(2027, 1, 1), long)
 	m.Direction = "up"
-	if w, h := annBoxSize(m); w != annBoxW || h != annBoxH {
+	if w, h := annBoxSize(defaultGanttValues(), m); w != defaultGanttValues().AnnBoxW || h != defaultGanttValues().AnnBoxH {
 		t.Fatalf("manual annotation box = %vx%v, want fixed", w, h)
 	}
 }
@@ -46,16 +46,16 @@ func TestAnnotationBoxFitsText(t *testing.T) {
 func TestLaneHeightFollowsTallestBox(t *testing.T) {
 	long := strings.Repeat("長い文", 40)
 	c := annChart(autoAnn(d(2027, 1, 1), "短い"), autoAnn(d(2029, 1, 1), long))
-	plan := planAnnotations(c, spaceMD, 900-2*spaceMD)
-	gm := ganttMetricsFor(c, 900)
+	plan := planAnnotations(defaultGanttValues(), c, defaultGanttValues().Padding, 900-2*defaultGanttValues().Padding)
+	gm := ganttMetricsFor(defaultGanttValues(), c, 900)
 	maxH := 0.0
 	for _, pl := range plan {
 		if !pl.up && pl.h > maxH {
 			maxH = pl.h
 		}
 	}
-	if !near(gm.annBottomH, maxH+annLaneGap) {
-		t.Fatalf("bottom lane = %v, want %v", gm.annBottomH, maxH+annLaneGap)
+	if !near(gm.annBottomH, maxH+defaultGanttValues().AnnLaneGap) {
+		t.Fatalf("bottom lane = %v, want %v", gm.annBottomH, maxH+defaultGanttValues().AnnLaneGap)
 	}
 }
 
