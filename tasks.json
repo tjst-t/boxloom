@@ -478,6 +478,27 @@
       "extra": {}
     },
     {
+      "id": "source",
+      "number": 47,
+      "kind": "task",
+      "title": "根拠の語彙:出典 source・文書の日付と機密区分と免責・表の合計行",
+      "status": "ready",
+      "parent": "slide-patterns",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "デモのレビュー(.tmp-sc/review.md の P3・P8)から。いまは出典・母数・時点・日付・免責の置き場所が無く、:::note に逃げている。\n- ブロック source(:::source、1枚に1つまで)。テンプレートの骨組みの名前つきの枠として本文の箱の外・フッターの上に置く。note は但し書きのまま。\n- 文書の頭(front matter / IR の deck)に date・confidential(フッターの文)・disclaimer(1回だけ。表紙に)。\n- table に合計行の意味(IR では total。Markdown の書き方は記法の設計で決め、GFM の都合を IR に持ち込まない)。テンプレートは上に線・太字。\n- 容量の計測(capacity)と layout-overflow は source の枠を引いた本文の領域で測る。",
+      "doneWhen": "source・date・confidential・disclaimer・table の total が IR・Schema・Markdown・PPTX・check・例・docs(ir・content-syntax・patterns)・SKILL.md に入り、ci.sh go python pptx が通る。LibreOffice の絵で確かめる。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T05:56:03.003Z",
+      "updatedAt": "2026-11-11T05:56:03.003Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "canvas-patterns",
       "number": 4,
       "kind": "story",
