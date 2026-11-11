@@ -996,7 +996,7 @@
       "number": 41,
       "kind": "bug",
       "title": "shapes のコネクタが箱の辺の中点でなく角で終わって見えることがある",
-      "status": "backlog",
+      "status": "ready",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -1008,7 +1008,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T04:51:30.633Z",
-      "updatedAt": "2026-11-11T04:51:30.633Z",
+      "updatedAt": "2026-11-11T05:16:29.941Z",
       "closedAt": null,
       "extra": {}
     },
