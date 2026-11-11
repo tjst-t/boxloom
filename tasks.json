@@ -390,7 +390,7 @@
       "number": 19,
       "kind": "task",
       "title": "引用のパターン(文と出どころ)",
-      "status": "ready",
+      "status": "done",
       "parent": "slide-patterns",
       "dependsOn": [
         "pattern-vocabulary"
@@ -400,12 +400,12 @@
       "labels": [],
       "body": "",
       "doneWhen": "IR・Schema・Markdown・dark/light の描き方・試験・例が揃い、画像で確かめている",
-      "resolution": null,
+      "resolution": "quote(:::quote 出どころ。出どころは必須、> は誤りのまま)を実装。main 5245819。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:02:58.852Z",
-      "updatedAt": "2026-11-11T02:02:58.852Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:02:32.887Z",
+      "closedAt": "2026-11-11T05:02:32.887Z",
       "extra": {}
     },
     {
