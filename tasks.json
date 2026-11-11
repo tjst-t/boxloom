@@ -1300,6 +1300,27 @@
       "updatedAt": "2026-11-11T07:08:10.238Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "compare-fill-ratio",
+      "number": 55,
+      "kind": "bug",
+      "title": "compare:選択肢に箇条を足しても fill-ratio の割合が動かない",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "見本 ai-society(#50)で Fable が見つけた。compare の選択肢に箇条を1行足しても fill-ratio は 63.5% のまま。takeaway を足すと越えた。高さが一番高い選択肢で決まるのは正しいが、一番高い選択肢に足しても動かないなら測り方の誤り。fill-ratio・capacity の need が compare の中身に連動しているかを確かめ、直す。作者(AI)が警告への対応で迷わないことが目的。",
+      "doneWhen": "compare の一番高い選択肢に1行足すと need と fill-ratio が増える試験があり、通る。原因と直しを docs/ir.md の容量の節に反映(要れば)。ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T07:08:10.335Z",
+      "updatedAt": "2026-11-11T07:08:10.335Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
