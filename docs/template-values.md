@@ -95,7 +95,7 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 | 種類 | values | subsystems/gantt.json | subsystems/shapes.json |
 |---|---|---|---|
 | 余白 | `pagePadding` `coverPadding` `sectionGap` `blockGap` `itemGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
-| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` `sectionTitle` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
+| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
 ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率は段階に載せない
 (図の寸法で、刻みに合わせても読みやすさは変わらないため)。
@@ -195,6 +195,8 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `optionLabel` `optionItem` | 比較の選択肢の名前、利点・欠点 |
 | `small` | 注記・フッター |
 | `sectionTitle` | 区切り(section)の章の題 |
+| `sectionTracker` | 真偽。`true` なら、区切りが2つ以上ある文書の区切りのスライドに、章の一覧と現在地を題の下に置く(いまの章は帯がアクセント・題が `text_primary` の太字、ほかは帯が `grid`・題が `text_muted`)。`false` なら置かない |
+| `sectionTrackerText` | 章の一覧の字の大きさ |
 | `statementText` | 主張(statement)の1文 |
 | `takeawayText` | 結論(takeaway)の1文 |
 | `statValue` `statUnit` `statLabel` | 統計強調(stat)の数・単位・説明 |

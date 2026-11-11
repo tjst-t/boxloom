@@ -107,7 +107,7 @@ func (t *Template) BuildSlide(d *IRDeck, i int) (*BuiltSlide, error) {
 	case "content":
 		return t.buildContent(d, i, s)
 	case "section":
-		return t.buildSection(s), nil
+		return t.buildSection(d, i, s), nil
 	case "statement":
 		return t.buildStatement(d, i, s), nil
 	}
@@ -226,16 +226,56 @@ func (t *Template) accentRule() *Spec {
 // スライドと見分け、アクセントの線の下に大きな太字の章の題を左に寄せて置く。
 // 題は中ほどより少し下(上の余白 3 : 下の余白 2)。フッターは置かない(表紙と同じく
 // 流れの外のページ)。
-func (t *Template) buildSection(s *IRSlide) *BuiltSlide {
+//
+// 文書に区切りが2つ以上あり、値の表の sectionTracker が true なら、題の下に
+// 章の一覧と現在地(sectionTracker)を置く。作者は何も書かない。
+func (t *Template) buildSection(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
 	v, th := t.Values, t.Theme
-	main := Col([]*Spec{
+	kids := []*Spec{
 		Col(nil, WithGrow(3)),
 		t.accentRule(),
 		t.text(s.Title, v.SectionTitle, th.c("text_primary"), true, WithPlaceholder("title")),
-		Col(nil, WithGrow(2)),
-	}, WithGap(v.SectionGap), WithGrow(1))
+	}
+	if tr := t.sectionTracker(d, i); tr != nil {
+		kids = append(kids, Col(nil, WithHeight(v.SectionGap)), tr)
+	}
+	kids = append(kids, Col(nil, WithGrow(2)))
+	main := Col(kids, WithGap(v.SectionGap), WithGrow(1))
 	root := Col([]*Spec{main}, WithPadding(v.CoverPadding), WithBackground(th.c("card_alt")))
 	return &BuiltSlide{Root: root, Main: main, MainWhat: "section title", Notes: s.Notes}
+}
+
+// sectionTracker は区切りのスライドに置く章の一覧。文書の区切り(type: section)の
+// 題を順に縦に並べ、左に細い帯を通す。いまの章は帯をアクセントの色にして題を
+// text_primary の太字に、ほかの章は帯を grid・題を text_muted にする。
+// 区切りが1つだけの文書や、値の表の sectionTracker が false なら nil。
+func (t *Template) sectionTracker(d *IRDeck, cur int) *Spec {
+	v, th := t.Values, t.Theme
+	if !v.SectionTracker {
+		return nil
+	}
+	var secs []int
+	for j := range d.Slides {
+		if d.Slides[j].Type == "section" {
+			secs = append(secs, j)
+		}
+	}
+	if len(secs) < 2 {
+		return nil
+	}
+	var items []*Spec
+	for _, j := range secs {
+		bar, color, bold := th.c("grid"), th.c("text_muted"), false
+		if j == cur {
+			bar, color, bold = th.c("accent"), th.c("text_primary"), true
+		}
+		items = append(items, Row([]*Spec{
+			Col(nil, WithWidth(v.AccentBarWidth), WithBackground(bar)),
+			Col([]*Spec{t.text(d.Slides[j].Title, v.SectionTrackerText, color, bold)},
+				WithPadding(v.ItemGap/2), WithGrow(1), WithBasis(0)),
+		}, WithGap(v.ItemGap)))
+	}
+	return Col(items)
 }
 
 // --- 骨組み: 主張(言うことが1文だけ) ---

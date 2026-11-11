@@ -56,15 +56,19 @@ type TemplateValues struct {
 	OptionItem    float64 `json:"optionItem" scale:"type"`  // 比較の利点・欠点
 	Small         float64 `json:"small" scale:"type"`       // 注記・フッター
 
-	SectionTitle  float64 `json:"sectionTitle" scale:"type"`  // 区切り(section)の章の題
-	StatementText float64 `json:"statementText" scale:"type"` // 主張(statement)の1文
-	TakeawayText  float64 `json:"takeawayText" scale:"type"`  // 結論(takeaway)の1文
-	StatValue     float64 `json:"statValue" scale:"type"`     // 統計強調(stat)の数
-	StatUnit      float64 `json:"statUnit" scale:"type"`      // 数の単位
-	StatLabel     float64 `json:"statLabel" scale:"type"`     // 数の説明
-	QuoteText     float64 `json:"quoteText" scale:"type"`     // 引用(quote)の言葉
-	QuoteMark     float64 `json:"quoteMark" scale:"type"`     // 引用の頭の印
-	QuoteSource   float64 `json:"quoteSource" scale:"type"`   // 引用の出どころ
+	SectionTitle float64 `json:"sectionTitle" scale:"type"` // 区切り(section)の章の題
+	// SectionTracker が true なら、区切りが2つ以上ある文書の区切りのスライドに
+	// 章の一覧と現在地を置く(SectionTrackerText はその字の大きさ)。
+	SectionTracker     bool    `json:"sectionTracker"`
+	SectionTrackerText float64 `json:"sectionTrackerText" scale:"type"`
+	StatementText      float64 `json:"statementText" scale:"type"` // 主張(statement)の1文
+	TakeawayText       float64 `json:"takeawayText" scale:"type"`  // 結論(takeaway)の1文
+	StatValue          float64 `json:"statValue" scale:"type"`     // 統計強調(stat)の数
+	StatUnit           float64 `json:"statUnit" scale:"type"`      // 数の単位
+	StatLabel          float64 `json:"statLabel" scale:"type"`     // 数の説明
+	QuoteText          float64 `json:"quoteText" scale:"type"`     // 引用(quote)の言葉
+	QuoteMark          float64 `json:"quoteMark" scale:"type"`     // 引用の頭の印
+	QuoteSource        float64 `json:"quoteSource" scale:"type"`   // 引用の出どころ
 
 	PointIndentEm float64 `json:"pointIndentEm"` // 入れ子の箇条の字下げ(親の字の大きさの倍)
 
