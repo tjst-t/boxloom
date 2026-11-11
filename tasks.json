@@ -1,0 +1,31 @@
+{
+  "format": "banto-backlog/1",
+  "milestones": [],
+  "items": [
+    {
+      "id": "verify-hypothesis",
+      "number": 1,
+      "kind": "story",
+      "title": "中心の仮説を確かめる:別の環境でも崩れず、AI が密度の高いスライドを書けるようになるか",
+      "status": "backlog",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [
+        "vision",
+        "fidelity",
+        "m1"
+      ],
+      "body": "## なぜ\n出発点の主張は2つ。(1) レイアウトエンジンで重なりとはみ出しが構造的に起きなくなる。(2) 破綻の心配が無くなれば AI は薄いレイアウトに逃げず、密度の高い図に挑む。\nどちらもまだ確かめていない。\n\n- 確かめたのは LibreOffice で画像にしたものだけ。PowerPoint・Google Slides・Keynote では開いていない。\n- PPTX が指定する字体は Noto Sans CJK JP。文字の幅もこの字体の寸法(metrics_data.json)で測っている。この字体が無い環境(ふつうの Windows の PowerPoint)では別の字体に置き換わる。そうなると折り返しが変わり、はみ出しが起き得る。「構造的に保証」が崩れる一番の穴。\n- (2) は仮説のまま。測る仕組みが無い。\n\n## ここで扱うこと\n開いて確かめる表、字体の方針、OOXML の機械検査、AI での比べる評価。",
+      "doneWhen": "4つの環境で開いた結果の表が docs にあり、字体の方針が決まって実装され、評価で比べた数字が出ている",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T02:00:01.545Z",
+      "updatedAt": "2026-11-11T02:00:01.545Z",
+      "closedAt": null,
+      "extra": {}
+    }
+  ]
+}
