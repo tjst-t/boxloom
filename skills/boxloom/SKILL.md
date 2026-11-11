@@ -377,7 +377,7 @@ Fixes by code:
 | `missing-key`, `invalid-value`, `schema` | Compare with the subsystem schema in `irSchema` |
 | `date-order`, `date-valid`, `within-span` | Gantt dates: `from` before `to`, real dates, inside `span` |
 | `target-exists`, `unique-id` | `target`/connector ends must name an existing `id`; ids are unique across the whole deck |
-| `template-values` | The custom template file (`-template ./my.json`) is invalid: the `file`/`line`/`path` point into that file, not your deck. Fix the template or use a bundled one |
+| `template-values` | The custom template file (`-template ./my.json`) is invalid: the `file`/`line`/`path` point into that file, not your deck. Fix the template or use a bundled one. Note: `accent`, `conditional`, `support`, `danger`, `none` and `text_muted` must all be different colors |
 | `shape-bounds`, `role-exists`, `connector-self` | `shapes`: keep within 0–1, use theme role names, connect two different shapes |
 | `matrix-cells` | `matrix`: give every row exactly one cell per column |
 | `chart-values` | `chart`: one value per category in every series; `component` needs one series of non-negative parts; `stacked` needs 2+ series; `correlation` needs `xAxis`, `yAxis` and `points` (no `categories`); at most 3 series |

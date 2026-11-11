@@ -139,11 +139,11 @@ func (s *ProcessSubsystem) geom(width float64) *processGeom {
 		g.gap = (g.inner - float64(g.perRow)*g.boxW) / float64(g.perRow-1)
 	}
 	if len(s.Data.Caption) > 0 {
-		_, g.captionH = runsBox(itemRuns(s.Data.Caption, "", nil), tx.Small, g.inner)
+		_, g.captionH = runsBox(itemRuns(s.Data.Caption, "", nil), tx.Detail, g.inner)
 	}
 	for i := range s.Data.Steps {
 		n := FigureNode{Title: s.title(i, g.boxW)}
-		_, h := nodeTextSize(&n, tx.Title, tx.Small, g.boxW, fv)
+		_, h := nodeTextSize(&n, tx.Title, tx.Detail, g.boxW, fv)
 		g.needH = math.Max(g.needH, h)
 	}
 	g.detailH = make([]float64, g.rows)
@@ -151,7 +151,7 @@ func (s *ProcessSubsystem) geom(width float64) *processGeom {
 		if len(st.Detail) == 0 {
 			continue
 		}
-		_, h := runsBox(itemRuns(st.Detail, "", nil), tx.Small, g.boxW)
+		_, h := runsBox(itemRuns(st.Detail, "", nil), tx.Detail, g.boxW)
 		r := i / g.perRow
 		g.detailH[r] = math.Max(g.detailH[r], h)
 	}
@@ -240,17 +240,17 @@ func (s *ProcessSubsystem) Render(ctx RenderContext, box LBox) {
 	g, pl := s.place(box)
 	p := ctx.Out
 	if g.captionH > 0 {
-		p.AddRichTextBox(pl.caption, itemRuns(s.Data.Caption, "text_muted", ctx.Roles), tx.Small, "left", "top")
+		p.AddRichTextBox(pl.caption, itemRuns(s.Data.Caption, "text_muted", ctx.Roles), tx.Detail, "left", "top")
 	}
 	ids := make([]int, len(s.Data.Steps))
 	for i := range s.Data.Steps {
 		n := s.Data.Steps[i]
 		n.Title, n.Detail = s.title(i, pl.boxes[i].Width), nil
-		ids[i] = drawFigureNode(ctx, pl.boxes[i], &n, tx.Title, tx.Small, fv)
+		ids[i] = drawFigureNode(ctx, pl.boxes[i], &n, tx.Title, tx.Detail, fv)
 	}
 	for i, st := range s.Data.Steps {
 		if len(st.Detail) > 0 {
-			p.AddRichTextBox(pl.details[i], itemRuns(st.Detail, "text_muted", ctx.Roles), tx.Small, "left", "top")
+			p.AddRichTextBox(pl.details[i], itemRuns(st.Detail, "text_muted", ctx.Roles), tx.Detail, "left", "top")
 		}
 	}
 	color := ctx.Roles.Color("text_muted")
@@ -282,14 +282,14 @@ func (s *ProcessSubsystem) Lint(box LBox) []string {
 	for i, st := range s.Data.Steps {
 		b := pl.boxes[i]
 		n := FigureNode{Title: s.title(i, b.Width)}
-		needW := nodeMinWidth(&n, tx.Title, tx.Small, fv)
-		_, needH := nodeTextSize(&n, tx.Title, tx.Small, b.Width, fv)
+		needW := nodeMinWidth(&n, tx.Title, tx.Detail, fv)
+		_, needH := nodeTextSize(&n, tx.Title, tx.Detail, b.Width, fv)
 		if !textFits(needW, needH, b.Width, b.Height) {
 			out = append(out, overflowWarning("process", fmt.Sprintf("steps[%d]", i), st.Title, needW, needH, b.Width, b.Height))
 		}
 		if len(st.Detail) > 0 {
 			d := pl.details[i]
-			needW := runsMinWidth(itemRuns(st.Detail, "", nil), tx.Small)
+			needW := runsMinWidth(itemRuns(st.Detail, "", nil), tx.Detail)
 			if !textFits(needW, 0, d.Width, 0) {
 				out = append(out, overflowWarning("process", fmt.Sprintf("steps[%d].detail", i), st.Detail, needW, d.Height, d.Width, d.Height))
 			}

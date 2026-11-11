@@ -244,7 +244,7 @@ func TestBuildTextPatternsPPTX(t *testing.T) {
 		stats := read("ppt/slides/slide4.xml")
 		for _, want := range []string{
 			`sz="3600" b="1"><a:solidFill><a:srgbClr val="` + tm.Theme["accent"] + `"/></a:solidFill></a:rPr><a:t>98.2</a:t>`,
-			`sz="1600" b="1"><a:solidFill><a:srgbClr val="` + tm.Theme["text_primary"] + `"/></a:solidFill></a:rPr><a:t> %</a:t>`,
+			`sz="1600" b="1"><a:solidFill><a:srgbClr val="` + tm.Theme["text_primary"] + `"/></a:solidFill></a:rPr><a:t>%</a:t>`,
 			"<a:t>月の稼働率</a:t>",
 			"<a:t>数字の改善は、どれも </a:t>",
 		} {

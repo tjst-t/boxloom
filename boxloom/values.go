@@ -51,10 +51,12 @@ type TemplateValues struct {
 	CoverAuthor   float64 `json:"coverAuthor" scale:"type"`
 	SlideTitle    float64 `json:"slideTitle" scale:"type"`
 	Body          float64 `json:"body" scale:"type"`
-	SubPoint      float64 `json:"subPoint" scale:"type"`    // 入れ子の箇条
-	OptionLabel   float64 `json:"optionLabel" scale:"type"` // 比較の選択肢の名前
-	OptionItem    float64 `json:"optionItem" scale:"type"`  // 比較の利点・欠点
-	Small         float64 `json:"small" scale:"type"`       // 注記・フッター
+	SubPoint      float64 `json:"subPoint" scale:"type"`     // 入れ子の箇条
+	OptionLabel   float64 `json:"optionLabel" scale:"type"`  // 比較の選択肢の名前
+	OptionItem    float64 `json:"optionItem" scale:"type"`   // 比較の利点・欠点
+	Small         float64 `json:"small" scale:"type"`        // 注記・フッター・図の凡例
+	FigureDetail  float64 `json:"figureDetail" scale:"type"` // 図の補足(箱の2段目・段階の下・図の説明)
+	CaptionText   float64 `json:"captionText" scale:"type"`  // 表・画像の説明の文
 
 	SectionTitle float64 `json:"sectionTitle" scale:"type"` // 区切り(section)の章の題
 	// SectionTracker が true なら、区切りが2つ以上ある文書の区切りのスライドに
@@ -117,7 +119,7 @@ type TemplateMarks struct {
 	Con      string `json:"con"`
 	Quote    string `json:"quote"`       // 引用の言葉の頭
 	Source   string `json:"quoteSource"` // 引用の出どころの頭
-	Unit     string `json:"statUnit"`    // 統計強調の数と単位の間
+	Unit     string `json:"statUnit"`    // 統計強調の数と単位の間(空でもよい)
 }
 
 // GanttValues は Gantt サブシステムの寸法(pt)。既定は subsystems/gantt.json。
@@ -196,6 +198,26 @@ type templateSubsystems struct {
 var themeRoles = []string{
 	"bg", "card", "card_alt", "text_primary", "text_muted", "grid",
 	"support", "conditional", "none", "danger", "risk", "accent", "on_conditional",
+}
+
+// distinctRoles は互いに違う色でなければならない役割名。どれも意味を色で
+// 見分けさせるもの(強調・Gantt や図の状態・補足の文字)で、同じ色だと
+// 「条件つき」が「強調」に見えるように意味が読めなくなる。PPTX のテーマの
+// accent1〜6 にもこの順に写す(pptx の theme)。
+var distinctRoles = []string{"accent", "conditional", "support", "danger", "none", "text_muted"}
+
+// checkDistinctRoles は distinctRoles の色が重ならないことを確かめる
+// (大文字小文字は hexColorRe で揃っている)。
+func checkDistinctRoles(theme map[string]string) error {
+	seen := map[string]string{}
+	for _, r := range distinctRoles {
+		c := theme[r]
+		if prev, ok := seen[c]; ok {
+			return fmt.Errorf("theme.%s: %s is the same color as theme.%s; the roles %v carry different meanings and must all differ", r, c, prev, distinctRoles)
+		}
+		seen[c] = r
+	}
+	return nil
 }
 
 var hexColorRe = regexp.MustCompile(`^[0-9A-F]{6}$`)
@@ -287,6 +309,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		if !hexColorRe.MatchString(f.Theme[r]) {
 			return nil, fmt.Errorf("theme.%s: %q is not a color (6 upper-case hex digits, e.g. 0033CC)", r, f.Theme[r])
 		}
+	}
+	if err := checkDistinctRoles(f.Theme); err != nil {
+		return nil, err
 	}
 	if err := checkPositive("values", f.Values); err != nil {
 		return nil, err
@@ -479,6 +504,9 @@ func nearestSizes(x float64, sizes []float64) string {
 func checkMarks(m TemplateMarks) error {
 	rv, rt := reflect.ValueOf(m), reflect.TypeOf(m)
 	for i := 0; i < rt.NumField(); i++ {
+		if rt.Field(i).Name == "Unit" {
+			continue // 数と単位を詰める(空)のは正しい選び方
+		}
 		if rv.Field(i).String() == "" {
 			name, _, _ := strings.Cut(rt.Field(i).Tag.Get("json"), ",")
 			return fmt.Errorf("marks.%s: must not be empty", name)

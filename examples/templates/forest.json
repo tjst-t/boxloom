@@ -44,6 +44,8 @@
     "optionLabel": 16,
     "optionItem": 12,
     "small": 10,
+    "figureDetail": 12,
+    "captionText": 12,
     "sectionTitle": 36,
     "sectionTracker": true,
     "sectionTrackerText": 14,
@@ -81,7 +83,7 @@
     "con": "－ ",
     "quote": "“",
     "quoteSource": "— ",
-    "statUnit": " "
+    "statUnit": ""
   },
   "fonts": {
     "latin": "Noto Sans CJK JP",

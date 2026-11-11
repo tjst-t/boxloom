@@ -20,7 +20,7 @@
   "annotationPaddingX": 8,
   "annotationPaddingY": 4,
   "annotationLaneGap": 8,
-  "annotationText": 8,
+  "annotationText": 10,
   "labelText": 10,
   "smallText": 8
 }

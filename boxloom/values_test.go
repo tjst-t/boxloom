@@ -65,7 +65,7 @@ func TestTemplateFileStrict(t *testing.T) {
 		{"spacing off scale", func(m map[string]any) { sub(m, "values")["itemGap"] = 6 }, `values.itemGap: 6 is not on the spacing scale (multiples of 4); nearest: 4 or 8`},
 		{"type off scale", func(m map[string]any) { sub(m, "values")["subPoint"] = 12.5 }, `values.subPoint: 12.5 is not on the type scale [8 10 12 14 16 24 36]; nearest: 12 or 14`},
 		{"type below scale", func(m map[string]any) { sub(m, "values")["small"] = 6 }, `nearest: 8`},
-		{"gantt default off a narrowed scale", func(m map[string]any) { sub(m, "scale")["typeSizes"] = []any{10, 12, 14, 16, 24, 36} }, `subsystems/gantt.json.annotationText: 8 is not on the type scale`},
+		{"gantt default off a narrowed scale", func(m map[string]any) { sub(m, "scale")["typeSizes"] = []any{10, 12, 14, 16, 24, 36} }, `subsystems/gantt.json.smallText: 8 is not on the type scale`},
 		{"gantt override off scale", func(m map[string]any) {
 			var gv map[string]any
 			raw, _ := valueFiles.ReadFile("subsystems/gantt.json")
@@ -88,6 +88,8 @@ func TestTemplateFileStrict(t *testing.T) {
 		{"unknown role", func(m map[string]any) { sub(m, "theme")["highlight"] = "FFFFFF" }, `unknown role "highlight"`},
 		{"bad color", func(m map[string]any) { sub(m, "theme")["bg"] = "#fff" }, `theme.bg: "#fff" is not a color`},
 		{"empty mark", func(m map[string]any) { sub(m, "marks")["pro"] = "" }, `marks.pro: must not be empty`},
+		{"accent equals conditional", func(m map[string]any) { sub(m, "theme")["conditional"] = sub(m, "theme")["accent"] }, `theme.conditional: 0033CC is the same color as theme.accent`},
+		{"none equals text_muted", func(m map[string]any) { sub(m, "theme")["none"] = sub(m, "theme")["text_muted"] }, `theme.text_muted: 5C6B85 is the same color as theme.none`},
 		{"name mismatch", func(m map[string]any) { m["name"] = "dark" }, `does not match the file name`},
 		{"partial gantt", func(m map[string]any) {
 			m["subsystems"] = map[string]any{"gantt": map[string]any{"padding": 16}}
@@ -178,5 +180,35 @@ func TestTemplateOverridesShapesValues(t *testing.T) {
 	}
 	if defaultShapesValues().DefaultAspect != 2.4 {
 		t.Errorf("default shapes values were modified")
+	}
+}
+
+// 数と単位の間の印は空でよい(「71%」と詰める)。ほかの印は空なら誤り。
+func TestStatUnitMarkMayBeEmpty(t *testing.T) {
+	tm, err := parseTemplateFile("light", mutate(t, func(m map[string]any) { sub(m, "marks")["statUnit"] = "" }))
+	if err != nil {
+		t.Fatalf("empty statUnit mark rejected: %v", err)
+	}
+	if tm.Marks.Unit != "" {
+		t.Errorf("Marks.Unit = %q, want empty", tm.Marks.Unit)
+	}
+}
+
+// 同梱のテンプレートは、意味の違う役割名がどれも違う色で、図の補足と
+// 表・画像の説明が注記(small)より大きい。
+func TestBundledTemplatesDistinctRolesAndReadableDetail(t *testing.T) {
+	for _, name := range TemplateNames {
+		tm := mustTemplate(name)
+		seen := map[string]string{}
+		for _, r := range distinctRoles {
+			if prev, ok := seen[tm.Theme[r]]; ok {
+				t.Errorf("%s: %s and %s share %s", name, prev, r, tm.Theme[r])
+			}
+			seen[tm.Theme[r]] = r
+		}
+		v := tm.Values
+		if v.FigureDetail <= v.Small || v.CaptionText <= v.Small {
+			t.Errorf("%s: figureDetail %v / captionText %v should be above small %v", name, v.FigureDetail, v.CaptionText, v.Small)
+		}
 	}
 }

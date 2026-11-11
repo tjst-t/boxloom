@@ -29,13 +29,14 @@ var figureStatuses = []string{"support", "conditional", "none", "danger"}
 
 // FigureText は図の文字の大きさ(pt)。テンプレートの values から入れる。
 type FigureText struct {
-	Title float64 // 箱の題・見出し(values.body)
-	Sub   float64 // 2段目の文字・セルの文字(values.subPoint)
-	Small float64 // 補足・注記・凡例(values.small)
+	Title  float64 // 箱の題・見出し(values.body)
+	Sub    float64 // 2段目の文字・セルの文字(values.subPoint)
+	Detail float64 // 箱の補足・段階の下の補足・図の説明(values.figureDetail)
+	Small  float64 // 凡例(values.small)
 }
 
 func figureTextFrom(v TemplateValues) FigureText {
-	return FigureText{Title: v.Body, Sub: v.SubPoint, Small: v.Small}
+	return FigureText{Title: v.Body, Sub: v.SubPoint, Detail: v.FigureDetail, Small: v.Small}
 }
 
 // defaultFigureText は既定のテンプレート(light)の段。

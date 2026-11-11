@@ -59,7 +59,9 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
   大文字の16進6桁(`0033CC`)。`#` や小文字は断る。
 - 大きさ(数)が 0 以下。
 - 段階(`scale`)の誤り、または段階から外れた値(次の節)。
-- 印の文字が空。
+- 意味の違う役割名が同じ色(`accent` `conditional` `support` `danger` `none`
+  `text_muted` の6つは互いに違う色。次の節)。
+- 印の文字が空(数と単位の間の `statUnit` だけは空でよい)。
 - `variants` に空の名前・同じ名前が2回。
 
 同梱のファイルが壊れていれば試験(`values_test.go`)が落ちる。
@@ -95,7 +97,7 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 | 種類 | values | subsystems/gantt.json | subsystems/shapes.json |
 |---|---|---|---|
 | 余白 | `pagePadding` `coverPadding` `sectionGap` `blockGap` `itemGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
-| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
+| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `body` `subPoint` `optionLabel` `optionItem` `small` `figureDetail` `captionText` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
 ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率は段階に載せない
 (図の寸法で、刻みに合わせても読みやすさは変わらないため)。
@@ -136,10 +138,34 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 種類と数は変わらない。従来のデモ(`go run ./cmd/boxloom`)も Gantt の既定の寸法を使うので、Gantt の
 字と注釈の箱が変わる。
 
+**図の補足の字を上げたとき(Backlog #45)に変えた値**(dark / light 共通):
+
+| 値 | 前 | 後 |
+|---|---|---|
+| 図の補足(新しい `figureDetail`。以前は `small`) | 10 | 12 |
+| 表・画像の説明(新しい `captionText`。以前は `small`) | 10 | 12 |
+| gantt `annotationText` | 8 | 10 |
+| marks `statUnit` | 半角の空白 | 空 |
+| light の theme `conditional` | `0033CC`(`accent` と同じ) | `9A6700` |
+
+結論や数が投影で読めない細字に書かれないように、図の補足と説明を従の文(12)に、
+Gantt の注釈を注(10)に上げた。Gantt の区間の文・節目・グループ名(`smallText` 8)は
+上げていない:10 にすると `examples/ir/gantt-full.json` が本文に収まらなくなる
+(行が高くなり 46.9pt はみ出す)。密な Gantt の中の字は 8 のまま、値の表で差し替えられる。
+例の警告の数は変わらない(20 の組み合わせで `check` の件数が同じ)。
+
 ### theme(役割名 → 色)
 
 `bg` `card` `card_alt` `text_primary` `text_muted` `grid` `support`
 `conditional` `none` `danger` `risk` `accent` `on_conditional` の 13 個、ちょうど。
+
+**意味の違う役割名は違う色(Backlog #45)。** `accent`(見てほしい1か所)・
+`conditional`・`support`・`danger`・`none`(状態)・`text_muted`(補足の文字)の6つは、
+どの2つも同じ16進にできない。読み込みで `theme.conditional: 0033CC is the same color as
+theme.accent` の形の誤り。同じ色だと、図の「条件つき」の丸や「要調整」の枠が強調に
+見え、意味が読めなくなる(以前の light は `conditional` と `accent` がどちらも
+`0033CC` だった)。PPTX のテーマの accent1〜6 にもこの6つを写す(次の節)。
+light の `conditional` は `9A6700`(黄土。白の文字 `on_conditional` を載せても読める濃さ)。
 
 #### PPTX のテーマへの写し方(Backlog #43)
 
@@ -193,7 +219,9 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `body` | 段落・箇条 |
 | `subPoint` | 入れ子の箇条 |
 | `optionLabel` `optionItem` | 比較の選択肢の名前、利点・欠点 |
-| `small` | 注記・フッター |
+| `small` | 注記・フッター・図の凡例 |
+| `figureDetail` | 図の補足:process・orgchart の箱の2段目、process の段階の下の文と図の説明(dark / light は 12) |
+| `captionText` | 表・画像・画像の並びの説明の文(dark / light は 12。色は `text_muted`) |
 | `sectionTitle` | 区切り(section)の章の題 |
 | `sectionTracker` | 真偽。`true` なら、区切りが2つ以上ある文書の区切りのスライドに、章の一覧と現在地を題の下に置く(いまの章は帯がアクセント・題が `text_primary` の太字、ほかは帯が `grid`・題が `text_muted`)。`false` なら置かない |
 | `sectionTrackerText` | 章の一覧の字の大きさ |
@@ -215,13 +243,14 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `tableCellPaddingX` `tableCellPaddingY` | セルの左右・上下の余白(8・4) |
 | `tableRuleWidth` | 表の行の間の線の太さ(1。線の色は役割名 `grid`、見出しの行の塗りは `card_alt`、本体は `card`) |
 | `imageMinHeight` | 画像を縮めてよい下限の高さ(96。はみ出しの検査はこの高さで測る) |
-| `captionGap` | 表・画像と説明の文の間(4。説明の文の字は `small`、色は `text_muted`) |
+| `captionGap` | 表・画像と説明の文の間(4。説明の文の字は `captionText`) |
 
 ### marks(印の文字)
 
 箇条(`point`、入れ子は `subPoint`)、比較の利点(`pro`)・欠点(`con`)の頭に置く
 文字、引用の言葉の頭(`quote`)と出どころの頭(`quoteSource`)、統計強調の数と単位の
-間(`statUnit`。dark / light は半角の空白1つ)。後ろの空きも含めて書く。
+間(`statUnit`。dark / light は空=「71%」「38社」と詰める。空でもよいのはこれだけ)。
+後ろの空きも含めて書く。
 
 `point`・`subPoint`・`pro`・`con` は、PPTX では本文の文字にせず、段落の箇条の印
 (`a:buChar`。色は印の色、字体は印の文字で選ぶ:U+2000 未満は `latin`、以降は

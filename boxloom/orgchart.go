@@ -165,7 +165,7 @@ func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
 		_, h := nodeTextSize(&u.FigureNode, tx.Title, tx.Sub, g.unitW[i], s.boxValues("rect"))
 		g.needUnit = math.Max(g.needUnit, h)
 		for j := range u.Members {
-			_, h := nodeTextSize(&u.Members[j], tx.Sub, tx.Small, g.memberW, s.boxValues("roundRect"))
+			_, h := nodeTextSize(&u.Members[j], tx.Sub, tx.Detail, g.memberW, s.boxValues("roundRect"))
 			g.needMember = math.Max(g.needMember, h)
 		}
 	}
@@ -234,7 +234,7 @@ func (s *OrgChartSubsystem) Render(ctx RenderContext, box LBox) {
 		u := &s.Data.Units[i]
 		unitIDs[i] = drawFigureNode(ctx, pl.units[i], &u.FigureNode, tx.Title, tx.Sub, s.boxValues("rect"))
 		for j := range u.Members {
-			memberIDs[i] = append(memberIDs[i], drawFigureNode(ctx, pl.members[i][j], &u.Members[j], tx.Sub, tx.Small, s.boxValues("roundRect")))
+			memberIDs[i] = append(memberIDs[i], drawFigureNode(ctx, pl.members[i][j], &u.Members[j], tx.Sub, tx.Detail, s.boxValues("roundRect")))
 		}
 	}
 	color := ctx.Roles.Color("text_muted")
@@ -268,7 +268,7 @@ func (s *OrgChartSubsystem) Lint(box LBox) []string {
 		u := &s.Data.Units[i]
 		check(fmt.Sprintf("units[%d]", i), &u.FigureNode, pl.units[i], tx.Title, tx.Sub, s.boxValues("rect"))
 		for j := range u.Members {
-			check(fmt.Sprintf("units[%d].members[%d]", i, j), &u.Members[j], pl.members[i][j], tx.Sub, tx.Small, s.boxValues("roundRect"))
+			check(fmt.Sprintf("units[%d].members[%d]", i, j), &u.Members[j], pl.members[i][j], tx.Sub, tx.Detail, s.boxValues("roundRect"))
 		}
 	}
 	return out

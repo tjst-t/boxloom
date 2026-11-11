@@ -220,7 +220,7 @@ func (t *Template) table(b *IRBlock) *Spec {
 	v, th := t.Values, t.Theme
 	numeric := numericColumns(b.Rows, len(b.Header))
 	leaf := &tableLeaf{size: v.TableText, padX: v.TableCellPadX, padY: v.TableCellPadY,
-		capSize: v.Small, capGap: v.CaptionGap,
+		capSize: v.CaptionText, capGap: v.CaptionGap,
 		draw: TableDraw{HeaderFill: th.c("card_alt"), BodyFill: th.c("card"), RuleColor: th.c("grid"), RuleWidth: v.TableRuleWidth}}
 	cellRow := func(cells []Inline, header bool) []TableCell {
 		var out []TableCell
@@ -323,7 +323,7 @@ func (t *Template) imageLeaf(src, alt string, caption Inline) (*imageLeaf, error
 		return nil, err
 	}
 	v := t.Values
-	m := &imageLeaf{img: img, alt: alt, capSize: v.Small, capGap: v.CaptionGap, minH: v.ImageMinHeight}
+	m := &imageLeaf{img: img, alt: alt, capSize: v.CaptionText, capGap: v.CaptionGap, minH: v.ImageMinHeight}
 	if caption != nil {
 		m.caption = t.runs(caption, t.Theme.c("text_muted"), false)
 	}
