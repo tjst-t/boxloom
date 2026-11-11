@@ -1,6 +1,6 @@
 ---
 title: 新サービス「Kumo」立ち上げ計画
-subtitle: サブシステム(Gantt・プロセス・組織図・ファネル・マトリクス・図形)をふんだんに使ったデモ(すべて架空)
+subtitle: パターンとサブシステムをひととおり使ったデモ(すべて架空)
 author: Boxloom デモ
 template: light
 ---
@@ -18,6 +18,47 @@ template: light
 :::note
 数字・日付・組織はすべて架空のデモ
 :::
+
+# 第1部 なぜいま作るのか {type=section}
+
+:::notes
+第1部は、作る理由を数字と利用者の声で示す。
+:::
+
+# 外に出せないデータにも、集計の道具は要る {type=statement}
+
+# 聞き取りの結果は、需要がはっきりあることを示している
+
+::::stat
+:::value 38 {unit=社}
+聞き取りをした企業
+:::
+:::value 71 {unit=%}
+「SaaS には業務のデータを送れない」と答えた割合
+:::
+:::value 3 → 1 {unit=週}
+集計の手作業を道具で減らせる見込み
+:::
+::::
+
+- 送れない理由は、社内の規程(16社)と取引先との契約(11社)が多かった
+- 多くの企業が、表計算ソフトの手作業で毎週の集計をしている
+
+:::takeaway
+**自分の環境の中で動く** 集計の道具には、はっきりした需要がある
+:::
+
+# 現場は「外に出さずに済むこと」を最も重く見ている
+
+:::quote 架空の製造業の情報システム担当、2026年10月の聞き取り
+便利な道具はたくさんあるが、データを外に出す時点で社内の審査に半年かかる。\
+中で動くなら、来月からでも試せる。
+:::
+
+- 38社のうち27社が、選ぶ条件の一番目に「データを外に出さないこと」を挙げた
+- 価格を一番目に挙げたのは4社だけだった
+
+# 第2部 何を作るか {type=section}
 
 # システム構成
 
@@ -62,6 +103,67 @@ steps:
 導入(3)を短くするのが限定公開までの最大の課題
 :::
 
+# 利用者の画面は3つの段階で進む
+
+![第1段階。3つの丸のうち1つ目だけが塗られている](images/step-1.png "1. データをつなぐ") ![第2段階。3つの丸のうち2つ目までが塗られている](images/step-2.png "2. 集計を選ぶ") ![第3段階。3つの丸がすべて塗られている](images/step-3.jpg "3. 結果を共有する")
+
+# 配布の形の比較
+
+```matrix
+columns: [コンテナ, 仮想マシン, 専用の機器]
+rows:
+  - label: 導入の速さ
+    cells:
+      - {status: support, text: 速い(1日)}
+      - {status: conditional, text: 中(3日)}
+      - {status: danger, text: 遅い(2週間)}
+  - label: 利用者の負担
+    cells:
+      - {status: conditional, text: 運用の知識が要る}
+      - {status: conditional, text: 中}
+      - {status: support, text: 小さい}
+  - label: 監査の通しやすさ
+    cells:
+      - {status: conditional, text: 要確認}
+      - {status: support, text: 通しやすい}
+      - {status: support, text: 通しやすい}
+  - label: 原価
+    cells:
+      - {status: support, text: 低い}
+      - {status: conditional, text: 中}
+      - {status: danger, text: 高い}
+legend:
+  support: 良い
+  conditional: 条件つき
+  danger: 悪い
+```
+
+# 限定公開は3つに絞り、残りは一般公開に回す
+
+::::columns
+:::column 限定公開でやること {role=main}
+- 集計の画面と、週次の報告の自動化
+- コンテナでの配布(導入は1日)
+- 認証は社内のディレクトリにつなぐだけ
+
+導入の速さを最優先にし、**10社に使ってもらう** ことを目標にする。
+:::
+:::column 一般公開まで
+- 仮想マシンでの配布
+- 外部監査への対応
+:::
+:::column やらないこと
+- 専用の機器の販売
+- 独自の帳票の作り直し
+:::
+::::
+
+# 集計の画面は一覧と週ごとの件数を1枚に収める
+
+![集計の画面の試作。左に一覧、右に週ごとの件数の棒グラフがある](images/screen-wide.png "試作の画面(架空)。左の欄が対象の一覧、右が週ごとの件数")
+
+# 第3部 どう進めるか {type=section}
+
 # 立ち上げの体制
 
 ```orgchart
@@ -95,37 +197,6 @@ stages:
   - {label: 環境の確認, value: 60, note: "環境の確認で **3社に2社** が脱落"}
   - {label: 試験運用, value: 24, status: conditional}
   - {label: 契約, value: 10, emphasis: true, note: 限定公開の目標は10社}
-```
-
-# 配布の形の比較
-
-```matrix
-columns: [コンテナ, 仮想マシン, 専用の機器]
-rows:
-  - label: 導入の速さ
-    cells:
-      - {status: support, text: 速い(1日)}
-      - {status: conditional, text: 中(3日)}
-      - {status: danger, text: 遅い(2週間)}
-  - label: 利用者の負担
-    cells:
-      - {status: conditional, text: 運用の知識が要る}
-      - {status: conditional, text: 中}
-      - {status: support, text: 小さい}
-  - label: 監査の通しやすさ
-    cells:
-      - {status: conditional, text: 要確認}
-      - {status: support, text: 通しやすい}
-      - {status: support, text: 通しやすい}
-  - label: 原価
-    cells:
-      - {status: support, text: 低い}
-      - {status: conditional, text: 中}
-      - {status: danger, text: 高い}
-legend:
-  support: 良い
-  conditional: 条件つき
-  danger: 悪い
 ```
 
 # 改善のサイクル
@@ -198,6 +269,17 @@ annotations:
 
 - 山場は、導入支援の人手が足りない **2027年3〜6月**
 
+# 一般公開までの費用は人件費が大半を占める
+
+| 項目 | 限定公開まで(万円) | 一般公開まで(万円) | 合計(万円) |
+| --- | --- | --- | --- |
+| 開発の人件費 | 2,800 | 4,200 | 7,000 |
+| 導入支援の人件費 | 600 | 1,500 | 2,100 |
+| 外部監査 | 0 | 900 | 900 |
+| 試験の環境 | 150 | 250 | 400 |
+| 合計 | 3,550 | 6,850 | 10,400 |
+: 金額はすべて架空の見積もり(2026年11月時点)
+
 # 判断してほしいこと
 
 :::::compare
@@ -221,4 +303,8 @@ annotations:
 
 :::note
 どちらでも外部監査の日程は変えない
+:::
+
+:::takeaway
+おすすめは **予定どおり公開**。人手を借りる費用は、半年早く出す効果より小さい
 :::
