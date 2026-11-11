@@ -1237,6 +1237,27 @@
       "updatedAt": "2026-11-11T07:08:09.865Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "chart",
+      "number": 52,
+      "kind": "bug",
+      "title": "chart:単位が長い(「億ドル」)と値のラベルが途中で折り返す",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "見本 ai-society(#50)で Fable が見つけた。chart の unit が長いと、LibreOffice で値のラベルが途中で折り返す。見本では単位を系列名に移して避けた。値のラベルの書式(数の書式に単位を入れているなら軸の題に寄せる、ラベルの幅を測る等)を見直す。PowerPoint・Google Slides での見え方の違いも考える(#44 と関係)。",
+      "doneWhen": "長い単位でも値のラベルが折り返さない(または check が警告する)。試験・例・docs/subsystem.md の12節を更新。ci.sh go python pptx が通る。LibreOffice の絵で確かめる。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T07:08:10.050Z",
+      "updatedAt": "2026-11-11T07:08:10.050Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
