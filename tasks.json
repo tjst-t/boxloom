@@ -1332,7 +1332,7 @@
       "number": 56,
       "kind": "bug",
       "title": "orgchart:箱の中で語の途中で折れる(「欧州 AI 委員 / 会」)",
-      "status": "ready",
+      "status": "done",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -1340,12 +1340,12 @@
       "labels": [],
       "body": "見本 ai-society(#50)の23枚目。orgchart の箱で「欧州 AI 委員会」が「欧州 AI 委員 / 会」と1文字だけ次の行に落ちる。figure-text-overflow にはならない。箱の幅の配分を、題の最短の折り返し(1文字だけ落ちる・語の途中で折れるのを避ける幅)に追従させるか、1文字だけの行(泣き別れ)を避ける折り返しにする。process など他の図の箱も同じ測りなら一緒に。",
       "doneWhen": "見本の23枚目で「欧州 AI 委員会」が1行に収まり、1文字だけの行を避ける試験がある。ci.sh go python pptx が通る。LibreOffice の絵で確かめる。",
-      "resolution": null,
+      "resolution": "8254803・d7f810e。orgchart の箱は、文の最後の行が2文字以下になるとき、列の余りの中で箱を広げる(root・2段目・3段目)。見本の23枚目は「欧州 AI 委員会」と3段目の補足が1行に。試験 TestOrgChartUnitAvoidsOrphanLine・TestNodeComfortWidth。ci.sh go python pptx 通過。process・matrix・funnel は余りの幅が無いので対象外。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T07:08:10.437Z",
-      "updatedAt": "2026-11-11T07:08:10.437Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T07:16:38.701Z",
+      "closedAt": "2026-11-11T07:16:38.701Z",
       "extra": {}
     }
   ]
