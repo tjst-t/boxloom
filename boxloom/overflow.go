@@ -44,6 +44,18 @@ type BlockMeasure struct {
 	// Columns は並列のまとまり(columns)のときだけ、まとまりごとの測り値。
 	// ブロックの Need は一番高いまとまりの Need。
 	Columns []ColumnMeasure
+
+	// Cards は横に同じ幅のカードを並べるブロック(compare・stat)のときだけ、
+	// カードごとの測り値。ブロックの Need は一番高いカードの Need + 余白。
+	CardsKey string // IR の並びの名前("options"・"items")
+	Cards    []CardMeasure
+}
+
+// CardMeasure は横に並ぶカードの1枚の測り値。
+type CardMeasure struct {
+	Index int
+	Need  float64 // カードを縮めずに積んだ高さ(カードの余白を含む)
+	Lines int
 }
 
 // ColumnMeasure は並列のまとまりの1つの測り値。Top・Bottom は本文の領域の
@@ -101,9 +113,34 @@ func measureBody(root, body *Spec) (blocks []BlockMeasure, capacity, need float6
 		if b.columns != nil {
 			m.Columns = measureColumns(b.columns, start, capacity)
 		}
+		if b.cards != "" {
+			m.CardsKey, m.Cards = b.cards, measureCards(b)
+		}
 		blocks = append(blocks, m)
 	}
 	return blocks, capacity, cursor, true
+}
+
+// measureCards は横に並ぶカードを1枚ずつ測る。requiredMeasure が行を並べた
+// 後(子の Box の幅が決まった後)に呼ぶこと。
+func measureCards(row *Spec) []CardMeasure {
+	var out []CardMeasure
+	for i, c := range row.Children {
+		h, n := requiredMeasure(c, c.Box.Width)
+		out = append(out, CardMeasure{Index: i, Need: h, Lines: n})
+	}
+	return out
+}
+
+// tallestCard は一番高いカードの番号(同じ高さなら前のもの)。カードが無ければ -1。
+func tallestCard(cards []CardMeasure) int {
+	best := -1
+	for i, c := range cards {
+		if best < 0 || c.Need > cards[best].Need+overflowEps {
+			best = i
+		}
+	}
+	return best
 }
 
 // overflowOf は start〜end に積んだものが、本文の領域(capacity)の下端を越えた高さ。

@@ -80,6 +80,10 @@ type Spec struct {
 	// columns は並列のまとまり(columns)の行が持つ、まとまりごとの部品
 	// (はみ出しをまとまりごとに測る。blocks.go)。
 	columns *columnsInfo
+	// cards は横に同じ幅のカードを並べる行(compare・stat)が持つ、IR の
+	// 並びの名前("options"・"items")。容量の計測でカードごとの高さを出し、
+	// 一番高いカードがブロックの高さを決めることを作者に見せる。
+	cards string
 	// nestedSlack は、この箱が列の中で足りないとき、中のサブシステムの縮められる
 	// 分を Phase3a で先に返すか(並列のまとまりで、画像を文字より先に縮めるため)。
 	nestedSlack bool

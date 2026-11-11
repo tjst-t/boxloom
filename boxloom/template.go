@@ -436,7 +436,9 @@ func (t *Template) compare(opts []IRCompareOption) *Spec {
 		cards = append(cards, Col(kids, WithGap(v.ItemGap), WithPadding(v.CardPadding),
 			WithBackground(th.c("card")), WithRadius(v.CardRadius), WithGrow(1), WithBasis(0)))
 	}
-	return Row(cards, WithGap(v.BlockGap))
+	row := Row(cards, WithGap(v.BlockGap))
+	row.cards = "options"
+	return row
 }
 
 // takeaway は本文の中の結論の1文。左にアクセントの帯を置き、カードの色の上に
@@ -469,7 +471,9 @@ func (t *Template) stat(items []IRStatItem) *Spec {
 		}, WithGap(v.ItemGap), WithPadding(v.CardPadding), WithBackground(th.c("card")), WithRadius(v.CardRadius),
 			WithGrow(1), WithBasis(0)))
 	}
-	return Row(cards, WithGap(v.BlockGap))
+	row := Row(cards, WithGap(v.BlockGap))
+	row.cards = "items"
+	return row
 }
 
 // quote は他人の言葉と出どころ。頭に大きなアクセントの色の引用の印を置き、

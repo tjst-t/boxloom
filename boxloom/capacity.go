@@ -50,6 +50,18 @@ type BlockCapacity struct {
 	RemainingWidth float64 `json:"remainingWidth,omitempty"`
 	// Columns は並列のまとまり(columns)のときだけ、まとまりごとの測り値。
 	Columns []ColumnCapacity `json:"columns,omitempty"`
+	// Cards は横に同じ幅のカードを並べるブロック(compare の選択肢・stat の数)の
+	// ときだけ、カードごとの測り値。ブロックの need を決めるのは一番高いカード
+	// (tallest)で、ほかのカードに文を足しても need は増えない。
+	Cards []CardCapacity `json:"cards,omitempty"`
+}
+
+// CardCapacity は横に並ぶカードの1枚の測り値。
+type CardCapacity struct {
+	Path    string  `json:"path"` // /slides/S/body/N/options/K(stat は …/items/K)
+	Need    float64 `json:"need"`
+	Lines   int     `json:"lines"`
+	Tallest bool    `json:"tallest,omitempty"` // このカードがブロックの高さを決める
 }
 
 // ColumnCapacity は並列のまとまりの1つの測り値(Top・Bottom は本文の領域の上端から)。
@@ -104,7 +116,7 @@ func slideCapacity(blocks []BlockMeasure, area, need, gap float64, si int, types
 }
 
 func blockCapacity(b BlockMeasure, path, typ string) BlockCapacity {
-	return BlockCapacity{
+	bc := BlockCapacity{
 		Path:     path,
 		Type:     typ,
 		Need:     round1(b.Need),
@@ -113,6 +125,12 @@ func blockCapacity(b BlockMeasure, path, typ string) BlockCapacity {
 		Bottom:   round1(b.Bottom),
 		Overflow: round1(b.Overflow),
 	}
+	tall := tallestCard(b.Cards)
+	for i, c := range b.Cards {
+		bc.Cards = append(bc.Cards, CardCapacity{Path: fmt.Sprintf("%s/%s/%d", path, b.CardsKey, c.Index),
+			Need: round1(c.Need), Lines: c.Lines, Tallest: i == tall})
+	}
+	return bc
 }
 
 // String は check の text の出し方(-capacity)の1行:
@@ -133,6 +151,12 @@ func (c SlideCapacity) String() string {
 		}
 		if b.RemainingWidth > 0 {
 			out += fmt.Sprintf(", %.1fpt of width unused beside the figure", b.RemainingWidth)
+		}
+		for _, c := range b.Cards {
+			out += fmt.Sprintf("\n    %s: %d lines, %.1fpt", c.Path, c.Lines, c.Need)
+			if c.Tallest {
+				out += " (tallest: sets the block height)"
+			}
 		}
 		for _, c := range b.Columns {
 			out += fmt.Sprintf("\n    %s: %d lines, %.1fpt", c.Path, c.Lines, c.Need)

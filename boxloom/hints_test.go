@@ -132,3 +132,58 @@ func TestMergeHintNeedsFit(t *testing.T) {
 		t.Errorf("slide 1: %q", h)
 	}
 }
+
+// compare の高さは一番高い選択肢で決まる(#55)。容量はカードごとの need と
+// 一番高いカード(tallest)を出し、ほかのカードに足しても need は増えず、
+// 一番高いカードに足すと増える。薄いときの hint はそのカードを名指しする。
+func TestCompareCardsCapacity(t *testing.T) {
+	deck := func(extraTall, extraShort string) []byte {
+		return []byte("---\ntitle: 試験\n---\n\n# 比べる\n\n:::::compare\n::::option 甲\n:::pros\n- 一つめの良い点\n- 二つめの良い点\n- 三つめの良い点\n" +
+			extraTall + ":::\n:::cons\n- 悪い点\n:::\n::::\n::::option 乙\n:::pros\n- 良い点\n" + extraShort + ":::\n:::cons\n- 悪い点\n:::\n::::\n:::::\n")
+	}
+	measure := func(src []byte) (SlideCapacity, []Issue) {
+		errs, warns, caps := checkCapacity("t.bx.md", src, "light", nil, nil)
+		if len(errs) > 0 || len(caps) != 1 {
+			t.Fatalf("errs %v caps %d", errs, len(caps))
+		}
+		return caps[0], warns
+	}
+	base, warns := measure(deck("", ""))
+	b := base.Blocks[0]
+	if len(b.Cards) != 2 || b.Cards[0].Path != "/slides/1/body/0/options/0" || !b.Cards[0].Tallest || b.Cards[1].Tallest {
+		t.Fatalf("cards = %+v", b.Cards)
+	}
+	if math.Abs(b.Cards[0].Need-b.Need) > 0.1 || b.Cards[1].Need >= b.Cards[0].Need {
+		t.Errorf("need %.1f, cards %+v", b.Need, b.Cards)
+	}
+	short, _ := measure(deck("", "- 足した良い点\n"))
+	if short.Need != base.Need {
+		t.Errorf("adding to the shorter option changed need: %.1f -> %.1f", base.Need, short.Need)
+	}
+	tall, _ := measure(deck("- 足した良い点\n", ""))
+	if tall.Need <= base.Need {
+		t.Errorf("adding to the tallest option did not raise need: %.1f -> %.1f", base.Need, tall.Need)
+	}
+	var hint string
+	for _, w := range warns {
+		if w.Code == "fill-ratio" {
+			hint = w.Hint
+		}
+	}
+	if !strings.Contains(hint, "一番高い /slides/1/body/0/options/0") {
+		t.Errorf("fill-ratio hint = %q", hint)
+	}
+}
+
+// stat の数のカードも同じ(並びの名前は items)。
+func TestStatCardsCapacity(t *testing.T) {
+	src := []byte("---\ntitle: 試験\n---\n\n# 数\n\n::::stat\n:::value 38 {unit=社}\n聞き取りした企業の数で、説明が長くて二行に折り返すほどの長さの説明の文を書いておく\n:::\n:::value 71 {unit=%}\n短い説明\n:::\n::::\n")
+	errs, _, caps := checkCapacity("t.bx.md", src, "light", nil, nil)
+	if len(errs) > 0 || len(caps) != 1 {
+		t.Fatalf("errs %v", errs)
+	}
+	c := caps[0].Blocks[0].Cards
+	if len(c) != 2 || c[0].Path != "/slides/1/body/0/items/0" || !c[0].Tallest {
+		t.Errorf("cards = %+v", c)
+	}
+}

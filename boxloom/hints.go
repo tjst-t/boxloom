@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -65,8 +66,38 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 			if m := mergeHint(s, thin, capOf); m != "" {
 				w.Hint = m + "。" + fillRatioHint
 			}
+			if c := cardsHint(capOf[w.Path]); c != "" {
+				w.Hint += "。" + c
+			}
 		}
 	}
+}
+
+// cardsHint は、本文に横に並ぶカード(compare の選択肢・stat の数)・並列の
+// まとまり(columns)があるとき、高さを決めているのは一番高いカード・まとまりで、
+// ほかに文を足しても本文の高さは増えないことを1文にする。無ければ空。
+func cardsHint(c SlideCapacity) string {
+	var parts []string
+	for _, b := range c.Blocks {
+		for _, k := range b.Cards {
+			if k.Tallest && len(b.Cards) > 1 {
+				parts = append(parts, fmt.Sprintf("%s の高さは一番高い %s(%.1fpt)で決まります", b.Path, k.Path, k.Need))
+			}
+		}
+		if len(b.Columns) > 1 {
+			best := 0
+			for i, col := range b.Columns {
+				if col.Need > b.Columns[best].Need+overflowEps {
+					best = i
+				}
+			}
+			parts = append(parts, fmt.Sprintf("%s の高さは一番高い %s(%.1fpt)で決まります", b.Path, b.Columns[best].Path, b.Columns[best].Need))
+		}
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, "。") + "。ほかのカード・まとまりに文を足しても本文の高さは増えないので、根拠を足すならそこに足すか、別のブロックとして足してください"
 }
 
 // mergeHint は、隣(前か後ろ)のスライドも薄く、2枚の本文を1枚にまとめると

@@ -362,7 +362,10 @@ Targets that read well (not hard limits):
      bodies fit on one slide, the warning's `hint` names that slide and the expected
      fill (e.g. "隣の /slides/5 … 約 96%"). Keep one conclusion title.
   2. **Add the evidence** the title needs: the numbers, a figure, a table, where the
-     numbers come from (who, how many, when).
+     numbers come from (who, how many, when). Side-by-side blocks (`compare` options,
+     `stat` cards, `columns`) are as tall as their tallest card or column: adding a line
+     to a shorter one does not change the fill. The `hint` and `capacity` (`cards` with
+     `"tallest": true`) name the one that sets the height — add there, or add a block.
   3. **Make it a `statement` slide** if the slide really is one message on its own
      (statement slides have no body, so no `fill-ratio`).
   Never pad: no repeated points in other words, no bigger text or figures to fill space.
