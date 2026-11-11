@@ -585,7 +585,7 @@
       "number": 28,
       "kind": "task",
       "title": "生の図形への逃げ道(キャンバスの中だけ・相対座標・役割名・重なりの警告)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "canvas-patterns",
       "dependsOn": [],
       "milestone": null,
@@ -593,7 +593,7 @@
       "labels": [],
       "body": "既存のパターンで表せないとき、図形・矢印・コネクタまで降りる層。持つと、一貫性と「構造的に重ならない」保証が崩れやすい。持たないと、表せないものが残る。中間の案:キャンバスの中だけ。相対の座標(0〜1)。色は役割名だけ。check が重なりを警告する。人が決める。",
       "doneWhen": "IR・Schema・Markdown で書け、0〜1 の外の座標と役割名でない色は誤り、重なりは check の警告、docs と試験と画像での確かめがある",
-      "resolution": null,
+      "resolution": "main fb1257f:subsystem shapes(図形・文字・線・矢印・本物のコネクタ)。座標0〜1、色は役割名、字は段の名前。check の誤り(shape-bounds・role-exists・target-exists・connector-self・unique-id)と警告(shapes-overlap・shapes-text-overflow)。",
       "refs": [],
       "threads": [
         {
@@ -602,8 +602,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:58.942Z",
-      "updatedAt": "2026-11-11T02:26:34.791Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T02:43:33.942Z",
+      "closedAt": "2026-11-11T02:43:33.942Z",
       "extra": {}
     },
     {
