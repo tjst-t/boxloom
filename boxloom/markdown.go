@@ -254,7 +254,6 @@ var (
 
 // 囲みの名前。
 var (
-	knownFences   = []string{"compare", "cons", "note", "notes", "option", "pros"}
 	plannedFences = map[string]bool{"takeaway": true, "columns": true, "column": true}
 )
 
@@ -1011,7 +1010,7 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 		p.fail(n.line, n.col, "/meta", codeInvalidValue, "文書の頭は「キー: 値」の対応表で書いてください", nil, "")
 		return nil, false
 	}
-	allowed := []string{"author", "cover", "date", "subtitle", "template", "title"}
+	allowed := frontMatterNames()
 	meta := &jobj{}
 	hasTitle := false
 	for k, key := range n.keys {

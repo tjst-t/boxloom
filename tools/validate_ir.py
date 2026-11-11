@@ -4,6 +4,9 @@
 使い方:
     python3 tools/validate_ir.py FILE.json ...   # 検査する。誤りは JSON で標準出力に出す
     python3 tools/validate_ir.py --self-test     # 例の正しいものが通り、断られるべきものが断られるか
+    python3 tools/validate_ir.py --bundle OUT.json [--self-test | FILE.json ...]
+        # schema/ の代わりに `boxloom schema` の出力(その irSchema)で検査する。
+        # 外を参照しない1つの文書なので、registry を使わずに読めることも確かめる
 
 Schema で書けない検査(id の一意性・target の指す先・日付の前後など)は
 Go の `go run . check deck.json`(boxloom/check.go)がする。
@@ -45,6 +48,13 @@ def make_validator():
     entry = registry.contents(ENTRY)
     Draft202012Validator.check_schema(entry)
     return Draft202012Validator(entry, registry=registry)
+
+
+def make_bundle_validator(path):
+    """`boxloom schema` の出力の irSchema だけで検査する(外の Schema を読まない)。"""
+    schema = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))["irSchema"]
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema)
 
 
 def pointer(path):
@@ -115,7 +125,11 @@ def self_test(validator):
 
 
 def main(argv):
-    validator = make_validator()
+    if argv[:1] == ["--bundle"] and len(argv) >= 2:
+        validator = make_bundle_validator(argv[1])
+        argv = argv[2:]
+    else:
+        validator = make_validator()
     if argv == ["--self-test"]:
         return 0 if self_test(validator) else 1
     if not argv:

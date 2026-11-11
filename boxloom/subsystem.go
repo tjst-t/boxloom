@@ -13,6 +13,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 )
@@ -77,10 +78,38 @@ type SubsystemFactory func(data any) (Subsystem, error)
 // テンプレートは Clone した表の一部を Override で差し替える。
 type SubsystemRegistry struct {
 	factories map[string]SubsystemFactory
+	decls     map[string]SubsystemDecl
+}
+
+// SubsystemDecl はサブシステムが名乗るもの(作者・AI に見せる書き方)。
+// 描き方(Factory)とは別に持ち、Override で描き方を差し替えても変わらない
+// (意味の形はサブシステムの種類が決め、テンプレートが変えるのは見た目だけ)。
+type SubsystemDecl struct {
+	// Schema は IR のブロック({type: "subsystem", subsystem, variant?, data})の
+	// JSON Schema(schema/subsystems/*.schema.json と同じもの)。
+	Schema json.RawMessage
+	// Markdown は Markdown のコードブロックで書くときの、Schema に書けない
+	// 約束事(範囲の A .. B など)。1つずつ短い文で。
+	Markdown []string
 }
 
 func NewSubsystemRegistry() *SubsystemRegistry {
-	return &SubsystemRegistry{factories: map[string]SubsystemFactory{}}
+	return &SubsystemRegistry{factories: map[string]SubsystemFactory{}, decls: map[string]SubsystemDecl{}}
+}
+
+// Declare は登録済みの種類に、名乗るもの(Schema など)を付ける。
+func (r *SubsystemRegistry) Declare(kind string, d SubsystemDecl) error {
+	if _, ok := r.factories[kind]; !ok {
+		return fmt.Errorf("cannot declare unknown subsystem %q (known: %v)", kind, r.Kinds())
+	}
+	r.decls[kind] = d
+	return nil
+}
+
+// Decl は種類が名乗るものを返す(無ければ ok=false)。
+func (r *SubsystemRegistry) Decl(kind string) (SubsystemDecl, bool) {
+	d, ok := r.decls[kind]
+	return d, ok
 }
 
 // Register は種類を足す。同じ名前がすでにあれば誤り(うっかり上書きを防ぐ)。
@@ -117,6 +146,9 @@ func (r *SubsystemRegistry) Clone() *SubsystemRegistry {
 	for k, f := range r.factories {
 		c.factories[k] = f
 	}
+	for k, d := range r.decls {
+		c.decls[k] = d
+	}
 	return c
 }
 
@@ -133,6 +165,7 @@ func (r *SubsystemRegistry) Kinds() []string {
 func DefaultSubsystems() *SubsystemRegistry {
 	r := NewSubsystemRegistry()
 	must(r.Register("gantt", NewGanttSubsystem))
+	must(r.Declare("gantt", ganttDecl()))
 	return r
 }
 

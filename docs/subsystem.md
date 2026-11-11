@@ -106,6 +106,10 @@ CSS の min-content / max-content と同じ考え方を、PPT のスライドの
 - コアは既定の表(`DefaultSubsystems()`:いまは `gantt` だけ)を持ちます。
 - テンプレートは `Clone()` した表に `Override` で自分の描き方を入れます。
   コンテンツのデータ(`GanttChart`)は変わらず、描き方だけが変わります。
+- 種類は `Declare(kind, SubsystemDecl{Schema, Markdown})` で、作者に見せるもの
+  (IR のブロックの JSON Schema と、Markdown で書くときの約束事)を名乗ります。
+  `boxloom schema` がこれを集めます(`docs/schema-command.md`)。`Override` で描き方を
+  差し替えても名乗るものは変わりません。
 - `Override` は無い名前を断り、`Register` は重複を断ります。打ち間違いを黙って
   通さないためです。
 - **理由**:Memory の「部品とサブシステムはコードで書く」に合わせ、差し替えの

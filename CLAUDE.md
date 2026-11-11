@@ -108,6 +108,11 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
 - **意味の中間表現(IR)**:どの記法も JSON の IR に落とし、テンプレートは IR だけを
   見る。Schema は `schema/`(入口 `boxloom-ir.schema.json`)、設計は `docs/ir.md`、
   検査は `python3 tools/validate_ir.py`。
+- **AI に渡す一覧**:`go run . schema [-template 名前]` が、テンプレートが名乗る囲み・
+  属性・サブシステムの Schema と、IR の Schema(外を参照しない1つの文書)を1つの
+  JSON で出す(`docs/schema-command.md`)。囲みは `Template.Blocks`、サブシステムは
+  登録簿の `Declare` で名乗る。Go は `schema/` の写し `boxloom/schemas/` を埋め込む
+  (`schema/` を直したら `go generate`)。
 
 ## アーキテクチャ: コアの二層構造(レイアウトとサブシステム)
 
@@ -174,6 +179,8 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     パーサー(YAML の部分集合も自前)。`go run . parse deck.bx.md`、`build` は
     `.md` もそのまま受け取る。詳細は `docs/content-syntax.md` の8章。
     発表者ノートは `:::notes`(`md_notes.go`、3.6)→ IR の `notes` → PPTX のノート
+  - `vocab.go` / `schema_cmd.go` = `go run . schema`。名乗る囲み・文書の頭の
+    キー・記法の約束事の表と、それを1つの JSON に組むコマンド
   - `main.go` = デモコンテンツとfill-ratioリンター(本物の
     `content_fill_ratio()`/`lint_fill_ratio()`の移植)。`go build .` →
     `./boxloom` で `out/` 配下に `boxloom_dark.pptx`/`boxloom_light.pptx`

@@ -1,0 +1,658 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/core.schema.json",
+  "title": "Boxloom IR core (0.1)",
+  "description": "意味の中間表現(IR)のコア。意味だけを持ち、色・座標・大きさ・Box の組み方は持たない。サブシステムのデータは $dynamicRef の差し込み口(#subsystem)で受け、中身の検査は boxloom-ir.schema.json が差し込む各サブシステムの Schema に任せる。",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "エディタや AI に Schema を知らせるための URI(検査には使わない)。",
+      "type": "string"
+    },
+    "boxloom": {
+      "description": "IR の版。",
+      "const": "0.1"
+    },
+    "template": {
+      "description": "使うテンプレートの名前。値の表・規則・骨組み・部品はテンプレートが持つ。",
+      "$ref": "#/$defs/name"
+    },
+    "meta": {
+      "$ref": "#/$defs/meta"
+    },
+    "slides": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/slide"
+      }
+    }
+  },
+  "required": [
+    "boxloom",
+    "slides"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "name": {
+      "description": "テンプレート名・変種名・サブシステム名などの識別子。",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "variant": {
+      "description": "テンプレートが用意した名前つきの変種(例 dense)。どの名前があるかはテンプレートが決め、Schema では形だけを検査する。",
+      "$ref": "#/$defs/name"
+    },
+    "id": {
+      "description": "参照のための識別子(注釈の対象など)。文書の中で一意にする。",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    },
+    "date": {
+      "description": "年月(YYYY-MM)か年月日(YYYY-MM-DD)。",
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$"
+    },
+    "dateRange": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/date"
+        },
+        "to": {
+          "$ref": "#/$defs/date"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "additionalProperties": false
+    },
+    "lines": {
+      "description": "意味のある改行を持つ短いラベル(例 グループ名の各行)。1行なら文字列でよい。",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ]
+    },
+    "inline": {
+      "description": "文中の表現。ただの文字列か、文字列とインライン要素の並び。見た目(太字・色・大きさ)ではなく意味(強調・コード・リンク)だけを書く。",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/inlineElement"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "inlineElement": {
+      "description": "インライン要素。type で種類を選ぶ。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "em",
+            "code",
+            "link",
+            "br"
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "em"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/inlineEm"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "code"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/inlineCode"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "link"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/inlineLink"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "br"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/inlineBreak"
+          }
+        }
+      ]
+    },
+    "inlineEm": {
+      "description": "強調。どう見せるか(太字・色)はテンプレートが決める。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "em"
+        },
+        "content": {
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "type",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "inlineCode": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "code"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "inlineLink": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "link"
+        },
+        "href": {
+          "type": "string",
+          "format": "uri"
+        },
+        "content": {
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "type",
+        "href",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "inlineBreak": {
+      "description": "意味のある改行(段落の中で行を分けたいとき)。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "br"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "subtitle": {
+          "$ref": "#/$defs/inline"
+        },
+        "author": {
+          "$ref": "#/$defs/inline"
+        },
+        "date": {
+          "$ref": "#/$defs/date"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "slide": {
+      "description": "スライド。type で種類を選ぶ。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "cover",
+            "content"
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "cover"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/coverSlide"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "content"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/contentSlide"
+          }
+        }
+      ]
+    },
+    "coverSlide": {
+      "description": "表紙。title などを省くと meta の値を使う。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "cover"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "subtitle": {
+          "$ref": "#/$defs/inline"
+        },
+        "author": {
+          "$ref": "#/$defs/inline"
+        },
+        "notes": {
+          "$ref": "#/$defs/notes"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "contentSlide": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "content"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          }
+        },
+        "notes": {
+          "$ref": "#/$defs/notes"
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "notes": {
+      "description": "発表者ノート(スライドには出ない)。文字だけの文字列で、改行が段落の区切り。",
+      "type": "string"
+    },
+    "block": {
+      "description": "スライドの本文に並べるブロック。type で種類を選ぶ。subsystem は差し込み口。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "paragraph",
+            "points",
+            "compare",
+            "note",
+            "subsystem"
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "paragraph"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/paragraph"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "points"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/points"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "compare"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/compare"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "note"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/note"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "subsystem"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$dynamicRef": "#subsystem"
+          }
+        }
+      ]
+    },
+    "paragraph": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "paragraph"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "content": {
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "type",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "points": {
+      "description": "箇条。入れ子にできる。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "points"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/pointItem"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "pointItem": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/inline"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "content": {
+              "$ref": "#/$defs/inline"
+            },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/pointItem"
+              }
+            }
+          },
+          "required": [
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "compare": {
+      "description": "選択肢の比較。選択肢ごとに良い点と悪い点を持つ。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "compare"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/compareOption"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "additionalProperties": false
+    },
+    "compareOption": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/inline"
+        },
+        "pros": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/inline"
+          }
+        },
+        "cons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/inline"
+          }
+        }
+      },
+      "required": [
+        "label"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "pros"
+          ]
+        },
+        {
+          "required": [
+            "cons"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "note": {
+      "description": "補足・注記。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "note"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "content": {
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "type",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "subsystem": {
+      "$dynamicAnchor": "subsystem",
+      "description": "サブシステムの差し込み口の既定。コアだけで検査したときは、名前と data があることだけを見る。data の中身は、boxloom-ir.schema.json が差し込む各サブシステムの Schema が検査する。",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "subsystem"
+        },
+        "subsystem": {
+          "$ref": "#/$defs/name"
+        },
+        "variant": {
+          "$ref": "#/$defs/variant"
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "subsystem",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

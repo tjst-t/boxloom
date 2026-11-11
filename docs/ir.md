@@ -130,6 +130,12 @@ IR は人が書くものではなく、パーサーの出力・AI の構造化�
 サブシステムを持つときは、同じ形の入口をテンプレート側で作れば、そのテンプレート
 用の検査になる。
 
+Go からは、サブシステムの Schema を登録簿の `Declare`(`SubsystemDecl.Schema`)で
+名乗らせる。`boxloom schema` はテンプレートの登録簿から、そのテンプレートで書ける
+サブシステムだけを差し込んだ1つの Schema(`irSchema`)を組む
+(`docs/schema-command.md`)。Go は `schema/` の写し `boxloom/schemas/` を埋め込む
+(直したら `go generate`)。
+
 ブロックの `type` を `"gantt"` にせず `"subsystem"` + 名前にしたのは、コアの
 ブロック名とサブシステム名の名前空間を分けるため(サブシステムがいくら増えても、
 コアのブロックの名前と衝突しない)。

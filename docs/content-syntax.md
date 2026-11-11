@@ -330,6 +330,8 @@ annotations:
 
 - `boxloom schema` で、いまのテンプレートとサブシステムが名乗る囲み・属性・
   サブシステムの Schema を、まとめて JSON で出す。AI にはこれを渡す。
+  `-template 名前` でそのテンプレートの分だけに絞る。出力の形は
+  `docs/schema-command.md`(IR を直接書くための Schema も `irSchema` に同梱する)。
 - 推奨の流れ: 書く → `boxloom check` → 誤りを渡して直させる、を誤りが無くなるまで回す。
 - 構造化出力で確実に書かせたいときは、Markdown ではなく IR(JSON)を直接書かせてよい。
   `boxloom fmt --to md` で IR から Boxloom Markdown に戻せるようにする(往復できること)。

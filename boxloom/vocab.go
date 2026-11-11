@@ -1,0 +1,169 @@
+// 作者(人と AI)に見せる「書けるもの」の表。
+//
+//   - 意味ブロック(囲み)は、テンプレートが名乗る(Template.Blocks)。いまの
+//     テンプレート(dark・light)はどちらも既定の一式(defaultBlocks)を名乗る。
+//     Markdown のパーサーはまだテンプレートを知らずに読むので、既定の一式で検査する。
+//   - サブシステムは、登録簿の SubsystemDecl で Schema と Markdown の約束事を名乗る。
+//   - 文書の頭・文中の記法はコアの記法(docs/content-syntax.md の3章)。
+//
+// `boxloom schema`(schema_cmd.go)はここから1つの JSON を組む。
+package main
+
+import (
+	"embed"
+	"encoding/json"
+	"sort"
+)
+
+// schemas/ はリポジトリ直下の schema/ の写し(go:embed は上の階層を読めないため)。
+// schema/ を直したら `go generate` で写し直す。写しがずれると
+// TestEmbeddedSchemasInSync が落ちる。
+//
+//go:generate sh -c "rm -rf schemas && cp -r ../schema schemas"
+//go:embed schemas
+var schemaFS embed.FS
+
+func embeddedSchema(name string) json.RawMessage {
+	b, err := schemaFS.ReadFile("schemas/" + name)
+	if err != nil {
+		panic(err)
+	}
+	return json.RawMessage(b)
+}
+
+// BlockDecl は1つの囲み(:::名前)が名乗るもの。
+type BlockDecl struct {
+	Name string `json:"name"`
+	// Label は名前の後ろに書く文の意味(空なら書けない)。
+	Label string `json:"label,omitempty"`
+	// LabelRequired は Label が必須か。
+	LabelRequired bool `json:"labelRequired,omitempty"`
+	// Inside は置ける場所(親の囲みの名前)。空なら本文に置く。
+	Inside []string `json:"inside,omitempty"`
+	// Contains は中に書けるもの(囲みの名前、または "本文"・"箇条")。
+	Contains []string `json:"contains"`
+	// MinChildren は Contains の囲みが最低いくつ要るか(0 は決まりなし)。
+	MinChildren int `json:"minChildren,omitempty"`
+	// Attributes は {名前=値} で書ける属性。
+	Attributes []string `json:"attributes"`
+	Meaning    string   `json:"meaning"`
+	// IR はできる IR の場所。
+	IR string `json:"ir"`
+}
+
+// defaultBlocks は第一版の囲み(docs/content-syntax.md の3.4)。名前の順。
+func defaultBlocks() []BlockDecl {
+	return []BlockDecl{
+		{Name: "compare", Contains: []string{"option"}, MinChildren: 2, Attributes: []string{"variant"},
+			Meaning: "選択肢の比較", IR: "compare"},
+		{Name: "cons", Inside: []string{"option"}, Contains: []string{"箇条"}, Attributes: []string{},
+			Meaning: "悪い点", IR: "compare.options[].cons"},
+		{Name: "note", Contains: []string{"本文"}, Attributes: []string{"variant"},
+			Meaning: "注記・但し書き", IR: "note"},
+		{Name: "option", Label: "選択肢の名前", LabelRequired: true, Inside: []string{"compare"},
+			Contains: []string{"pros", "cons"}, MinChildren: 1, Attributes: []string{},
+			Meaning: "比較の1つの選択肢", IR: "compare.options[](label が名前)"},
+		{Name: "pros", Inside: []string{"option"}, Contains: []string{"箇条"}, Attributes: []string{},
+			Meaning: "良い点", IR: "compare.options[].pros"},
+	}
+}
+
+// coreBlocks はテンプレートに依らずコアが持つ囲み(見た目を持たないもの)。
+func coreBlocks() []BlockDecl {
+	return []BlockDecl{
+		{Name: "notes", Contains: []string{"段落", "箇条"}, Attributes: []string{},
+			Meaning: "発表者ノート。スライドの本文の一番外側に1枚に1つ。最初の # より前なら表紙のノート。見た目には何も足さない",
+			IR:      "スライドの notes(文字だけの文字列)"},
+	}
+}
+
+// knownFences は Markdown のパーサーが受け付ける囲みの名前(コアと既定の一式)。
+var knownFences = blockNames(append(coreBlocks(), defaultBlocks()...))
+
+func blockNames(bs []BlockDecl) []string {
+	var out []string
+	for _, b := range bs {
+		out = append(out, b.Name)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// ganttDecl は Gantt サブシステムが名乗るもの。
+func ganttDecl() SubsystemDecl {
+	return SubsystemDecl{
+		Schema: embeddedSchema("subsystems/gantt.schema.json"),
+		Markdown: []string{
+			"中身は YAML で、キーは IR の data と同じ。知らないキーは誤り",
+			"日付は YYYY-MM か YYYY-MM-DD の文字列。範囲は `A .. B` か `{from: A, to: B}`",
+			"状態は意味役割名(support・conditional・none・danger)だけ。色は書けない",
+			"注釈は位置や上下を持たない。付ける先を target(グループか行の id)で示す",
+			"文の値(label・text・凡例の説明)は本文と同じ文中の記法で読む。YAML の列で書くと各行を意味のある改行でつなぐ",
+			"グループの label は列で書くと行の配列になる",
+			"YAML は部分集合:参照(& *)・タグ(!)・複数文書・複数行の値・ブロックの文字列(| >)は誤り。真偽値は true / false だけ",
+			"値の中に「: 」を書くときは \"…\" で囲む",
+		},
+	}
+}
+
+// frontMatterKey は文書の頭のキー(docs/content-syntax.md の3.1)。
+type frontMatterKey struct {
+	Key      string `json:"key"`
+	Meaning  string `json:"meaning"`
+	Required bool   `json:"required,omitempty"`
+	IR       string `json:"ir"`
+}
+
+func frontMatterKeys() []frontMatterKey {
+	return []frontMatterKey{
+		{"title", "文書の題(表紙に使う)。文中の記法で読む", true, "meta.title"},
+		{"subtitle", "副題", false, "meta.subtitle"},
+		{"author", "作者", false, "meta.author"},
+		{"date", "日付(YYYY-MM-DD か YYYY-MM の文字列)", false, "meta.date"},
+		{"template", "テンプレートの名前", false, "template"},
+		{"cover", "表紙を出すか(true / false、既定 true)", false, "先頭の {type: cover} のスライド"},
+	}
+}
+
+// frontMatterNames は文書の頭に書けるキーの名前(名前の順)。
+func frontMatterNames() []string {
+	var out []string
+	for _, k := range frontMatterKeys() {
+		out = append(out, k.Key)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// bodySyntax は本文で使える書き方(3.3)。
+type bodySyntaxItem struct {
+	Syntax  string `json:"syntax"`
+	Meaning string `json:"meaning"`
+	IR      string `json:"ir"`
+}
+
+func bodySyntax() []bodySyntaxItem {
+	return []bodySyntaxItem{
+		{"段落", "文", "paragraph"},
+		{"- 項目 / 1. 項目", "箇条(入れ子は2段まで)", "points(入れ子は {content, items})"},
+		{"**…**", "強調(太字という見た目ではなく、強調という意味)", "インラインの em"},
+		{"`…`", "コード・識別子", "インラインの code"},
+		{"[文](URL)", "リンク", "インラインの link"},
+		{"行末の \\", "意味のある改行", "インラインの br"},
+	}
+}
+
+// markdownRules は記法全体の約束事(2章・3章の要点)。
+func markdownRules() []string {
+	return []string{
+		"`# 題` が1枚のスライドの始まり。行末に {variant=名前} を書ける。1枚目の # より前に本文を書くのは誤り",
+		"`---`(水平線)はスライドの区切りではなく誤り",
+		"小見出し(##)・表・画像・:::takeaway・:::columns は予定で、いまは誤り。### 以下の見出しは使えない",
+		"囲みは :::名前 で開き、同じ数のコロンの ::: で閉じる。閉じの省略は誤り。中に囲みを入れるときは外側のコロンを1つ増やす。入れ子は3段まで",
+		"囲みの書き方は `:::名前 見出しの文 {属性=値}`。名乗っていない囲み・属性は誤り",
+		"サブシステムは言語名つきのコードブロック(```名前)で、中身は YAML。言語名の後ろに {variant=名前} を書ける",
+		"斜体(*…*)・取り消し線・脚注・生の HTML・サブシステムでないコードブロックは誤り",
+		"見た目(色・大きさ・位置)は書けない。見た目はテンプレートが決める",
+		"段落の中の改行は次の行とつながる(つなぎ目の両側が英数字のときだけ空白を入れる)",
+	}
+}

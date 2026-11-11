@@ -53,7 +53,12 @@ type Template struct {
 	// Variants はこのテンプレートが用意した変種の名前(IR の variant)。
 	// いまのデモのテンプレートは1つも持たない。
 	Variants map[string]bool
+	// Blocks はこのテンプレートが名乗る囲み(:::名前)。`boxloom schema` が出す。
+	Blocks []BlockDecl
 }
+
+// TemplateNames は LookupTemplate が引けるテンプレートの名前(既定は light)。
+var TemplateNames = []string{"dark", "light"}
 
 // LookupTemplate は名前からテンプレートを引く。
 func LookupTemplate(name string) (*Template, error) {
@@ -66,7 +71,7 @@ func LookupTemplate(name string) (*Template, error) {
 	default:
 		return nil, fmt.Errorf("unknown template %q (known: dark, light)", name)
 	}
-	return &Template{Name: name, Theme: th, Values: defaultValues(), Subsystems: DefaultSubsystems().Clone(), Variants: map[string]bool{}}, nil
+	return &Template{Name: name, Theme: th, Values: defaultValues(), Subsystems: DefaultSubsystems().Clone(), Variants: map[string]bool{}, Blocks: defaultBlocks()}, nil
 }
 
 // BuiltSlide は1枚分の組み立ての結果。
