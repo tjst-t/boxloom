@@ -51,6 +51,31 @@
       "updatedAt": "2026-11-11T02:00:01.638Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "slide-patterns",
+      "number": 3,
+      "kind": "story",
+      "title": "第1層:スライドのパターンの語彙を増やす",
+      "status": "backlog",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [
+        "vision",
+        "patterns",
+        "m2"
+      ],
+      "body": "## なぜ\n3層の構想の一番外の層。内容の型(比較・推移・構成比・因果・強調・引用…)を限られたパターンに分け、それぞれの描き方を持つ。\n\n## いまの語彙\nスライドは表紙と本文の2種類。本文のブロックは paragraph・points・compare(option/pros/cons)・note・subsystem だけ。表・画像も無い(content-syntax.md の7章で未決)。\n\n## 進め方\n先に語彙の文書を作り、どれをパターン(ブロック)、どれをサブシステムにするかの線を引く。それから1つずつ足す。どれも IR・Schema・Markdown・テンプレート(dark/light)・試験・例・schema の出力を揃える。",
+      "doneWhen": "語彙の文書があり、そこで優先とした型が IR から PPTX まで通り、dark/light で画像にした確かめがある",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T02:00:01.708Z",
+      "updatedAt": "2026-11-11T02:00:01.708Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
