@@ -151,7 +151,7 @@
       "number": 50,
       "kind": "task",
       "title": "見本の文書:「AI が社会に与える影響」を調べて全部の語彙を使ったデッキを作る",
-      "status": "in-progress",
+      "status": "done",
       "parent": "verify-hypothesis",
       "dependsOn": [
         "light-conditional-1",
@@ -165,7 +165,7 @@
       "labels": [],
       "body": "人の依頼:内容が微妙だと出来も微妙になるので、しっかりした題材で見本を作る。題材は「AI が社会に与える影響」。インターネットで調べ(出典つき)、全サブシステム(gantt・shapes・process・orgchart・matrix・funnel・chart)と全ブロック・スライドの型を使う。作るのは Fable(claude-fable-5-1)のサブエージェント。#45〜#49 が入ってから。業務に関係する固有名は書かない(BOXLOOM_FORBIDDEN_TERMS の検査を通す)。check の警告0件(fill-ratio を含む)を目標。",
       "doneWhen": "examples/md/ に .bx.md、out/ に light・dark の PPTX があり、check の誤り0件・警告0件(残すなら理由を書く)、LibreOffice の絵を人に見せた。",
-      "resolution": null,
+      "resolution": "a756174。28枚、light・dark とも check の誤り0・警告0、validate_pptx・ci.sh 通過。絵は .tmp-sc/aideck/。エンジンの不具合の候補は .tmp-sc/aideck/engine-issues.md(節目の重なり・chart の単位の折り返し・stat の値の折り返し)。",
       "refs": [],
       "threads": [
         {
@@ -174,8 +174,8 @@
         }
       ],
       "createdAt": "2026-11-11T05:56:10.642Z",
-      "updatedAt": "2026-11-11T06:08:26.310Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T06:51:58.803Z",
+      "closedAt": "2026-11-11T06:51:58.803Z",
       "extra": {}
     },
     {
