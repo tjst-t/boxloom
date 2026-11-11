@@ -1285,7 +1285,7 @@
       "number": 54,
       "kind": "bug",
       "title": "stat:値が長いと単位が次の行に落ちる(「ド/ル」)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -1295,9 +1295,14 @@
       "doneWhen": "値と単位が途中で折れない。入らないときは check が警告する。試験・docs・SKILL.md の直し方の表を更新。ci.sh go python pptx が通る。LibreOffice の絵で確かめる。",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "d1b7bf47-5614-4e05-b83e-3348f4104465"
+        }
+      ],
       "createdAt": "2026-11-11T07:08:10.238Z",
-      "updatedAt": "2026-11-11T07:08:10.238Z",
+      "updatedAt": "2026-11-11T07:09:43.486Z",
       "closedAt": null,
       "extra": {}
     },
