@@ -1216,6 +1216,27 @@
       "updatedAt": "2026-11-11T05:23:36.676Z",
       "closedAt": "2026-11-11T05:23:36.676Z",
       "extra": {}
+    },
+    {
+      "id": "gantt-2",
+      "number": 51,
+      "kind": "bug",
+      "title": "Gantt:節目が時間軸の上で近いと★と文字が重なるのに警告が無い",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "見本 ai-society(#50)を作りながら Fable が見つけた。節目(milestones)が近い日付だと★と文字が重なるが、check も build も何も言わない。見本では節目を1つ減らして避けた。直し方は、重なりを測って段をずらす(注釈と同じく置けなければ警告)か、少なくとも警告 milestone-overlap を出す。再現は examples/md/ai-society.bx.md の gantt に節目を近づけて足す。",
+      "doneWhen": "近い節目の文字が重ならない(段をずらす)か、重なるときは警告が出る。試験・例・docs/subsystem.md・SKILL.md の直し方の表を更新。ci.sh go python pptx が通る。LibreOffice の絵で確かめる。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T07:08:09.865Z",
+      "updatedAt": "2026-11-11T07:08:09.865Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
