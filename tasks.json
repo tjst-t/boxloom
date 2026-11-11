@@ -589,7 +589,7 @@
       "number": 26,
       "kind": "task",
       "title": "サブシステム:比較のマトリクス(行×列の評価を役割名で)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "canvas-patterns",
       "dependsOn": [
         "pattern-vocabulary",
@@ -600,7 +600,7 @@
       "labels": [],
       "body": "表(第1層)との線引きは pattern-vocabulary で決める。各セルの評価は support/conditional/none/danger のような役割名。",
       "doneWhen": "schema/subsystems に Schema、Markdown の囲み、dark/light の描き方、試験、例がある",
-      "resolution": null,
+      "resolution": "matrix サブシステム(セルは状態の丸+文、見出しの揃え、使った状態だけの凡例、check の matrix-cells)。table との線引きを patterns.md 2.1 に追記。main aacaef4。",
       "refs": [],
       "threads": [
         {
@@ -609,8 +609,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:58.942Z",
-      "updatedAt": "2026-11-11T04:46:30.858Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:07:42.163Z",
+      "closedAt": "2026-11-11T05:07:42.163Z",
       "extra": {}
     },
     {
