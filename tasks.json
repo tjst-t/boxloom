@@ -436,7 +436,7 @@
       "number": 21,
       "kind": "task",
       "title": "表(GFM の表を受け、PPTX の本物の表で出す)",
-      "status": "ready",
+      "status": "done",
       "parent": "slide-patterns",
       "dependsOn": [
         "pattern-vocabulary"
@@ -446,12 +446,12 @@
       "labels": [],
       "body": "編集できる PPTX なので、図形の寄せ集めではなく a:tbl で出す。列の幅は中身から測る。行が多すぎるときははみ出しの警告。",
       "doneWhen": "IR・Schema・Markdown・dark/light の描き方・試験・例が揃い、LibreOffice で表として編集できる",
-      "resolution": null,
+      "resolution": "GFM の表→本物の a:tbl(配置指定は誤り、列幅は中身から測る)。LibreOffice・python-pptx で表として読めることを確認。main 27e6af1。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:02:58.852Z",
-      "updatedAt": "2026-11-11T02:02:58.852Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:14:25.800Z",
+      "closedAt": "2026-11-11T05:14:25.800Z",
       "extra": {}
     },
     {
