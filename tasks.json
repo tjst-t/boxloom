@@ -831,6 +831,27 @@
       "updatedAt": "2026-11-11T02:02:59.118Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "gantt-span-text-overflow",
+      "number": 37,
+      "kind": "bug",
+      "title": "Gantt の破線の区間の文字が2行に折り返して区間の箱からはみ出す",
+      "status": "backlog",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "examples/ir/gantt-full.json(dark)の第1世代 Loom 3/4/5 の行で、破線の区間「Store X は Loom 4 非対応のため移行先になり得ない」が2行に折り返し、2行目が区間の箱(行の高さ)の下へはみ出す。LibreOffice で画像にして見つけた(verification-screenshots/fonts_compare_gantt-full.png の両側)。字体の変更とは関係なく、以前からある。",
+      "doneWhen": "区間の文字が箱に収まる(1行に切り詰める・行を高くする・警告を出す、のどれかを決めて実装)ことを画像で確かめている",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T02:48:30.993Z",
+      "updatedAt": "2026-11-11T02:48:30.993Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
