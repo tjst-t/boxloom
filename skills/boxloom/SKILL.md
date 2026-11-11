@@ -78,7 +78,8 @@ Speaker notes go here. Plain paragraphs and bullets only.
 
 - `# Title` starts a slide. **Write the title as the conclusion**, not the topic
   ("The old cluster loses support in 2028", not "Cluster status").
-- `---` is not a slide separator (it is an error). `##` and deeper headings are errors.
+- `---` is not a slide separator (it is an error). `##` and deeper headings are errors
+  (a group title is written as `:::column Title`, not as a subheading).
 - Body: paragraphs, `- ` / `1. ` bullets (two levels max), `**emphasis**`
   (one kind of emphasis only), `` `code` ``, `[text](url)`, trailing `\` for a
   meaningful line break. No italics, strikethrough, footnotes, HTML.
@@ -129,12 +130,16 @@ Available now (check `boxloom schema` — more may have been added):
 | 1–4 numbers to show strongly, with no series to compare | `::::stat` → `:::value 3 → 12 {unit=models}` + one-line label inside | 5+ numbers or a time series is a chart/table, not stat. The value is written as-is and must contain a digit |
 | Someone else's words | `:::quote Source text` + the words inside | The source (heading text) is required. Never quote your own conclusion |
 | One sentence to emphasise inside a normal slide | `:::takeaway` + one sentence | At most one per slide, usually last |
+| Rows × columns of plain text or numbers | GFM table: `\| A \| B \|` + `\| --- \| --- \|` + rows | First row is the header; every row has one cell per column (`table-shape`). **No alignment markers** (`:--`, `--:` are errors); numeric columns are right-aligned for you. Cells are inline only. A line `: caption` right after the table is its caption. Ratings in cells → `matrix` (below) |
 | Rows × columns where every cell is a rating (supported / conditional / not / risk) | ```` ```matrix ```` | `columns: [A, B]`, `rows: [{label, cells: [{status, text?}]}]`, optional `legend: {support: Good}`. One cell per column (`matrix-cells`). Cells that are plain text or numbers are a table, not a matrix |
 | 3–7 steps without dates, in a direction (the output of one is the input of the next) | ```` ```process ```` | `steps: [{title, detail?, status?, emphasis?}]`, optional `caption`. Numbers (1. 2. …) and arrows are added for you; long processes wrap to a second row |
 | Two or more options, each with pros and cons | `:::compare` → `:::option` → `:::pros` / `:::cons` | If 3+ shared criteria apply to every option, a matrix fits better (above) |
 | A parent with children (and grandchildren): team set-up, ownership | ```` ```orgchart ```` | `root: {title, detail?}`, `units: [{title, detail?, members: [{title, detail?}]}]`. 3 levels max. Not for unrelated teams side by side |
 | Stages whose count shrinks (visits → sign-ups → paid) | ```` ```funnel ```` | `stages: [{label, value, note?}]`, optional `unit`. `value` is a number or text; bar widths are stepped, not proportional. Values that grow are warned (`funnel-increase`) — use `process` for plain steps |
 | A dated plan, periods, deadlines, statuses over time | ```` ```gantt ```` | States are `support`, `conditional`, `none`, `danger` (roles, not colors). Hardware/support-risk periods are a group `risk: A .. B`. Annotations point at a group/row `id` via `target`; the subsystem places them |
+| 2–3 parallel groups read side by side ("this year / next year / not doing") | `::::columns` → `:::column Group title` (2 or 3) | Each group holds paragraphs, bullets, one table, one image or `:::note`. No nested columns, compare, gallery or figures. Widths are not numbers: mark the one main group `{role=main}` (the others support it) or leave all equal. 4+ one-line groups → bullets. Not for one argument split in two |
+| An image that shows the point (screenshot, photo, drawing) | a paragraph containing only `![alt text](images/x.png "caption")` | Alt text is required (`image-alt`). Path is relative to the deck file; no URLs, absolute paths or `..` (`image-path`). PNG or JPEG only (`image-format`). Kept in proportion, never cropped. Image + text side by side → `::::columns` with the image in one group |
+| 2–6 images compared or in sequence | one paragraph with 2–6 `![alt](path "caption")` | Becomes a gallery (one row for 2–3, a grid for 4–6). 7+ is an error: split the slide |
 | Parallel points | bullets | 2 levels max |
 | Connected prose | paragraph | 2–3 sentences |
 | A caveat / footnote-like remark | `:::note` | One short line |
@@ -143,14 +148,14 @@ Available now (check `boxloom schema` — more may have been added):
 In all four figures above you write only text, `status` (`support`, `conditional`,
 `none`, `danger`) and `emphasis: true`; position, size and colour come from the template.
 
-Patterns described in `docs/patterns.md` but **not in the schema yet** (columns,
-table, image, chart) are errors until `boxloom schema` lists them. When the schema lists
-them, prefer them in the order of `docs/patterns.md` §4 (R1–R14).
+Patterns described in `docs/patterns.md` but **not in the schema yet** (chart) are
+errors until `boxloom schema` lists them. When the schema lists them, prefer them in the
+order of `docs/patterns.md` §4 (R1–R14).
 
 Until then:
 
-- A short number series → bullets with the numbers, or a `gantt` if the values are
-  dated periods. Do not draw charts with `shapes`.
+- A short number series → a `table` (or bullets with the numbers), or a `gantt` if the
+  values are dated periods. Do not draw charts with `shapes`.
 
 Example of the text patterns (full deck: `examples/md/text-patterns.bx.md`):
 
@@ -173,6 +178,29 @@ It now ends on one screen.
 :::takeaway
 Most of the drop came from the **first registration** flow
 :::
+```
+
+Example of groups, a table and an image (full deck: `examples/md/blocks.bx.md`):
+
+```
+# Merging the front desks halves the handling time
+
+:::::columns
+::::column Merge the front desks {role=main}
+One screen replaces four. Duplicate input disappears.
+
+- Screens: 4 → 1
+::::
+::::column Measured
+| Item | Now | After |
+| --- | --- | --- |
+| Handling time | 6 min | 3 min |
+::::
+:::::
+
+# The new screen fits the list and the totals on one page
+
+![Prototype screen: desks listed on the left, weekly counts as bars on the right](images/screen.png "Prototype (fictional)")
 ```
 
 `>` blockquotes are an error; use `:::quote`. A unit containing spaces cannot be
@@ -281,6 +309,7 @@ text, 16:9):
 | One-line bullets on an otherwise empty slide | 15 fit; **aim for 3–6** |
 | Characters per full-width line | ~65 CJK characters, ~100 Latin characters |
 | Characters per line inside a `compare` column | ~30 CJK characters |
+| Table rows (12 pt cells, one line each) | ~16 under a title with nothing else; keep tables to ≤ 8 rows and ≤ 5 columns |
 | Gap between blocks | 16 pt (a new block costs this plus its own height) |
 
 Targets that read well (not hard limits):
@@ -331,7 +360,9 @@ Fixes by code:
 | `unclosed-block` | Count colons: each `:::name` needs a closing line with the same number of colons; outer fences have one more colon than inner ones |
 | `misplaced-content` | The block is in the wrong place or has too few children (`option` only inside `compare`, `compare` needs 2+ options, `notes` only at top level) |
 | `unknown-block`, `unknown-attribute`, `unknown-key` | Use only names from `expected` / `boxloom schema` |
-| `planned-syntax`, `unsupported-syntax`, `raw-html` | Rewrite with what exists (§3); no tables, images, `##`, italics or HTML unless the schema lists them |
+| `planned-syntax`, `unsupported-syntax`, `raw-html` | Rewrite with what exists (§3); no `##`, italics, table alignment markers or HTML |
+| `table-shape` | Give every table row exactly as many cells as the header (empty cell: `\| \|`) |
+| `image-alt`, `image-path`, `image-missing`, `image-format` | Write alt text; use a path relative to the deck file (no URL, `/…` or `..`); make sure the file exists next to the deck and is PNG or JPEG |
 | `yaml` | Restricted YAML (§2): quote values starting with `*`, remove anchors and multi-line values |
 | `missing-key`, `invalid-value`, `schema` | Compare with the subsystem schema in `irSchema` |
 | `date-order`, `date-valid`, `within-span` | Gantt dates: `from` before `to`, real dates, inside `span` |
@@ -339,7 +370,7 @@ Fixes by code:
 | `template-values` | The custom template file (`-template ./my.json`) is invalid: the `file`/`line`/`path` point into that file, not your deck. Fix the template or use a bundled one |
 | `shape-bounds`, `role-exists`, `connector-self` | `shapes`: keep within 0–1, use theme role names, connect two different shapes |
 | `matrix-cells` | `matrix`: give every row exactly one cell per column |
-| `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently |
+| `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently. Inside `columns` the path ends in `/columns/C/body/K`: shorten that group or move it to its own slide |
 | `fill-ratio` (warning) | Slide is mostly empty: merge with a neighbour, add the missing figure or evidence, or keep it if it is a deliberate one-line message |
 | `gantt-segment-label` (warning) | A Gantt bar is too narrow for its label: shorten the label, or move the explanation to an `annotation` / row `note` and leave the segment label short or empty |
 | `shapes-overlap`, `shapes-text-overflow`, `annotation-overlap`, `subsystem-min` (warnings) | Move/enlarge shapes, shorten text, or give the figure its own slide |

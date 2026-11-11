@@ -32,8 +32,9 @@ you build your own agent and need a deterministic PPTX backend.
 
 ## What you get
 
-- **Native PPTX.** Titles are real layout placeholders, text is real text, and
-  connectors are real connectors, so the result stays editable as ordinary slides.
+- **Native PPTX.** Titles are real layout placeholders, text is real text, tables are
+  real tables, images are real pictures (with alt text), and connectors are real
+  connectors, so the result stays editable as ordinary slides.
   Output is validated against the ECMA-376 schemas and opened with LibreOffice in CI;
   a compatibility matrix for PowerPoint, Keynote and Google Slides is in progress.
 - **Strict input with useful errors.** Unknown blocks, attributes and keys are errors.
@@ -45,6 +46,10 @@ you build your own agent and need a deterministic PPTX backend.
 - **Subsystems for complex figures.** A Gantt chart and a constrained raw-shape canvas are
   included. Subsystems declare their natural, minimum and maximum size, and the layout
   engine negotiates with them.
+- **Tables, images and parallel groups as plain Markdown.** GFM tables, `![alt](path)`
+  images (PNG/JPEG, alt text required, paths relative to the deck) and `::::columns`;
+  widths and alignment come from the template, never from the content. As a library,
+  images are read only from an `fs.FS` you pass (`BuildOptions.Assets`).
 - **Zero dependencies.** Go standard library only.
 
 ![A diagram drawn with the shapes subsystem (fictional data)](verification-screenshots/shapes_light.png)
