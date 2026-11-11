@@ -77,6 +77,9 @@
     "captionGap": 4
   },
   "marks": {
+    "slideSource": "出典:",
+    "date": "{YYYY}年{M}月{D}日",
+    "yearMonth": "{YYYY}年{M}月",
     "point": "・",
     "subPoint": "– ",
     "pro": "＋ ",

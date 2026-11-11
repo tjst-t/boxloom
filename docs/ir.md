@@ -54,16 +54,17 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 
 ```
 文書   { boxloom: "0.1", template?, meta?, slides: [スライド] }
+meta   { title, subtitle?, author?, date?, confidential?, disclaimer? }   日付・機密区分・免責は文書に1回
 スライド  { type: "cover",     variant?, title?, subtitle?, author?, notes? }
-         { type: "content",   variant?, title, body: [ブロック], notes? }
+         { type: "content",   variant?, title, body: [ブロック], source?, notes? }
          { type: "section",   variant?, title, notes? }          章の区切り(本文なし)
-         { type: "statement", variant?, content, notes? }        言うことが1文だけ(本文なし)
+         { type: "statement", variant?, content, source?, notes? }        言うことが1文だけ(本文なし)
 ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem   (どれも type で選ぶ)
          takeaway { content }                                     本文の中の結論の1文
          stat     { items: [{ value: "3 → 12", unit?: "機種", label }] }   1〜4個
          quote    { content, source }                             出どころは必須
 並列     { type: "columns", columns: [{ title?, role?: "main", body: [paragraph|points|note|table|image] }] }  (2〜3個)
-表       { type: "table", header: [セル], rows: [[セル]], caption? }   (セルはインライン。どの行も見出しと同じ数)
+表       { type: "table", header: [セル], rows: [[セル]], total?: [セル], caption? }   (セルはインライン。どの行も見出しと同じ数。total は合計の行)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
 サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel" | "chart", variant?, data: {…} }
@@ -218,6 +219,32 @@ Schema では書けないので `boxloom check` が見る。
   差分で読めるように)。代わりの文 `alt` は必須で、空白だけも不可。
   `caption` は画像の下に出す説明の文(インライン)。
 
+### 11. 根拠の置き場所:出典・日付・機密区分・免責・合計の行(#47)
+
+資料の根拠(どこから来た数か・いつの時点か・誰に見せてよいか)を、注記(`note`)に
+混ぜずに意味として持つ。
+
+- **出典はスライドの `source`(インライン)。** 本文のブロックではなくスライドの欄にした。
+  出典は本文の読む流れに入らず、どのブロックの後ろに置くかに意味が無いため(置き場所は
+  テンプレートの骨組みが決める。dark / light は本文の下・フッターの上に、頭に
+  `marks.slideSource` を付けた小さな控えめな字)。本文のスライドと主張のスライドが持てる。
+  表紙と区切りは持たない(Schema が断る)。1枚に1つで、複数の出どころは1つの文に書く
+  (改行は `br`)。他人の言葉の出どころは従来どおり `quote` の `source`、但し書きは `note`。
+- **日付・機密区分・免責は `meta`。** `date`(`YYYY-MM-DD` か `YYYY-MM`)・`confidential`
+  (機密区分の短い文。例「社外秘」)・`disclaimer`(文書全体の免責・但し書き)。文書に1回だけ
+  書き、どこに出すかはテンプレートが決める(dark / light は日付・機密区分・免責を表紙の下に、
+  機密区分を本文と主張のスライドのフッターの作者の隣にも)。日付の見せ方(`2026年11月11日`
+  など)はテンプレートの値の表の `marks.date`・`marks.yearMonth`(`docs/template-values.md`)。
+  スライドごとに「(デモ)」「架空」と注記で繰り返さないための置き場所。
+- **合計の行は表の `total`(セルの並び)。** `rows` の最後の行ではなく別の欄にした。
+  「この行は合計」は意味で、見た目(太字・上の濃い線)と PPTX の `a:tbl` の `lastRow` は
+  テンプレートが決める。セルの数は見出しと同じ(違えば `boxloom check` の `table-shape`、
+  path は `…/total`)。合計の値が正しいかは計算しない(書いたとおりに出す)。Markdown では
+  表の説明の行の属性 `{total=last}` で書く(`docs/content-syntax.md` の3.7。GFM の表に
+  合計の行の書き方が無いのは記法の都合で、IR には持ち込まない)。
+- 本文の領域(はみ出し・容量の測り)は、出典の枠の高さと gap を引いたものになる
+  (下の「はみ出しの測り方」)。
+
 ## 意味の検査(boxloom check)
 
 JSON Schema では書けない検査は Go の `boxloom check` がする。
@@ -263,10 +290,10 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `shape-bounds` | shapes の座標・大きさ・線の点が 0〜1 にあり、`x+w`・`y+h` が 1 以下(path は和が越えた `w`・`h`) |
 | `role-exists` | shapes の色(`fill`・`line`・`textColor`・`color`)の役割名が、そのテンプレートのテーマにある |
 | `connector-self` | shapes のコネクタの `from` と `to` が同じ図形 |
-| `empty-text` | 区切りの `title`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label` に、見える文字がある(Schema は `""` や空白だけを通す) |
+| `empty-text` | 区切りの `title`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label`・スライドの `source`・`meta` の `confidential` と `disclaimer` に、見える文字がある(Schema は `""` や空白だけを通す) |
 | `matrix-cells` | matrix の各行の `cells` の数が `columns` の数と同じ(path はその行の `cells`) |
 | `matrix-emphasis` | matrix の `emphasis`(推す列)が `columns` の見出しのどれか(文中の記法を除いた文字)と同じ(path は `…/data/emphasis`) |
-| `table-shape` | 表の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R`) |
+| `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`) |
 | `image-path` | 画像の `src` が文書からの相対パス(URL・絶対パス・`..`・`\` は断る) |
 | `image-missing` | 画像のファイルが読める(`CheckOptions.Assets` から。コマンドは文書のフォルダ) |
 | `image-format` | 画像が PNG か JPEG(中身で見る。SVG・GIF などは断る) |
@@ -300,7 +327,8 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 並べた後の座標でははみ出しが見えず、文字が重なったり詰まったりするだけになる。
 `layout-overflow` は「縮めなければ要る高さ」を測り直して比べる(`boxloom/overflow.go`)。
 
-- **本文の領域** = ページの内側の高さ − 題とフッターが要る高さ − その間の gap。
+- **本文の領域** = ページの内側の高さ − 題・出典(`source` があるとき)・フッターが要る高さ
+  − その間の gap。
 - **ブロックが要る高さ** = 並べた幅で文字を折り返した高さ。サブシステムは自己申告の
   最小の高さ(`Min`)まで縮めてよいので、`Min` で測る(自然な高さより縮んでも、
   `Min` が収まればはみ出しにしない)。
@@ -355,7 +383,7 @@ check でも断られるもの。
 "capacity": [{
   "file": "deck.bx.md", "line": 37,          // .md なら Markdown の行(IR なら省く)
   "path": "/slides/1",
-  "bodyArea": 414.1,      // 本文の領域(ページの内側 − 題・フッター − gap)
+  "bodyArea": 414.1,      // 本文の領域(ページの内側 − 題・出典・フッター − gap)
   "need": 210.2,          // ブロックを縮めずに積んだ高さ(ブロックの間の gap を含む)
   "remaining": 203.9,     // bodyArea − need。負ならはみ出している
   "blockGap": 16,         // ブロックの間の gap。新しいブロックを足すなら先にこれが要る

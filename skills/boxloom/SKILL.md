@@ -58,6 +58,9 @@ python3 -c "import json;d=json.load(open('/tmp/schema.json'));print(json.dumps(d
 title: Moving the reporting service to the new cluster
 subtitle: Plan and options (fictional example)
 author: Platform team
+date: 2026-11-11
+confidential: Internal
+disclaimer: All names and figures are fictional
 template: light
 ---
 
@@ -67,8 +70,8 @@ template: light
 - 14 services still run there; 9 can move without code changes
 - Moving takes about 6 weeks per service group
 
-:::note
-All dates are illustrative
+:::source
+Vendor support notice of 2026-09; service inventory as of October 2026
 :::
 
 :::notes
@@ -107,7 +110,11 @@ Speaker notes go here. Plain paragraphs and bullets only.
   :::::
   ```
 
-- `:::notes` (speaker notes) must sit at the top level of a slide, once per slide.
+- `:::notes` (speaker notes) and `:::source` (where the slide's numbers come from) must
+  sit at the top level of a slide, once per slide each.
+- `date`, `confidential` and `disclaimer` in the front matter are written **once for the
+  deck**; the template puts them on the cover (and `confidential` in the footer). Never
+  repeat "fictional" / "confidential" in a `:::note` on every slide.
 - Figures are fenced code blocks whose language is the subsystem name, body in a
   restricted YAML: no anchors/aliases (`&`, `*`), no tags, no multi-line values,
   no `|`/`>` blocks; booleans only `true`/`false`; dates are strings
@@ -126,12 +133,12 @@ Available now (check `boxloom schema` — more may have been added):
 | Content | Use | Notes |
 |---|---|---|
 | A chapter break | `# Part 2: How we migrate {type=section}` | Heading text is the chapter title; nothing but `:::notes` may follow. Not a table of contents — when the deck has two or more sections, the template draws the chapter list with the current one highlighted on every section slide by itself |
-| The slide says exactly one sentence; the evidence is on other slides | `# Migration must move two years earlier {type=statement}` | Heading text is the sentence; nothing but `:::notes` may follow. If you would add reasons, use a normal slide with the conclusion as title |
+| The slide says exactly one sentence; the evidence is on other slides | `# Migration must move two years earlier {type=statement}` | Heading text is the sentence; nothing but `:::notes` and `:::source` may follow. If you would add reasons, use a normal slide with the conclusion as title |
 | 1–4 numbers to show strongly, with no series to compare | `::::stat` → `:::value 3 → 12 {unit=models}` + one-line label inside | 5+ numbers or a time series is a chart/table, not stat. The value is written as-is and must contain a digit |
 | A series of numbers (3+ points): ranking, change over time, share of a whole, distribution, relation of two quantities | ```` ```chart ```` | `compare:` `item` / `timeSeries` / `component` / `frequency` / `correlation` — the chart type is chosen for you (never write bar/line/pie). `categories: [...]`, `series: [{name, values: [...]}]` (one value per category, unquoted numbers, max 3 series), optional `unit`, `emphasis: [category]` (one series) or `emphasis: true` on one series, `stacked: true` when series are parts of a total. `correlation` uses `xAxis: {title, unit?}`, `yAxis` and `points: [[x, y], …]` instead of categories. `component` (share) has 1 series and ≤ 6 parts — merge small parts into "Other" |
 | Someone else's words | `:::quote Source text` + the words inside | The source (heading text) is required. Never quote your own conclusion |
 | One sentence to emphasise inside a normal slide | `:::takeaway` + one sentence | At most one per slide, usually last |
-| Rows × columns of plain text or numbers | GFM table: `\| A \| B \|` + `\| --- \| --- \|` + rows | First row is the header; every row has one cell per column (`table-shape`). **No alignment markers** (`:--`, `--:` are errors); numeric columns are right-aligned for you. Cells are inline only. A line `: caption` right after the table is its caption. Ratings in cells → `matrix` (below) |
+| Rows × columns of plain text or numbers | GFM table: `\| A \| B \|` + `\| --- \| --- \|` + rows | First row is the header; every row has one cell per column (`table-shape`). **No alignment markers** (`:--`, `--:` are errors); numeric columns are right-aligned for you. Cells are inline only. A line `: caption` right after the table is its caption. If the last row is a total, end that line with `{total=last}` (`: Estimates {total=last}`, or just `: {total=last}`); it is drawn as a total row. Totals are not computed — write the value. Put a unit once in the caption or header, not in every cell. Ratings in cells → `matrix` (below) |
 | Rows × columns where every cell is a rating (supported / conditional / not / risk) | ```` ```matrix ```` | `columns: [A, B]`, `rows: [{label, cells: [{status, text?}]}]`, optional `legend: {support: Good}`. One cell per column (`matrix-cells`). The recommended option: `emphasis: <column heading text>` (exactly as written in `columns`, `matrix-emphasis`) — never say "the blue column" in prose. Cells that are plain text or numbers are a table, not a matrix |
 | 3–7 steps without dates, in a direction (the output of one is the input of the next) | ```` ```process ```` | `steps: [{title, detail?, status?, emphasis?}]`, optional `caption`. Numbers (1. 2. …) and arrows are added for you; long processes wrap to a second row. If you use `status`, say what it means in `legend: {conditional: Needs approval}` (`figure-legend`) |
 | Two or more options, each with pros and cons | `:::compare` → `:::option` → `:::pros` / `:::cons` | If 3+ shared criteria apply to every option, a matrix fits better (above) |
@@ -143,7 +150,9 @@ Available now (check `boxloom schema` — more may have been added):
 | 2–6 images compared or in sequence | one paragraph with 2–6 `![alt](path "caption")` | Becomes a gallery (one row for 2–3, a grid for 4–6). 7+ is an error: split the slide |
 | Parallel points | bullets | 2 levels max |
 | Connected prose | paragraph | 2–3 sentences |
-| A caveat / footnote-like remark | `:::note` | One short line |
+| Where the slide's numbers, table, figure or quote come from (source, sample size, date) | `:::source` at the top level of the slide, one paragraph | **Every slide that shows numbers, a table, a chart or a quote gets one.** Content and statement slides only (not section). Placed by the template under the body, above the footer; it takes room from the body (`layout-overflow` counts it). One per slide: several sources go in one paragraph |
+| Deck-wide date, confidentiality, disclaimer ("all figures are fictional") | front matter `date`, `confidential`, `disclaimer` | Written once; shown on the cover (and `confidential` in the footer) |
+| A caveat / footnote-like remark | `:::note` | One short line. Not for sources (`:::source`), not for the deck-wide disclaimer (front matter), and never for the conclusion or a key number |
 | A diagram whose positions/links carry meaning and none of the above fits | ```` ```shapes ```` | **Last resort**, see §3.1 |
 
 In all four figures above you write only text, `status` (`support`, `conditional`,
@@ -217,7 +226,24 @@ One screen replaces four. Duplicate input disappears.
 written yet (attribute values are single words).
 
 Text next to a figure: put the one or two lines of conclusion as a paragraph or bullets
-**after** the figure; use `:::note` only for a caveat ("dates are illustrative").
+**after** the figure; use `:::note` only for a caveat ("dates are illustrative") and
+`:::source` for where the data comes from. Example with a source and a total row
+(full deck: `examples/md/evidence.bx.md`):
+
+```
+# Merging the help desks pays back in the first year
+
+| Item | Year 1 (k$) | Year 2 (k$) |
+| --- | --- | --- |
+| New intake system | 120 | 0 |
+| Staff cost saved | −180 | −180 |
+| Net | −60 | −180 |
+: Costs are vendor quotes {total=last}
+
+:::source
+Quotes from three vendors (Oct 2026); staff cost from the 2026 desk roster
+:::
+```
 
 ### 3.1 `gantt` example
 
@@ -435,5 +461,6 @@ one line fits if `remainingBodyLines ≥ 1`; a new block fits if its height is b
 - Do not use names of real companies, products or people in examples unless the user
   supplied them as the content.
 - Every slide title is a conclusion. One message per slide.
+- Every slide that shows numbers, a table, a chart or a quote has a `:::source`.
 - Finish only when `check` reports no errors and no warnings. If you keep a warning on
   purpose (rare), tell the user which one and why.

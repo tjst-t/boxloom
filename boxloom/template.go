@@ -172,8 +172,26 @@ func (t *Template) buildCover(d *IRDeck, s *IRSlide) *BuiltSlide {
 		kids = append(kids, t.text(subtitle, v.CoverSubtitle, th.c("text_muted"), false, WithPlaceholder("subTitle")))
 	}
 	kids = append(kids, Col(nil, WithGrow(2))) // 下の余白(題を少し上に置く)
+	// 下の段: 作者・日付、その下に機密区分・免責(文書の頭の値)。
+	var foot []*Spec
 	if author != nil {
-		kids = append(kids, t.text(author, v.CoverAuthor, th.c("text_muted"), false))
+		foot = append(foot, t.text(author, v.CoverAuthor, th.c("text_muted"), false))
+	}
+	if d.Meta != nil && d.Meta.Date != "" {
+		foot = append(foot, TextNode(t.Marks.formatDate(d.Meta.Date), WithFontSize(v.CoverAuthor), WithColor(th.c("text_muted"))))
+	}
+	if d.Meta != nil && d.Meta.Confidential != nil {
+		foot = append(foot, t.text(d.Meta.Confidential, v.Small, th.c("text_primary"), true))
+	}
+	if d.Meta != nil && d.Meta.Disclaimer != nil {
+		foot = append(foot, t.text(d.Meta.Disclaimer, v.Small, th.c("text_muted"), false))
+	}
+	switch len(foot) {
+	case 0:
+	case 1:
+		kids = append(kids, foot[0])
+	default:
+		kids = append(kids, Col(foot, WithGap(v.ItemGap)))
 	}
 	root := Col(kids, WithGap(v.SectionGap), WithPadding(v.CoverPadding), WithBackground(th.c("bg")))
 	return &BuiltSlide{Root: root, Notes: s.Notes}
@@ -193,25 +211,47 @@ func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, erro
 	}
 	body := Col(blocks, WithGap(v.BlockGap), WithGrow(1))
 
-	root := Col([]*Spec{
+	kids := []*Spec{
 		t.text(s.Title, v.SlideTitle, th.c("text_primary"), true, WithPlaceholder("title")),
 		body,
-		t.footer(d, i),
-	}, WithGap(v.SectionGap), WithPadding(v.PagePadding), WithBackground(th.c("bg")))
+	}
+	if s.Source != nil {
+		kids = append(kids, t.slideSource(s.Source))
+	}
+	kids = append(kids, t.footer(d, i))
+	root := Col(kids, WithGap(v.SectionGap), WithPadding(v.PagePadding), WithBackground(th.c("bg")))
 	return &BuiltSlide{Root: root, Body: body, Notes: s.Notes}, nil
 }
 
-// footer は本文のスライドの下の行(作者と「何枚目 / 全部」)。
+// footer は本文のスライドの下の行(左に作者と機密区分、右に「何枚目 / 全部」)。
 func (t *Template) footer(d *IRDeck, i int) *Spec {
 	v, th := t.Values, t.Theme
 	left := ""
 	if d.Meta != nil && d.Meta.Author != nil {
 		left = d.Meta.Author.Plain()
 	}
+	leftSpec := TextNode(left, WithFontSize(v.Small), WithColor(th.c("text_muted")))
+	if d.Meta != nil && d.Meta.Confidential != nil {
+		conf := t.text(d.Meta.Confidential, v.Small, th.c("text_primary"), true)
+		if left == "" {
+			leftSpec = conf
+		} else {
+			leftSpec = Row([]*Spec{leftSpec, conf}, WithGap(v.BlockGap))
+		}
+	}
 	return Row([]*Spec{
-		TextNode(left, WithFontSize(v.Small), WithColor(th.c("text_muted"))),
+		leftSpec,
 		TextNode(fmt.Sprintf("%d / %d", i+1, len(d.Slides)), WithFontSize(v.Small), WithColor(th.c("text_muted")), WithAlign("right")),
 	}, WithJustify(JustifySpaceBetween))
+}
+
+// slideSource はスライドの出典。本文の箱の外(本文の下・フッターの上)に、控えめな
+// 色の小さな字で、頭に marks.slideSource を付けて置く。骨組みの名前つきの枠なので、
+// 本文の領域(容量・はみ出しの測り)はこの高さを引いたものになる。
+func (t *Template) slideSource(in Inline) *Spec {
+	v, th := t.Values, t.Theme
+	runs := append([]TextRun{{Text: t.Marks.SlideSource, Color: th.c("text_muted")}}, t.runs(in, th.c("text_muted"), false)...)
+	return RichTextNode(runs, WithFontSize(v.Small))
 }
 
 // accentRule は表紙の題の下と同じアクセントの短い線。
@@ -292,8 +332,12 @@ func (t *Template) buildStatement(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
 		t.text(s.Content, v.StatementText, th.c("text_primary"), true, WithPlaceholder("title")),
 		Col(nil, WithGrow(3)),
 	}, WithGap(v.SectionGap), WithPadding(v.StatementInset), WithGrow(1))
-	root := Col([]*Spec{main, t.footer(d, i)},
-		WithGap(v.SectionGap), WithPadding(v.PagePadding), WithBackground(th.c("bg")))
+	kids := []*Spec{main}
+	if s.Source != nil {
+		kids = append(kids, t.slideSource(s.Source))
+	}
+	kids = append(kids, t.footer(d, i))
+	root := Col(kids, WithGap(v.SectionGap), WithPadding(v.PagePadding), WithBackground(th.c("bg")))
 	return &BuiltSlide{Root: root, Main: main, MainWhat: "statement", Notes: s.Notes}
 }
 

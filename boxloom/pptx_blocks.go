@@ -41,6 +41,10 @@ type TableDraw struct {
 	BodyFill   string // 本体の行の塗り
 	RuleColor  string // 行の間の線
 	RuleWidth  float64
+	// TotalRow は最後の行が合計の行か(IR の table の total)。真なら a:tbl の
+	// lastRow を立て、その行の上に TotalRuleColor の線を引く。
+	TotalRow       bool
+	TotalRuleColor string
 }
 
 // AddTable は本物の表を box の左上に置く(大きさは列の幅と行の高さの和)。
@@ -72,8 +76,8 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 	fmt.Fprintf(&b, `<p:graphicFrame>
 <p:nvGraphicFramePr><p:cNvPr id="%d" name="Table %d"/><p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr>
 <p:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></p:xfrm>
-<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr firstRow="1"/><a:tblGrid>`,
-		s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(w), ptToEMU(h))
+<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr firstRow="1"%s/><a:tblGrid>`,
+		s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(w), ptToEMU(h), lastRowAttr(t.TotalRow))
 	for _, cw := range t.ColWidths {
 		fmt.Fprintf(&b, `<a:gridCol w="%d"/>`, ptToEMU(cw))
 	}
@@ -98,6 +102,19 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 		// 線は行の下だけ(見出しの下と行の間。最後の行の下にも引いて表の終わりを示す)。
 		lnT := noLine("lnT")
 		lnB := rule("lnB")
+		if t.TotalRow && t.TotalRuleColor != "" {
+			// 合計の行の上の線は濃い色(本体の行と見分ける)。同じ線を上の行の下の線
+			// としても書く(隣り合うセルの線はアプリによってどちらかが勝つため)。
+			dark := func(tag string) string {
+				return fmt.Sprintf(`<a:%s w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:%s>`, tag, ptToEMU(t.RuleWidth), hexColor(t.TotalRuleColor), tag)
+			}
+			switch r {
+			case len(t.Cells) - 1:
+				lnT = dark("lnT")
+			case len(t.Cells) - 2:
+				lnB = dark("lnB")
+			}
+		}
 		for _, c := range row {
 			fmt.Fprintf(&b, `<a:tc><a:txBody><a:bodyPr/><a:lstStyle/>%s</a:txBody><a:tcPr marL="%d" marR="%d" marT="%d" marB="%d">%s%s%s%s%s</a:tcPr></a:tc>`,
 				p.cellParaXML(c, t.FontSize), ptToEMU(t.PadX), ptToEMU(t.PadX), ptToEMU(t.PadY), ptToEMU(t.PadY),
@@ -211,4 +228,11 @@ func slideImageRels(p *PPTXBuilder) string {
 		fmt.Fprintf(&b, "\n"+`<Relationship Id="%s" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/%s"/>`, s.rid, s.media)
 	}
 	return b.String()
+}
+
+func lastRowAttr(on bool) string {
+	if on {
+		return ` lastRow="1"`
+	}
+	return ""
 }

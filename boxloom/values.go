@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -113,13 +114,19 @@ type TemplateScale struct {
 
 // TemplateMarks は部品が文の頭に置く印の文字(スタイル規則)。
 type TemplateMarks struct {
-	Point    string `json:"point"`
-	SubPoint string `json:"subPoint"`
-	Pro      string `json:"pro"`
-	Con      string `json:"con"`
-	Quote    string `json:"quote"`       // 引用の言葉の頭
-	Source   string `json:"quoteSource"` // 引用の出どころの頭
-	Unit     string `json:"statUnit"`    // 統計強調の数と単位の間(空でもよい)
+	// SlideSource はスライドの出典(source)の頭。
+	SlideSource string `json:"slideSource"`
+	// Date・YearMonth は文書の日付(meta.date)の書き方。{YYYY} {MM} {M} {DD} {D} を
+	// 日付の数に置き換える。YearMonth は日の無い日付(YYYY-MM)に使う。
+	Date      string `json:"date"`
+	YearMonth string `json:"yearMonth"`
+	Point     string `json:"point"`
+	SubPoint  string `json:"subPoint"`
+	Pro       string `json:"pro"`
+	Con       string `json:"con"`
+	Quote     string `json:"quote"`       // 引用の言葉の頭
+	Source    string `json:"quoteSource"` // 引用の出どころの頭
+	Unit      string `json:"statUnit"`    // 統計強調の数と単位の間(空でもよい)
 }
 
 // GanttValues は Gantt サブシステムの寸法(pt)。既定は subsystems/gantt.json。
@@ -519,6 +526,12 @@ func checkMarks(m TemplateMarks) error {
 			return fmt.Errorf("marks.%s: must not be empty", name)
 		}
 	}
+	if err := checkDateMark("date", m.Date, true); err != nil {
+		return err
+	}
+	if err := checkDateMark("yearMonth", m.YearMonth, false); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -626,4 +639,64 @@ func defaultShapesValues() *ShapesValues {
 	})
 	sv := shapesDefaults
 	return &sv
+}
+
+// dateTokens は日付の書き方(marks.date・marks.yearMonth)に書ける置き換えの印。
+var dateTokens = []string{"{YYYY}", "{MM}", "{M}", "{DD}", "{D}"}
+
+// checkDateMark は日付の書き方を見る。年と月の印は必ず要り、日の印は withDay の
+// ときだけ要る(無いときは書けない)。知らない {…} は誤り。
+func checkDateMark(name, f string, withDay bool) error {
+	rest := f
+	for _, t := range dateTokens {
+		rest = strings.ReplaceAll(rest, t, "")
+	}
+	if strings.ContainsAny(rest, "{}") {
+		return fmt.Errorf("marks.%s: %q has an unknown {…} (known: %s)", name, f, strings.Join(dateTokens, " "))
+	}
+	has := func(ts ...string) bool {
+		for _, t := range ts {
+			if strings.Contains(f, t) {
+				return true
+			}
+		}
+		return false
+	}
+	if !has("{YYYY}") || !has("{MM}", "{M}") {
+		return fmt.Errorf("marks.%s: %q needs {YYYY} and {M} (or {MM})", name, f)
+	}
+	if withDay && !has("{DD}", "{D}") {
+		return fmt.Errorf("marks.%s: %q needs {D} (or {DD})", name, f)
+	}
+	if !withDay && has("{DD}", "{D}") {
+		return fmt.Errorf("marks.%s: %q is for dates without a day and cannot use {D} or {DD}", name, f)
+	}
+	return nil
+}
+
+// formatDate は meta.date(YYYY-MM-DD か YYYY-MM)をテンプレートの書き方にする。
+// 形が違えば書いたとおりを返す(形は読み込みと Schema が見る)。
+func (m TemplateMarks) formatDate(s string) string {
+	parts := strings.Split(s, "-")
+	if len(parts) < 2 || len(parts) > 3 {
+		return s
+	}
+	n := make([]int, len(parts))
+	for i, p := range parts {
+		v, err := strconv.Atoi(p)
+		if err != nil {
+			return s
+		}
+		n[i] = v
+	}
+	f := m.YearMonth
+	if len(parts) == 3 {
+		f = m.Date
+	}
+	r := strings.NewReplacer("{YYYY}", fmt.Sprintf("%04d", n[0]), "{MM}", fmt.Sprintf("%02d", n[1]), "{M}", strconv.Itoa(n[1]))
+	f = r.Replace(f)
+	if len(parts) == 3 {
+		f = strings.NewReplacer("{DD}", fmt.Sprintf("%02d", n[2]), "{D}", strconv.Itoa(n[2])).Replace(f)
+	}
+	return f
 }

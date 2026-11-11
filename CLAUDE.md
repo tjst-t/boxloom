@@ -248,7 +248,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `markdown.go` / `md_gantt.go` / `yaml.go` = Boxloom Markdown → IR の
     パーサー(YAML の部分集合も自前)。`go run ./cmd/boxloom parse deck.bx.md`、`build` は
     `.md` もそのまま受け取る。詳細は `docs/content-syntax.md` の8章。
-    発表者ノートは `:::notes`(`md_notes.go`、3.6)→ IR の `notes` → PPTX のノート
+    発表者ノートは `:::notes`(`md_notes.go`、3.6)→ IR の `notes` → PPTX のノート。
+    出典は `:::source`(`md_source.go`、3.6.1)→ IR のスライドの `source` → 本文の下・
+    フッターの上の枠(`docs/ir.md` の設計判断11)
   - `vocab.go` / `schema_cmd.go` = `go run ./cmd/boxloom schema`。名乗る囲み・文書の頭の
     キー・記法の約束事の表と、それを1つの JSON に組むコマンド
   - `api.go` / `doc.go` = ライブラリの入口とパッケージの説明(`docs/library.md`)

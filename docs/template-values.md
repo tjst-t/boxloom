@@ -62,6 +62,7 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 - 意味の違う役割名が同じ色(`accent` `conditional` `support` `danger` `none`
   `text_muted` の6つは互いに違う色。次の節)。
 - 印の文字が空(数と単位の間の `statUnit` だけは空でよい)。
+- 日付の書き方(`marks.date`・`marks.yearMonth`)の印の誤り(次の節の marks)。
 - `variants` に空の名前・同じ名前が2回。
 
 同梱のファイルが壊れていれば試験(`values_test.go`)が落ちる。
@@ -74,7 +75,8 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
   "theme":  { "bg": "FFFFFF", "card": "F7F9FD", "...": "..." },
   "scale":  { "spacingUnit": 4, "typeSizes": [8, 10, 12, 14, 16, 24, 36] },
   "values": { "pageWidth": 960, "pageHeight": 540, "...": 0 },
-  "marks":  { "point": "・", "subPoint": "– ", "pro": "＋ ", "con": "－ " },
+  "marks":  { "slideSource": "出典:", "date": "{YYYY}年{M}月{D}日", "yearMonth": "{YYYY}年{M}月",
+              "point": "・", "subPoint": "– ", "pro": "＋ ", "con": "－ ", "...": "..." },
   "fonts":  { "latin": "Noto Sans CJK JP", "eastAsian": "Noto Sans CJK JP",
               "fallbackFonts": ["BIZ UDPGothic", "…"], "widthMargin": 1.05, "fixedLineSpacing": true },
   "variants": [],
@@ -260,6 +262,23 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 「・」と数字・英字の間にだけ入り、数字で始まる箇条だけ頭がずれて見えたため(#42)。
 印の後ろの空白は `buChar` に入れず、字下げの幅にだけ数える。印の太さは指定
 できない(描く側の決まりに従う)。
+
+スライドの出典(`source`)の頭に置く文字は `slideSource`(dark / light は「出典:」)。
+文書の日付(`meta.date`)の見せ方は `date`(日のある日付)と `yearMonth`(`YYYY-MM` の
+日付)で、`{YYYY}`(4桁の年)・`{MM}`・`{M}`(0 を付ける・付けない月)・`{DD}`・`{D}`
+(日)を数に置き換える。dark / light は `{YYYY}年{M}月{D}日` と `{YYYY}年{M}月`。
+読み込みで、`{YYYY}` と月の印が無い・`date` に日の印が無い・`yearMonth` に日の印がある・
+知らない `{…}` があるのは誤り。
+
+出典・日付・機密区分・免責・表の合計の行の置き場所(骨組み。コード):
+
+| 意味 | dark / light |
+|---|---|
+| スライドの出典 | 本文の下・フッターの上(`small`・`text_muted`、間は `sectionGap`)。本文の領域はこの分だけ狭くなる |
+| 日付 | 表紙の作者の下(`coverAuthor`・`text_muted`) |
+| 機密区分 | 表紙の日付の下と、本文・主張のスライドのフッターの作者の右(`small`・太字・`text_primary`) |
+| 免責 | 表紙の一番下(`small`・`text_muted`) |
+| 表の合計の行 | 太字、上の線を `text_primary` に(`tableRuleWidth`)。PPTX の `a:tblPr` に `lastRow="1"` |
 
 ### fonts(字体)
 

@@ -20,7 +20,12 @@ type mdTableBlk struct {
 	rows        []mdTableLine
 	caption     mdText // 表のすぐ次の行の「: 説明」
 	captionLine int
+	attrs       string // その行の末尾の {…}(total=last)
+	attrsCol    int
 }
+
+// tableAttributeNames は表の説明の行の末尾 {…} に書ける属性。
+var tableAttributeNames = []string{"total"}
 
 var reTableDelim = regexp.MustCompile(`^:?-+:?$`)
 
@@ -104,13 +109,32 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 		p.fail(it.line, 1, path, codeMisplaced, "表に本体の行がありません", nil, "区切りの行の下に行を書いてください")
 		return nil
 	}
+	attrs := map[string]string{}
+	if tb.attrs != "" {
+		attrs = p.parseAttrs(tb.attrs, tb.captionLine, tb.attrsCol, path, tableAttributeNames)
+	}
+	total := false
+	if v, ok := attrs["total"]; ok {
+		if v != "last" {
+			p.fail(tb.captionLine, tb.attrsCol, path+"/total", codeInvalidValue, fmt.Sprintf("total の値 %q はありません", v), []string{"last"}, "表の最後の行が合計の行なら {total=last} と書きます")
+		} else if len(body) < 2 {
+			p.fail(tb.captionLine, tb.attrsCol, path+"/total", codeMisplaced, "合計の行のほかに本体の行がありません", nil, "合計の行(最後の行)の上に、合計する行を書いてください")
+		} else {
+			total = true
+		}
+	}
 	hdr := []any{}
 	for c, cell := range header {
 		hdr = append(hdr, p.parseInline(cell, fmt.Sprintf("%s/header/%d", path, c)))
 	}
 	out := []any{}
+	var totalCells []any
 	for r, row := range body {
 		rp := fmt.Sprintf("%s/rows/%d", path, r)
+		isTotal := total && r == len(body)-1
+		if isTotal {
+			rp = path + "/total"
+		}
 		tl := tb.rows[r+2]
 		p.mark(rp, tl.line)
 		if len(row) != len(header) {
@@ -121,9 +145,16 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 		for c, cell := range row {
 			cells = append(cells, p.parseInline(cell, fmt.Sprintf("%s/%d", rp, c)))
 		}
+		if isTotal {
+			totalCells = cells
+			continue
+		}
 		out = append(out, cells)
 	}
 	b := obj("type", "table", "header", hdr, "rows", out)
+	if totalCells != nil {
+		b.set("total", totalCells)
+	}
 	if len(tb.caption.r) > 0 {
 		p.mark(path+"/caption", tb.captionLine)
 		b.set("caption", p.parseInline(tb.caption, path+"/caption"))

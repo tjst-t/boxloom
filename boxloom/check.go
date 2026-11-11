@@ -220,6 +220,9 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		ids[id] = ptr
 	})
 
+	if meta, ok := getPath(doc, "meta").(map[string]any); ok {
+		c.checkNotEmpty(meta, "/meta", "confidential", "disclaimer")
+	}
 	slides, _ := getPath(doc, "slides").([]any)
 	for si, s := range slides {
 		sp := fmt.Sprintf("/slides/%d", si)
@@ -231,6 +234,7 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		case "statement":
 			c.checkNotEmpty(sm, sp, "content")
 		}
+		c.checkNotEmpty(sm, sp, "source")
 		body, _ := sm["body"].([]any)
 		for bi, blk := range body {
 			bp := fmt.Sprintf("%s/body/%d", sp, bi)
@@ -329,6 +333,9 @@ func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
 			if ok && len(header) > 0 && len(cells) != len(header) {
 				c.add(fmt.Sprintf("%s/rows/%d", bp, ri), fmt.Sprintf("row has %d cells but the header has %d (every row has one cell per column)", len(cells), len(header)), "table-shape")
 			}
+		}
+		if cells, ok := bm["total"].([]any); ok && len(header) > 0 && len(cells) != len(header) {
+			c.add(bp+"/total", fmt.Sprintf("the total row has %d cells but the header has %d (every row has one cell per column)", len(cells), len(header)), "table-shape")
 		}
 	case "image":
 		img(bm, bp)

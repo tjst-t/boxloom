@@ -268,6 +268,14 @@
         },
         "date": {
           "$ref": "#/$defs/date"
+        },
+        "confidential": {
+          "description": "機密区分の短い文(例「社外秘」)。テンプレートが表紙とフッターに出す。",
+          "$ref": "#/$defs/inline"
+        },
+        "disclaimer": {
+          "description": "文書全体の免責・但し書き(1回だけ書く)。テンプレートが表紙に出す。",
+          "$ref": "#/$defs/inline"
         }
       },
       "required": [
@@ -400,6 +408,10 @@
             "$ref": "#/$defs/block"
           }
         },
+        "source": {
+          "description": "このスライドの出典(出どころ・母数・時点)。本文の流れの外で、テンプレートが本文の下・フッターの上に置く。",
+          "$ref": "#/$defs/inline"
+        },
         "notes": {
           "$ref": "#/$defs/notes"
         }
@@ -447,6 +459,10 @@
         },
         "content": {
           "description": "言いたいことの1文。",
+          "$ref": "#/$defs/inline"
+        },
+        "source": {
+          "description": "このスライドの出典(出どころ・母数・時点)。本文の流れの外で、テンプレートが本文の下・フッターの上に置く。",
           "$ref": "#/$defs/inline"
         },
         "notes": {
@@ -1129,6 +1145,14 @@
             "items": {
               "$ref": "#/$defs/inline"
             }
+          }
+        },
+        "total": {
+          "description": "合計の行(rows の後ろに置く。セルの数は header と同じ)。テンプレートが本体の行と見分けて描く。",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/inline"
           }
         }
       },

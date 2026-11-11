@@ -54,6 +54,7 @@ func TestCheckInvalidSemanticExamples(t *testing.T) {
 		"unknown-template.json":         {"template-exists", "/template"},
 		"unknown-variant.json":          {"variant-exists", "/slides/1/variant"},
 		"table-shape.json":              {"table-shape", "/slides/1/body/0/rows/1"},
+		"table-total-shape.json":        {"table-shape", "/slides/1/body/0/total"},
 		"image-missing.json":            {"image-missing", "/slides/1/body/0/src"},
 		"image-format.json":             {"image-format", "/slides/1/body/0/src"},
 	}

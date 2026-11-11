@@ -369,6 +369,10 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 			doc.coverNotes = append(doc.coverNotes, it.fence)
 			return
 		}
+		if c == nil && it.kind == mdFence && it.fence.name == "source" {
+			p.fail(it.line, 1, "", codeMisplaced, "最初のスライド(# 題)より前に :::source は書けません(表紙は出典を持ちません)", nil, "出典はそれを示すスライドの「# 題」の行の後ろに置いてください")
+			return
+		}
 		if c == nil {
 			if !orphanReported {
 				p.fail(it.line, 1, "", codeMisplaced, "最初のスライド(# 題)より前に本文があります", nil, "本文の前に「# 題」の行を置いてください")
@@ -581,7 +585,18 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 			if i < len(lines) {
 				l := strings.TrimRight(lines[i], " \t")
 				if li := leadingSpaces(l); strings.HasPrefix(l[li:], ": ") {
-					tb.caption = lineText(strings.TrimSpace(l[li+2:]), i+1, li+3)
+					text := ""
+					if len(l) > li+2 {
+						text = l[li+2:]
+					}
+					// 行末の {…} は表の属性(total=last など)。
+					if am := reAttrs.FindStringSubmatchIndex(text); am != nil {
+						tb.attrs = text[am[2]:am[3]]
+						tb.attrsCol = li + 3 + utf8.RuneCountInString(text[:am[2]])
+						text = text[:am[0]]
+					}
+					lead := len(text) - len(strings.TrimLeft(text, " \t"))
+					tb.caption = lineText(strings.TrimSpace(text), i+1, li+3+lead)
 					tb.captionLine = i + 1
 					i++
 				}
@@ -1006,6 +1021,7 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 			sl.set("variant", v)
 		}
 		body, notes := splitNotes(s.items)
+		body, sources := splitSource(body)
 		switch typ {
 		case "content":
 			sl.set("title", p.parseInline(s.title, path+"/title"))
@@ -1016,6 +1032,13 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 		case "statement":
 			sl.set("content", p.parseInline(s.title, path+"/content"))
 			p.noSlideBody(body, path, typ)
+		}
+		if typ == "section" {
+			for _, f := range sources {
+				p.fail(f.line, 1, path, codeMisplaced, "区切りのスライド(type=section)には :::source を書けません", nil, "出典は数や引用を示す本文・主張のスライドに置いてください")
+			}
+		} else if src, ok := p.sourceInline(sources, path+"/source"); ok {
+			sl.set("source", src)
 		}
 		if n, ok := p.notesText(notes, path+"/notes"); ok {
 			sl.set("notes", n)
@@ -1099,7 +1122,7 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 			p.mark(path, line)
 		}
 		switch key {
-		case "title", "subtitle", "author":
+		case "title", "subtitle", "author", "confidential", "disclaimer":
 			if key == "title" {
 				hasTitle = true
 			}
@@ -1135,9 +1158,9 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 		p.fail(n.line, 1, "/meta", codeMissingKey, "文書の頭に title がありません", []string{"title"}, "")
 		return nil, cover
 	}
-	// meta の中の順を IR の例と揃える(title, subtitle, author, date)。
+	// meta の中の順を IR の例と揃える(title, subtitle, author, date, confidential, disclaimer)。
 	ordered := &jobj{}
-	for _, k := range []string{"title", "subtitle", "author", "date"} {
+	for _, k := range []string{"title", "subtitle", "author", "date", "confidential", "disclaimer"} {
 		for i, kk := range meta.keys {
 			if kk == k {
 				ordered.set(k, meta.vals[i])
@@ -1278,6 +1301,9 @@ func (p *mdParser) fenceBlock(f *mdFenceBlk, path string) any {
 		return p.statBlock(f, path)
 	case f.name == "notes":
 		p.fail(f.line, 1, path, codeMisplaced, "発表者ノート(:::notes)はスライドの一番外側にだけ書けます", nil, "ほかの囲みの外に出してください")
+		return nil
+	case f.name == "source":
+		p.fail(f.line, 1, path, codeMisplaced, "出典(:::source)はスライドの一番外側にだけ書けます", nil, "ほかの囲みの外に出してください。引用の出どころは :::quote の見出しの文に書きます")
 		return nil
 	case f.name == "value":
 		p.fail(f.line, 1, path, codeMisplaced, "囲み :::value は :::stat の中にだけ書けます", nil, "")

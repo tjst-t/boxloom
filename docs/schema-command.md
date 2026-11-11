@@ -80,7 +80,7 @@ go run ./cmd/boxloom schema -template ./my.json  # 外の値の表(docs/template
 |---|---|
 | `name` | `type` に書く名前(IR の `slides[].type`) |
 | `heading` | `#` の行の文の意味(種類で違う) |
-| `body` | `#` の行の後ろに書けるもの(`notes` は `:::notes`) |
+| `body` | `#` の行の後ろに書けるもの(`notes` は `:::notes`、`source` は `:::source`) |
 | `meaning` / `ir` | 意味と、できる IR の形 |
 
 ### `irSchema`
@@ -108,7 +108,7 @@ JSON Schema 2020-12 の**複合文書**。外を参照しない1つの文書で�
 | 出力 | 出どころ |
 |---|---|
 | `markdown` | `vocab.go`(`frontMatterKeys`・`bodySyntax`・`markdownRules`)。パーサーも文書の頭のキーを同じ表から引く |
-| `markdown.blocks` | `coreBlocks()`(`:::notes`) |
+| `markdown.blocks` | `coreBlocks()`(`:::notes`・`:::source`) |
 | `templates[].blocks` | `Template.Blocks`。いまは dark・light とも `defaultBlocks()`。パーサーの `knownFences` は `coreBlocks()` と `defaultBlocks()` から作る |
 | `templates[].variants` | `Template.Variants` |
 | `templates[].slides` | `Template.Slides`。いまは dark・light とも `defaultSlides()`。パーサーの `type` の検査も同じ表から引く |

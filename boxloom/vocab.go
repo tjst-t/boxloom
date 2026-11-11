@@ -104,11 +104,11 @@ type SlideDecl struct {
 // 表紙は文書の頭から作るので、ここには無い(type=cover は誤り)。
 func defaultSlides() []SlideDecl {
 	return []SlideDecl{
-		{Name: "content", Heading: "題(何の話かではなく結論の文)", Body: []string{"本文", "notes"},
+		{Name: "content", Heading: "題(何の話かではなく結論の文)", Body: []string{"本文", "notes", "source"},
 			Meaning: "本文のスライド。type を省くとこれ", IR: "{type: content, title, body}"},
 		{Name: "section", Heading: "章の題", Body: []string{"notes"},
 			Meaning: "章の変わり目(R1)。本文は書けない(目次は本文のスライドに箇条で)", IR: "{type: section, title}"},
-		{Name: "statement", Heading: "言いたいことの1文", Body: []string{"notes"},
+		{Name: "statement", Heading: "言いたいことの1文", Body: []string{"notes", "source"},
 			Meaning: "このスライドで言うことが1文だけ(R2)。根拠はほかのスライドに置く。本文は書けない", IR: "{type: statement, content}"},
 	}
 }
@@ -123,12 +123,16 @@ func slideTypeNames() []string {
 	return out
 }
 
-// coreBlocks はテンプレートに依らずコアが持つ囲み(見た目を持たないもの)。
+// coreBlocks はテンプレートに依らずコアが持つ囲み(本文のブロックではなく、スライドの
+// 欄になるもの。置き場所はスライドの一番外側)。
 func coreBlocks() []BlockDecl {
 	return []BlockDecl{
 		{Name: "notes", Contains: []string{"段落", "箇条"}, Attributes: []string{},
 			Meaning: "発表者ノート。スライドの本文の一番外側に1枚に1つ。最初の # より前なら表紙のノート。見た目には何も足さない",
 			IR:      "スライドの notes(文字だけの文字列)"},
+		{Name: "source", Contains: []string{"段落1つ"}, Attributes: []string{},
+			Meaning: "このスライドの出典(出どころ・母数・時点)。スライドの本文の一番外側に1枚に1つ。本文と主張のスライドに書ける。テンプレートが本文の下・フッターの上に置く。但し書きは note、引用の出どころは :::quote の見出しの文",
+			IR:      "スライドの source(文中の値)"},
 	}
 }
 
@@ -191,7 +195,9 @@ func frontMatterKeys() []frontMatterKey {
 		{"title", "文書の題(表紙に使う)。文中の記法で読む", true, "meta.title"},
 		{"subtitle", "副題", false, "meta.subtitle"},
 		{"author", "作者", false, "meta.author"},
-		{"date", "日付(YYYY-MM-DD か YYYY-MM の文字列)", false, "meta.date"},
+		{"date", "日付(YYYY-MM-DD か YYYY-MM の文字列)。表紙に出す(書き方はテンプレート)", false, "meta.date"},
+		{"confidential", "機密区分の短い文(例 社外秘)。表紙とフッターに出す。文中の記法で読む", false, "meta.confidential"},
+		{"disclaimer", "文書全体の免責・但し書き(1回だけ書く)。表紙に出す。文中の記法で読む", false, "meta.disclaimer"},
 		{"template", "テンプレートの名前", false, "template"},
 		{"cover", "表紙を出すか(true / false、既定 true)", false, "先頭の {type: cover} のスライド"},
 	}
@@ -222,7 +228,7 @@ func bodySyntax() []bodySyntaxItem {
 		{"`…`", "コード・識別子", "インラインの code"},
 		{"[文](URL)", "リンク", "インラインの link"},
 		{"行末の \\", "意味のある改行", "インラインの br"},
-		{"| 見出し | … |\n| --- | … |\n| セル | … |", "表(GFM の表)。1行目が見出し。列の配置の指定(:--: など)は誤り。表のすぐ次の行の「: 説明」は表の説明", "table"},
+		{"| 見出し | … |\n| --- | … |\n| セル | … |", "表(GFM の表)。1行目が見出し。列の配置の指定(:--: など)は誤り。表のすぐ次の行の「: 説明」は表の説明。その行の末尾に {total=last} を書くと最後の行が合計の行", "table"},
 		{"![代わりの文](path \"説明\")", "画像。画像だけの段落に1枚なら image、2〜6枚を並べると gallery。代わりの文は必須。path は文書からの相対パス(PNG・JPEG)", "image / gallery"},
 	}
 }
@@ -230,7 +236,7 @@ func bodySyntax() []bodySyntaxItem {
 // markdownRules は記法全体の約束事(2章・3章の要点)。
 func markdownRules() []string {
 	return []string{
-		"`# 題` が1枚のスライドの始まり。行末に {type=種類 variant=名前} を書ける。種類は slides(省けば content)。section・statement は # の行の文だけを持ち、本文は書けない(:::notes だけ書ける)。1枚目の # より前に本文を書くのは誤り",
+		"`# 題` が1枚のスライドの始まり。行末に {type=種類 variant=名前} を書ける。種類は slides(省けば content)。section・statement は # の行の文だけを持ち、本文は書けない(:::notes と、statement は :::source も書ける)。1枚目の # より前に本文を書くのは誤り",
 		"`---`(水平線)はスライドの区切りではなく誤り",
 		"小見出し(##)は使えない(IR に小見出しは無い。まとまりの題は囲みの見出しの文で書く)。### 以下の見出しも使えない",
 		"表のセルの中はインライン(強調・コード・リンク)だけ。どの行も見出しと同じ数のセル",

@@ -218,7 +218,11 @@ func numericColumns(rows [][]Inline, n int) []bool {
 // table は表の葉を作る。
 func (t *Template) table(b *IRBlock) *Spec {
 	v, th := t.Values, t.Theme
-	numeric := numericColumns(b.Rows, len(b.Header))
+	body := b.Rows
+	if b.Total != nil {
+		body = append(append([][]Inline{}, b.Rows...), b.Total)
+	}
+	numeric := numericColumns(body, len(b.Header))
 	leaf := &tableLeaf{size: v.TableText, padX: v.TableCellPadX, padY: v.TableCellPadY,
 		capSize: v.CaptionText, capGap: v.CaptionGap,
 		draw: TableDraw{HeaderFill: th.c("card_alt"), BodyFill: th.c("card"), RuleColor: th.c("grid"), RuleWidth: v.TableRuleWidth}}
@@ -236,6 +240,12 @@ func (t *Template) table(b *IRBlock) *Spec {
 	leaf.cells = append(leaf.cells, cellRow(b.Header, true))
 	for _, r := range b.Rows {
 		leaf.cells = append(leaf.cells, cellRow(r, false))
+	}
+	if b.Total != nil {
+		// 合計の行は本体の行と見分ける: 太字にし、上に濃い線を引く(TableDraw.TotalRow)。
+		leaf.cells = append(leaf.cells, cellRow(b.Total, true))
+		leaf.draw.TotalRow = true
+		leaf.draw.TotalRuleColor = th.c("text_primary")
 	}
 	leaf.natural = make([]float64, len(b.Header))
 	leaf.minimum = make([]float64, len(b.Header))

@@ -20,7 +20,7 @@ type SlideCapacity struct {
 	File      string  `json:"file,omitempty"`
 	Line      int     `json:"line,omitempty"`
 	Path      string  `json:"path"`      // /slides/S
-	BodyArea  float64 `json:"bodyArea"`  // 本文の領域の高さ(ページの内側 − 題・フッター − gap)
+	BodyArea  float64 `json:"bodyArea"`  // 本文の領域の高さ(ページの内側 − 題・出典・フッター − gap)
 	Need      float64 `json:"need"`      // ブロックを縮めずに積んだ高さ(gap を含む)
 	Remaining float64 `json:"remaining"` // bodyArea − need。負ならはみ出している
 	// BlockGap はブロックの間の gap。新しいブロックを足すなら、先にこれだけ要る。

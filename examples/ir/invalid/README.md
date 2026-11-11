@@ -1,6 +1,6 @@
 # 断られるべき IR の例
 
-どれも `../demo-deck.json`(`shapes-*.json` は `../shapes.json`、`stat-*.json`・`statement-*.json`・`quote-*.json` は `../text-patterns.json`、`figure-*.json`・`funnel-*.json` は `../figures.json`、`chart-*.json` は `../charts.json`)を1か所だけ変えたもの。
+どれも `../demo-deck.json`(`shapes-*.json` は `../shapes.json`、`stat-*.json`・`statement-*.json`・`section-*.json`・`quote-*.json` は `../text-patterns.json`、`figure-*.json`・`funnel-*.json` は `../figures.json`、`chart-*.json` は `../charts.json`)を1か所だけ変えたもの。
 表・画像・並列のまとまりの例(`table-*`・`image-*`・`column*`)は、`../blocks.json` の
 表紙とスライド1枚だけを取り出して1か所変えたもの。`tools/validate_ir.py --self-test` は、これらが全部断られることを確かめる。
 
@@ -19,6 +19,7 @@
 | `shapes-font-size.json` | shapes の字の段(textStyle)に数を書いた |
 | `shapes-hex-fill.json` | shapes の図形の塗りに役割名ではなく16進の色を書いた |
 | `statement-with-body.json` | 主張のスライドに本文(body)を足した |
+| `section-with-source.json` | 区切りのスライドに出典(source)を足した(出典は本文・主張のスライドだけ) |
 | `stat-five-items.json` | 統計強調の数を5つにした(1〜4個) |
 | `stat-value-no-digit.json` | 統計強調の数を、数字の無い言葉(多数)にした |
 | `quote-without-source.json` | 引用の出どころ(source)を消した |

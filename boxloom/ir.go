@@ -30,6 +30,10 @@ type IRMeta struct {
 	Subtitle Inline `json:"subtitle,omitempty"`
 	Author   Inline `json:"author,omitempty"`
 	Date     string `json:"date,omitempty"`
+	// Confidential は機密区分の短い文(表紙とフッター)。
+	Confidential Inline `json:"confidential,omitempty"`
+	// Disclaimer は文書全体の免責・但し書き(表紙に1回)。
+	Disclaimer Inline `json:"disclaimer,omitempty"`
 }
 
 // IRSlide はスライド。Type で cover / content / section / statement を選ぶ。
@@ -40,6 +44,7 @@ type IRSlide struct {
 	Subtitle Inline // cover だけ
 	Author   Inline // cover だけ
 	Content  Inline // statement だけ(言いたいことの1文)
+	Source   Inline // content・statement: 出典(本文の流れの外。本文の下・フッターの上)
 	Body     []IRBlock
 	Notes    string
 }
@@ -62,6 +67,7 @@ type IRBlock struct {
 
 	Header  []Inline   // table: 見出しの行
 	Rows    [][]Inline // table: 本体の行(どの行もセルの数は見出しと同じ)
+	Total   []Inline   // table: 合計の行(任意。セルの数は見出しと同じ)
 	Caption Inline     // table・image: 説明の文(任意)
 
 	Src    string    // image: 文書からの相対パス
@@ -335,6 +341,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 			Variant string            `json:"variant"`
 			Title   Inline            `json:"title"`
 			Body    []json.RawMessage `json:"body"`
+			Source  Inline            `json:"source"`
 			Notes   string            `json:"notes"`
 		}
 		if err := strictUnmarshal(b, &v); err != nil {
@@ -346,7 +353,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 		if v.Body == nil {
 			return fmt.Errorf("content slide needs \"body\"")
 		}
-		out := IRSlide{Type: v.Type, Variant: v.Variant, Title: v.Title, Notes: v.Notes}
+		out := IRSlide{Type: v.Type, Variant: v.Variant, Title: v.Title, Source: v.Source, Notes: v.Notes}
 		for i, r := range v.Body {
 			var blk IRBlock
 			if err := blk.UnmarshalJSON(r); err != nil {
@@ -376,6 +383,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 			Type    string `json:"type"`
 			Variant string `json:"variant"`
 			Content Inline `json:"content"`
+			Source  Inline `json:"source"`
 			Notes   string `json:"notes"`
 		}
 		if err := strictUnmarshal(b, &v); err != nil {
@@ -384,7 +392,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 		if v.Content == nil {
 			return fmt.Errorf("statement slide needs \"content\"")
 		}
-		*s = IRSlide{Type: v.Type, Variant: v.Variant, Content: v.Content, Notes: v.Notes}
+		*s = IRSlide{Type: v.Type, Variant: v.Variant, Content: v.Content, Source: v.Source, Notes: v.Notes}
 		return nil
 	}
 	return fmt.Errorf("unknown slide type %q (known: cover, content, section, statement)", head.Type)
@@ -513,6 +521,7 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 			Caption Inline     `json:"caption"`
 			Header  []Inline   `json:"header"`
 			Rows    [][]Inline `json:"rows"`
+			Total   []Inline   `json:"total"`
 		}
 		if err := strictUnmarshal(b, &v); err != nil {
 			return err
@@ -525,7 +534,10 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 				return fmt.Errorf("rows[%d]: row has %d cells but the header has %d", i, len(r), len(v.Header))
 			}
 		}
-		*k = IRBlock{Type: v.Type, Variant: v.Variant, Caption: v.Caption, Header: v.Header, Rows: v.Rows}
+		if v.Total != nil && len(v.Total) != len(v.Header) {
+			return fmt.Errorf("total: row has %d cells but the header has %d", len(v.Total), len(v.Header))
+		}
+		*k = IRBlock{Type: v.Type, Variant: v.Variant, Caption: v.Caption, Header: v.Header, Rows: v.Rows, Total: v.Total}
 	case "image":
 		var v struct {
 			Type    string `json:"type"`
