@@ -42,15 +42,26 @@ var defaultScenarios = []fontScenario{
 }
 
 type fontStats struct {
-	Boxes, Lines   int
-	Over           []overLine // 右へはみ出す行(-v で出す)
-	WidthOver      int        // 右へはみ出す行
-	WorstOverPt    float64    // いちばんはみ出した量(pt)
-	WorstOverPct   float64    // その行の幅に対する割合
-	WorstLine      string
-	RewrapChanged  int // 置き換わった字体で折り返し直すと行の数が変わる箱
-	HeightOver     int // 下へはみ出す箱(行の送りを固定しないとき)
-	WorstHeightPct float64
+	Boxes, Lines  int
+	Over          []overLine // 右へはみ出す行(-v で出す)
+	WidthOver     int        // 右へはみ出す行
+	WorstOverPt   float64    // いちばんはみ出した量(pt)
+	WorstOverPct  float64    // その行の幅に対する割合
+	WorstLine     string
+	RewrapChanged int // 置き換わった字体で折り返し直すと行の数が変わる箱
+	// RewrapMore・RewrapFewer はそのうち行が増える箱・減る箱。RewrapOverflow は
+	// 増えた行が枠に入りきらず下へはみ出す箱(箇条は枠の中の余りと比べる)。
+	RewrapMore, RewrapFewer, RewrapOverflow int
+	Rewraps                                 []rewrapBox // 行が増える箱(-v で出す)
+	HeightOver                              int         // 下へはみ出す箱(行の送りを固定しないとき)
+	WorstHeightPct                          float64
+}
+
+// rewrapBox は置き換わった字体で折り返し直すと行が増える箱。
+type rewrapBox struct {
+	Text      string
+	From, To  int  // Boxloom が測った行の数 → 折り返し直した行の数
+	Overflows bool // 増えた行が枠に入りきらない
 }
 
 type overLine struct {
@@ -105,13 +116,28 @@ func measurePages(pages []*PPTXBuilder, alt *FontSet) fontStats {
 		for i := range p.Shapes {
 			s := &p.Shapes[i]
 			if len(s.list) > 0 {
-				// 箇条:項目(段落)ごとに、字下げを引いた幅で測る。
+				// 箇条:項目(段落)ごとに、字下げを引いた幅で測る。増えた行は1つの枠の
+				// 中で下の項目を押し下げるので、枠の余り(枠の高さ − 測った高さ)と比べる。
+				used, added := 0.0, 0.0
+				var grown []int
 				for _, it := range s.list {
 					restore := useFonts(p.Fonts)
 					box := LBox{X: s.box.X + it.Indent, Y: s.box.Y, Width: s.box.Width - it.Indent, Height: math.Inf(1)}
 					lines := wrapRuns(it.Runs, it.Size, box.Width)
 					restore()
-					measureUnit(&st, alt, p, s, it.Runs, lines, box, it.Size)
+					used += it.SpaceBefore + float64(len(lines))*it.Size*lineHeightMult
+					before := st.RewrapMore
+					n := measureUnit(&st, alt, p, s, it.Runs, lines, box, it.Size)
+					if st.RewrapMore > before {
+						added += float64(n-len(lines)) * it.Size * lineHeightMult
+						grown = append(grown, len(st.Rewraps)-1)
+					}
+				}
+				if added > 0 && used+added > s.box.Height+0.5 {
+					st.RewrapOverflow++
+					for _, k := range grown {
+						st.Rewraps[k].Overflows = true
+					}
 				}
 				continue
 			}
@@ -137,7 +163,8 @@ func measurePages(pages []*PPTXBuilder, alt *FontSet) fontStats {
 }
 
 // measureUnit は1つの文字の枠(箇条なら1つの段落)を alt の字体で測り直して数える。
-func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []TextRun, lines [][]TextRun, box LBox, size float64) {
+// 返り値は置き換わった字体で折り返し直した行の数(折り返さない文字なら測った行の数)。
+func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []TextRun, lines [][]TextRun, box LBox, size float64) int {
 	const eps = 0.01
 	st.Boxes++
 	st.Lines += len(lines)
@@ -154,17 +181,37 @@ func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []T
 		}
 	}
 	// 折り返し直したら行の数が変わるか(描く側が自分で折り返すときの目安)。
+	n := len(lines)
 	if s.wrap || len(runs) > 0 {
-		restore := useFonts(alt)
-		var n int
+		// 描く側は余裕を掛けずに測る(置き換わった字体そのものの幅)。行の頭に
+		// 閉じの約物を置かない禁則(追い出し)も真似る。
+		bare := *alt
+		bare.WidthMargin = 1
+		restore := useFonts(&bare)
+		kinsokuGlue = true
+		defer func() { kinsokuGlue = false }()
 		if len(runs) > 0 {
 			n = len(wrapRuns(runs, size, box.Width))
 		} else {
 			n = len(wrapText(s.text, size, box.Width, s.bold))
 		}
 		restore()
-		if n != len(lines) {
+		switch {
+		case n > len(lines):
 			st.RewrapChanged++
+			st.RewrapMore++
+			over := float64(n)*size*lineHeightMult > box.Height+0.5
+			if over {
+				st.RewrapOverflow++
+			}
+			text := runsText(runs)
+			if text == "" {
+				text = s.text
+			}
+			st.Rewraps = append(st.Rewraps, rewrapBox{Text: text, From: len(lines), To: n, Overflows: over})
+		case n < len(lines):
+			st.RewrapChanged++
+			st.RewrapFewer++
 		}
 	}
 	// 行の高さ:固定しないなら字体の ascent+descent で送られる(目安)。
@@ -185,6 +232,7 @@ func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []T
 			st.WorstHeightPct = pct
 		}
 	}
+	return n
 }
 
 func scenarioFonts(sc fontScenario, base *FontSet) (*FontSet, error) {
@@ -330,12 +378,19 @@ func (fc *FontCheck) Deck(w io.Writer, file string, d *IRDeck) error {
 		if need > fc.worstNeeded[sc.Label] {
 			fc.worstNeeded[sc.Label] = need
 		}
-		fmt.Fprintf(w, "  %-32s boxes %3d lines %3d | wider lines %3d (worst +%.1fpt, %.1f%%) | rewrap changes %3d | taller boxes %3d (worst +%.0f%%) | widthMargin needed %s\n",
-			sc.Label, st.Boxes, st.Lines, st.WidthOver, st.WorstOverPt, st.WorstOverPct, st.RewrapChanged, st.HeightOver, st.WorstHeightPct, needS)
+		fmt.Fprintf(w, "  %-32s boxes %3d lines %3d | wider lines %3d (worst +%.1fpt, %.1f%%) | rewrap changes %3d (more %d, of which overflow %d; fewer %d) | taller boxes %3d (worst +%.0f%%) | widthMargin needed %s\n",
+			sc.Label, st.Boxes, st.Lines, st.WidthOver, st.WorstOverPt, st.WorstOverPct, st.RewrapChanged, st.RewrapMore, st.RewrapOverflow, st.RewrapFewer, st.HeightOver, st.WorstHeightPct, needS)
 		if st.WorstLine != "" && !fc.Verbose {
 			fmt.Fprintf(w, "  %-32s   worst line: %q\n", "", st.WorstLine)
 		}
 		if fc.Verbose {
+			for _, r := range st.Rewraps {
+				mark := "fits"
+				if r.Overflows {
+					mark = "OVERFLOWS"
+				}
+				fmt.Fprintf(w, "      rewrap %d -> %d lines %-9s %q\n", r.From, r.To, mark, r.Text)
+			}
 			for _, o := range st.Over {
 				kind := "label"
 				if o.Wrapped {

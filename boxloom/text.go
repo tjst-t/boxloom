@@ -241,8 +241,18 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 			for k := pos; k < pos+n; k++ {
 				tokW += charEmWidth(rs[k], runs[style[k]].Bold) * runSize(runs[style[k]], fontSizePt)
 			}
-			toks = append(toks, wrapTok{pos: pos, n: n, w: tokW, space: strings.TrimSpace(tok) == "", text: tok})
+			t := wrapTok{pos: pos, n: n, w: tokW, space: strings.TrimSpace(tok) == "", text: tok}
 			pos += n
+			// 禁則の追い出し(fonts の測り直しだけ):行の頭に来てはいけない閉じの約物は
+			// 前のトークンにつなげ、前の字と一緒に次の行へ送る。
+			if kinsokuGlue && len(toks) > 0 && !toks[len(toks)-1].space && strings.Contains(closers, tok) {
+				last := &toks[len(toks)-1]
+				last.n += t.n
+				last.w += t.w
+				last.text += t.text
+				continue
+			}
+			toks = append(toks, t)
 		}
 		var breaks []int // 次の行の頭のトークンの番号
 		if phrase {
@@ -301,6 +311,11 @@ func keepTokens(rs []rune, style []int, runs []TextRun) []string {
 func measureRunsHeight(runs []TextRun, fontSizePt, maxWidthPt float64) float64 {
 	return float64(len(wrapRuns(runs, fontSizePt, maxWidthPt))) * fontSizePt * lineHeightMult
 }
+
+// kinsokuGlue が true なら、閉じの約物(、。」など)を前のトークンにつなげて折る
+// (行の頭に来ない。PowerPoint の禁則の追い出しに近い)。組むときは false で、
+// fonts の測り直し(fontcheck.go)だけが描く側を真似るために立てる。
+var kinsokuGlue bool
 
 // wrapTok は折り返しの単位(トークン)。pos は文字の位置、w は幅(pt)。
 type wrapTok struct {

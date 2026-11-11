@@ -165,8 +165,16 @@ func TestFontCheckFallbacksRemoveOverflow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st := measurePages(pages, alt); st.WidthOver == 0 {
+	st := measurePages(pages, alt)
+	if st.WidthOver == 0 {
 		t.Fatal("expected wider lines with BIZ UDPGothic and the default margin")
+	}
+	// 描く側が折り返すので、広い行は行の数が増える箱として数える(増える・減るを分ける)。
+	if st.RewrapMore == 0 || st.RewrapChanged != st.RewrapMore+st.RewrapFewer || len(st.Rewraps) != st.RewrapMore {
+		t.Errorf("rewrap counts: more %d fewer %d changed %d listed %d", st.RewrapMore, st.RewrapFewer, st.RewrapChanged, len(st.Rewraps))
+	}
+	if st.RewrapOverflow == 0 {
+		t.Errorf("a box measured to its lines must overflow when a line is added")
 	}
 	same := measurePages(pages, tm.Fonts)
 	if same.WidthOver != 0 {
@@ -181,8 +189,8 @@ func TestFontCheckFallbacksRemoveOverflow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st := measurePages(pages2, alt); st.WidthOver != 0 {
-		t.Errorf("with fallback, still wider lines: %+v", st.Over)
+	if st := measurePages(pages2, alt); st.WidthOver != 0 || st.RewrapMore != 0 {
+		t.Errorf("with fallback, still wider lines or added lines: %+v %+v", st.Over, st.Rewraps)
 	}
 	activeFonts = defaultFontSet()
 }
