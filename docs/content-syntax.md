@@ -3,9 +3,9 @@
 Boxloom の作者が書くコンテンツの記法を定める。候補の比較と理由は
 `docs/content-syntax-comparison.md` にある。この文書はその「決定」を受けた仕様である。
 
-> 状態: 第一版。パーサーは未実装。要素の名前と範囲は、意味の中間表現(IR)の
-> Schema 第一版(`schema/`・`docs/ir.md`)に揃えてある。食い違ったら IR を正とする。
-> IR にまだ無いものは「予定」と書き、入るまでは誤りとして断る。
+> 状態: 第一版。Go 版にパーサーがある(`boxloom/markdown.go`。8章)。要素の名前と
+> 範囲は、意味の中間表現(IR)の Schema 第一版(`schema/`・`docs/ir.md`)に揃えてある。
+> 食い違ったら IR を正とする。IR にまだ無いものは「予定」と書き、入るまでは誤りとして断る。
 
 ## 1. 決定
 
@@ -59,7 +59,7 @@ YAML で書く。使えるキー:
 
 | キー | 意味 | 必須 |
 |---|---|---|
-| `title` | 文書の題(表紙に使う) | ○ |
+| `title` | 文書の題(表紙に使う) | ○(文書の頭を書くなら) |
 | `subtitle` | 副題 | |
 | `author` | 作者 | |
 | `date` | 日付(`YYYY-MM-DD` の文字列として扱う) | |
@@ -68,7 +68,9 @@ YAML で書く。使えるキー:
 
 表紙は文書の頭から作る。表紙のためにスライドを書く必要はない。
 IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭に `{type: "cover"}` の
-スライドが置かれる。
+スライドが置かれる。`template` は IR の根の `template` になる。文書の頭を書かなければ
+`meta` も表紙も無い。`title`・`subtitle`・`author` の値は本文と同じ文中の記法
+(`**…**` など)で読む。
 
 ### 3.2 スライド
 
@@ -90,6 +92,13 @@ IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭�
 | `[文](URL)` | リンク | インラインの `link` |
 | 行末の `\` | 意味のある改行 | インラインの `br` |
 
+段落の中の改行(行末に `\` の無いもの)は、ふつうの Markdown と同じく改行にならず
+次の行とつながる。つなぐとき、**つなぎ目の両側が英数字のときだけ空白を1つ入れ**、
+どちらかが日本語なら空白を入れない(ふつうの Markdown は常に空白を入れるので、
+日本語の文の途中に空白が入ってしまう)。
+
+`\` の後ろの記号はただの文字になる(`\*` は `*`)。`_` と `&` には意味を持たせない
+(ただの文字)。
 次は **予定**(IR 第一版に無いので、入るまでは誤り):
 
 | 書き方 | 意味 |
@@ -156,7 +165,19 @@ groups: …
   `{from, to}` に変える。複数行のラベルは YAML の配列で書く(IR の行の配列になる)。
 - YAML は落とし穴の少ない部分集合で読む: 参照(`&` `*`)・タグ(`!`)・複数文書は誤り。
   真偽値は `true` / `false` だけ(`yes` `no` `on` `off` は文字列)。
-- サブシステムの名前でないコードブロック(` ```go ` など)は、ふつうのコードとして扱う。
+- 文の値(IR でインラインのもの:`label`・`text`・凡例の説明など)は、本文と同じ
+  文中の記法で読む(`**…**`・`` `…` ``・`[文](URL)`)。**YAML の列で書くと、各行を
+  意味のある改行(`br`)でつなぐ**:`text: [ここまでに全利用者を, Board B/C へ移行予定]`。
+  グループの `label`(IR で行の配列のもの)は、列がそのまま行の配列になる。
+- 範囲は `A .. B` のほか、IR と同じ `{from: A, to: B}` でも書ける。
+- 流れの書き方(`{…}` `[…]`)は1行の中で閉じる。複数行にまたがる値・ブロックの
+  文字列(`|` `>`)は誤り。値の中に「: 」を書くときは `"…"` で囲む。
+- コードブロックの言語名の後ろに `{variant=名前}` を書ける(IR のサブシステムの
+  `variant`)。
+- サブシステムの名前でないコードブロック(` ```go ` など)と言語名の無い
+  コードブロックは、**いまは誤り(予定)**。IR 第一版にコードのブロックが無いため
+  (冒頭の「食い違ったら IR を正とする」)。IR にコードのブロックが入ったら、
+  ふつうのコードとして扱う。
 
 ## 4. 例(比較文書の3枚)
 
@@ -224,12 +245,17 @@ groups:
           - {from: 2026-09, to: 2028-08, status: support, label: 内部+外部利用}
           - {from: 2028-08, to: 2029-12, status: conditional, label: 延長要確認}
 annotations:
-  - {at: 2029-12, target: gen1, text: ここまでに全利用者を Board B/C へ移行予定, status: danger, emphasis: true}
+  - at: 2029-12
+    target: gen1
+    text: [ここまでに全利用者を, Board B/C へ移行予定]
+    status: danger
+    emphasis: true
 ```
 ````
 
-この例を IR にしたものが `examples/ir/demo-deck.json`(注釈の改行だけ IR 側で `br` を
-入れている)。
+この例は `examples/md/demo-deck.bx.md` にあり、パーサーで IR にすると
+`examples/ir/demo-deck.json` と JSON として等しくなる(試験で確かめている)。
+デモの Gantt 全体は `examples/md/gantt-full.bx.md`(↔ `examples/ir/gantt-full.json`)。
 
 比較文書の案B と違うのは、良い点・悪い点を `+` / `-` の記号ではなく `:::pros` / `:::cons`
 の名前で書くところ(2章の「約束事は名前で書く」)。
@@ -267,8 +293,34 @@ annotations:
 
 ## 7. まだ決めていないこと
 
-- 拡張子(`.bx.md` 案。ふつうの `.md` でも読めるが、エディタの扱いが変わる)。
+- 拡張子(`.bx.md` 案。パーサーは `.md` で終わるものをすべて読む)。
 - 発表者メモ(ノート)の書き方(IR にはスライドの `notes` がある)。
 - 小見出し・表・画像・`takeaway`・`columns`・スライドの `id` を IR に足すか。
 - 1つの文書を複数ファイルに分ける方法(取り込み)。
 - 囲みの属性の値の型(文字列だけか、数や真偽値も許すか)。
+
+## 8. パーサー(Go 版)
+
+```sh
+cd boxloom
+go run . parse ../examples/md/demo-deck.bx.md            # IR(JSON)を標準出力に書く
+go run . parse -format json deck.bx.md                   # 誤りを {"ok": false, "errors": [...]} で出す
+go run . build ../examples/md/demo-deck.bx.md            # .md もそのまま PPTX にする
+```
+
+- 拡張子が `.md`(`.bx.md` を含む)なら Markdown として、それ以外は IR の JSON として読む。
+  出力の名前は `deck.bx.md` → `out/deck.pptx`。
+- 誤りは最初の1件で止めず、読めるところまで全部集めて、行の順に返す。形は5章の形
+  (`file`・`line`・`column`・`path`・`code`・`message`・`expected`・`hint`)。
+  `-format text`(既定)は `file:line:column: code: message` の1行ずつ。
+- いまの `code` の一覧:`unknown-block`・`unknown-attribute`・`raw-html`・
+  `unsupported-syntax`・`planned-syntax`(仕様で「予定」のもの)・`unclosed-block`
+  (囲み・コードブロック・強調・コロンの数の不一致)・`misplaced-content`(その場所に
+  書けないもの。例 `:::option` を `:::compare` の外に書いた)・`unknown-key`・
+  `missing-key`・`invalid-value`(YAML と文書の頭の値)・`yaml`(YAML の部分集合の外)・
+  `schema`(できた IR が通らない。ふつうは起きない)。
+- Gantt のコードブロックは、YAML の検査が通ったあと Gantt サブシステム自身にも
+  読ませる。Schema では書けない誤り(`target` の行き先が無い・id の重複・範囲の
+  前後)もここで見つかる(このときの `line` はコードブロックの開きの行)。
+- `layout-overflow` などテンプレートの規則の検査と、`boxloom check` のコマンド
+  そのものはまだ無い(`build` の警告として出る)。

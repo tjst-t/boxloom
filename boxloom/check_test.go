@@ -137,3 +137,17 @@ func TestRunCheckExitCodes(t *testing.T) {
 		t.Errorf("invalid deck: exit %d, want 1", c)
 	}
 }
+
+// 注釈の重なりの警告は、最小の大きさの警告と別の rule になる。
+func TestWarningIssueRules(t *testing.T) {
+	cases := map[string]string{
+		`slide 3: [SUBSYSTEM WARNING] gantt: needs at least 400.0pt height, got 300.0pt`:                           "subsystem-min",
+		`slide 3: [SUBSYSTEM WARNING] gantt: annotation 9 ("x") has no free place and overlaps another annotation`: "annotation-overlap",
+		`slide 2: [FILL-RATIO WARNING] underfilled: 50.8% (< 65%)`:                                                 "fill-ratio",
+	}
+	for w, want := range cases {
+		if got := warningIssue("f", w).Rule; got != want {
+			t.Errorf("%q: rule = %q, want %q", w, got, want)
+		}
+	}
+}

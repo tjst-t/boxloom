@@ -417,6 +417,10 @@ func warningIssue(file, w string) CheckIssue {
 	}
 	n, _ := strconv.Atoi(m[1])
 	rule := warnRuleNames[m[2]]
+	if m[2] == "SUBSYSTEM" && strings.Contains(m[3], "overlaps another annotation") {
+		// Gantt の注釈の置き場所が無かった(lintSubsystems が拾う SubsystemLinter の警告)
+		rule = "annotation-overlap"
+	}
 	if rule == "" {
 		rule = strings.ToLower(m[2])
 	}

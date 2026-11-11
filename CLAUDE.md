@@ -166,6 +166,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `check.go` = `go run . check deck.json`。Schema で書けない IR の検査
     (id の一意性・target の指す先・日付の前後と範囲・variant)と組み立ての
     警告を、`validate_ir.py` と同じ形の JSON で出す(`docs/ir.md`)
+  - `markdown.go` / `md_gantt.go` / `yaml.go` = Boxloom Markdown → IR の
+    パーサー(YAML の部分集合も自前)。`go run . parse deck.bx.md`、`build` は
+    `.md` もそのまま受け取る。詳細は `docs/content-syntax.md` の8章
   - `main.go` = デモコンテンツとfill-ratioリンター(本物の
     `content_fill_ratio()`/`lint_fill_ratio()`の移植)。`go build .` →
     `./boxloom` で `out/` 配下に `boxloom_dark.pptx`/`boxloom_light.pptx`
