@@ -918,6 +918,27 @@
       "updatedAt": "2026-11-11T03:06:08.210Z",
       "closedAt": "2026-11-11T03:06:08.210Z",
       "extra": {}
+    },
+    {
+      "id": "gantt-segment-label-hidden",
+      "number": 39,
+      "kind": "bug",
+      "title": "Gantt の区間の文が、帯が狭いと黙って消え、帯より長いと帯からはみ出す",
+      "status": "backlog",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "gantt.go の renderGantt:区間(segment)の label は折り返さず(AddTextBoxNoWrap)、帯の幅が 46pt 以下なら描かない。どちらも警告が無い。「黙って潰さない」に反する。#37 の調査で見つけた。直し方(警告・帯の外に置く・凡例へ逃がすなど)は未定。",
+      "doneWhen": "文が出ない区間・帯からはみ出す区間に check の警告が出るか、文が帯の外の決まった場所に出ることを、試験と画像で確かめている",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-11T03:06:08.319Z",
+      "updatedAt": "2026-11-11T03:06:08.319Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
