@@ -241,6 +241,10 @@ func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, erro
 }
 
 // footer は本文のスライドの下の行(左に作者と機密区分、右に「何枚目 / 全部」)。
+// 番号はスライドの番号の置き場(sldNum)の中の番号の欄(a:fld slidenum)なので、
+// PowerPoint でスライドを足す・並べ替えると振り直る。全部の枚数の欄は PowerPoint に
+// 無いので「/ 全部」は組み立てたときの数の文字のまま。左の欄はフッターの置き場(ftr。
+// 作者と機密区分の両方があれば作者の側)。
 func (t *Template) footer(d *IRDeck, i int) *Spec {
 	v, th := t.Values, t.Theme
 	left := ""
@@ -248,8 +252,15 @@ func (t *Template) footer(d *IRDeck, i int) *Spec {
 		left = d.Meta.Author.Plain()
 	}
 	leftSpec := TextNode(left, WithFontSize(v.Small), WithColor(th.c("text_muted")))
+	if left != "" {
+		leftSpec.Placeholder = "ftr"
+	}
 	if d.Meta != nil && d.Meta.Confidential != nil {
-		conf := t.text(d.Meta.Confidential, v.Small, th.c("text_primary"), true)
+		var opts []SpecOpt
+		if left == "" {
+			opts = append(opts, WithPlaceholder("ftr"))
+		}
+		conf := t.text(d.Meta.Confidential, v.Small, th.c("text_primary"), true, opts...)
 		if left == "" {
 			leftSpec = conf
 		} else {
@@ -258,7 +269,10 @@ func (t *Template) footer(d *IRDeck, i int) *Spec {
 	}
 	return Row([]*Spec{
 		leftSpec,
-		TextNode(fmt.Sprintf("%d / %d", i+1, len(d.Slides)), WithFontSize(v.Small), WithColor(th.c("text_muted")), WithAlign("right")),
+		RichTextNode([]TextRun{
+			{Text: fmt.Sprint(i + 1), Color: th.c("text_muted"), Field: "slidenum"},
+			{Text: fmt.Sprintf(" / %d", len(d.Slides)), Color: th.c("text_muted")},
+		}, WithFontSize(v.Small), WithAlign("right"), WithPlaceholder("sldNum")),
 	}, WithJustify(JustifySpaceBetween))
 }
 

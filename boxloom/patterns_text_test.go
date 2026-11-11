@@ -234,7 +234,7 @@ func TestBuildTextPatternsPPTX(t *testing.T) {
 		if i < 0 || !strings.Contains(statement[i:], "<a:t>移行は 2 年早める必要がある</a:t>") || !strings.Contains(statement[i:], `sz="3600" b="1"`) {
 			t.Errorf("%s: statement is not written as a large title placeholder", name)
 		}
-		if !strings.Contains(statement, "5 / 7") {
+		if !strings.Contains(statement, `type="slidenum">`) || !strings.Contains(statement, "<a:t>5</a:t></a:fld>") || !strings.Contains(statement, "<a:t> / 7</a:t>") {
 			t.Errorf("%s: statement lacks the footer", name)
 		}
 		if !strings.Contains(read("ppt/notesSlides/notesSlide5.xml"), "1文だけを言い切る") {

@@ -58,6 +58,24 @@ func TestTitlesArePlaceholders(t *testing.T) {
 	if !strings.Contains(read("ppt/slides/_rels/slide2.xml.rels"), "slideLayout2.xml") {
 		t.Error("content slide does not use the title-only layout")
 	}
+	// フッター:番号は番号の置き場の中の番号の欄、左の欄はフッターの置き場。
+	// 置き場はマスターとレイアウトにもあり、同じ idx で結ぶ。
+	n := strings.Index(body, `<p:ph `+sldNumPhAttrs+`/>`)
+	if n < 0 || !strings.Contains(body[n:], `<a:fld id="`+slideNumFieldID+`" type="slidenum">`) || !strings.Contains(body[n:], "<a:t>2</a:t></a:fld>") {
+		t.Error("content slide number is not a slidenum field in the sldNum placeholder")
+	}
+	if !strings.Contains(body, `<p:ph `+ftrPhAttrs+`/>`) {
+		t.Error("content slide lacks the footer placeholder")
+	}
+	for _, part := range []string{"ppt/slideMasters/slideMaster1.xml", "ppt/slideLayouts/slideLayout2.xml"} {
+		x := read(part)
+		if !strings.Contains(x, sldNumPhAttrs) || !strings.Contains(x, ftrPhAttrs) {
+			t.Errorf("%s lacks the footer placeholders", part)
+		}
+	}
+	if strings.Contains(cover, "slidenum") {
+		t.Error("cover must not show the slide number")
+	}
 	if !strings.Contains(read("ppt/slideLayouts/slideLayout2.xml"), `type="titleOnly"`) ||
 		!strings.Contains(read("ppt/slideLayouts/slideLayout3.xml"), `type="title"`) {
 		t.Error("layouts are not typed")

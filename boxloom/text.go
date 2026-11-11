@@ -165,6 +165,9 @@ type TextRun struct {
 	// リード文のように文として読む段落に使う。塊のどれかが Phrase なら段落の
 	// 全体に効く。
 	Phrase bool
+	// Field は PPTX でアプリが値を入れる欄(a:fld の type。"slidenum" ならスライドの
+	// 番号)。Text は組み立てたときの値で、測るのにも、欄の値の控えにも使う。
+	Field string
 }
 
 // runSize は塊の字の大きさ(0 なら葉の大きさ)。
@@ -277,7 +280,8 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 				line[len(line)-1].Text += string(rs[k])
 				continue
 			}
-			line = append(line, TextRun{Text: string(rs[k]), Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep, Phrase: r.Phrase})
+			r.Text = string(rs[k])
+			line = append(line, r)
 		}
 		out = append(out, line)
 	}

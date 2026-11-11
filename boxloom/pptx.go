@@ -35,7 +35,7 @@ type shape struct {
 	id   int
 	kind shapeKind
 	// ph は文字の図形をプレースホルダーとして書く種類("title" | "ctrTitle" |
-	// "subTitle"。空ならテキストボックス)。
+	// "subTitle" | "sldNum" | "ftr"。空ならテキストボックス)。
 	ph string
 
 	box    LBox
@@ -512,12 +512,7 @@ func (p *PPTXBuilder) parasXMLSized(s *shape, lines [][]TextRun, fontSize float6
 			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr%s algn="%s">%s%s</a:pPr>`, indent, alignAttr(s.align), lnSpc, bullet))
 		}
 		for _, r := range line {
-			boldAttr := ""
-			if r.Bold {
-				boldAttr = ` b="1"`
-			}
-			paras.WriteString(fmt.Sprintf(`<a:r><a:rPr lang="ja-JP" sz="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr><a:t>%s</a:t></a:r>`,
-				int(runSize(r, fontSize)*100), boldAttr, hexColor(r.Color), escapeXML(r.Text)))
+			paras.WriteString(runXML(r, fontSize))
 		}
 		paras.WriteString(`</a:p>`)
 	}
@@ -599,13 +594,26 @@ func (p *PPTXBuilder) paraXML(s *shape, lines [][]TextRun, fontSize float64, o p
 	return b.String()
 }
 
+// slideNumFieldID は a:fld type="slidenum" の id(PowerPoint と同じく、どのスライドでも同じ値)。
+const slideNumFieldID = "{4F5C2B1E-6A3D-4B8E-9C7F-2D1A0E5B3C64}"
+
+// runXML は1つの塊を a:r にする。Field のある塊は a:fld(アプリが値を入れる欄)にし、
+// Text を欄の値の控えとして書く。
 func runXML(r TextRun, fontSize float64) string {
 	boldAttr := ""
 	if r.Bold {
 		boldAttr = ` b="1"`
 	}
-	return fmt.Sprintf(`<a:r><a:rPr lang="ja-JP" sz="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr><a:t>%s</a:t></a:r>`,
-		int(runSize(r, fontSize)*100), boldAttr, hexColor(r.Color), escapeXML(r.Text))
+	rPr := fmt.Sprintf(`<a:rPr lang="ja-JP" sz="%d"%s><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:rPr>`,
+		int(runSize(r, fontSize)*100), boldAttr, hexColor(r.Color))
+	switch r.Field {
+	case "":
+		return `<a:r>` + rPr + `<a:t>` + escapeXML(r.Text) + `</a:t></a:r>`
+	case "slidenum":
+		return fmt.Sprintf(`<a:fld id="%s" type="slidenum">%s<a:t>%s</a:t></a:fld>`, slideNumFieldID, rPr, escapeXML(r.Text))
+	default:
+		panic("unknown field " + r.Field)
+	}
 }
 
 // forcedBreak は、折り返した2つの行の間に強制の改行を書くか。
@@ -715,10 +723,20 @@ func textNvSpPr(s *shape) string {
 		return fmt.Sprintf(`<p:nvSpPr><p:cNvPr id="%d" name="Title %d"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="%s"/></p:nvPr></p:nvSpPr>`, s.id, s.id, s.ph)
 	case "subTitle":
 		return fmt.Sprintf(`<p:nvSpPr><p:cNvPr id="%d" name="Subtitle %d"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="subTitle" idx="1"/></p:nvPr></p:nvSpPr>`, s.id, s.id)
+	case "sldNum":
+		return fmt.Sprintf(`<p:nvSpPr><p:cNvPr id="%d" name="Slide Number %d"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph %s/></p:nvPr></p:nvSpPr>`, s.id, s.id, sldNumPhAttrs)
+	case "ftr":
+		return fmt.Sprintf(`<p:nvSpPr><p:cNvPr id="%d" name="Footer %d"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph %s/></p:nvPr></p:nvSpPr>`, s.id, s.id, ftrPhAttrs)
 	default:
 		panic("unknown placeholder " + s.ph)
 	}
 }
+
+// フッターの置き場(マスター・レイアウト・スライドで同じ idx で結ぶ)。
+const (
+	ftrPhAttrs    = `type="ftr" sz="quarter" idx="11"`
+	sldNumPhAttrs = `type="sldNum" sz="quarter" idx="12"`
+)
 
 // slideLayoutNum はスライドが使うレイアウト(1 白紙・2 題だけ・3 表紙)。
 // 持っているプレースホルダーで決める。
@@ -728,7 +746,7 @@ func slideLayoutNum(p *PPTXBuilder) int {
 		switch s.ph {
 		case "ctrTitle", "subTitle":
 			return 3
-		case "title":
+		case "title", "sldNum", "ftr":
 			n = 2
 		}
 	}
@@ -737,8 +755,20 @@ func slideLayoutNum(p *PPTXBuilder) int {
 
 // phSpXML はマスター・レイアウトのプレースホルダー(中身の無い置き場)。
 func phSpXML(id int, name, phAttrs string, box LBox, sz float64, algn string) string {
-	return fmt.Sprintf(`<p:sp><p:nvSpPr><p:cNvPr id="%d" name="%s"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph %s/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm></p:spPr><p:txBody><a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle><a:lvl1pPr algn="%s"><a:defRPr sz="%d"/></a:lvl1pPr></a:lstStyle><a:p><a:endParaRPr lang="ja-JP"/></a:p></p:txBody></p:sp>`,
-		id, name, phAttrs, ptToEMU(box.X), ptToEMU(box.Y), ptToEMU(box.Width), ptToEMU(box.Height), algn, int(sz*100))
+	return phParaSpXML(id, name, phAttrs, fmt.Sprintf(`<a:lvl1pPr algn="%s"><a:defRPr sz="%d"/></a:lvl1pPr>`, algn, int(sz*100)), box, `<a:p><a:endParaRPr lang="ja-JP"/></a:p>`)
+}
+
+// phParaSpXML はマスター・レイアウトのプレースホルダーを、段落の既定(lstStyle の中身)と
+// 中身の段落を決めて書く。
+func phParaSpXML(id int, name, phAttrs, lstStyle string, box LBox, paras string) string {
+	return fmt.Sprintf(`<p:sp><p:nvSpPr><p:cNvPr id="%d" name="%s"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph %s/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm></p:spPr><p:txBody><a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0"><a:noAutofit/></a:bodyPr><a:lstStyle>%s</a:lstStyle>%s</p:txBody></p:sp>`,
+		id, name, phAttrs, ptToEMU(box.X), ptToEMU(box.Y), ptToEMU(box.Width), ptToEMU(box.Height), lstStyle, paras)
+}
+
+// footerPhStyle はフッター・番号の置き場の段落の既定。字体はテーマの本文の字体を
+// 名指す(LibreOffice はこの置き場に既定の字体を当てるので、書かないと明朝になる)。
+func footerPhStyle(sz float64, algn string) string {
+	return fmt.Sprintf(`<a:lvl1pPr algn="%s"><a:defRPr sz="%d"><a:latin typeface="+mn-lt"/><a:ea typeface="+mn-ea"/></a:defRPr></a:lvl1pPr>`, algn, int(sz*100))
 }
 
 // shapeTextRect は図形の文字の枠(prstGeom の文字の矩形)。楕円は内接する矩形。
@@ -1029,10 +1059,17 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	titleBox := LBox{X: 24, Y: 24, Width: W - 48, Height: 40}
 	ctrBox := LBox{X: 48, Y: H * 0.3, Width: W - 96, Height: 60}
 	subBox := LBox{X: 48, Y: H*0.3 + 80, Width: W - 96, Height: 30}
+	ftrBox := LBox{X: 24, Y: H - 36, Width: W/2 - 24, Height: 16}
+	numBox := LBox{X: W - 144, Y: H - 36, Width: 120, Height: 16}
+	footerPhs := func(id int) string {
+		return phParaSpXML(id, "Footer Placeholder", ftrPhAttrs, footerPhStyle(10, "l"), ftrBox, `<a:p><a:endParaRPr lang="ja-JP"/></a:p>`) +
+			phParaSpXML(id+1, "Slide Number Placeholder", sldNumPhAttrs, footerPhStyle(10, "r"), numBox,
+				`<a:p><a:fld id="`+slideNumFieldID+`" type="slidenum"><a:rPr lang="ja-JP"/><a:t>‹#›</a:t></a:fld><a:endParaRPr lang="ja-JP"/></a:p>`)
+	}
 	master := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
 <p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="` + scheme.bg + `"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>
-<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>` + phSpXML(2, "Title Placeholder 1", `type="title"`, titleBox, 24, "l") + `</p:spTree>
+<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>` + phSpXML(2, "Title Placeholder 1", `type="title"`, titleBox, 24, "l") + footerPhs(3) + `</p:spTree>
 </p:cSld>
 ` + scheme.masterClrMap() + `
 <p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/><p:sldLayoutId id="2147483650" r:id="rId2"/><p:sldLayoutId id="2147483651" r:id="rId3"/></p:sldLayoutIdLst>
@@ -1055,7 +1092,7 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	}
 	layouts := []string{
 		layoutXML("blank", "Blank", ""),
-		layoutXML("titleOnly", "Title Only", phSpXML(2, "Title 1", `type="title"`, titleBox, 24, "l")),
+		layoutXML("titleOnly", "Title Only", phSpXML(2, "Title 1", `type="title"`, titleBox, 24, "l")+footerPhs(3)),
 		layoutXML("title", "Title Slide", phSpXML(2, "Title 1", `type="ctrTitle"`, ctrBox, 36, "l")+
 			phSpXML(3, "Subtitle 2", `type="subTitle" idx="1"`, subBox, 16, "l")),
 	}
