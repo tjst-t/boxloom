@@ -507,7 +507,7 @@
       "number": 23,
       "kind": "task",
       "title": "Subsystem interface に縦横比・幅から高さを決める申告と、余りの置き方を足す",
-      "status": "in-progress",
+      "status": "done",
       "parent": "canvas-patterns",
       "dependsOn": [],
       "milestone": null,
@@ -515,7 +515,7 @@
       "labels": [],
       "body": "いまの Measure は幅と高さの自然・最小・上限だけ。組織図のように幅で高さが決まる図のために、heightForWidth か縦横比を申告できるようにする。割り当てが大きいときは、中で組み直して余りをどこに置くかを決める(上寄せ・中央はテンプレートの方針)。文字の大きさを段から外さないため、拡大縮小(object-fit)は使わない。最後の手段として残すかも決める。",
       "doneWhen": "docs/subsystem.md に方針があり、試験用の部品で縦横比を申告する図が幅に合わせた高さをもらうことが試験で確かめられている。従来のデモの PPTX が変わらない",
-      "resolution": null,
+      "resolution": "Measurement に FixedAspect を足し、幅→高さは Measure(Constraint{Width}) の Natural.Height という約束にした。FixedAspect の図と Max を越える枠は、図の大きさまで切り詰めて Render に渡し、余りは Spec.Place(既定は左上)の側に置く。拡大縮小はしない。試験は fit_test.go。従来のデモと既存の例の PPTX は変わらない。docs/subsystem.md の9節。",
       "refs": [],
       "threads": [
         {
@@ -524,8 +524,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:58.942Z",
-      "updatedAt": "2026-11-11T02:59:23.869Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T03:06:08.123Z",
+      "closedAt": "2026-11-11T03:06:08.123Z",
       "extra": {}
     },
     {
