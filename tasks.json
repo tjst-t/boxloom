@@ -459,7 +459,7 @@
       "number": 22,
       "kind": "task",
       "title": "画像(1枚の画像と文、画像の並び)",
-      "status": "ready",
+      "status": "done",
       "parent": "slide-patterns",
       "dependsOn": [
         "pattern-vocabulary"
@@ -469,12 +469,12 @@
       "labels": [],
       "body": "画像のファイルの扱い(置き場・大きさ・縦横比を保った収め方・代替の文)を含む。依存ゼロで PNG/JPEG の大きさを読む。",
       "doneWhen": "IR・Schema・Markdown・dark/light の描き方・試験・例が揃い、縦長・横長の画像で画像にして確かめている",
-      "resolution": null,
+      "resolution": "image/gallery(PNG・JPEG、代わりの文必須、Assets fs.FS から読む、パスは文書のフォルダ内だけ)。縦長・横長で確認。main 27e6af1。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:02:58.852Z",
-      "updatedAt": "2026-11-11T02:02:58.852Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:14:25.885Z",
+      "closedAt": "2026-11-11T05:14:25.885Z",
       "extra": {}
     },
     {
