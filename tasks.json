@@ -1131,6 +1131,31 @@
       "extra": {}
     },
     {
+      "id": "pairs-component",
+      "number": 65,
+      "kind": "task",
+      "title": "pairs(対の並び)を最初の標準でない型として足す:代わりの組み方は columns、組み方は dark・light",
+      "status": "ready",
+      "parent": "tokens-template",
+      "dependsOn": [
+        "type-vocabulary"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "docs/layers.md の 8.1 と 7章の3段目。\n\n## なぜ\n外の資料で最も多かった型は「分かったこと ↔ 打ち手」のように、左右の見出しを1回書いて、その下に行をそろえた対を何組も並べるもの。いまの columns では行が左右でそろわない。発表用のスライドでは少ないので標準にはせず、足す部品の最初の1つにする。\n\n## 意味の形\n- 左右の見出し(列の題)を1回だけ。\n- そのあとに対を並べる。対の左右はそれぞれ段落・箇条・引用のどれか。\n- 意味の名前で書く(位置の名前にしない、#1279989)。欄の名前は実装で決め、docs/ir.md に書く。\n\n## やること\n- schema/ に pairs.schema.json(型ごとのファイル)、docs/ir.md・docs/content-syntax.md・docs/patterns.md(どの規則で選ぶか)に追記。\n- Markdown の囲み(:::pairs など)。layers.md 8.3 の「囲みを BlockDecl から一般に読めるか」はこの中で決め、layers.md に書く。\n- 代わりの組み方:左右2つのまとまりの columns。見出しはまとまりの題、各対の左右の中身はそれぞれのまとまりに順に入れる。\n- dark・light の組み方:対ごとに左右の高い方に行の高さを合わせる。はみ出しは対ごとに測る(layout-overflow・容量と同じ測り値)。\n- 公開 API の広さ(layers.md 8.3)はこの中で決め、layers.md に書く。\n- examples に架空の内容の例を1つ(業務に関係する名前を書かない)。\n\n## 確かめ方\n例の deck を build して PowerPoint の表示で左右の行がそろうこと、組み方を持たないテンプレート(試験用)で component-fallback が出て columns で組まれること。",
+      "doneWhen": "schema に pairs が出る。例の deck が dark・light で build でき、各対の左右の箱の上端が同じ y で、対の高さが左右の高い方と等しいことを試験で確かめる。組み方を持たないテンプレートでは component-fallback の警告1件と、代わりの columns の IR が Schema と check を通る。はみ出しは対ごとの layout-overflow になる。tools/validate_pptx.py が通り、tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [
+        "docs/layers.md"
+      ],
+      "threads": [],
+      "createdAt": "2026-11-11T23:50:28.739Z",
+      "updatedAt": "2026-11-11T23:50:28.739Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "oss-release-prep",
       "number": 6,
       "kind": "story",
