@@ -627,7 +627,7 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 		p := NewPPTXBuilder(v.PageW, v.PageH)
 		p.ColorTheme = &DeckColors{Name: t.Name, Colors: t.Theme}
 		roles := newCheckedRoles(t.Theme)
-		renderSpec(RenderContext{Out: p, Roles: roles}, b.Root)
+		renderSlide(RenderContext{Out: p, Roles: roles}, b.Root)
 		if missing := roles.Missing(); len(missing) > 0 {
 			warnings = append(warnings, fmt.Sprintf("[ROLE WARNING] theme has no value for roles: %v", missing))
 		}

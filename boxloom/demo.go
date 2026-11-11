@@ -50,6 +50,16 @@ func buildSlideSpec(th Theme, subtitle string) *Spec {
 		WithGap(spaceSM), WithPadding(spaceLG), WithBackground(th.c("bg")))
 }
 
+// renderSlide はスライドの根を描く。根の地は全面の四角ではなくスライドの
+// 背景(マスターの地か、違う色ならそのスライドの p:bg)にする。
+func renderSlide(ctx RenderContext, root *Spec) {
+	bg := root.Background
+	ctx.Out.SetSlideBackground(bg)
+	root.Background = ""
+	renderSpec(ctx, root)
+	root.Background = bg
+}
+
 func renderSpec(ctx RenderContext, s *Spec) {
 	p := ctx.Out
 	if s.card {
@@ -231,7 +241,7 @@ func WriteDemo(w io.Writer, theme string) (*DemoResult, error) {
 	p := NewPPTXBuilder(pageW, pageH)
 	p.ColorTheme = &DeckColors{Name: theme, Colors: th}
 	roles := newCheckedRoles(th)
-	renderSpec(RenderContext{Out: p, Roles: roles}, spec)
+	renderSlide(RenderContext{Out: p, Roles: roles}, spec)
 	if missing := roles.Missing(); len(missing) > 0 {
 		res.Warnings = append(res.Warnings, fmt.Sprintf("[ROLE WARNING] theme has no value for roles: %v", missing))
 	}

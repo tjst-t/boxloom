@@ -105,6 +105,8 @@ type PPTXBuilder struct {
 	// ColorTheme はテーマの配色(theme1.xml の a:clrScheme)とマスターの clrMap を
 	// 作る元(テンプレートの名前と値の表の色)。nil なら固定の既定の配色。
 	ColorTheme *DeckColors
+	// Background はスライドの地(p:cSld の p:bg)。"" ならマスターの地を引き継ぐ。
+	Background string
 	nextID     int
 }
 
@@ -116,6 +118,17 @@ type DeckColors struct {
 
 func NewPPTXBuilder(widthPt, heightPt float64) *PPTXBuilder {
 	return &PPTXBuilder{WidthPt: widthPt, HeightPt: heightPt, Fonts: activeFonts, nextID: 2}
+}
+
+// SetSlideBackground はスライドの地を fill にする。マスターの地と同じ色なら
+// 何も書かない(マスターの p:bg を引き継ぐ)。違えばそのスライドの p:bg に書く。
+// 全面の四角を描かないので、PowerPoint では背景の書式から変えられる。
+func (p *PPTXBuilder) SetSlideBackground(fill string) {
+	if fill == "" || strings.EqualFold(hexColor(fill), themeScheme(p.ColorTheme).bg) {
+		p.Background = ""
+		return
+	}
+	p.Background = hexColor(fill)
 }
 
 func (p *PPTXBuilder) allocID() int {
@@ -1209,15 +1222,19 @@ func writeSlide(write func(name, content string) error, num int, p *PPTXBuilder)
 		shapesXML.WriteString(p.shapeXML(&p.Shapes[i]))
 	}
 
+	bg := ""
+	if p.Background != "" {
+		bg = `<p:bg><p:bgPr><a:solidFill><a:srgbClr val="` + p.Background + `"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>`
+	}
 	slide := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-<p:cSld><p:spTree>
+<p:cSld>%s<p:spTree>
 <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
 <p:grpSpPr/>
 %s
 </p:spTree></p:cSld>
 <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
-</p:sld>`, shapesXML.String())
+</p:sld>`, bg, shapesXML.String())
 
 	slideRels := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
