@@ -171,7 +171,7 @@
       "number": 7,
       "kind": "task",
       "title": "パターンの語彙の文書を書く:内容の型の一覧と、ブロックかサブシステムかの線引き",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "agent-entry",
       "dependsOn": [],
       "milestone": null,
@@ -181,9 +181,14 @@
       "doneWhen": "docs/patterns.md に型の一覧と線引きがあり、content-syntax.md の7章の表・画像の未決が閉じている",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "c307f4f9-0798-44a0-96f8-d89f9bc61fb0"
+        }
+      ],
       "createdAt": "2026-11-11T02:00:29.883Z",
-      "updatedAt": "2026-11-11T02:03:05.387Z",
+      "updatedAt": "2026-11-11T02:59:19.930Z",
       "closedAt": null,
       "extra": {}
     },
