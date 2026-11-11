@@ -279,9 +279,9 @@ check でも断られるもの。
 "capacity": [{
   "file": "deck.bx.md", "line": 37,          // .md なら Markdown の行(IR なら省く)
   "path": "/slides/1",
-  "bodyArea": 413.4,      // 本文の領域(ページの内側 − 題・フッター − gap)
+  "bodyArea": 414.1,      // 本文の領域(ページの内側 − 題・フッター − gap)
   "need": 210.2,          // ブロックを縮めずに積んだ高さ(ブロックの間の gap を含む)
-  "remaining": 203.2,     // bodyArea − need。負ならはみ出している
+  "remaining": 203.9,     // bodyArea − need。負ならはみ出している
   "blockGap": 16,         // ブロックの間の gap。新しいブロックを足すなら先にこれが要る
   "bodyLineHeight": 18.9, // 本文の字の大きさの1行の高さ
   "remainingBodyLines": 10, // 残りに本文の行がいくつ入るか(既にあるブロックに足す場合)
