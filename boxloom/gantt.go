@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 )
@@ -526,12 +527,8 @@ func ganttMetricsFor(gv *GanttValues, chart *GanttChart, boxWidth float64) gantt
 // 本物のrender_gantt()と同じ手順・同じピクセル計算式で移植している。
 func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *GanttValues) {
 	c := roles.Color
-	pad := gv.Padding
-	x0, y0 := box.X+pad, box.Y+pad
-	w, h := box.Width-2*pad, box.Height-2*pad
-
-	gm := ganttMetricsFor(gv, chart, box.Width)
-	annTopH, annBottomH, milestoneH := gm.annTopH, gm.annBottomH, gm.milestoneH
+	f := ganttFrameFor(gv, chart, box)
+	x0, y0, w := f.x0, f.y0, f.w
 
 	// --- 凡例(実測した文字幅でカーソルを前進させる。本物と同じ) ---
 	lx := x0
@@ -542,17 +539,11 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 		lx += 19 + 6 + labelW + gv.Padding
 	}
 
-	upY := y0 + gv.LegendH + gv.LegendGap
-	milestoneY := upY + annTopH
-	axisLabelY := milestoneY + milestoneH
-	axisY := axisLabelY + gv.AxisLabelH + 5
-	gutterW := gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW
-	chartX0 := x0 + gutterW
-	chartW := w - gutterW
-	bodyTop := axisY + 5
-	bodyH := (y0 + h) - annBottomH - bodyTop
+	milestoneY, axisLabelY, axisY := f.milestoneY, f.axisLabelY, f.axisY
+	chartX0, chartW := f.chartX0, f.chartW
+	bodyTop, bodyH := f.bodyTop, f.bodyH
 
-	sx := func(dt time.Time) float64 { return chart.Scale.X(dt, chartX0, chartW) }
+	sx := f.sx(chart)
 
 	// --- ★マイルストーン ---
 	for _, m := range chart.Milestones {
@@ -590,18 +581,16 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 
 	// --- 行本体 ---
 	nGroups := len(chart.Groups)
-	rows := ganttRowLayout(gv, chart, box.Width, bodyH)
+	rows := f.rows
 	rowH := rows.base
 
 	subX := x0 + gv.GutterGroupW
 	labelX := subX + gv.GutterSubW
 
 	yCursor := bodyTop
-	groupTops := make([]float64, nGroups)
 	for gi := range chart.Groups {
 		group := &chart.Groups[gi]
-		groupTop := yCursor
-		groupTops[gi] = groupTop
+		groupTop := f.groupTops[gi]
 		groupH := rowH*float64(len(group.Rows)) + rows.extraBefore(gi, len(group.Rows))
 
 		if group.HasRiskBand {
@@ -704,41 +693,214 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 	}
 
 	// --- 注釈(置き場所と大きさは planAnnotations が決める) ---
-	downY := bodyTop + bodyH + gv.AnnLaneGap
-	plan := planAnnotations(gv, chart, x0, w)
+	geoms := annotationGeoms(gv, chart, f)
 	for i, ann := range chart.Annotations {
-		pl := plan[i]
-		ax := sx(ann.AnchorDate)
-		ay := bodyTop + ann.AnchorYFrac*bodyH
-		if ann.Direction == "" {
-			ay = autoAnchorY(chart, ann, groupTops, rows, bodyTop, bodyH)
-		}
+		lg := geoms[i]
 		annColor := c(ann.Role)
 
 		if ann.Emphasis {
-			p.AddLine(ax, bodyTop, ax, bodyTop+bodyH, 2.0, annColor, "")
+			p.AddLine(lg.ax, bodyTop, lg.ax, bodyTop+bodyH, 2.0, annColor, "")
 		}
-		p.AddDot(ax, ay, 3.0, annColor)
+		p.AddDot(lg.ax, lg.ay, 3.0, annColor)
 
-		// 上のレーンは箱の下端を揃え(チャートに近い側)、下のレーンは上端を揃える。
-		by := downY
-		if pl.up {
-			by = upY + (annTopH - gv.AnnLaneGap) - pl.h
-		}
-
-		p.AddRectFull(LBox{X: pl.bx, Y: by, Width: pl.w, Height: pl.h}, c("card_alt"), 8, annColor, "", 1.25)
+		b := lg.box
+		p.AddRectFull(LBox{X: b.x, Y: b.y, Width: b.w, Height: b.h}, c("card_alt"), 8, annColor, "", 1.25)
 		if ann.Direction != "" {
 			// 手で置いた注釈は従来どおりの余白。
-			p.AddTextBox(LBox{X: pl.bx + 8, Y: by + 4, Width: pl.w - 16, Height: pl.h - 8}, ann.Text, gv.AnnText, c("text_primary"), false, "left", "top")
+			p.AddTextBox(LBox{X: b.x + 8, Y: b.y + 4, Width: b.w - 16, Height: b.h - 8}, ann.Text, gv.AnnText, c("text_primary"), false, "left", "top")
 		} else {
-			p.AddTextBox(LBox{X: pl.bx + gv.AnnPadX, Y: by + gv.AnnPadY, Width: pl.w - 2*gv.AnnPadX, Height: pl.h - 2*gv.AnnPadY}, ann.Text, gv.AnnText, c("text_primary"), false, "left", "top")
+			p.AddTextBox(LBox{X: b.x + gv.AnnPadX, Y: b.y + gv.AnnPadY, Width: b.w - 2*gv.AnnPadX, Height: b.h - 2*gv.AnnPadY}, ann.Text, gv.AnnText, c("text_primary"), false, "left", "top")
+		}
+		// 引き出し線は、目盛りと節目の文字を横切るところを空けて描く(文字に線を重ねない)。
+		for _, sg := range lg.leader {
+			p.AddLine(sg.x1, sg.y1, sg.x2, sg.y2, 1.0, annColor, "dash")
+		}
+	}
+}
+
+// ganttFrame は renderGantt の縦の並びと本体の行の位置(描くときの座標)。
+// 描画と試験(引き出し線の検査)が同じ計算を使う。
+type ganttFrame struct {
+	x0, y0, w, h                       float64
+	gm                                 ganttMetrics
+	upY, milestoneY, axisLabelY, axisY float64
+	chartX0, chartW                    float64
+	bodyTop, bodyH, downY              float64
+	rows                               ganttRows
+	groupTops                          []float64
+}
+
+func ganttFrameFor(gv *GanttValues, chart *GanttChart, box LBox) ganttFrame {
+	var f ganttFrame
+	pad := gv.Padding
+	f.x0, f.y0 = box.X+pad, box.Y+pad
+	f.w, f.h = box.Width-2*pad, box.Height-2*pad
+	f.gm = ganttMetricsFor(gv, chart, box.Width)
+	f.upY = f.y0 + gv.LegendH + gv.LegendGap
+	f.milestoneY = f.upY + f.gm.annTopH
+	f.axisLabelY = f.milestoneY + f.gm.milestoneH
+	f.axisY = f.axisLabelY + gv.AxisLabelH + 5
+	gutterW := gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW
+	f.chartX0 = f.x0 + gutterW
+	f.chartW = f.w - gutterW
+	f.bodyTop = f.axisY + 5
+	f.bodyH = (f.y0 + f.h) - f.gm.annBottomH - f.bodyTop
+	f.downY = f.bodyTop + f.bodyH + gv.AnnLaneGap
+	f.rows = ganttRowLayout(gv, chart, box.Width, f.bodyH)
+	f.groupTops = make([]float64, len(chart.Groups))
+	yCursor := f.bodyTop
+	for gi := range chart.Groups {
+		f.groupTops[gi] = yCursor
+		yCursor += f.rows.base*float64(len(chart.Groups[gi].Rows)) + f.rows.extraBefore(gi, len(chart.Groups[gi].Rows))
+		if gi < len(chart.Groups)-1 {
+			yCursor += gv.GroupGap
+		}
+	}
+	return f
+}
+
+func (f ganttFrame) sx(chart *GanttChart) func(time.Time) float64 {
+	return func(dt time.Time) float64 { return chart.Scale.X(dt, f.chartX0, f.chartW) }
+}
+
+// ganttLabelRects は、軸の目盛りの文字と節目の文字が実際に占める矩形(字の幅と
+// 行の高さ。文字の箱そのものではない)。描くときの箱の置き方(中央揃え、目盛りは
+// 上揃え、節目は上下の真ん中)から求める。上のレーンの注釈の引き出し線は必ず
+// この帯を通るので、ここを避ける。本体の中の文字(区間の文・注記)は避けない
+// (docs/subsystem.md の6節「引き出し線と文字」)。
+func ganttLabelRects(gv *GanttValues, chart *GanttChart, f ganttFrame) []placedBox {
+	sx := f.sx(chart)
+	ink := func(cx, top, boxH float64, text string, size float64, bold bool, middle bool) placedBox {
+		tw, n := 0.0, 0
+		for _, line := range strings.Split(text, "\n") {
+			tw = math.Max(tw, runWidthPt(line, size, bold))
+			n++
+		}
+		th := float64(n) * size * lineHeightMult
+		y := top
+		if middle {
+			y = top + (boxH-th)/2
+		}
+		return placedBox{cx - tw/2, y, tw, th}
+	}
+	var out []placedBox
+	for _, m := range chart.Milestones {
+		out = append(out, ink(sx(m.Date), f.milestoneY, gv.MilestoneH, "★ "+m.Label, gv.SmallText, true, true))
+	}
+	for _, t := range chart.Ticks {
+		tx := sx(t.Date)
+		if t.MainLabel != "" {
+			out = append(out, ink(tx, f.axisLabelY, 13, t.MainLabel, gv.LabelText, true, false))
+		}
+		if t.SubLabel != "" {
+			out = append(out, ink(tx, f.axisLabelY+12, 12, t.SubLabel, gv.SmallText, false, false))
+		}
+	}
+	return out
+}
+
+// ganttLeaderGap は、引き出し線が文字を避けるときに文字との間に空ける隙間(pt)。
+const ganttLeaderGap = 2.0
+
+// lineSeg は線分。
+type lineSeg struct{ x1, y1, x2, y2 float64 }
+
+// annGeom は1つの注釈を描く座標: 日付の x・点の y・箱・引き出し線(文字を避けて
+// 切った線分の列)。
+type annGeom struct {
+	ax, ay float64
+	box    placedBox
+	leader []lineSeg
+}
+
+// annotationGeoms は注釈を描く座標を決める(描画と試験が同じものを使う)。
+func annotationGeoms(gv *GanttValues, chart *GanttChart, f ganttFrame) []annGeom {
+	sx := f.sx(chart)
+	plan := planAnnotations(gv, chart, f.x0, f.w)
+	labels := ganttLabelRects(gv, chart, f)
+	out := make([]annGeom, len(chart.Annotations))
+	for i, ann := range chart.Annotations {
+		pl := plan[i]
+		ax := sx(ann.AnchorDate)
+		ay := f.bodyTop + ann.AnchorYFrac*f.bodyH
+		if ann.Direction == "" {
+			ay = autoAnchorY(chart, ann, f.groupTops, f.rows, f.bodyTop, f.bodyH)
+		}
+		// 上のレーンは箱の下端を揃え(チャートに近い側)、下のレーンは上端を揃える。
+		by := f.downY
+		if pl.up {
+			by = f.upY + (f.gm.annTopH - gv.AnnLaneGap) - pl.h
 		}
 		connY := by
 		if by < ay {
 			connY = by + pl.h
 		}
-		p.AddLine(ax, ay, pl.bx+pl.w/2, connY, 1.0, annColor, "dash")
+		out[i] = annGeom{
+			ax: ax, ay: ay,
+			box:    placedBox{pl.bx, by, pl.w, pl.h},
+			leader: splitAround(lineSeg{ax, ay, pl.bx + pl.w/2, connY}, labels, ganttLeaderGap),
+		}
 	}
+	return out
+}
+
+// splitAround は線分 s から、矩形(gap だけ広げたもの)の中を通る部分を除いた
+// 残りの線分を返す。どの矩形とも交わらなければ s をそのまま1本で返す。
+// 1pt に満たない切れ端は描かない。
+func splitAround(s lineSeg, rects []placedBox, gap float64) []lineSeg {
+	type span struct{ t0, t1 float64 }
+	var cut []span
+	dx, dy := s.x2-s.x1, s.y2-s.y1
+	for _, r := range rects {
+		// Liang–Barsky: 線分のうち矩形の中にある t の範囲。
+		t0, t1 := 0.0, 1.0
+		ok := true
+		for _, e := range [][2]float64{
+			{-dx, s.x1 - (r.x - gap)}, {dx, (r.x + r.w + gap) - s.x1},
+			{-dy, s.y1 - (r.y - gap)}, {dy, (r.y + r.h + gap) - s.y1},
+		} {
+			p, q := e[0], e[1]
+			if p == 0 {
+				if q < 0 {
+					ok = false
+				}
+				continue
+			}
+			t := q / p
+			if p < 0 {
+				t0 = math.Max(t0, t)
+			} else {
+				t1 = math.Min(t1, t)
+			}
+		}
+		if ok && t0 < t1 {
+			cut = append(cut, span{t0, t1})
+		}
+	}
+	if len(cut) == 0 {
+		return []lineSeg{s}
+	}
+	sort.Slice(cut, func(i, j int) bool { return cut[i].t0 < cut[j].t0 })
+	length := math.Hypot(dx, dy)
+	var out []lineSeg
+	at := func(t float64) (float64, float64) { return s.x1 + t*dx, s.y1 + t*dy }
+	emit := func(a, b float64) {
+		if (b-a)*length < 1 {
+			return
+		}
+		x1, y1 := at(a)
+		x2, y2 := at(b)
+		out = append(out, lineSeg{x1, y1, x2, y2})
+	}
+	from := 0.0
+	for _, c := range cut {
+		if c.t0 > from {
+			emit(from, c.t0)
+		}
+		from = math.Max(from, c.t1)
+	}
+	emit(from, 1)
+	return out
 }
 
 // annPlacement は1つの注釈の置き場所と大きさ: 上のレーンか下のレーンか、
