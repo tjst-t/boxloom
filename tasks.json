@@ -561,7 +561,7 @@
       "number": 25,
       "kind": "task",
       "title": "サブシステム:2階層の組織図",
-      "status": "in-progress",
+      "status": "done",
       "parent": "canvas-patterns",
       "dependsOn": [
         "subsystem-fit"
@@ -571,7 +571,7 @@
       "labels": [],
       "body": "",
       "doneWhen": "schema/subsystems に Schema、Markdown の囲み、dark/light の描き方、試験、例があり、幅の違う枠(スライド全幅・右 60%)で画像にして確かめている",
-      "resolution": null,
+      "resolution": "orgchart サブシステム(3段・直角のコネクタ)。全幅と右60%の列で試験と絵で確認。main aacaef4。",
       "refs": [],
       "threads": [
         {
@@ -580,8 +580,8 @@
         }
       ],
       "createdAt": "2026-11-11T02:02:58.942Z",
-      "updatedAt": "2026-11-11T04:46:30.766Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-11T05:07:42.066Z",
+      "closedAt": "2026-11-11T05:07:42.066Z",
       "extra": {}
     },
     {
