@@ -561,7 +561,7 @@
       "number": 25,
       "kind": "task",
       "title": "サブシステム:2階層の組織図",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "canvas-patterns",
       "dependsOn": [
         "subsystem-fit"
@@ -573,9 +573,14 @@
       "doneWhen": "schema/subsystems に Schema、Markdown の囲み、dark/light の描き方、試験、例があり、幅の違う枠(スライド全幅・右 60%)で画像にして確かめている",
       "resolution": null,
       "refs": [],
-      "threads": [],
+      "threads": [
+        {
+          "projectId": "6c989bef-a72e-40ee-9c2e-c559fbdd77e3",
+          "threadId": "d0ddc64f-b331-4914-9e13-917e619c9da3"
+        }
+      ],
       "createdAt": "2026-11-11T02:02:58.942Z",
-      "updatedAt": "2026-11-11T02:02:58.942Z",
+      "updatedAt": "2026-11-11T04:46:30.766Z",
       "closedAt": null,
       "extra": {}
     },
