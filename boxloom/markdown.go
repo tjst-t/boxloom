@@ -72,6 +72,9 @@ const (
 	codeInvalidValue      = "invalid-value"      // 値の形が違う
 	codeYAML              = "yaml"               // YAML の部分集合の外
 	codeSchema            = "schema"             // できた IR が通らない
+	codeTableShape        = "table-shape"        // 表の行のセルの数が見出しと違う
+	codeImagePath         = "image-path"         // 画像の src が絶対パス・URL・文書のフォルダの外
+	codeImageAlt          = "image-alt"          // 画像の代わりの文が無い
 )
 
 // --- 出力: キーの順を保つ JSON の object ---
@@ -150,6 +153,7 @@ const (
 	mdList
 	mdFence
 	mdCode
+	mdTable
 )
 
 type mdItem struct {
@@ -163,6 +167,8 @@ type mdItem struct {
 	lang, info string   // mdCode
 	code       []string // mdCode: 中身の行
 	codeLine   int      // mdCode: 中身の1行目の行番号
+
+	table *mdTableBlk // mdTable
 }
 
 type mdListEnt struct {
@@ -255,7 +261,7 @@ var (
 
 // 囲みの名前。
 var (
-	plannedFences = map[string]bool{"takeaway": true, "columns": true, "column": true}
+	plannedFences = map[string]bool{"takeaway": true}
 )
 
 func leadingSpaces(s string) int {
@@ -560,9 +566,28 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 			hint := "注記なら :::note … ::: で囲んでください"
 			p.fail(no, ind+1, "", codeUnsupportedSyntax, "引用(>)は使えません", nil, hint)
 
-		case strings.HasPrefix(t, "|"):
+		case strings.HasPrefix(t, "|") && ind < 4:
 			flush()
-			p.fail(no, ind+1, "", codePlannedSyntax, "表はまだ使えません(予定)", nil, "")
+			tb := &mdTableBlk{}
+			for ; i < len(lines); i++ {
+				l := strings.TrimRight(lines[i], " \t")
+				li := leadingSpaces(l)
+				if !strings.HasPrefix(l[li:], "|") {
+					break
+				}
+				tb.rows = append(tb.rows, mdTableLine{text: l[li:], line: i + 1, col: li + 1})
+			}
+			// 表のすぐ次の行の「: 説明」は表の説明の文(caption)。
+			if i < len(lines) {
+				l := strings.TrimRight(lines[i], " \t")
+				if li := leadingSpaces(l); strings.HasPrefix(l[li:], ": ") {
+					tb.caption = lineText(strings.TrimSpace(l[li+2:]), i+1, li+3)
+					tb.captionLine = i + 1
+					i++
+				}
+			}
+			i--
+			add(&mdItem{kind: mdTable, line: no, table: tb})
 
 		case strings.HasPrefix(t, "[^"):
 			flush()
@@ -808,7 +833,7 @@ func (x *inlineParser) parse(inEm bool) (parts []any, closed bool) {
 			x.fail(x.i, codeUnsupportedSyntax, "取り消し線(~~)は使えません", "")
 			x.i += 2
 		case c == '!' && next == '[':
-			x.fail(x.i, codePlannedSyntax, "画像はまだ使えません(予定)", "")
+			x.fail(x.i, codeMisplaced, "画像は文の中には書けません", "画像だけの段落にしてください(1枚なら image、2〜6枚を並べると gallery)")
 			x.i += 2
 		case c == '[' && next == '^':
 			x.fail(x.i, codeUnsupportedSyntax, "脚注は使えません", "補足は :::note … ::: で書いてください")
@@ -1102,7 +1127,17 @@ func (p *mdParser) blocks(items []*mdItem, path string) []any {
 		p.mark(bp, it.line)
 		switch it.kind {
 		case mdPara:
+			if b, ok := p.imageParagraph(it, bp); ok {
+				if b != nil {
+					out = append(out, b)
+				}
+				continue
+			}
 			out = append(out, obj("type", "paragraph", "content", p.parseInline(it.text.trimBR(), bp+"/content")))
+		case mdTable:
+			if b := p.tableBlock(it, bp); b != nil {
+				out = append(out, b)
+			}
 		case mdList:
 			out = append(out, obj("type", "points", "items", p.listItems(it.items, bp+"/items", true)))
 		case mdCode:
@@ -1156,6 +1191,11 @@ func (p *mdParser) fenceBlock(f *mdFenceBlk, path string) any {
 		return nil
 	case f.name == "compare":
 		return p.compareBlock(f, path)
+	case f.name == "columns":
+		return p.columnsBlock(f, path)
+	case f.name == "column":
+		p.fail(f.line, 1, path, codeMisplaced, "囲み :::column は ::::columns の中にだけ書けます", nil, "")
+		return nil
 	case f.name == "note":
 		attrs := p.fenceAttrs(f, path, []string{"variant"})
 		p.noLabel(f, path)

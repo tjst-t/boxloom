@@ -55,6 +55,13 @@ type BlockDecl struct {
 // defaultBlocks は第一版の囲み(docs/content-syntax.md の3.4)。名前の順。
 func defaultBlocks() []BlockDecl {
 	return []BlockDecl{
+		{Name: "column", Label: "まとまりの題(任意)", Inside: []string{"columns"},
+			Contains: []string{"段落", "箇条", "表", "画像(1枚)", "note"}, Attributes: []string{"role"},
+			Meaning: "並列のまとまりの1つ。role=main は主のまとまり(ほかがそれを補う。テンプレートが広く取る)。幅を数で書く口は無い",
+			IR:      "columns.columns[](title・role・body)"},
+		{Name: "columns", Contains: []string{"column"}, MinChildren: 2, Attributes: []string{"variant"},
+			Meaning: "2〜3個のまとまりを並べて読ませる(段組みの指定ではなく「並列」という意味)。画像と文を横に並べるのもこれ",
+			IR:      "columns"},
 		{Name: "compare", Contains: []string{"option"}, MinChildren: 2, Attributes: []string{"variant"},
 			Meaning: "選択肢の比較", IR: "compare"},
 		{Name: "cons", Inside: []string{"option"}, Contains: []string{"箇条"}, Attributes: []string{},
@@ -168,6 +175,8 @@ func bodySyntax() []bodySyntaxItem {
 		{"`…`", "コード・識別子", "インラインの code"},
 		{"[文](URL)", "リンク", "インラインの link"},
 		{"行末の \\", "意味のある改行", "インラインの br"},
+		{"| 見出し | … |\n| --- | … |\n| セル | … |", "表(GFM の表)。1行目が見出し。列の配置の指定(:--: など)は誤り。表のすぐ次の行の「: 説明」は表の説明", "table"},
+		{"![代わりの文](path \"説明\")", "画像。画像だけの段落に1枚なら image、2〜6枚を並べると gallery。代わりの文は必須。path は文書からの相対パス(PNG・JPEG)", "image / gallery"},
 	}
 }
 
@@ -176,7 +185,9 @@ func markdownRules() []string {
 	return []string{
 		"`# 題` が1枚のスライドの始まり。行末に {variant=名前} を書ける。1枚目の # より前に本文を書くのは誤り",
 		"`---`(水平線)はスライドの区切りではなく誤り",
-		"小見出し(##)・表・画像・:::takeaway・:::columns は予定で、いまは誤り。### 以下の見出しは使えない",
+		"小見出し(##)は持たない(誤り)。:::takeaway は予定で、いまは誤り。### 以下の見出しは使えない",
+		"表のセルの中はインライン(強調・コード・リンク)だけ。どの行も見出しと同じ数のセル",
+		"画像は文の中には書けない。URL・絶対パス・文書のフォルダの外(..)は誤り",
 		"囲みは :::名前 で開き、同じ数のコロンの ::: で閉じる。閉じの省略は誤り。中に囲みを入れるときは外側のコロンを1つ増やす。入れ子は3段まで",
 		"囲みの書き方は `:::名前 見出しの文 {属性=値}`。名乗っていない囲み・属性は誤り",
 		"サブシステムは言語名つきのコードブロック(```名前)で、中身は YAML。言語名の後ろに {variant=名前} を書ける",
