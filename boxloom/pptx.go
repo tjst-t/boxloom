@@ -209,6 +209,30 @@ func (p *PPTXBuilder) AddList(box LBox, items []listPara) {
 	})
 }
 
+// AddCard は地(prst の図形・fill・角 radius)と、項目を段落にした文字を持つ
+// 1つの図形を足す。文字の枠の内側の余白は insetX・insetY で、段落の書き方は
+// AddList と同じ(上に詰め、左にそろえる)。
+func (p *PPTXBuilder) AddCard(box LBox, prst, fill string, radius, insetX, insetY float64, items []listPara) {
+	var text []string
+	for _, it := range items {
+		text = append(text, runsText(it.Runs))
+	}
+	p.Shapes = append(p.Shapes, shape{
+		id: p.allocID(), kind: skShape, box: box, prst: prst, fill: fill, radius: radius,
+		insetX: insetX, insetY: insetY, text: strings.Join(text, "\n"),
+		list: items, align: "left", anchor: "top", wrap: true,
+	})
+}
+
+// listRect は箇条の段落を書く文字の枠(カードなら内側の余白を除いたところ)。
+func listRect(s *shape) LBox {
+	if s.kind != skShape {
+		return s.box
+	}
+	return LBox{X: s.box.X + s.insetX, Y: s.box.Y + s.insetY,
+		Width: s.box.Width - 2*s.insetX, Height: s.box.Height - 2*s.insetY}
+}
+
 // AddLine は直線/コネクタを追加する。dash は "" (実線) または "dash"。
 func (p *PPTXBuilder) AddLine(x1, y1, x2, y2, widthPt float64, color, dash string) {
 	p.Shapes = append(p.Shapes, shape{
@@ -660,7 +684,7 @@ func (p *PPTXBuilder) listXML(s *shape) string {
 	defer restore()
 	var out strings.Builder
 	for _, it := range s.list {
-		lines := wrapRuns(it.Runs, it.Size, math.Max(s.box.Width-it.Indent, 0))
+		lines := wrapRuns(it.Runs, it.Size, math.Max(listRect(s).Width-it.Indent, 0))
 		out.WriteString(p.paraXML(s, lines, it.Size, paraOpts{level: it.Level, indent: it.Indent, spaceBefore: it.SpaceBefore}))
 	}
 	return out.String()
@@ -808,7 +832,9 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 			ptToEMU(s.outlineWidthPt), hexColor(s.outlineColor))
 	}
 	paras := "<a:p/>"
-	if len(s.runs) > 0 {
+	if len(s.list) > 0 {
+		paras = p.listXML(s)
+	} else if len(s.runs) > 0 {
 		tr := shapeTextRect(s.prst, s.box)
 		restore := func() {}
 		if p.Fonts != nil {
@@ -821,6 +847,13 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 			paras += p.flowXML(s, r, s.paraSizes[i], w)
 		}
 	}
+	insX, insY := s.insetX, s.insetY
+	if len(s.list) > 0 && s.prst == "roundRect" {
+		// 角丸の文字の枠(prstGeom の il)は角の 0.29289 倍だけ内側にある。カードの
+		// 文字は組んだ位置(地の端から余白の分)に置くので、その分を余白から引く。
+		il := math.Min(s.radius, math.Min(s.box.Width, s.box.Height)/2) * 0.29289
+		insX, insY = math.Max(insX-il, 0), math.Max(insY-il, 0)
+	}
 	return fmt.Sprintf(`<p:sp>
 <p:nvSpPr><p:cNvPr id="%d" name="Shape %d"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
 <p:spPr>
@@ -832,7 +865,7 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 <p:txBody><a:bodyPr wrap="square" anchor="%s" lIns="%d" tIns="%d" rIns="%d" bIns="%d"><a:noAutofit/></a:bodyPr><a:lstStyle/>%s</p:txBody>
 </p:sp>
 `, s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), s.prst, adj, fillXML, lnXML,
-		anchorAttr(s.anchor), ptToEMU(s.insetX), ptToEMU(s.insetY), ptToEMU(s.insetX), ptToEMU(s.insetY), paras)
+		anchorAttr(s.anchor), ptToEMU(insX), ptToEMU(insY), ptToEMU(insX), ptToEMU(insY), paras)
 }
 
 // connectorXML は本物のコネクタ(p:cxnSp)。図形に繋ぐなら a:stCxn・a:endCxn を書く。

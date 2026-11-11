@@ -288,7 +288,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   `wrap="square"` で書き、折り返しはアプリに任せる(PowerPoint で編集すれば流れ直る)。
   Boxloom は同じ文を自分でも折り返して行の数を測り、高さを決める。強制の改行(`a:br`)は
   リード文などの文の切れ目と、統計強調の数の塊の境目だけ。箇条は1つのテキストボックスの
-  段落(印は `a:buChar`、入れ子は `lvl`、項目の間は `a:spcBef`)。図の中の折り返さない
+  段落(印は `a:buChar`、入れ子は `lvl`、項目の間は `a:spcBef`)。カード(compare・stat・
+  takeaway の地)も同じ書き方で、地の図形そのものが文字を持つ1つの図形(余白は
+  `lIns` 等。takeaway の帯だけ別の図形)。図の中の折り返さない
   名前だけが `wrap="none"`。
 - python-pptxの`add_shape()`はテーマ由来の`<p:style>`参照(lnRef/fillRef/
   effectRef/fontRef)を自動付与するが(それを打ち消すために`shadow.inherit =

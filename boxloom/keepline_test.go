@@ -126,8 +126,10 @@ func TestStatValueOneLineInPPTX(t *testing.T) {
 	if !strings.Contains(long, "<a:t>12,345,678</a:t>") || !strings.Contains(long, "<a:t>千円</a:t>") {
 		t.Errorf("long value or unit was broken: %s", long)
 	}
+	// カードは1つの図形で、1段落目が数と単位(改行なし)、2段落目が説明。
 	short := shapeOf(">3<")
-	if n := strings.Count(short, "<a:p>"); n != 1 || !strings.Contains(short, "社") {
-		t.Errorf("short value: %d paragraphs: %s", n, short)
+	paras := strings.Split(short, "<a:p>")[1:]
+	if len(paras) != 2 || !strings.Contains(paras[0], "社") || strings.Contains(paras[0], "<a:br>") || !strings.Contains(paras[1], "短い数") {
+		t.Errorf("short value: %d paragraphs: %s", len(paras), short)
 	}
 }

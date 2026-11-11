@@ -76,12 +76,13 @@ cover: false
 	}
 	// 数字で始まる箇条と和文で始まる箇条の段落の頭(pPr)は同じ。
 	pprOf := func(text string) string {
-		re := regexp.MustCompile(`<a:p>(<a:pPr[^>]*>.*?</a:pPr>)<a:r><a:rPr[^>]*>(?:<a:solidFill>.*?</a:solidFill>)?</a:rPr><a:t>` + regexp.QuoteMeta(text))
+		re := regexp.MustCompile(`<a:p>(<a:pPr[^>]*>(?:<[^>]*>)*?</a:pPr>)<a:r><a:rPr[^>]*>(?:<a:solidFill><a:srgbClr[^>]*/></a:solidFill>)?</a:rPr><a:t>` + regexp.QuoteMeta(text))
 		m := re.FindStringSubmatch(xml)
 		if m == nil {
 			t.Fatalf("paragraph %q not found", text)
 		}
-		return m[1]
+		// 項目の間(spcBef)は2つ目からだけ付くので比べない。
+		return regexp.MustCompile(`<a:spcBef>.*?</a:spcBef>`).ReplaceAllString(m[1], "")
 	}
 	a, b := pprOf("2027年4月に限定公開"), pprOf("一般公開の前に監査")
 	if a != b {

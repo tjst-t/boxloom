@@ -118,11 +118,13 @@ func measurePages(pages []*PPTXBuilder, alt *FontSet) fontStats {
 			if len(s.list) > 0 {
 				// 箇条:項目(段落)ごとに、字下げを引いた幅で測る。増えた行は1つの枠の
 				// 中で下の項目を押し下げるので、枠の余り(枠の高さ − 測った高さ)と比べる。
+				// カードは内側の余白を除いた文字の枠で測る。
+				tr := listRect(s)
 				used, added := 0.0, 0.0
 				var grown []int
 				for _, it := range s.list {
 					restore := useFonts(p.Fonts)
-					box := LBox{X: s.box.X + it.Indent, Y: s.box.Y, Width: s.box.Width - it.Indent, Height: math.Inf(1)}
+					box := LBox{X: tr.X + it.Indent, Y: tr.Y, Width: tr.Width - it.Indent, Height: math.Inf(1)}
 					lines := wrapRuns(it.Runs, it.Size, box.Width)
 					restore()
 					used += it.SpaceBefore + float64(len(lines))*it.Size*lineHeightMult
@@ -133,7 +135,7 @@ func measurePages(pages []*PPTXBuilder, alt *FontSet) fontStats {
 						grown = append(grown, len(st.Rewraps)-1)
 					}
 				}
-				if added > 0 && used+added > s.box.Height+0.5 {
+				if added > 0 && used+added > tr.Height+0.5 {
 					st.RewrapOverflow++
 					for _, k := range grown {
 						st.Rewraps[k].Overflows = true

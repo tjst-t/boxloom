@@ -76,6 +76,9 @@ type Spec struct {
 	// List は箇条の並び(中の文字の葉が項目)。測り方と置き方はふつうの Col と
 	// 同じで、PPTX では項目を1つの文字の枠の段落として書く(renderList)。
 	List bool
+	// card はカード(compare・stat の1枚、takeaway の地)。PPTX では地と中の文字を
+	// 文字を持つ1つの図形として書く(renderCard)。測り方と置き方はふつうの Col と同じ。
+	card bool
 
 	Subsystem Subsystem // KindSubsystem のときだけ
 	Place     Place     // KindSubsystem: 割り当てが図より大きいときの置き方(既定は左上)

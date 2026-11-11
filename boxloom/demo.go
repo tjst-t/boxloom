@@ -52,6 +52,10 @@ func buildSlideSpec(th Theme, subtitle string) *Spec {
 
 func renderSpec(ctx RenderContext, s *Spec) {
 	p := ctx.Out
+	if s.card {
+		renderCard(p, s)
+		return
+	}
 	if s.Background != "" {
 		radius := 0.0
 		if s.HasRadius {
@@ -94,8 +98,27 @@ func renderSpec(ctx RenderContext, s *Spec) {
 // 位置(前の項目の下端から次の項目の上端まで)から取り、字下げは項目の左端の
 // ずれから取るので、組んだとおりの位置に並ぶ。入れ子の深さは lvl に書く。
 func renderList(p *PPTXBuilder, s *Spec) {
+	p.AddList(s.Box, layoutParas(s, s.Box.X, s.Box.Y))
+}
+
+// renderCard はカードを、地と中の文字を持つ1つの図形にする(PowerPoint で
+// カードを動かせば文字も付いてきて、文字を足せば地の中で流れる)。文字の枠の
+// 内側の余白はカードの余白で、段落の前の間と字下げは renderList と同じく
+// 組んだ位置から取る。
+func renderCard(p *PPTXBuilder, s *Spec) {
+	prst, radius := "rect", 0.0
+	if s.HasRadius && s.Radius > 0 {
+		prst, radius = "roundRect", s.Radius
+	}
+	px, py := s.padX(), s.padY()
+	p.AddCard(s.Box, prst, s.Background, radius, px, py, layoutParas(s, s.Box.X+px, s.Box.Y+py))
+}
+
+// layoutParas は s の中の文字の葉を、組んだ位置どおりの段落にする。left・top は
+// 文字の枠の左上(字下げと最初の段落の前の間はここから測る)。
+func layoutParas(s *Spec, left, top float64) []listPara {
 	var items []listPara
-	prevBottom := s.Box.Y
+	prevBottom := top
 	var walk func(n *Spec, level int)
 	walk = func(n *Spec, level int) {
 		for _, c := range n.Children {
@@ -110,7 +133,7 @@ func renderList(p *PPTXBuilder, s *Spec) {
 					runs = []TextRun{{Text: c.Text, Color: c.Color, Bold: c.Bold}}
 				}
 				items = append(items, listPara{Runs: runs, Size: c.FontSize, Level: level,
-					Indent: c.Box.X - s.Box.X, SpaceBefore: math.Max(sp, 0)})
+					Indent: c.Box.X - left, SpaceBefore: math.Max(sp, 0)})
 				prevBottom = c.Box.Y + c.Box.Height
 			case c.List:
 				walk(c, level+1)
@@ -120,7 +143,7 @@ func renderList(p *PPTXBuilder, s *Spec) {
 		}
 	}
 	walk(s, 0)
-	p.AddList(s.Box, items)
+	return items
 }
 
 // --- fill-ratioリンター。本物のcontent_fill_ratio()/lint_fill_ratio()の移植。 ---

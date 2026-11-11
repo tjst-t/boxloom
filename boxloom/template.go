@@ -465,8 +465,10 @@ func (t *Template) compare(opts []IRCompareOption) *Spec {
 			runs := append([]TextRun{{Text: t.Marks.Con, Color: th.c("danger"), Bold: true, Mark: true}}, t.runs(c, th.c("text_primary"), false)...)
 			kids = append(kids, RichTextNode(runs, WithFontSize(v.OptionItem)))
 		}
-		cards = append(cards, Col(kids, WithGap(v.ItemGap), WithPadding(v.CardPadding),
-			WithBackground(th.c("card")), WithRadius(v.CardRadius), WithGrow(1), WithBasis(0)))
+		card := Col(kids, WithGap(v.ItemGap), WithPadding(v.CardPadding),
+			WithBackground(th.c("card")), WithRadius(v.CardRadius), WithGrow(1), WithBasis(0))
+		card.card = true
+		cards = append(cards, card)
 	}
 	row := Row(cards, WithGap(v.BlockGap))
 	row.cards = "options"
@@ -477,10 +479,13 @@ func (t *Template) compare(opts []IRCompareOption) *Spec {
 // 一段大きな太字で書く。
 func (t *Template) takeaway(in Inline) *Spec {
 	v, th := t.Values, t.Theme
+	// 帯は別の図形のまま(片側だけの枠は DrawingML に無い)。
+	card := Col([]*Spec{t.prose(in, v.TakeawayText, th.c("text_primary"), true)},
+		WithPadding(v.CardPadding), WithBackground(th.c("card")), WithGrow(1), WithBasis(0))
+	card.card = true
 	return Row([]*Spec{
 		Col(nil, WithWidth(v.AccentBarWidth), WithBackground(th.c("accent"))),
-		Col([]*Spec{t.prose(in, v.TakeawayText, th.c("text_primary"), true)},
-			WithPadding(v.CardPadding), WithBackground(th.c("card")), WithGrow(1), WithBasis(0)),
+		card,
 	})
 }
 
@@ -502,11 +507,13 @@ func (t *Template) stat(items []IRStatItem) *Spec {
 		}
 		value := RichTextNode(num, WithFontSize(v.StatValue))
 		value.keepLine = fmt.Sprintf("stat: items[%d]", i)
-		cards = append(cards, Col([]*Spec{
+		card := Col([]*Spec{
 			value,
 			t.text(it.Label, v.StatLabel, th.c("text_muted"), false),
 		}, WithGap(v.ItemGap), WithPadding(v.CardPadding), WithBackground(th.c("card")), WithRadius(v.CardRadius),
-			WithGrow(1), WithBasis(0)))
+			WithGrow(1), WithBasis(0))
+		card.card = true
+		cards = append(cards, card)
 	}
 	row := Row(cards, WithGap(v.BlockGap))
 	row.cards = "items"
