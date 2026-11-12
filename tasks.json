@@ -1207,7 +1207,7 @@
       "number": 68,
       "kind": "task",
       "title": "配置の段をトークンのまま持つ(値の表の名前・段の刻み・役割名で持ち、組み立ての直後・計測の前に1か所で解決する)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "tokens-template",
       "dependsOn": [
         "public-measure-marks"
@@ -1217,14 +1217,14 @@
       "labels": [],
       "body": "docs/layers.md の 2.1・7章の4段目・8.3。\n\n## なぜ\nいまの Spec は、値の表から引いた pt と色の文字列を持つ。これを名前(blockGap・cardPadding・body・accent など)のまま持ち、1か所で解決するようにする。そうすると、組み方の中で値の表から外れた数を書けなくなる(#1301886 の段の検査が組み方にも効く)。配置の段の木を入力として読む口(layout-input、#69)の前提でもある。\n\n## 決めたこと(layers.md 8.3)\n- **書けるもの**:値の表の名前と、段の刻みだけ。刻みは `space(n)`(spacingUnit の n 倍)と `type(n)`(typeSizes の段)。\n  - 段に無い数は書けない。\n  - 色は役割名だけで、16進は書けない。\n  - grow・basis は比なので、トークンにせずただの数のまま。\n- **標準の部品は名前だけで書く。** 刻みと段は、足す部品(pairs など)・テンプレートの組み方・木の入力の逃げ道として残す。\n- **解決は1か所。** 組み立ての直後・計測の前に `resolveSpec`(値の表を引く)で数と色に直す。計測・配置・PPTX の書き出しは解決した数を読むので、エンジンは変えない。\n- **サブシステムへの渡し方は今のまま。** トークンはサブシステムの葉の外側(余白・置き方)で終わる。中の寸法はテンプレートを選んだ時に Factory に渡し、色は描く時に Roles で引く。\n- **範囲の外**:サブシステムの中に直に書いた数(Gantt の 148・80 など)。\n\n## 確かめ方\n- 標準の部品が名前だけを書くことを試験で確かめる(Spec に解決済みの数・色・刻みが無い)。\n- 段から外れた刻みや、知らない名前・役割名は解決のときに誤りになる。\n- layout のダンプ(#67)が、トークンと解決した値を出す。",
       "doneWhen": "標準の部品が Spec に解決済みの数・色を書かず、名前だけを書く(試験で確かめる。足す部品は名前か space(n)・type(n) の刻み)。解決は組み立ての直後・計測の前の resolveSpec の1か所で、段に無い刻み・知らない名前・役割名は誤り。layout のダンプにトークンが出る。examples の出力が変わらない(TestOutputsGolden の PPTX と check の記録が同じ)。tools/ci.sh go python pptx が通る。",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/token-spec）",
       "refs": [
         "docs/layers.md"
       ],
       "threads": [],
       "createdAt": "2026-11-12T01:24:55.354Z",
-      "updatedAt": "2026-11-12T09:32:28.401Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-12T09:43:13.174Z",
+      "closedAt": "2026-11-12T09:43:13.174Z",
       "extra": {}
     },
     {
