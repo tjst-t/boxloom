@@ -1180,6 +1180,29 @@
       "extra": {}
     },
     {
+      "id": "layout-dump",
+      "number": 67,
+      "kind": "task",
+      "title": "配置の段の木を JSON で出す(layout コマンド:箱・印・値・決まった座標)",
+      "status": "ready",
+      "parent": "tokens-template",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "## なぜ\n組みの三段(docs/layers.md)の配置の段(Spec の木)は Go のメモリの中だけにあり、外から見えない。なぜその大きさ・はみ出しになったかを、人と AI が読めるようにする。\n\n## 形\n- `go run ./cmd/boxloom layout [-template 名前] deck.(bx.md|json)` がスライドごとの木を JSON で出す。\n- 1つの箱:kind(row/col/text/subsystem)・どの IR の場所から来たか(path)・gap・padding・grow・basis・文字の葉の文字と字の大きさと色・計測の印(irType・cardRow・columnGroups・keepLine・nestedSlack・list・card)・エンジンが決めた box{x,y,width,height}(pt)。サブシステムは名前と申告した大きさ(自然・最小・上限)だけで中身は出さない。\n- いまの Spec は値の表から引いた数と色を持っている。トークンの名前(blockGap・text_primary など)を出すかは、出せるところだけ添える(値を後で解決する形は layers.md 7章4段目で、この仕事の外)。\n- 形の定義を schema/ に Schema として置き、docs に書く(docs/layers.md と docs/build.md)。\n- 入力として読む口は、人の答えを待って別に決める(作者に書かせない原則との関係)。この仕事は出力だけ。\n\n## 確かめ方\nexamples の deck で出し、box が PPTX の a:off/a:ext と一致すること(EMU/12700)を試験で確かめる。",
+      "doneWhen": "layout コマンドが examples の全 deck で Schema に通る JSON を出す。各文字の葉と card の box が PPTX の図形の位置・大きさと一致する(試験)。build と check の出力は変わらない(TestOutputsGolden の記録が同じ)。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [
+        "docs/layers.md"
+      ],
+      "threads": [],
+      "createdAt": "2026-11-12T01:23:37.679Z",
+      "updatedAt": "2026-11-12T01:23:37.679Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "oss-release-prep",
       "number": 6,
       "kind": "story",
