@@ -73,6 +73,14 @@ func TestTemplateFileStrict(t *testing.T) {
 			gv["annotationPaddingY"] = 6
 			m["subsystems"] = map[string]any{"gantt": gv}
 		}, `subsystems.gantt.annotationPaddingY: 6 is not on the spacing scale`},
+		{"gantt drawing size off scale", func(m map[string]any) {
+			// #70 でコードから値の表へ移した寸法も段で見る(節目の箱の最小の幅)。
+			var gv map[string]any
+			raw, _ := valueFiles.ReadFile("subsystems/gantt.json")
+			_ = json.Unmarshal(raw, &gv)
+			gv["milestoneMinWidth"] = 150
+			m["subsystems"] = map[string]any{"gantt": gv}
+		}, `subsystems.gantt.milestoneMinWidth: 150 is not on the spacing scale (multiples of 4); nearest: 148 or 152`},
 		{"shapes override off scale", func(m map[string]any) {
 			var sv map[string]any
 			raw, _ := valueFiles.ReadFile("subsystems/shapes.json")

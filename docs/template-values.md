@@ -98,7 +98,7 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 
 | 種類 | values | subsystems/gantt.json | subsystems/shapes.json |
 |---|---|---|---|
-| 余白 | `pagePadding` `pagePaddingY` `coverPadding` `sectionGap` `blockGap` `itemGap` `headerGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` `sectionTrackerPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` | `padding` `textInsetX` `textInsetY` |
+| 余白 | `pagePadding` `pagePaddingY` `coverPadding` `sectionGap` `blockGap` `itemGap` `headerGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` `sectionTrackerPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap`、#70 で移した `legendSwatchGap` `milestonePaddingX` `milestoneAxisGap` `groupBoxGap` `subgroupInsetRight` `rowLabelGap` `annotationFixedPaddingX` `annotationFixedPaddingY` `annotationGap` `annotationShift`、箱の大きさ `milestoneMinWidth` `tickLabelWidth` `tickSubLabelOffset` `tickSubLabelWidth` `tickSubLabelHeight` | `padding` `textInsetX` `textInsetY` |
 | 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `leadText` `body` `subPoint` `optionLabel` `optionItem` `small` `figureDetail` `captionText` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
 ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率は段階に載せない
@@ -418,8 +418,50 @@ process・orgchart・funnel の状態の凡例(`docs/subsystem.md` の11節)の�
 | `outlineWidth` | 図形の枠線の太さ |
 | `cornerRadius` | roundRect の角 |
 
-描く処理の中の細かい数(バーと行の間の 3pt、凡例の色見本の大きさなど)は、
-描き方の一部としてコード(`gantt.go`)に残した。
+**描く処理の細部の寸法**(Backlog #70 でコードから移した。値は移す前のまま):
+
+| キー | 意味 |
+|---|---|
+| `legendSwatchWidth` `legendSwatchHeight` | 凡例の色見本の大きさ(15×7) |
+| `legendSwatchTop` `legendLabelRaise` | 色見本を行の上端から下げる分、凡例の文の箱を上げる分(2・2) |
+| `legendSwatchGap` `legendLabelGap` | 色見本と文の間(4)、文の後ろ(6。この後に `padding` を空けて次の項目) |
+| `legendSwatchOutlineWidth` `legendSwatchRadius` | 色見本の枠の太さ・角(0.5・2) |
+| `milestoneMinWidth` `milestonePaddingX` | 節目の文字の箱の最小の幅(148)、左右の余白(4) |
+| `milestoneAxisGap` `milestoneLabelGap` | 節目の段と目盛りの文字の間(4)、同じ段の節目の文字どうしの最小の隙間(6) |
+| `tickLabelWidth` `tickLabelHeight` | 目盛りの文字の箱(64×13。日付の真上に中央揃え) |
+| `tickSubLabelOffset` `tickSubLabelWidth` `tickSubLabelHeight` | 目盛りの副ラベルの箱を下げる分(12)と箱(80×12) |
+| `axisGap` | 目盛りの文字の行と軸の線の間、軸の線と本体の間(5) |
+| `tickDotRadius` | 軸の上の目盛りの点(2.2) |
+| `breakMarkWidth` `breakMarkHeight` `breakMarkSpacing` `breakMarkHaloWidth` | 区間圧縮の印(//)の1本の幅と高さ(6・14)、2本の間(6)、下に地の色で引く線の太さ(3) |
+| `groupBoxGap` `groupInsetX` `groupRadius` | グループ名の箱とサブグループの列の間(4)、箱の中の左右の余白(3)、角(6) |
+| `subgroupInsetLeft` `subgroupInsetRight` | サブグループの文字の箱の左右の余白(2・4) |
+| `rowLabelGap` | 行の名前と時間軸の間(8) |
+| `barInset` `barRadius` | 行の高さと帯・注記の箱の高さの差(6。上下に半分ずつ)、帯・注記の箱の角(3) |
+| `segmentLabelInsetLeft` `segmentLabelInsetRight` | 帯の中の文の左右の余白(5・3) |
+| `noteInsetX` | 注記の箱の中の左右の余白(5) |
+| `openEndDotOffset` `openEndDotStep` `openEndDotRadius` | 終わりの無い帯の後ろの点:帯の端から最初の点まで(5)、点の間(6)、点の大きさ(1.4) |
+| `extNoteLabelHeight` `extNoteLabelGap` | 延伸ノートの文字の箱の高さ(13)、箱と線の間(2) |
+| `annotationFixedPaddingX` `annotationFixedPaddingY` | 手で置いた注釈の箱の中の余白(8・4) |
+| `annotationRadius` | 注釈の箱の角(8) |
+| `annotationGap` `annotationShift` | 同じレーンの注釈の箱の間の最小の隙間(4)、置けないときにずらす刻み(箱の幅に足す。8) |
+| `anchorDotRadius` `leaderGap` | 注釈が指す先の点(3)、引き出し線が文字を避けるときの隙間(2) |
+| `thinLineWidth` | 目盛りの縦の破線・グループの境・注記の破線の枠(0.75) |
+| `lineWidth` | 軸・仮の帯の破線の枠・延伸ノートの線・注釈の箱の枠(1.25) |
+| `leaderLineWidth` `emphasisLineWidth` | 引き出し線と区間圧縮の印の線(1)、強調した注釈の縦の線(2) |
+
+**段から外れたままの寸法**(Backlog #70):余白・間隔・箱の大きさのうち、いまの値が
+段(dark / light の `spacingUnit` 4)から外れているものは、近い段に寄せると出力が
+変わるので寄せず、`scale:"space"` の印を付けずに置いた(0 より大きいことだけを見る):
+`legendSwatchWidth` 15・`legendSwatchHeight` 7・`legendSwatchTop` 2・`legendLabelRaise` 2・
+`legendLabelGap` 6・`milestoneLabelGap` 6・`tickLabelHeight` 13・`axisGap` 5・
+`groupInsetX` 3・`subgroupInsetLeft` 2・`barInset` 6・`segmentLabelInsetLeft` 5・
+`segmentLabelInsetRight` 3・`noteInsetX` 5・`extNoteLabelHeight` 13・`extNoteLabelGap` 2・
+`leaderGap` 2、印の形の `breakMarkWidth` 6・`breakMarkSpacing` 6・`openEndDotOffset` 5・
+`openEndDotStep` 6。段に寄せるかは出力を変える別の判断として残す。線の太さ・角・
+点の大きさは、ほかの値の表と同じく段に載せない。
+
+行の数・段の数・比などの決まりの数は値の表に置かず、名前つきの定数としてコードに
+残した(`docs/subsystem.md` の13節)。
 
 ## コードに残したもの
 
@@ -427,8 +469,9 @@ process・orgchart・funnel の状態の凡例(`docs/subsystem.md` の11節)の�
 - **従来のデモ**(`go run ./cmd/boxloom`、`demo.go` の `buildSlideSpec`):v11 の再現なので、
   題の大きさなどの数はそのまま。色はテンプレートのファイル(dark / light)から引く。
 - `fill-ratio` の上限(100%)。はみ出しはテンプレートの方針ではなくコアの検査なので。
-- 描く処理の中の細かい数(Gantt のバーの余白・凡例の色見本・手で置いた注釈の箱の中の
-  余白など)は段階の検査の外にある。
+- サブシステムの中の決まりの数(行・段の数の上限、比、アプリの振る舞いの見積もり)。
+  名前つきの定数で、理由を注釈に書いた(`docs/subsystem.md` の13節)。Gantt の描く
+  処理の細部の寸法は #70 で値の表に移した(上の「subsystems/gantt.json の形」)。
 
 ## 確かめたこと
 

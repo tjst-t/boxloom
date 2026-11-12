@@ -335,7 +335,7 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 			p.AddDot(x+v.LegendDotSize/2, y+lineH/2, v.LegendDotSize/2, ctx.Roles.Color(li.Role))
 			lx := x + v.LegendDotSize + v.DotGap/2
 			w := runWidthPt(li.Label, tx.Small, false)
-			p.AddTextBoxNoWrap(LBox{X: lx, Y: y, Width: w + 4, Height: lineH}, li.Label, tx.Small, ctx.Roles.Color("text_muted"), false, "left", "top")
+			p.AddTextBoxNoWrap(LBox{X: lx, Y: y, Width: w + noWrapSlack, Height: lineH}, li.Label, tx.Small, ctx.Roles.Color("text_muted"), false, "left", "top")
 			x += s.legendItemW(li) + v.LegendItemGap
 		}
 	}

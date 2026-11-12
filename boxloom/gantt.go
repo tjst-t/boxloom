@@ -257,7 +257,7 @@ func (g *GanttSubsystem) Measure(c Constraint) Measurement {
 		if len(gr.Rows) == 0 {
 			continue
 		}
-		lh := measureTextHeight(gr.Label, gv.SmallText, gv.GutterGroupW-10, true)
+		lh := measureTextHeight(gr.Label, gv.SmallText, gv.GutterGroupW-(gv.GroupBoxGap+2*gv.GroupInsetX), true)
 		if v := lh / float64(len(gr.Rows)); v > labelRowH {
 			labelRowH = v
 		}
@@ -291,7 +291,7 @@ func (g *GanttSubsystem) Measure(c Constraint) Measurement {
 type ganttNoteNeed struct {
 	group, row int
 	text       string
-	rowH       float64 // 要る行の高さ(箱の上下の隙間 6pt を含む)
+	rowH       float64 // 要る行の高さ(箱の上下の隙間 barInset を含む)
 }
 
 // ganttRows は行ごとの高さ。行の高さはふつう全行で同じ(base)だが、注記の文が
@@ -391,8 +391,14 @@ const (
 
 // ganttSegLabelMaxLines は、区間の文を帯の中で折り返してよい行数の上限。
 // これを越えるほど帯が狭いときは、文を描かずに警告する(縦に細長い文の柱を
-// 作らない)。
+// 作らない)。決まりの数:3行を越えると帯が文の柱になり、時間の長さを表す帯の
+// 形が読めなくなる。寸法ではない(行の数)ので値の表には置かない。
 const ganttSegLabelMaxLines = 3
+
+// ganttSegLabelMinEm は、区間の文を折り返すときに帯の中に要る文の幅の下限
+// (字の大きさの倍)。決まりの数:2字分より狭いと1字ずつの縦書きのような
+// 折り返しになり読めない。字の大きさに比例させるための倍率で、寸法ではない。
+const ganttSegLabelMinEm = 2
 
 // segLabelPlan は区間の文の置き方の計画。
 type segLabelPlan struct {
@@ -408,7 +414,7 @@ func planSegmentLabel(gv *GanttValues, chart *GanttChart, chartW float64, seg Ga
 		return segLabelPlan{mode: segLabelNone}
 	}
 	ww := chart.Scale.X(seg.End, 0, chartW) - chart.Scale.X(seg.Start, 0, chartW)
-	textW := ww - 8
+	textW := ww - (gv.SegLabelInsetL + gv.SegLabelInsetR)
 	lines := wrapText(seg.Label, gv.SmallText, math.Max(textW, 1), false)
 	need := 0.0
 	for _, para := range strings.Split(seg.Label, "\n") {
@@ -420,7 +426,7 @@ func planSegmentLabel(gv *GanttValues, chart *GanttChart, chartW float64, seg Ga
 		p.mode = segLabelFit
 		return p
 	}
-	fits := textW >= 2*gv.SmallText && len(lines) <= ganttSegLabelMaxLines
+	fits := textW >= ganttSegLabelMinEm*gv.SmallText && len(lines) <= ganttSegLabelMaxLines
 	for _, l := range lines {
 		if runWidthPt(l, gv.SmallText, false) > textW+eps {
 			fits = false // 折り返しても切れない語が帯より長い
@@ -431,7 +437,7 @@ func planSegmentLabel(gv *GanttValues, chart *GanttChart, chartW float64, seg Ga
 		return p
 	}
 	p.mode = segLabelWrap
-	p.rowH = float64(len(lines))*gv.SmallText*lineHeightMult + ganttNoteBarInset
+	p.rowH = float64(len(lines))*gv.SmallText*lineHeightMult + gv.BarInset
 	return p
 }
 
@@ -487,9 +493,6 @@ func (r ganttRows) bodyHeight(gaps float64) float64 {
 	return t
 }
 
-// ganttNoteBarInset は行の高さと注記・区間の箱の高さの差(renderGantt の barH)。
-const ganttNoteBarInset = 6
-
 // ganttNoteNeeds は、幅 boxWidth で描いたときの各注記の要る行の高さ。箱の幅と
 // 文の幅の取り方は renderGantt と同じ(Measure と描画がずれないように)。
 func ganttNoteNeeds(gv *GanttValues, chart *GanttChart, boxWidth float64) []ganttNoteNeed {
@@ -503,15 +506,15 @@ func ganttNoteNeeds(gv *GanttValues, chart *GanttChart, boxWidth float64) []gant
 				continue
 			}
 			ww := chart.Scale.X(row.NoteEnd, 0, chartW) - chart.Scale.X(row.NoteStart, 0, chartW)
-			if ww < 1.0 {
-				ww = 1.0
+			if ww < ganttMinDrawW {
+				ww = ganttMinDrawW
 			}
-			textW := ww - 10
-			if textW < 1 {
-				textW = 1
+			textW := ww - 2*gv.NoteInsetX
+			if textW < ganttMinDrawW {
+				textW = ganttMinDrawW
 			}
 			h := measureTextHeight(row.NoteText, gv.SmallText, textW, false)
-			out = append(out, ganttNoteNeed{gi, ri, row.NoteText, h + ganttNoteBarInset})
+			out = append(out, ganttNoteNeed{gi, ri, row.NoteText, h + gv.BarInset})
 		}
 	}
 	return out
@@ -541,12 +544,12 @@ func ganttMetricsFor(gv *GanttValues, chart *GanttChart, boxWidth float64) gantt
 	if len(chart.Milestones) > 0 {
 		gutterW := gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW
 		m.milestones = planMilestones(gv, chart, boxWidth-2*gv.Padding-gutterW)
-		m.milestoneH = float64(m.milestones.rows)*gv.MilestoneH + 4
+		m.milestoneH = float64(m.milestones.rows)*gv.MilestoneH + gv.MilestoneAxisGap
 	}
 	// renderGantt の縦の並び: 余白 / 凡例 / 上の注釈 / 節目 / 軸の文字 / 軸 / 本体 / 下の注釈 / 余白
-	m.chromeH = 2*gv.Padding + gv.LegendH + gv.LegendGap + m.annTopH + m.milestoneH + gv.AxisLabelH + 5 + 5 + m.annBottomH
+	m.chromeH = 2*gv.Padding + gv.LegendH + gv.LegendGap + m.annTopH + m.milestoneH + gv.AxisLabelH + gv.AxisGap + gv.AxisGap + m.annBottomH
 	for _, li := range chart.Legend {
-		m.legendW += 19 + 6 + runWidthPt(li.Label, gv.LabelText, false) + gv.Padding
+		m.legendW += gv.LegendSwatchW + gv.LegendSwatchGap + gv.LegendLabelGap + runWidthPt(li.Label, gv.LabelText, false) + gv.Padding
 	}
 	return m
 }
@@ -561,10 +564,10 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 	// --- 凡例(実測した文字幅でカーソルを前進させる。本物と同じ) ---
 	lx := x0
 	for _, li := range chart.Legend {
-		p.AddRectFull(LBox{X: lx, Y: y0 + 2, Width: 15, Height: 7}, c(li.Role), 2, c("text_muted"), "", 0.5)
+		p.AddRectFull(LBox{X: lx, Y: y0 + gv.LegendSwatchTop, Width: gv.LegendSwatchW, Height: gv.LegendSwatchH}, c(li.Role), gv.LegendRadius, c("text_muted"), "", gv.LegendOutlineW)
 		labelW := runWidthPt(li.Label, gv.LabelText, false)
-		p.AddTextBoxNoWrap(LBox{X: lx + 19, Y: y0 - 2, Width: labelW + 4, Height: gv.LegendH}, li.Label, gv.LabelText, c("text_muted"), false, "left", "top")
-		lx += 19 + 6 + labelW + gv.Padding
+		p.AddTextBoxNoWrap(LBox{X: lx + (gv.LegendSwatchW + gv.LegendSwatchGap), Y: y0 - gv.LegendLabelUp, Width: labelW + noWrapSlack, Height: gv.LegendH}, li.Label, gv.LabelText, c("text_muted"), false, "left", "top")
+		lx += gv.LegendSwatchW + gv.LegendSwatchGap + gv.LegendLabelGap + labelW + gv.Padding
 	}
 
 	milestoneY, axisLabelY, axisY := f.milestoneY, f.axisLabelY, f.axisY
@@ -577,7 +580,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 	for i, m := range chart.Milestones {
 		mx := sx(m.Date)
 		text := "★ " + m.text(gv)
-		bw := math.Max(148, runWidthPt(text, gv.SmallText, true)+8)
+		bw := math.Max(gv.MilestoneMinW, runWidthPt(text, gv.SmallText, true)+2*gv.MilestonePadX)
 		y := f.gm.milestones.rowY(milestoneY, gv, i)
 		p.AddTextBoxNoWrap(LBox{X: mx - bw/2, Y: y, Width: bw, Height: gv.MilestoneH}, text, gv.SmallText, c("accent"), true, "center", "middle")
 	}
@@ -585,14 +588,14 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 	// --- 軸目盛り ---
 	for _, t := range chart.Ticks {
 		tx := sx(t.Date)
-		p.AddTextBoxNoWrap(LBox{X: tx - 32, Y: axisLabelY, Width: 64, Height: 13}, t.mainText(gv), gv.LabelText, c(t.Role), true, "center", "top")
+		p.AddTextBoxNoWrap(LBox{X: tx - gv.TickLabelW/2, Y: axisLabelY, Width: gv.TickLabelW, Height: gv.TickLabelH}, t.mainText(gv), gv.LabelText, c(t.Role), true, "center", "top")
 		if t.SubLabel != "" {
-			p.AddTextBoxNoWrap(LBox{X: tx - 40, Y: axisLabelY + 12, Width: 80, Height: 12}, t.SubLabel, gv.SmallText, c("text_muted"), false, "center", "top")
+			p.AddTextBoxNoWrap(LBox{X: tx - gv.TickSubLabelW/2, Y: axisLabelY + gv.TickSubOffset, Width: gv.TickSubLabelW, Height: gv.TickSubLabelH}, t.SubLabel, gv.SmallText, c("text_muted"), false, "center", "top")
 		}
-		p.AddDot(tx, axisY, 2.2, c(t.Role))
-		p.AddLine(tx, bodyTop, tx, bodyTop+bodyH, 0.75, c("grid"), "dash")
+		p.AddDot(tx, axisY, gv.TickDotRadius, c(t.Role))
+		p.AddLine(tx, bodyTop, tx, bodyTop+bodyH, gv.ThinLineW, c("grid"), "dash")
 	}
-	p.AddLine(chartX0, axisY, x0+w, axisY, 1.25, c("text_muted"), "")
+	p.AddLine(chartX0, axisY, x0+w, axisY, gv.LineW, c("text_muted"), "")
 
 	// --- 区間圧縮のbreakマーク("//") ---
 	if chart.HasBreak {
@@ -604,9 +607,10 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 				break
 			}
 		}
-		for _, dx := range []float64{-3.0, 3.0} {
-			p.AddLine(bx+dx-3, axisY-7, bx+dx+3, axisY+7, 3.0, c("bg"), "")
-			p.AddLine(bx+dx-3, axisY-7, bx+dx+3, axisY+7, 1.0, c("text_primary"), "")
+		hw, hh := gv.BreakMarkW/2, gv.BreakMarkH/2
+		for _, dx := range []float64{-gv.BreakMarkSpace / 2, gv.BreakMarkSpace / 2} {
+			p.AddLine(bx+dx-hw, axisY-hh, bx+dx+hw, axisY+hh, gv.BreakMarkHalo, c("bg"), "")
+			p.AddLine(bx+dx-hw, axisY-hh, bx+dx+hw, axisY+hh, gv.LeaderLineW, c("text_primary"), "")
 		}
 	}
 
@@ -629,10 +633,10 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 			p.AddRect(LBox{X: rb0, Y: groupTop, Width: rb1 - rb0, Height: groupH}, c("risk"), 0)
 		}
 
-		p.AddShape(LBox{X: x0, Y: groupTop, Width: gv.GutterGroupW - 4, Height: groupH}, ShapeOpts{
-			Prst: "roundRect", Fill: c("card_alt"), Radius: 6,
+		p.AddShape(LBox{X: x0, Y: groupTop, Width: gv.GutterGroupW - gv.GroupBoxGap, Height: groupH}, ShapeOpts{
+			Prst: "roundRect", Fill: c("card_alt"), Radius: gv.GroupRadius,
 			Runs: []TextRun{{Text: group.Label, Color: c("text_primary"), Bold: true}}, FontSize: gv.SmallText,
-			InsetX: 3 - roundRectTextInset(6), Align: "center", Anchor: "middle",
+			InsetX: gv.GroupInsetX - roundRectTextInset(gv.GroupRadius), Align: "center", Anchor: "middle",
 		})
 
 		rowTops := make([]float64, len(group.Rows))
@@ -651,7 +655,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 			if sub != "" {
 				subTop := rowTops[i]
 				subH := rowTops[j] + rows.h(gi, j) - subTop
-				p.AddTextBox(LBox{X: subX + 2, Y: subTop, Width: gv.GutterSubW - 6, Height: subH}, sub, gv.SmallText, c("text_muted"), false, "center", "middle")
+				p.AddTextBox(LBox{X: subX + gv.SubInsetL, Y: subTop, Width: gv.GutterSubW - (gv.SubInsetL + gv.SubInsetR), Height: subH}, sub, gv.SmallText, c("text_muted"), false, "center", "middle")
 			}
 			i = j + 1
 		}
@@ -660,21 +664,21 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 			row := &group.Rows[idx]
 			rowTop := rowTops[idx]
 			thisH := rows.h(gi, idx)
-			p.AddTextBoxNoWrap(LBox{X: labelX, Y: rowTop, Width: gv.GutterLabelW - 8, Height: thisH}, row.Label, gv.LabelText, c("text_muted"), false, "left", "middle")
+			p.AddTextBoxNoWrap(LBox{X: labelX, Y: rowTop, Width: gv.GutterLabelW - gv.RowLabelGap, Height: thisH}, row.Label, gv.LabelText, c("text_muted"), false, "left", "middle")
 
-			barH := thisH - ganttNoteBarInset
+			barH := thisH - gv.BarInset
 			barY := rowTop + (thisH-barH)/2
 
 			if row.HasNote {
 				nx1, nx2 := sx(row.NoteStart), sx(row.NoteEnd)
 				ww := nx2 - nx1
-				if ww < 1.0 {
-					ww = 1.0
+				if ww < ganttMinDrawW {
+					ww = ganttMinDrawW
 				}
 				p.AddShape(LBox{X: nx1, Y: barY, Width: ww, Height: barH}, ShapeOpts{
-					Prst: "roundRect", Radius: 3, Outline: c("text_muted"), OutlineDash: "dash", OutlineWidthPt: 0.75,
+					Prst: "roundRect", Radius: gv.BarRadius, Outline: c("text_muted"), OutlineDash: "dash", OutlineWidthPt: gv.ThinLineW,
 					Runs: []TextRun{{Text: row.NoteText, Color: c("text_muted")}}, FontSize: gv.SmallText,
-					InsetX: 5 - roundRectTextInset(3), Align: "left", Anchor: "middle",
+					InsetX: gv.NoteInsetX - roundRectTextInset(gv.BarRadius), Align: "left", Anchor: "middle",
 				})
 				continue
 			}
@@ -682,14 +686,14 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 			for _, seg := range row.Segments {
 				bx1, bx2 := sx(seg.Start), sx(seg.End)
 				ww := bx2 - bx1
-				if ww < 1.0 {
-					ww = 1.0
+				if ww < ganttMinDrawW {
+					ww = ganttMinDrawW
 				}
 				segColor := c(seg.Role)
 				if seg.Tentative {
-					p.AddRectFull(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, "", 3, segColor, "dash", 1.25)
+					p.AddRectFull(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, "", gv.BarRadius, segColor, "dash", gv.LineW)
 				} else {
-					p.AddRect(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, segColor, 3)
+					p.AddRect(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, segColor, gv.BarRadius)
 				}
 				if lp := planSegmentLabel(gv, chart, chartW, seg); lp.mode == segLabelFit || lp.mode == segLabelWrap {
 					labelColor := c("text_primary")
@@ -699,7 +703,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 					if seg.Tentative {
 						labelColor = segColor
 					}
-					lbox := LBox{X: bx1 + 5, Y: barY, Width: bx2 - bx1 - 8, Height: barH}
+					lbox := LBox{X: bx1 + gv.SegLabelInsetL, Y: barY, Width: bx2 - bx1 - (gv.SegLabelInsetL + gv.SegLabelInsetR), Height: barH}
 					if lp.mode == segLabelWrap {
 						p.AddTextBox(lbox, seg.Label, gv.SmallText, labelColor, false, "left", "middle")
 					} else {
@@ -707,8 +711,8 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 					}
 				}
 				if seg.OpenEnd {
-					for _, dx := range []float64{5, 11, 17} {
-						p.AddDot(bx2+dx, barY+barH/2, 1.4, segColor)
+					for k := 0; k < ganttOpenEndDots; k++ {
+						p.AddDot(bx2+(gv.OpenEndDotX+float64(k)*gv.OpenEndDotStep), barY+barH/2, gv.OpenEndDotR, segColor)
 					}
 				}
 			}
@@ -716,7 +720,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 
 		yCursor += groupH
 		if gi < nGroups-1 {
-			p.AddLine(x0, yCursor+gv.GroupGap/2, x0+w, yCursor+gv.GroupGap/2, 0.75, c("grid"), "")
+			p.AddLine(x0, yCursor+gv.GroupGap/2, x0+w, yCursor+gv.GroupGap/2, gv.ThinLineW, c("grid"), "")
 			yCursor += gv.GroupGap
 		}
 	}
@@ -725,8 +729,8 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 	if chart.HasExtNote {
 		ex0 := sx(chart.ExtNoteStart)
 		ey := bodyTop + chart.ExtNoteYFrac*bodyH
-		p.AddLine(ex0, ey, x0+w, ey, 1.25, c(chart.ExtNoteRole), "dash")
-		p.AddTextBoxNoWrap(LBox{X: ex0, Y: ey - 15, Width: (x0 + w) - ex0, Height: 13}, chart.ExtNoteLabel, gv.SmallText, c(chart.ExtNoteRole), true, "left", "top")
+		p.AddLine(ex0, ey, x0+w, ey, gv.LineW, c(chart.ExtNoteRole), "dash")
+		p.AddTextBoxNoWrap(LBox{X: ex0, Y: ey - (gv.ExtNoteLabelH + gv.ExtNoteLabelGap), Width: (x0 + w) - ex0, Height: gv.ExtNoteLabelH}, chart.ExtNoteLabel, gv.SmallText, c(chart.ExtNoteRole), true, "left", "top")
 	}
 
 	// --- 注釈(置き場所と大きさは planAnnotations が決める) ---
@@ -736,24 +740,24 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 		annColor := c(ann.Role)
 
 		if ann.Emphasis {
-			p.AddLine(lg.ax, bodyTop, lg.ax, bodyTop+bodyH, 2.0, annColor, "")
+			p.AddLine(lg.ax, bodyTop, lg.ax, bodyTop+bodyH, gv.EmphasisLineW, annColor, "")
 		}
-		p.AddDot(lg.ax, lg.ay, 3.0, annColor)
+		p.AddDot(lg.ax, lg.ay, gv.AnchorDotR, annColor)
 
 		b := lg.box
 		padX, padY := gv.AnnPadX, gv.AnnPadY
 		if ann.Direction != "" {
 			// 手で置いた注釈は従来どおりの余白。
-			padX, padY = 8, 4
+			padX, padY = gv.AnnFixedPadX, gv.AnnFixedPadY
 		}
 		p.AddShape(LBox{X: b.x, Y: b.y, Width: b.w, Height: b.h}, ShapeOpts{
-			Prst: "roundRect", Fill: c("card_alt"), Radius: 8, Outline: annColor, OutlineWidthPt: 1.25,
+			Prst: "roundRect", Fill: c("card_alt"), Radius: gv.AnnRadius, Outline: annColor, OutlineWidthPt: gv.LineW,
 			Runs: []TextRun{{Text: ann.Text, Color: c("text_primary")}}, FontSize: gv.AnnText,
-			InsetX: padX - roundRectTextInset(8), InsetY: padY - roundRectTextInset(8), Align: "left", Anchor: "top",
+			InsetX: padX - roundRectTextInset(gv.AnnRadius), InsetY: padY - roundRectTextInset(gv.AnnRadius), Align: "left", Anchor: "top",
 		})
 		// 引き出し線は、目盛りと節目の文字を横切るところを空けて描く(文字に線を重ねない)。
 		for _, sg := range lg.leader {
-			p.AddLine(sg.x1, sg.y1, sg.x2, sg.y2, 1.0, annColor, "dash")
+			p.AddLine(sg.x1, sg.y1, sg.x2, sg.y2, gv.LeaderLineW, annColor, "dash")
 		}
 	}
 }
@@ -779,11 +783,11 @@ func ganttFrameFor(gv *GanttValues, chart *GanttChart, box LBox) ganttFrame {
 	f.upY = f.y0 + gv.LegendH + gv.LegendGap
 	f.milestoneY = f.upY + f.gm.annTopH
 	f.axisLabelY = f.milestoneY + f.gm.milestoneH
-	f.axisY = f.axisLabelY + gv.AxisLabelH + 5
+	f.axisY = f.axisLabelY + gv.AxisLabelH + gv.AxisGap
 	gutterW := gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW
 	f.chartX0 = f.x0 + gutterW
 	f.chartW = f.w - gutterW
-	f.bodyTop = f.axisY + 5
+	f.bodyTop = f.axisY + gv.AxisGap
 	f.bodyH = (f.y0 + f.h) - f.gm.annBottomH - f.bodyTop
 	f.downY = f.bodyTop + f.bodyH + gv.AnnLaneGap
 	f.rows = ganttRowLayout(gv, chart, box.Width, f.bodyH)
@@ -830,17 +834,14 @@ func ganttLabelRects(gv *GanttValues, chart *GanttChart, f ganttFrame) []placedB
 	for _, t := range chart.Ticks {
 		tx := sx(t.Date)
 		if mt := t.mainText(gv); mt != "" {
-			out = append(out, ink(tx, f.axisLabelY, 13, mt, gv.LabelText, true, false))
+			out = append(out, ink(tx, f.axisLabelY, gv.TickLabelH, mt, gv.LabelText, true, false))
 		}
 		if t.SubLabel != "" {
-			out = append(out, ink(tx, f.axisLabelY+12, 12, t.SubLabel, gv.SmallText, false, false))
+			out = append(out, ink(tx, f.axisLabelY+gv.TickSubOffset, gv.TickSubLabelH, t.SubLabel, gv.SmallText, false, false))
 		}
 	}
 	return out
 }
-
-// ganttLeaderGap は、引き出し線が文字を避けるときに文字との間に空ける隙間(pt)。
-const ganttLeaderGap = 2.0
 
 // lineSeg は線分。
 type lineSeg struct{ x1, y1, x2, y2 float64 }
@@ -878,7 +879,7 @@ func annotationGeoms(gv *GanttValues, chart *GanttChart, f ganttFrame) []annGeom
 		out[i] = annGeom{
 			ax: ax, ay: ay,
 			box:    placedBox{pl.bx, by, pl.w, pl.h},
-			leader: splitAround(lineSeg{ax, ay, pl.bx + pl.w/2, connY}, labels, ganttLeaderGap),
+			leader: splitAround(lineSeg{ax, ay, pl.bx + pl.w/2, connY}, labels, gv.LeaderGap),
 		}
 	}
 	return out
@@ -989,7 +990,7 @@ func planAnnotations(gv *GanttValues, chart *GanttChart, x0, w float64) []annPla
 	var placed []annPlacement
 	free := func(up bool, bx, bw float64) bool {
 		for _, pb := range placed {
-			if pb.up == up && rectsOverlap(placedBox{bx, 0, bw, 1}, placedBox{pb.bx, 0, pb.w, 1}, 4.0) {
+			if pb.up == up && rectsOverlap(placedBox{bx, 0, bw, 1}, placedBox{pb.bx, 0, pb.w, 1}, gv.AnnGap) {
 				return false
 			}
 		}
@@ -998,14 +999,14 @@ func planAnnotations(gv *GanttValues, chart *GanttChart, x0, w float64) []annPla
 	out := make([]annPlacement, len(chart.Annotations))
 	for i, ann := range chart.Annotations {
 		bw, bh := annBoxSize(gv, ann)
-		step := bw + 8
+		step := bw + gv.AnnShift
 		ax := chart.Scale.X(ann.AnchorDate, chartX0, chartW)
 		center := clamp(ax-bw/2, x0, x0+w-bw)
 		pl := annPlacement{w: bw, h: bh}
 		if ann.Direction != "" {
 			pl.up, pl.bx = ann.Direction == "up", center
 			tries := 0
-			for ; tries < 6 && !free(pl.up, pl.bx, bw); tries++ {
+			for ; tries < ganttAnnotationMaxShifts && !free(pl.up, pl.bx, bw); tries++ {
 				pl.bx = clamp(pl.bx+step, x0, x0+w-bw)
 			}
 			pl.overlap = !free(pl.up, pl.bx, bw)
@@ -1013,7 +1014,7 @@ func planAnnotations(gv *GanttValues, chart *GanttChart, x0, w float64) []annPla
 			prefUp := annAnchorFrac(chart, ann) < 0.5
 			pl.up, pl.bx = prefUp, center
 			found := false
-			for k := 0; k <= 6 && !found; k++ {
+			for k := 0; k <= ganttAnnotationMaxShifts && !found; k++ {
 				offsets := []float64{0}
 				if k > 0 {
 					offsets = []float64{float64(k) * step / 2, -float64(k) * step / 2}
@@ -1041,10 +1042,9 @@ func planAnnotations(gv *GanttValues, chart *GanttChart, x0, w float64) []annPla
 
 // ganttMilestoneMaxRows は節目の文字を積む段の数の上限。近い節目は段をずらして
 // 重ならないようにし、それでも重なるものは警告 milestone-overlap にする。
+// 決まりの数:3段以上積むと、どの文字がどの日付の節目かを目で追えなくなる
+// (段の数で、寸法ではない)。
 const ganttMilestoneMaxRows = 2
-
-// ganttMilestoneGap は、同じ段に並べる節目の文字どうしの最小の隙間(pt)。
-const ganttMilestoneGap = 6.0
 
 // milestonePlan は節目ごとの段(0 が軸に一番近い段)と、段の数、
 // 置き場所が無く重ねて置いた節目の組。
@@ -1088,7 +1088,7 @@ func planMilestones(gv *GanttValues, chart *GanttChart, chartW float64) mileston
 	for _, sp := range order {
 		placed := false
 		for r := 0; r < ganttMilestoneMaxRows; r++ {
-			if last[r] < 0 || spans[last[r]].right+ganttMilestoneGap <= sp.left {
+			if last[r] < 0 || spans[last[r]].right+gv.MilestoneGap <= sp.left {
 				mp.row[sp.i], last[r], placed = r, sp.i, true
 				if r+1 > mp.rows {
 					mp.rows = r + 1
@@ -1307,3 +1307,17 @@ func buildChart() *GanttChart {
 func roundRectTextInset(radius float64) float64 {
 	return radius * 0.29289
 }
+
+// ganttMinDrawW は、帯・注記の箱を描く最小の幅と、注記の文に使う幅の下限(pt)。
+// 決まりの数:幅 0 以下の図形は PPTX に書けない(アプリが壊れた図形として扱う)
+// ので、日付が同じか逆の区間でも 1pt の線として残す。見た目の寸法ではない。
+const ganttMinDrawW = 1.0
+
+// ganttOpenEndDots は、終わりの無い帯(open-end)の後ろに並べる点の数。決まりの数:
+// 「…」と同じく3つで「この先も続く」を表す(点の間と大きさは値の表)。
+const ganttOpenEndDots = 3
+
+// ganttAnnotationMaxShifts は、注釈の箱を置けないときに左右へずらして試す回数の
+// 上限。決まりの数:探す手間の打ち切りで、これで見つからなければ重ねて置いて
+// 警告にする(寸法ではない)。
+const ganttAnnotationMaxShifts = 6

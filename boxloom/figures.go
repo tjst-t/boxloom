@@ -577,6 +577,12 @@ func (l figureLegendLayout) part(lv figureLegendValues) []flexPart {
 	return []flexPart{fixedPart(lv.gap + l.h)}
 }
 
+// noWrapSlack は、折り返さない1行の文字の箱を、測った文字の幅より広げる分(pt)。
+// 決まりの数:文字は左揃えなので箱の右の余りは見えない(見た目の寸法ではない)。
+// アプリの字の幅が測った値より少し広くても、箱の端で文字が切れたり次の行へ
+// 落ちたりしないためのゆとり(Gantt の凡例・図の凡例・funnel の転換率)。
+const noWrapSlack = 4.0
+
 // drawFigureLegend は凡例を (x, y) から描く。見本は箱と同じ形(地の塗りに状態の
 // 色の枠線)。
 func drawFigureLegend(ctx RenderContext, x0, y0 float64, l figureLegendLayout, size float64, lv figureLegendValues) {
@@ -590,7 +596,7 @@ func drawFigureLegend(ctx RenderContext, x0, y0 float64, l figureLegendLayout, s
 					OutlineWidthPt: lv.outlineW, Radius: lv.radius})
 			lx := x + lv.swatchW + lv.swatchGap
 			w := runWidthPt(li.Label, size, false)
-			ctx.Out.AddTextBoxNoWrap(LBox{X: lx, Y: y, Width: w + 4, Height: lineH}, li.Label, size, ctx.Roles.Color("text_muted"), false, "left", "top")
+			ctx.Out.AddTextBoxNoWrap(LBox{X: lx, Y: y, Width: w + noWrapSlack, Height: lineH}, li.Label, size, ctx.Roles.Color("text_muted"), false, "left", "top")
 			x += lv.itemW(li, size) + lv.itemGap
 		}
 	}

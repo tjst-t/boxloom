@@ -225,11 +225,31 @@ func (s *ChartSubsystem) valueExtent() float64 {
 	return m
 }
 
+// グラフの大きさの見積もりに使う決まりの数。軸・名前の置き場所はアプリが決めるので、
+// Boxloom はアプリの振る舞いを見積もる(docs/subsystem.md の12節)。どれも見た目の
+// 寸法ではなく、アプリの決まりを写した比・行の数(テンプレートで変えても、アプリの
+// 描き方は変わらない)。
+const (
+	// chartAxisHeadroom:アプリは一番大きな値より1刻み上まで目盛りを振る。その目盛りの
+	// 文字の幅を、一番大きな値の 1.2 倍の数の幅で見積もる。
+	chartAxisHeadroom = 1.2
+	// chartBarSeriesGrowth:並べた横棒は、系列が1つ増えるごとに1項目の高さが半分ずつ太る
+	// (アプリが系列の棒を隙間なく並べ、項目の間は gapWidth のまま)。
+	chartBarSeriesGrowth = 0.5
+	// chartPieLabelLines:円の扇の外の名前と値の2行が、上と下に出る(2行×2)。
+	chartPieLabelLines = 4
+	// chartScatterAxisLines:散布図の下の目盛りの行と軸の題の2行。
+	chartScatterAxisLines = 2
+	// chartCategoryLabelFrac:縦の形で、アプリが項目の名前に使う幅は1項目の幅の 9 割
+	// (残りは名前の間の隙間)。
+	chartCategoryLabelFrac = 0.9
+)
+
 // tickLabelWidth は値の軸の目盛りの文字の幅(一番長いもの)の見積もり。
 // アプリは一番大きな値より1刻み上まで目盛りを振るので、桁が1つ増える分を見込む。
 func (s *ChartSubsystem) tickLabelWidth(vals []float64, extent float64, unit string) float64 {
 	dec := chartDecimals(vals)
-	txt := chartFormat(extent*1.2, dec, unit)
+	txt := chartFormat(extent*chartAxisHeadroom, dec, unit)
 	if strings.HasPrefix(txt, "-") {
 		txt = txt[1:]
 	}
@@ -292,7 +312,7 @@ func (s *ChartSubsystem) geom(width float64) chartGeom {
 		g.labelLines = s.labelLinesAt(g.slot)
 		k := 1.0
 		if form == ChartBar {
-			k = 1 + 0.5*float64(len(d.Series)-1) // 並べた棒は系列の数だけ太る
+			k = 1 + chartBarSeriesGrowth*float64(len(d.Series)-1) // 並べた棒は系列の数だけ太る
 		}
 		need := float64(g.labelLines)*lh + v.Padding/2
 		n := float64(len(d.Categories))
@@ -303,15 +323,15 @@ func (s *ChartSubsystem) geom(width float64) chartGeom {
 		return g
 	case ChartPie:
 		// 扇の外に項目の名前と値の2行が上下に出る。
-		g.min = v.MinPlotHeight + 4*lh + extra
+		g.min = v.MinPlotHeight + chartPieLabelLines*lh + extra
 	case ChartScatter:
 		// 下に目盛りの行と軸の題、左に軸の題。
-		g.min = v.MinPlotHeight + 2*lh + extra
+		g.min = v.MinPlotHeight + chartScatterAxisLines*lh + extra
 	default:
 		yW := s.tickLabelWidth(s.allValues(), s.valueExtent(), d.Unit)
 		plotW := width - 2*v.Padding - yW - v.Padding
 		g.slot = plotW / float64(max(len(d.Categories), 1))
-		g.labelLines = s.labelLinesAt(g.slot * 0.9)
+		g.labelLines = s.labelLinesAt(g.slot * chartCategoryLabelFrac)
 		extra += float64(min(g.labelLines, int(v.LabelMaxLines)))*lh + v.Padding/2
 		if s.dataLabels() {
 			extra += lh // 一番高い棒の上の値
@@ -322,7 +342,7 @@ func (s *ChartSubsystem) geom(width float64) chartGeom {
 	if s.Form() == ChartPie {
 		// 円は幅いっぱいの直径(左右に扇の外の名前と値を残す)を自然な高さにする。
 		// 細い枠(並列のまとまりの中)でも円が小さくなりすぎない。
-		g.nat = math.Max(g.min, width-s.pieSide()+2*v.Padding+4*lh)
+		g.nat = math.Max(g.min, width-s.pieSide()+2*v.Padding+chartPieLabelLines*lh)
 	}
 	return g
 }
@@ -357,7 +377,7 @@ func (s *ChartSubsystem) Measure(c Constraint) Measurement {
 // これを横の上限として申告する。
 func (s *ChartSubsystem) pieWidth(h float64) float64 {
 	v, lh := s.vals(), s.lineH()
-	d := math.Max(h-2*v.Padding-4*lh, v.MinPlotHeight)
+	d := math.Max(h-2*v.Padding-chartPieLabelLines*lh, v.MinPlotHeight)
 	return math.Max(d+s.pieSide(), v.MinWidth)
 }
 
@@ -492,7 +512,7 @@ func (s *ChartSubsystem) Lint(box LBox) []string {
 	fs := s.fontSize()
 	var bad []int
 	var needW float64
-	haveW := g.slot * 0.9
+	haveW := g.slot * chartCategoryLabelFrac
 	if form == ChartBar || form == ChartStackedBar {
 		haveW = g.slot
 	}

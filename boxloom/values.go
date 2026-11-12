@@ -164,6 +164,66 @@ type GanttValues struct {
 	LabelText float64 `json:"labelText" scale:"type"` // 凡例・行の名前・目盛り
 	SmallText float64 `json:"smallText" scale:"type"` // グループ名・区間の文字・節目
 
+	// 描く処理の細部の寸法(#70 でコードから移した。値は移す前のまま)。
+	// 余白・間隔・箱の大きさのうち段に載るものは scale:"space"。段から外れて
+	// いるもの(6・5・3・2・13 など)は、寄せると出力が変わるので印を付けずに置いた
+	// (docs/template-values.md の「段から外れたままの寸法」)。
+	LegendSwatchW   float64 `json:"legendSwatchWidth"`             // 凡例の色見本の幅
+	LegendSwatchH   float64 `json:"legendSwatchHeight"`            // 凡例の色見本の高さ
+	LegendSwatchTop float64 `json:"legendSwatchTop"`               // 色見本の上端を凡例の行の上端から下げる分
+	LegendSwatchGap float64 `json:"legendSwatchGap" scale:"space"` // 色見本と文の間
+	LegendLabelUp   float64 `json:"legendLabelRaise"`              // 凡例の文の箱を行の上端から上げる分
+	LegendLabelGap  float64 `json:"legendLabelGap"`                // 凡例の文の後ろ(この後に padding を空けて次の項目)
+
+	MilestoneMinW    float64 `json:"milestoneMinWidth" scale:"space"` // 節目の文字の箱の最小の幅
+	MilestonePadX    float64 `json:"milestonePaddingX" scale:"space"` // 節目の文字の箱の左右の余白
+	MilestoneAxisGap float64 `json:"milestoneAxisGap" scale:"space"`  // 節目の段と目盛りの文字の間
+	MilestoneGap     float64 `json:"milestoneLabelGap"`               // 同じ段に並べる節目の文字どうしの最小の隙間
+
+	TickLabelW     float64 `json:"tickLabelWidth" scale:"space"`     // 目盛りの文字の箱の幅(日付の真上に中央揃え)
+	TickLabelH     float64 `json:"tickLabelHeight"`                  // 目盛りの文字の箱の高さ
+	TickSubOffset  float64 `json:"tickSubLabelOffset" scale:"space"` // 目盛りの副ラベルを主の文字の上端から下げる分
+	TickSubLabelW  float64 `json:"tickSubLabelWidth" scale:"space"`  // 目盛りの副ラベルの箱の幅
+	TickSubLabelH  float64 `json:"tickSubLabelHeight" scale:"space"` // 目盛りの副ラベルの箱の高さ
+	AxisGap        float64 `json:"axisGap"`                          // 目盛りの文字の行と軸の線の間、軸の線と本体の間
+	TickDotRadius  float64 `json:"tickDotRadius"`                    // 軸の上の目盛りの点
+	BreakMarkW     float64 `json:"breakMarkWidth"`                   // 区間圧縮の印(//)の1本の横の幅
+	BreakMarkH     float64 `json:"breakMarkHeight"`                  // 同じく縦の高さ
+	BreakMarkSpace float64 `json:"breakMarkSpacing"`                 // 2本の線の間(中心どうし)
+	BreakMarkHalo  float64 `json:"breakMarkHaloWidth"`               // 印の下に地の色で引く太い線(軸を切って見せる)
+
+	GroupBoxGap     float64 `json:"groupBoxGap" scale:"space"`        // グループ名の箱とサブグループの列の間
+	GroupInsetX     float64 `json:"groupInsetX"`                      // グループ名の箱の中の左右の余白
+	GroupRadius     float64 `json:"groupRadius"`                      // グループ名の箱の角
+	SubInsetL       float64 `json:"subgroupInsetLeft"`                // サブグループの文字の箱の左の余白
+	SubInsetR       float64 `json:"subgroupInsetRight" scale:"space"` // 同じく右の余白
+	RowLabelGap     float64 `json:"rowLabelGap" scale:"space"`        // 行の名前と時間軸の間
+	BarInset        float64 `json:"barInset"`                         // 行の高さと帯・注記の箱の高さの差(上下に半分ずつ)
+	BarRadius       float64 `json:"barRadius"`                        // 帯・注記の箱の角
+	SegLabelInsetL  float64 `json:"segmentLabelInsetLeft"`            // 帯の中の文の左の余白
+	SegLabelInsetR  float64 `json:"segmentLabelInsetRight"`           // 帯の中の文の右の余白
+	NoteInsetX      float64 `json:"noteInsetX"`                       // 注記の箱の中の左右の余白
+	OpenEndDotX     float64 `json:"openEndDotOffset"`                 // 終わりの無い帯の後ろの点の列の、帯の右端から最初の点まで
+	OpenEndDotStep  float64 `json:"openEndDotStep"`                   // 同じく点の間
+	OpenEndDotR     float64 `json:"openEndDotRadius"`                 // 同じく点の大きさ
+	ExtNoteLabelH   float64 `json:"extNoteLabelHeight"`               // 延伸ノートの文字の箱の高さ
+	ExtNoteLabelGap float64 `json:"extNoteLabelGap"`                  // 延伸ノートの文字の箱と線の間
+
+	AnnFixedPadX float64 `json:"annotationFixedPaddingX" scale:"space"` // 手で置いた注釈の箱の中の余白
+	AnnFixedPadY float64 `json:"annotationFixedPaddingY" scale:"space"`
+	AnnRadius    float64 `json:"annotationRadius"`              // 注釈の箱の角
+	AnnGap       float64 `json:"annotationGap" scale:"space"`   // 同じレーンの注釈の箱の間の最小の隙間
+	AnnShift     float64 `json:"annotationShift" scale:"space"` // 置けないときにずらす刻み(箱の幅にこれを足す)
+	AnchorDotR   float64 `json:"anchorDotRadius"`               // 注釈が指す先の点
+	LeaderGap    float64 `json:"leaderGap"`                     // 引き出し線が文字を避けるときの文字との隙間
+
+	ThinLineW      float64 `json:"thinLineWidth"`            // 目盛りの縦の破線・グループの境・注記の破線の枠
+	LineW          float64 `json:"lineWidth"`                // 軸・仮の帯の破線の枠・延伸ノートの線・注釈の箱の枠
+	LeaderLineW    float64 `json:"leaderLineWidth"`          // 引き出し線・区間圧縮の印の線
+	EmphasisLineW  float64 `json:"emphasisLineWidth"`        // 強調した注釈の縦の線
+	LegendOutlineW float64 `json:"legendSwatchOutlineWidth"` // 凡例の色見本の枠
+	LegendRadius   float64 `json:"legendSwatchRadius"`       // 凡例の色見本の角
+
 	// DateFormat は目盛りと節目の日付の書き方(IR から作った Gantt)。YYYY・YY・
 	// M・MM を年と月に置き換え、ほかの文字はそのまま(例 "YYYY/M" → 2026/12)。
 	DateFormat string `json:"dateFormat"`

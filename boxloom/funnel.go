@@ -269,7 +269,7 @@ func (s *FunnelSubsystem) place(box LBox) (*funnelGeom, *funnelPlaced) {
 	lineH := s.text().Sub * lineHeightMult
 	for i := 0; i+1 < len(pl.bars); i++ {
 		mid := (pl.bars[i].Y + pl.bars[i].Height + pl.bars[i+1].Y) / 2
-		pl.rates = append(pl.rates, LBox{X: x0 + g.rateX, Y: mid - lineH/2, Width: g.rateW + 4, Height: lineH})
+		pl.rates = append(pl.rates, LBox{X: x0 + g.rateX, Y: mid - lineH/2, Width: g.rateW + noWrapSlack, Height: lineH})
 	}
 	if g.legend.h > 0 {
 		last := pl.bars[len(pl.bars)-1]

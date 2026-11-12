@@ -144,7 +144,7 @@ Gantt の Factory は `ganttFromIR`(`gantt_ir.go`)で読み、`GanttChart` を
 | 確定していない区間(`tentative`) | 塗らずに、状態の色の破線の枠で描く |
 
 **節目の段**(Issue #51、`planMilestones`):節目の文字(`★ 日付 名前`)の幅を実測し、
-左から順に、横に重ならない(隙間 6pt)一番下の段へ置く。段は2つまで
+左から順に、横に重ならない(隙間 `milestoneLabelGap` 6pt)一番下の段へ置く。段は2つまで
 (`ganttMilestoneMaxRows`)で、軸に一番近い段から埋める。日付が近い節目が2つなら
 段をずらして並べ、そのぶん節目の帯が1段高くなる(Measure の自然な高さも同じだけ
 増えるので、はみ出しの計測と描画はずれない)。2段のどちらにも空きが無い節目は、
@@ -173,7 +173,7 @@ Gantt の Factory は `ganttFromIR`(`gantt_ir.go`)で読み、`GanttChart` を
 箱から本体の点へ引く線は、必ず節目と軸の文字の帯を通る。注釈の日付に目盛りか
 節目があると(箱は日付の真上に置くので、ほとんどの場合そうなる)、線が文字の
 真ん中を通って字を隠していた。いまは、目盛りと節目の文字が実際に占める矩形
-(字の幅 × 行の高さ。文字の箱そのものではない)を 2pt 広げ、線のうちその中を
+(字の幅 × 行の高さ。文字の箱そのものではない)を `leaderGap`(2pt)広げ、線のうちその中を
 通る部分を描かない。線は文字の前後で切れた数本の線分になり、点から箱まで
 続いて見える(1pt に満たない切れ端は描かない)。どの文字とも交わらない線は
 従来どおり1本で、その PPTX は変わらない。
@@ -399,7 +399,7 @@ Place の側(上・中央・下で 0・75・150pt)に残る/形を保たない�
 (`gantt-full` の「Loom 3/4/5」の行)。
 
 **直し方**:文が収まらない **その行だけ** を、収まる高さ(文の高さ + 箱の上下の
-隙間 6pt)まで高くし、その分ほかの行を低くします(本体の高さの合計は同じ)。
+隙間 `barInset` 6pt)まで高くし、その分ほかの行を低くします(本体の高さの合計は同じ)。
 Measure の Natural・Min・Max にもこの高さを入れるので、枠が足りなければ
 `subsystem-min` の警告が出ます。
 
@@ -419,7 +419,8 @@ Measure の Natural・Min・Max にもこの高さを入れるので、枠が足
 
 以前は、区間(segment)の文を折り返さずに帯へ置き、帯の幅が 46pt 以下なら文を
 出していませんでした(黙って消す・帯からはみ出す、のどちらも警告が無かった)。
-いまは、帯の中で文に使える幅(帯の幅 − 8pt)で、次の順に決めます
+いまは、帯の中で文に使える幅(帯の幅 − 文の左右の余白 `segmentLabelInsetLeft` 5pt・
+`segmentLabelInsetRight` 3pt)で、次の順に決めます
 (`planSegmentLabel`。Measure・Lint・描画が同じ計算を使う)。
 
 | 場合 | 置き方 |
@@ -432,7 +433,8 @@ Measure の Natural・Min・Max にもこの高さを入れるので、枠が足
 目盛りの場所で、置き場所を探す仕組み(注釈の置き場所の計画)を区間にも広げる
 ことになる。狭い区間の説明は、作者が注釈(`annotations`)か行の注記に移すのが
 意味として正しいので、警告で知らせて作者に選ばせる。3行の上限は、細長い文の柱を
-作らないための目安(値の表には出していない)。
+作らないための目安(行の数で寸法ではないので、値の表には出さず名前つきの定数
+`ganttSegLabelMaxLines` にした。13節)。
 
 1行で収まる文の描き方は以前と同じなので、従来のデモの PPTX は変わらない。例は
 `examples/md/warnings/gantt-segment-label.bx.md`(↔ `examples/ir/check-warnings/gantt-segment-label.json`)。
@@ -780,6 +782,33 @@ Google Slides で PDF にしたもの `chart-prototype-light-googleslide.pdf`)�
 - 積み上げの100%(割合の積み上げ)・面グラフ・ウォーターフォール・2つの軸の組み合わせは無い。
 - 値のラベルは1系列の棒と円だけ(折れ線・積み上げには付けない)。
 - 円の小さい扇のラベルの手当て(上の表)。
+
+## 13. サブシステムの中の数:値の表か決まりの数か(Backlog #70)
+
+#68 のあと、部品の組み方は段に無い数を書けない。サブシステムの描画と計測に直に
+書いていた数も、次の2つに分けた。
+
+- **(a) 見た目の寸法**(余白・間隔・箱の大きさ・線の太さ・角・点の大きさ):値の表
+  (`subsystems/<名前>.json`、テンプレートの `subsystems.<名前>`)の名前に移した。
+  渡し方は従来どおりで、寸法はテンプレートを選んだときに Factory へ、色は描くときに
+  Roles で引く。余白・間隔・箱の大きさのうち段に載るものには `scale:"space"` を付け、
+  段から外れると読み込みで誤りにする。いまの値が段から外れているもの(Gantt の
+  `barInset` 6・`axisGap` 5 など)は、近い段に寄せると出力が変わるので、印を付けずに
+  移した(`docs/template-values.md` の「段から外れたままの寸法」)。
+- **(b) 決まりの数**(行・段・点の数の上限、比、半分にする 2、アプリの振る舞いの
+  見積もり、図形を書ける最小の幅):名前つきの定数にし、なぜその数かを注釈に書いた。
+
+| サブシステム | (b) として残した定数 |
+|---|---|
+| gantt | `ganttSegLabelMaxLines`(3行)・`ganttSegLabelMinEm`(字2つ分)・`ganttMilestoneMaxRows`(2段)・`ganttOpenEndDots`(3つ)・`ganttAnnotationMaxShifts`(6回)・`ganttMinDrawW`(1pt)・`roundRectTextInset`(1 − 1/√2) |
+| chart | `chartAxisHeadroom`(1.2)・`chartBarSeriesGrowth`(0.5)・`chartPieLabelLines`(4)・`chartScatterAxisLines`(2)・`chartCategoryLabelFrac`(0.9) |
+| 図(凡例)・funnel・matrix | `noWrapSlack`(4pt。折り返さない文字の箱のゆとりで、左揃えなので見えない) |
+| shapes・matrix | 既にあった `connectorAngleMin`・`ellipseSiteFactor`・`matrixDotInk` と 1/√2(楕円に内接する矩形) |
+
+Gantt に足した値の表のキーは `docs/template-values.md` の「subsystems/gantt.json の形」。
+出力は1バイトも変わらない(`TestOutputsGolden` と従来のデモ2枚を展開して比べた)。
+chart の PPTX の書き手(`chartxml.go`)の `orDefault` の数は、サブシステムが値を
+渡さなかったときの書き手の既定で、サブシステムの描画と計測の外に置いた。
 
 ## 確かめたこと
 

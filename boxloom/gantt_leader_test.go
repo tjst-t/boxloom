@@ -87,7 +87,7 @@ func TestGanttLeaderAvoidsAxisLabels(t *testing.T) {
 					}
 					for _, sg := range ag.leader {
 						for ri, r := range labels {
-							if segHitsRect(sg, r, -ganttLeaderGap+0.05) {
+							if segHitsRect(sg, r, -gv.LeaderGap+0.05) {
 								t.Errorf("%s %s: annotation %d leader %+v crosses label %d %+v", c.path, tmpl, ai, sg, ri, r)
 							}
 						}
