@@ -104,6 +104,9 @@ type Spec struct {
 	// "/" で始まれば文書の中の絶対の場所、そうでなければスライドからの相対
 	// ("title"・"lead" など)。空なら親の場所を継ぐ。
 	irPath string
+	// tok は部品が書いたトークン(値の表の名前・段の刻み・役割名)。resolveSpec が
+	// 上の数と色に直す(token.go)。layout の出力はこれを tokens に出す。
+	tok specTokens
 
 	Box LBox // compute_layout()実行後に確定する
 }

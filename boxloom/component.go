@@ -141,7 +141,7 @@ func (r *componentRegistry) build(ctx componentContext, b *IRBlock) (*Spec, erro
 	if len(kids) == 1 {
 		return kids[0], nil
 	}
-	return Col(kids, WithGap(ctx.t.Values.BlockGap)), nil
+	return Col(kids, tokGap("blockGap")), nil
 }
 
 // clone はテンプレートごとに表を分けるために写しを作る(語彙は共有)。
@@ -174,11 +174,11 @@ func defaultComponents() *componentRegistry {
 	}
 	reg("paragraph", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		t := ctx.t
-		return t.text(b.Content, t.Values.Body, t.Theme.c("text_primary"), false), nil
+		return t.text(b.Content, "body", "text_primary", false), nil
 	})
 	reg("note", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		t := ctx.t
-		return t.text(b.Content, t.Values.Small, t.Theme.c("text_muted"), false), nil
+		return t.text(b.Content, "small", "text_muted", false), nil
 	})
 	reg("points", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		return ctx.t.points(b.Items, 0), nil
@@ -218,7 +218,7 @@ func defaultComponents() *componentRegistry {
 			return nil, err
 		}
 		// 高さは自己申告(自然な高さ)が出発点で、余りは grow で受け取る。
-		return SubsystemNode(sub, WithGrow(1), WithBackground(t.Theme.c("card")), WithRadius(t.Values.SubsystemRadius)), nil
+		return SubsystemNode(sub, WithGrow(1), tokBackground("card"), tokRadius("subsystemRadius")), nil
 	})
 	return r
 }

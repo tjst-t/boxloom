@@ -191,11 +191,13 @@ go run ./cmd/boxloom layout -template dark ../examples/ir/demo-deck.json
   `nestedSlack`・`list`・`card`。
 - サブシステム(表・画像・図・グラフ・Gantt)は `subsystem` に名前と、割り当てられた幅で
   尋ねた申告(`natural`・`min`・`max`・`fixedAspect`)と、描いた矩形 `draw` だけ。中身は出さない。
-- いまの木は値の表から引いた**数と色**を持つ(値を後で解決する形は `docs/layers.md` の
-  7章の4段目)。値の表の名前(トークン)は、その値に当たる名前が1つだけのときに
-  `tokens` に添える(間隔・余白は `scale:"space"` の値、字の大きさは `scale:"type"` の値、
-  色はテーマの役割名、角は `…Radius`。塊の色は `runs[].role`)。同じ値の名前が2つ以上
-  あれば添えない(どちらから引いたかを今の木は覚えていない)。
+- 部品は木に数と色を書かず、**トークン**(値の表の名前・段の刻み `space(n)`・`type(n)`・
+  テーマの役割名)を書く。組み立ての直後・計測の前に1か所(`resolveSpec`、
+  `boxloom/token.go`)で数と色に直す(`docs/layers.md` の 2.1・8.3)。出力には解決した値
+  (`gap`・`padding`・`fontSize`・`background` など)と、部品が書いたトークンの両方が出る:
+  `tokens` の `gap`・`padding`・`paddingY`・`width`・`height`・`fontSize`・`color`・
+  `background`・`radius`、塊の色は `runs[].role`、塊だけの字の大きさは `runs[].sizeToken`。
+  `pointIndentEm` のような em の名前は、同じ箱の `fontSize` のトークンに掛けた値になる。
 - `box` は build と同じ配置(PPTX はこれをそのまま `a:off`/`a:ext` に書く)。文字の葉・
   カード・箇条・地の箱が PPTX の図形と一致することを `TestLayoutBoxesMatchPPTX`
   (`boxloom/layoutdump_test.go`)が examples の全 deck で確かめる。カードと箇条の中の

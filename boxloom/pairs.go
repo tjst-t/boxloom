@@ -187,17 +187,16 @@ type pairRow struct {
 // 真上に来る。
 func pairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
 	t := ctx.t
-	v, th := t.Values, t.Theme
 	p, err := readPairs(b.Raw)
 	if err != nil {
 		return nil, err
 	}
 	side := func(s *Spec) *Spec { return Col([]*Spec{s}, WithGrow(1), WithBasis(0)) }
-	row := func(a, b *Spec) *Spec { return Row([]*Spec{a, b}, WithGap(v.ColumnGap)) }
+	row := func(a, b *Spec) *Spec { return Row([]*Spec{a, b}, tokGap("columnGap")) }
 	info := &pairsInfo{}
 	info.head = row(
-		side(t.text(p.Subject, v.ColumnTitle, th.c("text_primary"), true)),
-		side(t.text(p.Response, v.ColumnTitle, th.c("text_primary"), true)))
+		side(t.text(p.Subject, "columnTitle", "text_primary", true)),
+		side(t.text(p.Response, "columnTitle", "text_primary", true)))
 	var rows []*Spec
 	for k := range p.Pairs {
 		pr := &p.Pairs[k]
@@ -214,8 +213,8 @@ func pairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
 		info.rows = append(info.rows, pi)
 		rows = append(rows, pi.row)
 	}
-	info.list = Col(rows, WithGap(v.BlockGap))
-	return Col([]*Spec{info.head, info.list}, WithGap(v.ItemGap), measurePairRows(info)), nil
+	info.list = Col(rows, tokGap("blockGap"))
+	return Col([]*Spec{info.head, info.list}, tokGap("itemGap"), measurePairRows(info)), nil
 }
 
 // registerBundledComponents は同梱のテンプレート(templates/*.json。いまは dark・light)が

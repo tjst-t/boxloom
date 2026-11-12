@@ -104,11 +104,10 @@ func pairTemplate(t *testing.T) *Template {
 		if err != nil {
 			return nil, err
 		}
-		v := ctx.t.Values
 		return Row([]*Spec{
-			ctx.t.text(Inline{{Text: p.Left}}, v.Body, ctx.t.Theme.c("text_primary"), false),
-			ctx.t.text(Inline{{Text: p.Right}}, v.Body, ctx.t.Theme.c("text_primary"), false),
-		}, WithGap(v.BlockGap)), nil
+			ctx.t.text(Inline{{Text: p.Left}}, "body", "text_primary", false),
+			ctx.t.text(Inline{{Text: p.Right}}, "body", "text_primary", false),
+		}, tokGap("blockGap")), nil
 	})); err != nil {
 		t.Fatal(err)
 	}

@@ -200,3 +200,52 @@ func TestLayoutPaths(t *testing.T) {
 		t.Errorf("/slides/1/title = line %d tokens %v placeholder %q", n.Line, n.Tokens, n.Placeholder)
 	}
 }
+
+// TestLayoutTokens は layout の出力が部品の書いたトークン(値の表の名前・役割名)と
+// 解決した値を一緒に出すことを確かめる。
+func TestLayoutTokens(t *testing.T) {
+	data := []byte("---\ntitle: T\ntemplate: dark\n---\n\n# 題\n\n- 親の項目\n  - 子の項目\n- 次の項目\n\n:::::compare\n::::option A\n:::pros\n- 良い\n:::\n::::\n::::option B\n:::cons\n- 悪い\n:::\n::::\n:::::\n")
+	dump, err := Layout("tokens.bx.md", data, BuildOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tm := mustTemplate("dark")
+	var root, card, indent, mark *LayoutNode
+	var markRun *LayoutRun
+	var walk func(n *LayoutNode)
+	walk = func(n *LayoutNode) {
+		switch {
+		case root == nil && n.Tokens["padding"] == "pagePadding":
+			root = n
+		case card == nil && n.Marks != nil && n.Marks.Card && n.Tokens["radius"] == "cardRadius":
+			card = n
+		case indent == nil && n.Tokens["width"] == "pointIndentEm":
+			indent = n
+		}
+		for i, r := range n.Runs {
+			if markRun == nil && r.Mark && r.Role == "accent" {
+				mark, markRun = n, &n.Runs[i]
+			}
+		}
+		for _, c := range n.Children {
+			walk(c)
+		}
+	}
+	for _, s := range dump.Slides {
+		walk(s.Root)
+	}
+	v := tm.Values
+	if root == nil || root.Tokens["paddingY"] != "pagePaddingY" || root.Tokens["gap"] != "sectionGap" || root.Tokens["background"] != "bg" ||
+		root.Padding.X != v.PagePadding || root.Padding.Y != v.PagePaddingY || root.Background != tm.Theme["bg"] {
+		t.Errorf("slide root: %+v", root)
+	}
+	if card == nil || card.Tokens["padding"] != "cardPadding" || card.Tokens["background"] != "card" || *card.Radius != v.CardRadius {
+		t.Errorf("card: %+v", card)
+	}
+	if indent == nil || indent.Tokens["fontSize"] != "body" || *indent.Width != v.Body*v.PointIndentEm {
+		t.Errorf("point indent: %+v", indent)
+	}
+	if markRun == nil || markRun.Color != tm.Theme["accent"] || mark.Tokens["fontSize"] == "" {
+		t.Errorf("point mark run: %+v", markRun)
+	}
+}

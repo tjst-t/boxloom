@@ -6,16 +6,14 @@
 //
 // 座標は build と同じ配置(computeLayout の直後。PPTX はこの box をそのまま
 // a:off / a:ext に書く)。サブシステムは名前と申告した大きさだけで、中身は出さない。
-// 間隔・余白・字の大きさ・色は、いまの木では値の表から引いた数と色なので、
-// 値の表の名前(トークン)が1つに決まるときだけ tokens に添える。
+// 間隔・余白・幅・高さ・角・字の大きさ・色は、解決した数と色に加えて、部品が
+// 書いたトークン(値の表の名前・段の刻み・役割名。token.go)を tokens に出す。
 
 package boxloom
 
 import (
 	"fmt"
 	"math"
-	"reflect"
-	"sort"
 	"strings"
 )
 
@@ -68,8 +66,9 @@ type LayoutRun struct {
 	Mark  bool    `json:"mark,omitempty"`  // 箇条などの頭の印
 	Keep  bool    `json:"keep,omitempty"`  // 塊の中で折り返さない
 	Field string  `json:"field,omitempty"` // アプリが値を入れる欄(slidenum)
-	// Role は色の役割名(値の表で1つに決まるときだけ)。
-	Role string `json:"role,omitempty"`
+	// Role は色の役割名、SizeToken は字の大きさのトークン(部品が書いたもの)。
+	Role      string `json:"role,omitempty"`
+	SizeToken string `json:"sizeToken,omitempty"`
 }
 
 // LayoutMarks は計測と書き出しの印(docs/layers.md の2.1)。
@@ -126,8 +125,8 @@ type LayoutNode struct {
 
 	Marks     *LayoutMarks     `json:"marks,omitempty"`
 	Subsystem *LayoutSubsystem `json:"subsystem,omitempty"`
-	// Tokens は数・色の値の表の名前(1つに決まるものだけ)。
-	// キーは gap・padding・paddingY・fontSize・color・background・radius。
+	// Tokens は部品が書いたトークン(値の表の名前・space(n)・type(n)・役割名)。
+	// キーは gap・padding・paddingY・width・height・fontSize・color・background・radius。
 	Tokens   map[string]string `json:"tokens,omitempty"`
 	Children []*LayoutNode     `json:"children,omitempty"`
 }
@@ -194,22 +193,20 @@ func layoutDeck(deck *IRDeck, opt BuildOptions, lines lineMap) (*LayoutDump, err
 		return nil, err
 	}
 	v := t.Values
-	tk := newLayoutTokens(t)
 	out := &LayoutDump{Format: LayoutFormat, Template: t.Name, Page: LayoutSize{v.PageW, v.PageH}, Slides: []LayoutSlide{}}
 	for i, b := range built {
 		computeLayout(b.Root, 0, 0, v.PageW, v.PageH)
 		sp := fmt.Sprintf("/slides/%d", i)
-		d := &layoutDumper{slide: sp, tokens: tk, lines: lines, body: b.Body, groups: map[*Spec]columnInfo{}, pairParts: map[*Spec]string{}}
+		d := &layoutDumper{slide: sp, lines: lines, body: b.Body, groups: map[*Spec]columnInfo{}, pairParts: map[*Spec]string{}}
 		out.Slides = append(out.Slides, LayoutSlide{Path: sp, Line: lines.Line(sp), Type: deck.Slides[i].Type, Root: d.node(b.Root, sp)})
 	}
 	return out, nil
 }
 
 type layoutDumper struct {
-	slide  string
-	tokens *layoutTokens
-	lines  lineMap
-	body   *Spec
+	slide string
+	lines lineMap
+	body  *Spec
 	// groups は並列のまとまりの箱(まとまり全体・本文の列)→ そのまとまり。
 	groups map[*Spec]columnInfo
 	// pairParts は対の並びの中の箱 → "list"(対の行の列)か "row"(見出しの行・対の行)。
@@ -244,17 +241,20 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 			tok[key] = name
 		}
 	}
+	k := s.tok
 	n.Gap = s.Gap
-	if s.Gap != 0 {
-		addTok("gap", d.tokens.space(s.Gap))
-	}
+	addTok("gap", k.gap)
 	if s.Padding != 0 || s.padY() != 0 {
 		n.Padding = &LayoutPadding{X: s.padX(), Y: s.padY()}
-		addTok("padding", d.tokens.space(s.padX()))
-		if s.padY() != s.padX() {
-			addTok("paddingY", d.tokens.space(s.padY()))
-		}
 	}
+	addTok("padding", k.padX)
+	if k.padY != k.padX {
+		addTok("paddingY", k.padY)
+	}
+	addTok("width", k.width)
+	addTok("height", k.height)
+	// 字の大きさ(文字の葉。em の名前で幅を決めた空きの箱も持つ)。
+	addTok("fontSize", k.fontSize)
 	n.Grow, n.Basis, n.Width, n.Height = s.Grow, s.Basis, s.Width, s.Height
 	if s.AlignItems == AlignCenter {
 		n.AlignItems = "center"
@@ -264,25 +264,24 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 	}
 	if s.Background != "" {
 		n.Background = s.Background
-		addTok("background", d.tokens.color(s.Background))
 	}
+	addTok("background", k.background)
+	addTok("radius", k.radius)
 	if s.HasRadius {
 		r := s.Radius
 		n.Radius = &r
-		addTok("radius", d.tokens.radius(r))
 	}
 	if s.Kind == KindText {
 		txt := s.Text
 		n.Text = &txt
 		n.FontSize = s.FontSize
-		addTok("fontSize", d.tokens.typeSize(s.FontSize))
 		if len(s.Runs) > 0 {
 			for _, r := range s.Runs {
-				n.Runs = append(n.Runs, LayoutRun{Text: r.Text, Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep, Field: r.Field, Role: d.tokens.color(r.Color)})
+				n.Runs = append(n.Runs, LayoutRun{Text: r.Text, Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep, Field: r.Field, Role: r.role, SizeToken: r.sizeTok})
 			}
 		} else {
 			n.Color, n.Bold = s.Color, s.Bold
-			addTok("color", d.tokens.color(s.Color))
+			addTok("color", k.color)
 		}
 		if s.Align != "" && s.Align != "left" {
 			n.TextAlign = s.Align
@@ -365,55 +364,3 @@ func (d *layoutDumper) childPath(s *Spec, i int, c *Spec, path string) string {
 	}
 	return path
 }
-
-// --- 値の表の名前(トークン)。数・色が1つの名前にだけ当たるときに添える ---
-
-type layoutTokens struct {
-	spaces, types, radii, colors map[string][]string
-}
-
-func tokenKey(v float64) string { return fmt.Sprintf("%g", v) }
-
-func newLayoutTokens(t *Template) *layoutTokens {
-	tk := &layoutTokens{spaces: map[string][]string{}, types: map[string][]string{}, radii: map[string][]string{}, colors: map[string][]string{}}
-	rv := reflect.ValueOf(t.Values)
-	rt := rv.Type()
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
-		if f.Type.Kind() != reflect.Float64 {
-			continue
-		}
-		name := strings.Split(f.Tag.Get("json"), ",")[0]
-		val := tokenKey(rv.Field(i).Float())
-		switch {
-		case f.Tag.Get("scale") == "space":
-			tk.spaces[val] = append(tk.spaces[val], name)
-		case f.Tag.Get("scale") == "type":
-			tk.types[val] = append(tk.types[val], name)
-		case strings.HasSuffix(name, "Radius"):
-			tk.radii[val] = append(tk.radii[val], name)
-		}
-	}
-	roles := make([]string, 0, len(t.Theme))
-	for r := range t.Theme {
-		roles = append(roles, r)
-	}
-	sort.Strings(roles)
-	for _, r := range roles {
-		c := strings.ToUpper(t.Theme[r])
-		tk.colors[c] = append(tk.colors[c], r)
-	}
-	return tk
-}
-
-func only(names []string) string {
-	if len(names) == 1 {
-		return names[0]
-	}
-	return ""
-}
-
-func (tk *layoutTokens) space(v float64) string    { return only(tk.spaces[tokenKey(v)]) }
-func (tk *layoutTokens) typeSize(v float64) string { return only(tk.types[tokenKey(v)]) }
-func (tk *layoutTokens) radius(v float64) string   { return only(tk.radii[tokenKey(v)]) }
-func (tk *layoutTokens) color(c string) string     { return only(tk.colors[strings.ToUpper(c)]) }

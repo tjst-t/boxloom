@@ -67,16 +67,18 @@ type TemplateValues struct {
 	// 章の一覧と現在地を置く(SectionTrackerText はその字の大きさ)。
 	SectionTracker     bool    `json:"sectionTracker"`
 	SectionTrackerText float64 `json:"sectionTrackerText" scale:"type"`
-	StatementText      float64 `json:"statementText" scale:"type"` // 主張(statement)の1文
-	TakeawayText       float64 `json:"takeawayText" scale:"type"`  // 結論(takeaway)の1文
-	StatValue          float64 `json:"statValue" scale:"type"`     // 統計強調(stat)の数
-	StatUnit           float64 `json:"statUnit" scale:"type"`      // 数の単位
-	StatLabel          float64 `json:"statLabel" scale:"type"`     // 数の説明
-	QuoteText          float64 `json:"quoteText" scale:"type"`     // 引用(quote)の言葉
-	QuoteMark          float64 `json:"quoteMark" scale:"type"`     // 引用の頭の印
-	QuoteSource        float64 `json:"quoteSource" scale:"type"`   // 引用の出どころ
+	// SectionTrackerPadding は章の一覧の題の上下左右の余白(左の帯との間も)。
+	SectionTrackerPadding float64 `json:"sectionTrackerPadding" scale:"space"`
+	StatementText         float64 `json:"statementText" scale:"type"` // 主張(statement)の1文
+	TakeawayText          float64 `json:"takeawayText" scale:"type"`  // 結論(takeaway)の1文
+	StatValue             float64 `json:"statValue" scale:"type"`     // 統計強調(stat)の数
+	StatUnit              float64 `json:"statUnit" scale:"type"`      // 数の単位
+	StatLabel             float64 `json:"statLabel" scale:"type"`     // 数の説明
+	QuoteText             float64 `json:"quoteText" scale:"type"`     // 引用(quote)の言葉
+	QuoteMark             float64 `json:"quoteMark" scale:"type"`     // 引用の頭の印
+	QuoteSource           float64 `json:"quoteSource" scale:"type"`   // 引用の出どころ
 
-	PointIndentEm float64 `json:"pointIndentEm"` // 入れ子の箇条の字下げ(親の字の大きさの倍)
+	PointIndentEm float64 `json:"pointIndentEm" unit:"em"` // 入れ子の箇条の字下げ(親の字の大きさの倍)
 
 	CardPadding     float64 `json:"cardPadding" scale:"space"`
 	CardRadius      float64 `json:"cardRadius"`
@@ -88,11 +90,11 @@ type TemplateValues struct {
 	StatementInset float64 `json:"statementInset" scale:"space"` // 主張のスライドの文を本文の外周からさらに内へ
 	AccentBarWidth float64 `json:"accentBarWidth"`               // 結論の左の帯の幅
 
-	FillRatioMin float64 `json:"fillRatioMin"` // 本文の埋まりがこれ未満なら警告
+	FillRatioMin float64 `json:"fillRatioMin" unit:"ratio"` // 本文の埋まりがこれ未満なら警告
 
-	ColumnTitle      float64 `json:"columnTitle" scale:"type"` // 並列のまとまりの題
-	ColumnGap        float64 `json:"columnGap" scale:"space"`  // まとまりの間
-	ColumnMainWeight float64 `json:"columnMainWeight"`         // 主のまとまり(role: main)の幅の比(ほかは 1)
+	ColumnTitle      float64 `json:"columnTitle" scale:"type"`      // 並列のまとまりの題
+	ColumnGap        float64 `json:"columnGap" scale:"space"`       // まとまりの間
+	ColumnMainWeight float64 `json:"columnMainWeight" unit:"ratio"` // 主のまとまり(role: main)の幅の比(ほかは 1)
 
 	TableText      float64 `json:"tableText" scale:"type"`          // 表のセルの字
 	TableCellPadX  float64 `json:"tableCellPaddingX" scale:"space"` // セルの左右の余白

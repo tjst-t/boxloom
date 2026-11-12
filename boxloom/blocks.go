@@ -233,7 +233,7 @@ func (t *Template) table(b *IRBlock) *Spec {
 			if numeric[c] {
 				align = "right"
 			}
-			out = append(out, TableCell{Runs: t.runs(in, th.c("text_primary"), header), Align: align})
+			out = append(out, TableCell{Runs: t.leafRuns(in, "text_primary", header), Align: align})
 		}
 		return out
 	}
@@ -256,7 +256,7 @@ func (t *Template) table(b *IRBlock) *Spec {
 		}
 	}
 	if b.Caption != nil {
-		leaf.caption = t.runs(b.Caption, th.c("text_muted"), false)
+		leaf.caption = t.leafRuns(b.Caption, "text_muted", false)
 	}
 	return SubsystemNode(leaf)
 }
@@ -335,7 +335,7 @@ func (t *Template) imageLeaf(src, alt string, caption Inline) (*imageLeaf, error
 	v := t.Values
 	m := &imageLeaf{img: img, alt: alt, capSize: v.CaptionText, capGap: v.CaptionGap, minH: v.ImageMinHeight}
 	if caption != nil {
-		m.caption = t.runs(caption, t.Theme.c("text_muted"), false)
+		m.caption = t.leafRuns(caption, "text_muted", false)
 	}
 	return m, nil
 }
@@ -482,7 +482,7 @@ type columnInfo struct {
 // columns は並列のまとまりを横に並べる。幅の比は意味(role: main)から決める:
 // 主のまとまりは columnMainWeight、ほかは 1。題は本文の上に置く。
 func (t *Template) columns(ctx componentContext, b *IRBlock) (*Spec, error) {
-	v, th := t.Values, t.Theme
+	v := t.Values
 	info := &columnsInfo{}
 	var cols []*Spec
 	for ci := range b.Columns {
@@ -495,20 +495,20 @@ func (t *Template) columns(ctx componentContext, b *IRBlock) (*Spec, error) {
 			}
 			blocks = append(blocks, s)
 		}
-		body := Col(blocks, WithGap(v.BlockGap), WithGrow(1), nestedSlack())
+		body := Col(blocks, tokGap("blockGap"), WithGrow(1), nestedSlack())
 		col := columnInfo{body: body}
 		kids := []*Spec{body}
 		if c.Title != nil {
-			col.title = t.text(c.Title, v.ColumnTitle, th.c("text_primary"), true)
+			col.title = t.text(c.Title, "columnTitle", "text_primary", true)
 			kids = []*Spec{col.title, body}
 		}
 		weight := 1.0
 		if c.Role == "main" {
 			weight = v.ColumnMainWeight
 		}
-		col.spec = Col(kids, WithGap(v.ItemGap), WithGrow(weight), WithBasis(0))
+		col.spec = Col(kids, tokGap("itemGap"), WithGrow(weight), WithBasis(0))
 		info.cols = append(info.cols, col)
 		cols = append(cols, col.spec)
 	}
-	return Row(cols, WithGap(v.ColumnGap), measureColumnGroups(info), nestedSlack()), nil
+	return Row(cols, tokGap("columnGap"), measureColumnGroups(info), nestedSlack()), nil
 }

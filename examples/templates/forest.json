@@ -53,6 +53,7 @@
     "sectionTitle": 36,
     "sectionTracker": true,
     "sectionTrackerText": 14,
+    "sectionTrackerPadding": 4,
     "statementText": 36,
     "takeawayText": 16,
     "statValue": 36,

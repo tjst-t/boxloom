@@ -100,8 +100,22 @@ func (t *Template) checkVariant(v string) error {
 	return nil
 }
 
-// BuildSlide は i 枚目を組む。
+// BuildSlide は i 枚目を組む。部品と骨組みが書いたトークン(値の表の名前・段の
+// 刻み・役割名)は、組み立ての直後・計測の前にここで1度だけ数と色に直す
+// (resolveSpec。token.go)。
 func (t *Template) BuildSlide(d *IRDeck, i int) (*BuiltSlide, error) {
+	b, err := t.buildSlideTokens(d, i)
+	if err != nil {
+		return nil, err
+	}
+	if err := resolveSpec(t, b.Root); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// buildSlideTokens は i 枚目をトークンのまま組む(解決はしない)。
+func (t *Template) buildSlideTokens(d *IRDeck, i int) (*BuiltSlide, error) {
 	s := &d.Slides[i]
 	if err := t.checkVariant(s.Variant); err != nil {
 		return nil, err
@@ -122,41 +136,53 @@ func (t *Template) BuildSlide(d *IRDeck, i int) (*BuiltSlide, error) {
 // --- 文字の装飾: 意味(em など)を見た目に変える ---
 
 // runs は inline を見た目の塊に変える。強調はアクセントの色の太字。
-func (t *Template) runs(in Inline, color string, bold bool) []TextRun {
+// role は色の役割名(値は resolveSpec が引く)。
+func (t *Template) runs(in Inline, role string, bold bool) []TextRun {
 	var out []TextRun
-	var walk func(in Inline, color string, bold bool)
-	walk = func(in Inline, color string, bold bool) {
+	var walk func(in Inline, role string, bold bool)
+	walk = func(in Inline, role string, bold bool) {
 		for _, p := range in {
 			switch p.Type {
 			case "":
-				out = append(out, TextRun{Text: p.Text, Color: color, Bold: bold})
+				out = append(out, roleRun(p.Text, role, bold))
 			case "br":
-				out = append(out, TextRun{Text: "\n", Color: color, Bold: bold})
+				out = append(out, roleRun("\n", role, bold))
 			case "code":
-				out = append(out, TextRun{Text: p.Text, Color: t.Theme.c("text_muted"), Bold: bold})
+				out = append(out, roleRun(p.Text, "text_muted", bold))
 			case "em":
-				walk(p.Content, t.Theme.c("accent"), true)
+				walk(p.Content, "accent", true)
 			case "link":
-				walk(p.Content, t.Theme.c("accent"), bold)
+				walk(p.Content, "accent", bold)
 			}
 		}
 	}
-	walk(in, color, bold)
+	walk(in, role, bold)
 	return out
 }
 
-func (t *Template) text(in Inline, size float64, color string, bold bool, opts ...SpecOpt) *Spec {
-	return RichTextNode(t.runs(in, color, bold), append([]SpecOpt{WithFontSize(size)}, opts...)...)
+// leafRuns は表・画像の葉の中の文字の塊。葉の中はトークンの外(サブシステムと
+// 同じ)なので、色はここでテーマから引いておく。
+func (t *Template) leafRuns(in Inline, role string, bold bool) []TextRun {
+	runs := t.runs(in, role, bold)
+	for i := range runs {
+		runs[i].Color, runs[i].role = t.Theme.c(runs[i].role), ""
+	}
+	return runs
+}
+
+// text は文字の葉。size は字の大きさのトークン、role は色の役割名。
+func (t *Template) text(in Inline, size, role string, bold bool, opts ...SpecOpt) *Spec {
+	return RichTextNode(t.runs(in, role, bold), append([]SpecOpt{tokSize(size)}, opts...)...)
 }
 
 // prose は文として読む段落(リード文・ステートメント・要点・引用)。折るところを
 // 文の切れ目・読点に寄せる(TextRun.Phrase。行の数は増やさない)。
-func (t *Template) prose(in Inline, size float64, color string, bold bool, opts ...SpecOpt) *Spec {
-	runs := t.runs(in, color, bold)
+func (t *Template) prose(in Inline, size, role string, bold bool, opts ...SpecOpt) *Spec {
+	runs := t.runs(in, role, bold)
 	for i := range runs {
 		runs[i].Phrase = true
 	}
-	return RichTextNode(runs, append([]SpecOpt{WithFontSize(size)}, opts...)...)
+	return RichTextNode(runs, append([]SpecOpt{tokSize(size)}, opts...)...)
 }
 
 func plainInline(s string) Inline { return Inline{{Text: s}} }
@@ -164,7 +190,6 @@ func plainInline(s string) Inline { return Inline{{Text: s}} }
 // --- 骨組み: 表紙 ---
 
 func (t *Template) buildCover(d *IRDeck, s *IRSlide) *BuiltSlide {
-	v, th := t.Values, t.Theme
 	title, subtitle, author := s.Title, s.Subtitle, s.Author
 	titleAt, subtitleAt, authorAt := "title", "subtitle", "author"
 	if d.Meta != nil {
@@ -181,42 +206,41 @@ func (t *Template) buildCover(d *IRDeck, s *IRSlide) *BuiltSlide {
 	var kids []*Spec
 	kids = append(kids, Col(nil, WithGrow(1))) // 上の余白
 	if title != nil {
-		kids = append(kids, t.text(title, v.CoverTitle, th.c("text_primary"), true, WithPlaceholder("ctrTitle"), fromIR(titleAt)))
+		kids = append(kids, t.text(title, "coverTitle", "text_primary", true, WithPlaceholder("ctrTitle"), fromIR(titleAt)))
 	}
-	kids = append(kids, Col(nil, WithWidth(v.CoverRuleW), WithHeight(v.CoverRuleH), WithBackground(th.c("accent"))))
+	kids = append(kids, Col(nil, tokWidth("coverRuleWidth"), tokHeight("coverRuleHeight"), tokBackground("accent")))
 	if subtitle != nil {
-		kids = append(kids, t.text(subtitle, v.CoverSubtitle, th.c("text_muted"), false, WithPlaceholder("subTitle"), fromIR(subtitleAt)))
+		kids = append(kids, t.text(subtitle, "coverSubtitle", "text_muted", false, WithPlaceholder("subTitle"), fromIR(subtitleAt)))
 	}
 	kids = append(kids, Col(nil, WithGrow(2))) // 下の余白(題を少し上に置く)
 	// 下の段: 作者・日付、その下に機密区分・免責(文書の頭の値)。
 	var foot []*Spec
 	if author != nil {
-		foot = append(foot, t.text(author, v.CoverAuthor, th.c("text_muted"), false, fromIR(authorAt)))
+		foot = append(foot, t.text(author, "coverAuthor", "text_muted", false, fromIR(authorAt)))
 	}
 	if d.Meta != nil && d.Meta.Date != "" {
-		foot = append(foot, TextNode(t.Marks.formatDate(d.Meta.Date), WithFontSize(v.CoverAuthor), WithColor(th.c("text_muted")), fromIR("/meta/date")))
+		foot = append(foot, TextNode(t.Marks.formatDate(d.Meta.Date), tokSize("coverAuthor"), tokColor("text_muted"), fromIR("/meta/date")))
 	}
 	if d.Meta != nil && d.Meta.Confidential != nil {
-		foot = append(foot, t.text(d.Meta.Confidential, v.Small, th.c("text_primary"), true, fromIR("/meta/confidential")))
+		foot = append(foot, t.text(d.Meta.Confidential, "small", "text_primary", true, fromIR("/meta/confidential")))
 	}
 	if d.Meta != nil && d.Meta.Disclaimer != nil {
-		foot = append(foot, t.text(d.Meta.Disclaimer, v.Small, th.c("text_muted"), false, fromIR("/meta/disclaimer")))
+		foot = append(foot, t.text(d.Meta.Disclaimer, "small", "text_muted", false, fromIR("/meta/disclaimer")))
 	}
 	switch len(foot) {
 	case 0:
 	case 1:
 		kids = append(kids, foot[0])
 	default:
-		kids = append(kids, Col(foot, WithGap(v.ItemGap)))
+		kids = append(kids, Col(foot, tokGap("itemGap")))
 	}
-	root := Col(kids, WithGap(v.SectionGap), WithPadding(v.CoverPadding), WithBackground(th.c("bg")))
+	root := Col(kids, tokGap("sectionGap"), tokPad("coverPadding"), tokBackground("bg"))
 	return &BuiltSlide{Root: root, Notes: s.Notes}
 }
 
 // --- 骨組み: 本文のスライド(題 / 本文 / フッター) ---
 
 func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, error) {
-	v, th := t.Values, t.Theme
 	var blocks []*Spec
 	var warns []string
 	ctx := componentContext{t: t, warn: func(w string) { warns = append(warns, w) }}
@@ -229,19 +253,19 @@ func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, erro
 	}
 	// 本文の図が自然な大きさのままだとページに入らないとき、題・リード文・出典・
 	// フッターを縮めず、先に本文の図のゆとり(自然〜最小)から返させる。
-	body := Col(blocks, WithGap(v.BlockGap), WithGrow(1), nestedSlack())
+	body := Col(blocks, tokGap("blockGap"), WithGrow(1), nestedSlack())
 
-	title := t.text(s.Title, v.SlideTitle, th.c("text_primary"), true, WithPlaceholder("title"), fromIR("title"))
+	title := t.text(s.Title, "slideTitle", "text_primary", true, WithPlaceholder("title"), fromIR("title"))
 	head := title
 	if s.Lead != nil {
-		head = Col([]*Spec{head, t.prose(s.Lead, v.LeadText, th.c("text_primary"), false, fromIR("lead"))}, WithGap(v.HeaderGap))
+		head = Col([]*Spec{head, t.prose(s.Lead, "leadText", "text_primary", false, fromIR("lead"))}, tokGap("headerGap"))
 	}
 	kids := []*Spec{head, body}
 	if s.Source != nil {
 		kids = append(kids, apply(t.slideSource(s.Source), []SpecOpt{fromIR("source")}))
 	}
 	kids = append(kids, t.footer(d, i))
-	root := Col(kids, WithGap(v.SectionGap), WithPaddingXY(v.PagePadding, v.PagePaddingY), WithBackground(th.c("bg")))
+	root := Col(kids, tokGap("sectionGap"), tokPadXY("pagePadding", "pagePaddingY"), tokBackground("bg"))
 	return &BuiltSlide{Root: root, Body: body, Notes: s.Notes, Title: title, Warnings: warns}, nil
 }
 
@@ -251,12 +275,11 @@ func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, erro
 // 無いので「/ 全部」は組み立てたときの数の文字のまま。左の欄はフッターの置き場(ftr。
 // 作者と機密区分の両方があれば作者の側)。
 func (t *Template) footer(d *IRDeck, i int) *Spec {
-	v, th := t.Values, t.Theme
 	left := ""
 	if d.Meta != nil && d.Meta.Author != nil {
 		left = d.Meta.Author.Plain()
 	}
-	leftSpec := TextNode(left, WithFontSize(v.Small), WithColor(th.c("text_muted")))
+	leftSpec := TextNode(left, tokSize("small"), tokColor("text_muted"))
 	if left != "" {
 		leftSpec.Placeholder = "ftr"
 	}
@@ -265,19 +288,19 @@ func (t *Template) footer(d *IRDeck, i int) *Spec {
 		if left == "" {
 			opts = append(opts, WithPlaceholder("ftr"))
 		}
-		conf := t.text(d.Meta.Confidential, v.Small, th.c("text_primary"), true, opts...)
+		conf := t.text(d.Meta.Confidential, "small", "text_primary", true, opts...)
 		if left == "" {
 			leftSpec = conf
 		} else {
-			leftSpec = Row([]*Spec{leftSpec, conf}, WithGap(v.BlockGap))
+			leftSpec = Row([]*Spec{leftSpec, conf}, tokGap("blockGap"))
 		}
 	}
 	return Row([]*Spec{
 		leftSpec,
 		RichTextNode([]TextRun{
-			{Text: fmt.Sprint(i + 1), Color: th.c("text_muted"), Field: "slidenum"},
-			{Text: fmt.Sprintf(" / %d", len(d.Slides)), Color: th.c("text_muted")},
-		}, WithFontSize(v.Small), WithAlign("right"), WithPlaceholder("sldNum")),
+			{Text: fmt.Sprint(i + 1), role: "text_muted", Field: "slidenum"},
+			{Text: fmt.Sprintf(" / %d", len(d.Slides)), role: "text_muted"},
+		}, tokSize("small"), WithAlign("right"), WithPlaceholder("sldNum")),
 	}, WithJustify(JustifySpaceBetween))
 }
 
@@ -285,15 +308,13 @@ func (t *Template) footer(d *IRDeck, i int) *Spec {
 // 色の小さな字で、頭に marks.slideSource を付けて置く。骨組みの名前つきの枠なので、
 // 本文の領域(容量・はみ出しの測り)はこの高さを引いたものになる。
 func (t *Template) slideSource(in Inline) *Spec {
-	v, th := t.Values, t.Theme
-	runs := append([]TextRun{{Text: t.Marks.SlideSource, Color: th.c("text_muted")}}, t.runs(in, th.c("text_muted"), false)...)
-	return RichTextNode(runs, WithFontSize(v.Small))
+	runs := append([]TextRun{{Text: t.Marks.SlideSource, role: "text_muted"}}, t.runs(in, "text_muted", false)...)
+	return RichTextNode(runs, tokSize("small"))
 }
 
 // accentRule は表紙の題の下と同じアクセントの短い線。
 func (t *Template) accentRule() *Spec {
-	v := t.Values
-	return Col(nil, WithWidth(v.CoverRuleW), WithHeight(v.CoverRuleH), WithBackground(t.Theme.c("accent")))
+	return Col(nil, tokWidth("coverRuleWidth"), tokHeight("coverRuleHeight"), tokBackground("accent"))
 }
 
 // --- 骨組み: 区切り(章の変わり目) ---
@@ -306,18 +327,17 @@ func (t *Template) accentRule() *Spec {
 // 文書に区切りが2つ以上あり、値の表の sectionTracker が true なら、題の下に
 // 章の一覧と現在地(sectionTracker)を置く。作者は何も書かない。
 func (t *Template) buildSection(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
-	v, th := t.Values, t.Theme
 	kids := []*Spec{
 		Col(nil, WithGrow(3)),
 		t.accentRule(),
-		t.text(s.Title, v.SectionTitle, th.c("text_primary"), true, WithPlaceholder("title"), fromIR("title")),
+		t.text(s.Title, "sectionTitle", "text_primary", true, WithPlaceholder("title"), fromIR("title")),
 	}
 	if tr := t.sectionTracker(d, i); tr != nil {
-		kids = append(kids, Col(nil, WithHeight(v.SectionGap)), tr)
+		kids = append(kids, Col(nil, tokHeight("sectionGap")), tr)
 	}
 	kids = append(kids, Col(nil, WithGrow(2)))
-	main := Col(kids, WithGap(v.SectionGap), WithGrow(1))
-	root := Col([]*Spec{main}, WithPadding(v.CoverPadding), WithBackground(th.c("card_alt")))
+	main := Col(kids, tokGap("sectionGap"), WithGrow(1))
+	root := Col([]*Spec{main}, tokPad("coverPadding"), tokBackground("card_alt"))
 	return &BuiltSlide{Root: root, Main: main, MainWhat: "section title", Notes: s.Notes}
 }
 
@@ -326,7 +346,7 @@ func (t *Template) buildSection(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
 // text_primary の太字に、ほかの章は帯を grid・題を text_muted にする。
 // 区切りが1つだけの文書や、値の表の sectionTracker が false なら nil。
 func (t *Template) sectionTracker(d *IRDeck, cur int) *Spec {
-	v, th := t.Values, t.Theme
+	v := t.Values
 	if !v.SectionTracker {
 		return nil
 	}
@@ -341,15 +361,15 @@ func (t *Template) sectionTracker(d *IRDeck, cur int) *Spec {
 	}
 	var items []*Spec
 	for _, j := range secs {
-		bar, color, bold := th.c("grid"), th.c("text_muted"), false
+		bar, color, bold := "grid", "text_muted", false
 		if j == cur {
-			bar, color, bold = th.c("accent"), th.c("text_primary"), true
+			bar, color, bold = "accent", "text_primary", true
 		}
 		items = append(items, Row([]*Spec{
-			Col(nil, WithWidth(v.AccentBarWidth), WithBackground(bar)),
-			Col([]*Spec{t.text(d.Slides[j].Title, v.SectionTrackerText, color, bold)},
-				WithPadding(v.ItemGap/2), WithGrow(1), WithBasis(0)),
-		}, WithGap(v.ItemGap)))
+			Col(nil, tokWidth("accentBarWidth"), tokBackground(bar)),
+			Col([]*Spec{t.text(d.Slides[j].Title, "sectionTrackerText", color, bold)},
+				tokPad("sectionTrackerPadding"), WithGrow(1), WithBasis(0)),
+		}, tokGap("itemGap")))
 	}
 	return Col(items)
 }
@@ -361,19 +381,18 @@ func (t *Template) sectionTracker(d *IRDeck, cur int) *Spec {
 // 左に寄せた太字で置く(強調の部分はアクセントの色)。
 // 文は中ほどより少し上(上の余白 2 : 下の余白 3)。
 func (t *Template) buildStatement(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
-	v, th := t.Values, t.Theme
 	main := Col([]*Spec{
 		Col(nil, WithGrow(2)),
 		t.accentRule(),
-		t.prose(s.Content, v.StatementText, th.c("text_primary"), true, WithPlaceholder("title"), fromIR("content")),
+		t.prose(s.Content, "statementText", "text_primary", true, WithPlaceholder("title"), fromIR("content")),
 		Col(nil, WithGrow(3)),
-	}, WithGap(v.SectionGap), WithPadding(v.StatementInset), WithGrow(1))
+	}, tokGap("sectionGap"), tokPad("statementInset"), WithGrow(1))
 	kids := []*Spec{main}
 	if s.Source != nil {
 		kids = append(kids, apply(t.slideSource(s.Source), []SpecOpt{fromIR("source")}))
 	}
 	kids = append(kids, t.footer(d, i))
-	root := Col(kids, WithGap(v.SectionGap), WithPaddingXY(v.PagePadding, v.PagePaddingY), WithBackground(th.c("bg")))
+	root := Col(kids, tokGap("sectionGap"), tokPadXY("pagePadding", "pagePaddingY"), tokBackground("bg"))
 	return &BuiltSlide{Root: root, Main: main, MainWhat: "statement", Notes: s.Notes}
 }
 
@@ -398,22 +417,22 @@ func (t *Template) buildBlockIn(ctx componentContext, b *IRBlock) (*Spec, error)
 // points は箇条。印は先頭の塊(Mark)に入れ、PPTX では段落の箇条の印として
 // 書く(折り返した行は印の下に戻る)。
 func (t *Template) points(items []IRPointItem, depth int) *Spec {
-	v, th := t.Values, t.Theme
 	mark := t.Marks.Point
-	size := v.Body
+	size := "body"
 	if depth > 0 {
-		mark, size = t.Marks.SubPoint, v.SubPoint
+		mark, size = t.Marks.SubPoint, "subPoint"
 	}
 	var kids []*Spec
 	for _, it := range items {
-		runs := append([]TextRun{{Text: mark, Color: th.c("accent"), Bold: true, Mark: true}}, t.runs(it.Content, th.c("text_primary"), false)...)
-		kids = append(kids, RichTextNode(runs, WithFontSize(size)))
+		runs := append([]TextRun{{Text: mark, role: "accent", Bold: true, Mark: true}}, t.runs(it.Content, "text_primary", false)...)
+		kids = append(kids, RichTextNode(runs, tokSize(size)))
 		if len(it.Items) > 0 {
-			// 字下げ: 左に固定幅の空き + 入れ子の箇条(残りの幅をもらう)。
-			kids = append(kids, Row([]*Spec{Col(nil, WithWidth(size*v.PointIndentEm)), t.points(it.Items, depth+1)}))
+			// 字下げ: 左に固定幅の空き + 入れ子の箇条(残りの幅をもらう)。空きの幅は
+			// 字の大きさの倍(pointIndentEm は em の名前なので、空きの箱の字の大きさに掛ける)。
+			kids = append(kids, Row([]*Spec{Col(nil, tokSize(size), tokWidth("pointIndentEm")), t.points(it.Items, depth+1)}))
 		}
 	}
-	col := Col(kids, WithGap(v.ItemGap), asList())
+	col := Col(kids, tokGap("itemGap"), asList())
 	if depth > 0 {
 		col.Grow, col.Basis = 1, new(float64)
 	}
@@ -422,34 +441,32 @@ func (t *Template) points(items []IRPointItem, depth int) *Spec {
 
 // compare は選択肢の比較。選択肢ごとのカードを同じ幅で横に並べる。
 func (t *Template) compare(opts []IRCompareOption) *Spec {
-	v, th := t.Values, t.Theme
 	var cards []*Spec
 	for _, o := range opts {
-		kids := []*Spec{t.text(o.Label, v.OptionLabel, th.c("text_primary"), true)}
+		kids := []*Spec{t.text(o.Label, "optionLabel", "text_primary", true)}
 		for _, p := range o.Pros {
-			runs := append([]TextRun{{Text: t.Marks.Pro, Color: th.c("support"), Bold: true, Mark: true}}, t.runs(p, th.c("text_primary"), false)...)
-			kids = append(kids, RichTextNode(runs, WithFontSize(v.OptionItem)))
+			runs := append([]TextRun{{Text: t.Marks.Pro, role: "support", Bold: true, Mark: true}}, t.runs(p, "text_primary", false)...)
+			kids = append(kids, RichTextNode(runs, tokSize("optionItem")))
 		}
 		for _, c := range o.Cons {
-			runs := append([]TextRun{{Text: t.Marks.Con, Color: th.c("danger"), Bold: true, Mark: true}}, t.runs(c, th.c("text_primary"), false)...)
-			kids = append(kids, RichTextNode(runs, WithFontSize(v.OptionItem)))
+			runs := append([]TextRun{{Text: t.Marks.Con, role: "danger", Bold: true, Mark: true}}, t.runs(c, "text_primary", false)...)
+			kids = append(kids, RichTextNode(runs, tokSize("optionItem")))
 		}
-		card := Col(kids, WithGap(v.ItemGap), WithPadding(v.CardPadding),
-			WithBackground(th.c("card")), WithRadius(v.CardRadius), WithGrow(1), WithBasis(0), asCard())
+		card := Col(kids, tokGap("itemGap"), tokPad("cardPadding"),
+			tokBackground("card"), tokRadius("cardRadius"), WithGrow(1), WithBasis(0), asCard())
 		cards = append(cards, card)
 	}
-	return Row(cards, WithGap(v.BlockGap), measureCardRow("options"))
+	return Row(cards, tokGap("blockGap"), measureCardRow("options"))
 }
 
 // takeaway は本文の中の結論の1文。左にアクセントの帯を置き、カードの色の上に
 // 一段大きな太字で書く。
 func (t *Template) takeaway(in Inline) *Spec {
-	v, th := t.Values, t.Theme
 	// 帯は別の図形のまま(片側だけの枠は DrawingML に無い)。
-	card := Col([]*Spec{t.prose(in, v.TakeawayText, th.c("text_primary"), true)},
-		WithPadding(v.CardPadding), WithBackground(th.c("card")), WithGrow(1), WithBasis(0), asCard())
+	card := Col([]*Spec{t.prose(in, "takeawayText", "text_primary", true)},
+		tokPad("cardPadding"), tokBackground("card"), WithGrow(1), WithBasis(0), asCard())
 	return Row([]*Spec{
-		Col(nil, WithWidth(v.AccentBarWidth), WithBackground(th.c("accent"))),
+		Col(nil, tokWidth("accentBarWidth"), tokBackground("accent")),
 		card,
 	})
 }
@@ -458,7 +475,6 @@ func (t *Template) takeaway(in Inline) *Spec {
 // (1個ならカード1枚が本文の幅いっぱい)。カードの中は、大きなアクセントの色の数と
 // その後ろの単位(下端をそろえる)、その下に控えめな色の説明。
 func (t *Template) stat(items []IRStatItem) *Spec {
-	v, th := t.Values, t.Theme
 	var cards []*Spec
 	for i, it := range items {
 		// 数と単位は1つの文字の葉の2つの塊にする(下の線はアプリがそろえる)。
@@ -466,33 +482,32 @@ func (t *Template) stat(items []IRStatItem) *Spec {
 		// 数と単位はそれぞれ途中で折らない(Keep)。1行に入らなければ単位を次の
 		// 行へ送り、数そのものが入らなければ1行のままはみ出す。どちらも警告
 		// stat-value で知らせる(keepline.go)。
-		num := []TextRun{{Text: it.Value, Color: th.c("accent"), Bold: true, Keep: true}}
+		num := []TextRun{{Text: it.Value, role: "accent", Bold: true, Keep: true}}
 		if it.Unit != "" {
-			num = append(num, TextRun{Text: t.Marks.Unit + it.Unit, Color: th.c("text_primary"), Bold: true, Size: v.StatUnit, Keep: true})
+			num = append(num, TextRun{Text: t.Marks.Unit + it.Unit, role: "text_primary", Bold: true, sizeTok: "statUnit", Keep: true})
 		}
-		value := RichTextNode(num, WithFontSize(v.StatValue), keepLine(fmt.Sprintf("stat: items[%d]", i)))
+		value := RichTextNode(num, tokSize("statValue"), keepLine(fmt.Sprintf("stat: items[%d]", i)))
 		card := Col([]*Spec{
 			value,
-			t.text(it.Label, v.StatLabel, th.c("text_muted"), false),
-		}, WithGap(v.ItemGap), WithPadding(v.CardPadding), WithBackground(th.c("card")), WithRadius(v.CardRadius),
+			t.text(it.Label, "statLabel", "text_muted", false),
+		}, tokGap("itemGap"), tokPad("cardPadding"), tokBackground("card"), tokRadius("cardRadius"),
 			WithGrow(1), WithBasis(0), asCard())
 		cards = append(cards, card)
 	}
-	return Row(cards, WithGap(v.BlockGap), measureCardRow("items"))
+	return Row(cards, tokGap("blockGap"), measureCardRow("items"))
 }
 
 // quote は他人の言葉と出どころ。頭に大きなアクセントの色の引用の印を置き、
 // その右に言葉、下に控えめな色で出どころ(頭に marks.quoteSource)。
 func (t *Template) quote(content, source Inline) *Spec {
-	v, th := t.Values, t.Theme
-	src := append([]TextRun{{Text: t.Marks.Source, Color: th.c("text_muted")}}, t.runs(source, th.c("text_muted"), false)...)
+	src := append([]TextRun{{Text: t.Marks.Source, role: "text_muted"}}, t.runs(source, "text_muted", false)...)
 	return Row([]*Spec{
-		TextNode(t.Marks.Quote, WithFontSize(v.QuoteMark), WithColor(th.c("accent")), WithBold(true)),
+		TextNode(t.Marks.Quote, tokSize("quoteMark"), tokColor("accent"), WithBold(true)),
 		Col([]*Spec{
-			t.prose(content, v.QuoteText, th.c("text_primary"), false),
-			RichTextNode(src, WithFontSize(v.QuoteSource)),
-		}, WithGap(v.ItemGap), WithGrow(1), WithBasis(0)),
-	}, WithGap(v.ItemGap))
+			t.prose(content, "quoteText", "text_primary", false),
+			RichTextNode(src, tokSize("quoteSource")),
+		}, tokGap("itemGap"), WithGrow(1), WithBasis(0)),
+	}, tokGap("itemGap"))
 }
 
 // --- 検査 ---

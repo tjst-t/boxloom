@@ -150,6 +150,9 @@ type TextRun struct {
 	Color string
 	Bold  bool
 	Size  float64
+	// role・sizeTok は部品が書いた色の役割名と字の大きさのトークン。resolveSpec が
+	// Color・Size に直す(token.go)。
+	role, sizeTok string
 	// Mark は文の頭の印(箇条の「・」、良い点・悪い点の「＋」「－」など)。
 	// 測るときはふつうの文字と同じに幅を数える。PPTX では印を本文の文字に
 	// せず、段落の箇条の印(a:buChar)として書き、本文は印の幅だけ字下げした

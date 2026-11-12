@@ -229,6 +229,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     `:::subject`・`:::response` を交互に)。組み方は同梱のテンプレート(dark・light)が持ち、
     対ごとに2つの側の行をそろえる。はみ出しは対ごと(印 `measurePairRows`)。組み方を
     持たないテンプレートは `columns` で組んで `component-fallback`。`docs/layers.md` の8.1・8.3
+  - `token.go` = 配置の段のトークン。部品と骨組みは Spec に数・色を書かず、値の表の名前・
+    段の刻み(`space(n)`・`type(n)`)・役割名を書き、`BuildSlide` の中の `resolveSpec`(組み立ての
+    直後・計測の前の1か所)で数と色に直す。トークンの無い数・色・段に無い刻み・知らない名前は
+    誤り。標準の部品は名前だけ(`TestStandardComponentsWriteNamesOnly`)。`docs/layers.md` の2.1・8.3
   - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
     `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
   - `blocks.go` / `image.go` / `pptx_blocks.go` / `md_blocks.go` = 第1層のブロックの

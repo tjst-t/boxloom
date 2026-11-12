@@ -60,7 +60,8 @@
         "mark": {"description": "頭の印(PPTX では段落の箇条の印)。", "type": "boolean"},
         "keep": {"description": "塊の中で折り返さない。", "type": "boolean"},
         "field": {"description": "アプリが値を入れる欄(slidenum)。", "type": "string"},
-        "role": {"description": "色の役割名(値の表で1つに決まるときだけ)。", "type": "string"}
+        "role": {"description": "色の役割名(部品が書いたもの)。", "type": "string"},
+        "sizeToken": {"description": "塊だけの字の大きさのトークン(値の表の名前か type(n))。", "type": "string"}
       }
     },
     "marks": {
@@ -131,7 +132,7 @@
         "marks": {"$ref": "#/$defs/marks"},
         "subsystem": {"$ref": "#/$defs/subsystem"},
         "tokens": {
-          "description": "数・色の値の表の名前(1つに決まるものだけ。間隔・余白は scale:space の値、字の大きさは scale:type の値、色はテーマの役割名)。",
+          "description": "部品が書いたトークン(解決する前の形)。間隔・余白は値の表の scale:space の名前か space(n)、幅・高さ・角は値の表の長さの名前か space(n)、字の大きさは scale:type の名前か type(n)、色はテーマの役割名。",
           "type": "object",
           "additionalProperties": false,
           "minProperties": 1,
@@ -139,6 +140,8 @@
             "gap": {"$ref": "#/$defs/tokenName"},
             "padding": {"$ref": "#/$defs/tokenName"},
             "paddingY": {"$ref": "#/$defs/tokenName"},
+            "width": {"$ref": "#/$defs/tokenName"},
+            "height": {"$ref": "#/$defs/tokenName"},
             "fontSize": {"$ref": "#/$defs/tokenName"},
             "color": {"$ref": "#/$defs/tokenName"},
             "background": {"$ref": "#/$defs/tokenName"},
