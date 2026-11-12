@@ -328,7 +328,7 @@
       "number": 12,
       "kind": "task",
       "title": "MCP サーバ:schema・check・build を AI エージェントの道具として出す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "agent-entry",
       "dependsOn": [
         "go-library"
@@ -342,7 +342,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:00:29.883Z",
-      "updatedAt": "2026-11-11T02:00:29.883Z",
+      "updatedAt": "2026-11-12T09:32:31.071Z",
       "closedAt": null,
       "extra": {}
     },
