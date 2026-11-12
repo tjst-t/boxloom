@@ -7,6 +7,7 @@
 //	boxloom parse [-format text|json] deck.bx.md|deck.yaml
 //	boxloom schema [-template NAME]
 //	boxloom layout [-template dark|light|./my.json] deck.json|deck.bx.md|deck.yaml   # 配置の段の木(JSON)
+//	boxloom mcp                  # stdio の MCP サーバ(道具 schema・check・build。docs/mcp.md)
 //	boxloom fonts [-template 名前] [-against "欧文/和文;…"] [-v] deck… | -list
 //	boxloom                      # 従来の Go で組んだデモ(out/boxloom_dark.pptx・out/boxloom_light.pptx)
 //
@@ -47,6 +48,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return runParse(args[1:], stdout, stderr)
 		case "layout":
 			return runLayout(args[1:], stdout, stderr)
+		case "mcp":
+			return runMCP(args[1:], os.Stdin, stdout, stderr)
 		}
 	}
 	return runDemo(stdout, stderr)

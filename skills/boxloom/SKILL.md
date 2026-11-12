@@ -21,6 +21,11 @@ The loop is always:
 Commands run from the `boxloom/` directory of the repository:
 `go run ./cmd/boxloom <schema|check|build|parse> …` (Go 1.24+, no other dependency).
 
+If the `boxloom` MCP server is connected (`boxloom mcp`, see `docs/mcp.md`), call its tools
+instead of the commands: `schema` = `boxloom schema`, `check` = `boxloom check -format json`
+(capacity always included), `build` = `boxloom build -o`. Pass the deck as `path`; the
+results are the same JSON.
+
 ## 1. Read the schema first
 
 `boxloom schema [-template light|dark]` prints one JSON document. It is the source of

@@ -275,6 +275,8 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `vocab.go` / `schema_cmd.go` = `go run ./cmd/boxloom schema`。名乗る囲み・文書の頭の
     キー・記法の約束事の表と、それを1つの JSON に組むコマンド
   - `api.go` / `doc.go` = ライブラリの入口とパッケージの説明(`docs/library.md`)
+  - `cmd/boxloom/mcp.go` = `boxloom mcp`。stdio の MCP サーバ(標準ライブラリだけ)。道具は
+    `schema`・`check`(容量つき)・`build`。Claude Code への登録の手順は `docs/mcp.md`
   - `cmd/boxloom/main.go` = コマンド(フラグ・ファイルの読み書き・終了コード)
   - `demo.go` = デモコンテンツとfill-ratioリンター(本物の
     `content_fill_ratio()`/`lint_fill_ratio()`の移植。`WriteDemo`)。

@@ -159,6 +159,7 @@ Design documents are written in Japanese.
 | [`docs/subsystem.md`](docs/subsystem.md) | The subsystem interface (Gantt, shapes, process, orgchart, matrix, funnel, chart) |
 | [`docs/template-values.md`](docs/template-values.md), [`docs/fonts.md`](docs/fonts.md) | Templates, scales, fonts and metrics |
 | [`docs/build.md`](docs/build.md), [`docs/library.md`](docs/library.md) | Building PPTX, the Go API |
+| [`docs/mcp.md`](docs/mcp.md) | `boxloom mcp`: the MCP server (tools `schema`, `check`, `build`) for AI agents such as Claude Code |
 | [`CLAUDE.md`](CLAUDE.md) | Design principles in short form |
 
 ## Contributing
