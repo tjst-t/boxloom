@@ -1738,7 +1738,7 @@
       "number": 74,
       "kind": "bug",
       "title": "YAML の deck で、欄の型の誤りがその欄の行でなくスライドの頭の行を指す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -1750,7 +1750,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T13:23:06.370Z",
-      "updatedAt": "2026-11-12T13:23:06.370Z",
+      "updatedAt": "2026-11-12T13:27:10.439Z",
       "closedAt": null,
       "extra": {}
     },
