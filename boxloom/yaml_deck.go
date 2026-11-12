@@ -31,11 +31,11 @@ func isYAMLPath(path string) bool {
 // yamlPos は YAML の中の場所(行と列。1から)。
 type yamlPos struct{ line, col int }
 
-// YAMLSourceMap は IR の場所(JSON Pointer)→ YAML の行と列。
-type YAMLSourceMap map[string]yamlPos
+// yamlSourceMap は IR の場所(JSON Pointer)→ YAML の行と列。
+type yamlSourceMap map[string]yamlPos
 
 // Pos は path か、その一番近い親の行と列(無ければ 0, 0)。
-func (m YAMLSourceMap) Pos(path string) (line, col int) {
+func (m yamlSourceMap) Pos(path string) (line, col int) {
 	for {
 		if p, ok := m[path]; ok {
 			return p.line, p.col
@@ -49,7 +49,7 @@ func (m YAMLSourceMap) Pos(path string) (line, col int) {
 }
 
 // Line は path の行(SourceMap と同じ使い方のため)。
-func (m YAMLSourceMap) Line(path string) int {
+func (m yamlSourceMap) Line(path string) int {
 	l, _ := m.Pos(path)
 	return l
 }
@@ -59,7 +59,7 @@ var yamlJSONNumber = regexp.MustCompile(`^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?
 type yamlDeckReader struct {
 	file string
 	errs []Issue
-	pos  YAMLSourceMap
+	pos  yamlSourceMap
 }
 
 func (r *yamlDeckReader) fail(line, col int, path, code, msg, hint string) {
@@ -126,8 +126,8 @@ func YAMLToIR(file string, src []byte) ([]byte, []Issue) {
 
 // parseYAMLDeck は YAMLToIR に、IR の場所 → YAML の行と列の対応を足したもの。
 // ParseIR は通さない(check は意味の検査を先に見るため)。
-func parseYAMLDeck(file string, src []byte) ([]byte, []Issue, YAMLSourceMap) {
-	r := &yamlDeckReader{file: file, pos: YAMLSourceMap{"": {1, 1}}}
+func parseYAMLDeck(file string, src []byte) ([]byte, []Issue, yamlSourceMap) {
+	r := &yamlDeckReader{file: file, pos: yamlSourceMap{"": {1, 1}}}
 	text := strings.TrimPrefix(string(src), "\ufeff")
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 	lines := strings.Split(strings.TrimSuffix(text, "\n"), "\n")
@@ -152,7 +152,7 @@ func parseYAMLDeck(file string, src []byte) ([]byte, []Issue, YAMLSourceMap) {
 }
 
 // yamlIRIssue は ParseIR の誤りを、YAML の行と列つきの Issue にする。
-func yamlIRIssue(file string, err error, pos YAMLSourceMap) Issue {
+func yamlIRIssue(file string, err error, pos yamlSourceMap) Issue {
 	path := locationToPointer(err.Error())
 	line, col := pos.Pos(path)
 	return Issue{File: file, Line: line, Column: col, Path: path, Code: codeSchema, Message: err.Error(), Hint: yamlTypeHint(err.Error())}

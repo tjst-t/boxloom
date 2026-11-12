@@ -253,8 +253,8 @@ func registerBundledComponents(r *componentRegistry) {
 
 // --- はみ出しと容量 ---
 
-// PairMeasure は対の1つの測り値。Top・Bottom は本文の領域の上端から。
-type PairMeasure struct {
+// pairMeasure は対の1つの測り値。Top・Bottom は本文の領域の上端から。
+type pairMeasure struct {
 	Index        int
 	Need         float64 // 行の高さ(高い方の側の高さ)
 	SubjectNeed  float64 // subject の側を縮めずに積んだ高さ
@@ -267,13 +267,13 @@ type PairMeasure struct {
 
 // measurePairs は対を1つずつ縮めずに測る(top はブロックの上端、width はブロックの
 // 中の幅)。requiredMeasure が行を並べるので、描いた後に呼ぶこと。
-func measurePairs(block *Spec, info *pairsInfo, top, width, capacity float64) []PairMeasure {
+func measurePairs(block *Spec, info *pairsInfo, top, width, capacity float64) []pairMeasure {
 	cursor := top
 	if info.head != nil {
 		h, _ := requiredMeasure(info.head, width)
 		cursor += h + block.Gap
 	}
-	var out []PairMeasure
+	var out []pairMeasure
 	for k, r := range info.rows {
 		if k > 0 {
 			cursor += info.list.Gap
@@ -281,7 +281,7 @@ func measurePairs(block *Spec, info *pairsInfo, top, width, capacity float64) []
 		h, n := requiredMeasure(r.row, width)
 		sh, _ := requiredMeasure(r.subject, r.subject.Box.Width)
 		rh, _ := requiredMeasure(r.response, r.response.Box.Width)
-		pm := PairMeasure{Index: k, Need: h, SubjectNeed: sh, ResponseNeed: rh, Lines: n, Top: cursor, Bottom: cursor + h}
+		pm := pairMeasure{Index: k, Need: h, SubjectNeed: sh, ResponseNeed: rh, Lines: n, Top: cursor, Bottom: cursor + h}
 		pm.Overflow = overflowOf(pm.Top, pm.Bottom, capacity)
 		out = append(out, pm)
 		cursor += h
@@ -306,7 +306,7 @@ type PairCapacity struct {
 	Tallest string `json:"tallest"`
 }
 
-func pairCapacity(m PairMeasure, path string) PairCapacity {
+func pairCapacity(m pairMeasure, path string) PairCapacity {
 	tall := "subject"
 	if m.ResponseNeed > m.SubjectNeed+overflowEps {
 		tall = "response"

@@ -52,7 +52,7 @@ type BlockMeasure struct {
 
 	// Pairs は対の並び(pairs)のときだけ、対ごとの測り値。ブロックの Need は
 	// 見出しの行と対の行を積んだ高さ。
-	Pairs []PairMeasure
+	Pairs []pairMeasure
 }
 
 // CardMeasure は横に並ぶカードの1枚の測り値。

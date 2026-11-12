@@ -134,7 +134,7 @@ type LayoutNode struct {
 	Children []*LayoutNode     `json:"children,omitempty"`
 }
 
-// lineMap は IR の場所 → 元の文書の行(Markdown の SourceMap・YAML の YAMLSourceMap)。
+// lineMap は IR の場所 → 元の文書の行(Markdown の SourceMap・YAML の yamlSourceMap)。
 type lineMap interface{ Line(path string) int }
 
 // noLines は IR(JSON)を読んだとき(行を添えない)。

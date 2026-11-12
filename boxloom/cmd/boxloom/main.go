@@ -295,8 +295,9 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 }
 
 // runLayout は「boxloom layout」: 配置の段の木(箱・印・値・決まった座標)を JSON で
-// 標準出力に書く(docs/build.md の「配置の段の木を見る」)。出すだけで、この形を
-// 入力として読む口は無い。
+// 標準出力に書く(docs/build.md の「配置の段の木を見る」)。作者の入口は出すだけで、
+// この形を読み直す口は開発者・試験用の「boxloom layout-build」(runLayoutBuild、
+// docs/build.md の「配置の段の木を読み直す」)だけ。
 func runLayout(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("layout", flag.ContinueOnError)
 	fs.SetOutput(stderr)

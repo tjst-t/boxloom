@@ -2,8 +2,15 @@
 
 Boxloom は Go のパッケージ `boxloom`(モジュールの根 `boxloom/`)として使える。
 コマンド `boxloom`(`boxloom/cmd/boxloom`)も、このページに挙げた入口だけで
-できている。安定させるつもりなのは下の表の名前だけで、ほかに公開されている
-名前(`Spec`・`PPTXBuilder`・`Template` など)は予告なく変わる。
+できている。安定させるつもりなのは「安定させる入口」の表の名前だけ。ほかに公開されている
+名前は、次のどれかのために公開しているもので、予告なく変わる。
+
+- 安定させる入口の返り値の中の型(`CheckResult.Capacity` の `BlockCapacity`・`CardCapacity`・
+  `ColumnCapacity`・`PairCapacity`、`Schema` の JSON の形の `SchemaOutput`・`TypeSchema` など)。
+  JSON にしたときの形は入口と同じく保つが、Go の型としては安定させない
+- 「安定させない入口」の表の入口とその引数・返り値(`LayoutReadOptions`・`LayoutDump` ほかの
+  `Layout*`、`FontCheck`・`DemoResult` など)
+- コマンドと試験が使う低い層(`Spec`・`PPTXBuilder`・`Template`・サブシステムの型など)
 
 ```go
 src, _ := os.ReadFile("deck.bx.md")
