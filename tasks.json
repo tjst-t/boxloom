@@ -606,7 +606,7 @@
       "number": 79,
       "kind": "task",
       "title": "表の行の群:先頭の列の群の名前を縦に結合したセルで書く(本物の a:tbl の rowSpan)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "slide-patterns",
       "dependsOn": [],
       "milestone": null,
@@ -618,7 +618,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T14:32:44.778Z",
-      "updatedAt": "2026-11-12T14:32:44.778Z",
+      "updatedAt": "2026-11-12T14:44:46.700Z",
       "closedAt": null,
       "extra": {}
     },
