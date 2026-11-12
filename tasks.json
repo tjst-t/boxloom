@@ -1690,6 +1690,27 @@
       "updatedAt": "2026-11-12T13:22:50.220Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "text-color-required",
+      "number": 72,
+      "kind": "bug",
+      "title": "色のトークンを持たない文字の葉が誤りにならず、コアの16進の既定色で描かれる",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "fable のレビューの中3。レビューはコードを読んだ結論で、実行はしていない。直す前に再現の試験を書いて確かめる。\n\n## 何が起きるか\n- token.go(209-212 行あたり)で、`TextNode(\"x\", tokSize(\"body\"))` や role の無い TextRun が resolveSpec を通ってしまう。\n- そのまま、コアの16進 defaultTextColor(F5F7FA、layout.go:323)で描かれる。\n- TestStandardComponentsWriteNamesOnly(token_test.go:81)もこれを見逃す。\n\n## なぜ困るか\n「色は役割名だけ」(#1398948)の穴になる。light では白い地に白い字になる。\n\n## 直し方\n- 文字の葉には「葉の color トークン」か「すべての塊の role」を必須にし、無ければ resolveSpec で誤りにする。\n- コアの16進の既定色は取り除く。\n- 試験は、名前だけを書いているかを見る試験に「色の無い文字の葉」を足す。",
+      "doneWhen": "色のトークンも塊の role も持たない文字の葉は resolveSpec で誤りになる(試験)。コアに16進の既定の文字色が無い。examples の出力が変わらない(TestOutputsGolden)。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-12T13:22:55.398Z",
+      "updatedAt": "2026-11-12T13:22:55.398Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
