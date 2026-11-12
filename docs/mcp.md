@@ -99,6 +99,22 @@ MCP(Model Context Protocol)サーバで、道具を3つ出す。
   | boxloom mcp
   ```
 
-- 実装したときの環境には `claude` コマンドが無く、上の手順の 2〜4(Claude Code への登録と
-  会話からの呼び出し)はその場では流していない。流したら、ここに Claude Code の版と結果を
-  書き足す。
+- **Claude Code から呼んで PPTX を作った**(2026-11-12)。
+  - 環境:Claude Code を Agent Client Protocol のアダプター
+    `@agentclientprotocol/claude-agent-acp` 0.81.1 で動かした。`claude` コマンドは入って
+    いなかったので、`claude mcp add` そのものは流しておらず、CLI の版も分からない。
+  - 登録:このブランチの `boxloom/` で `go build ./cmd/boxloom` したバイナリを、
+    プロジェクトの `.mcp.json` に
+    `{"mcpServers":{"boxloom":{"type":"stdio","command":"<作ったバイナリ>","args":["mcp"]}}}`
+    と書き、`.claude/settings.json` に `{"enableAllProjectMcpServers":true}` を書いた。
+  - 文書:架空の内容の、2枚の Markdown の deck(`deck.bx.md`)。
+  - 結果:
+    - Claude Code に `mcp__boxloom__schema`・`mcp__boxloom__check`・`mcp__boxloom__build`
+      が並んだ(遅れて読み込む道具として、ToolSearch で読み込んで使った)。
+    - `mcp__boxloom__check` `{"path":"deck.bx.md"}` は `ok` で、誤り 0・警告 1
+      (fill-ratio の警告。容量つき)。
+    - `mcp__boxloom__build` `{"path":"deck.bx.md","output":"deck.pptx"}` は light の
+      テンプレートで2枚の PPTX(10119 バイト)を書いた。中には期待する部品がそろっていた。
+- **まだ確かめていないこと**:CLI での `claude mcp add -s user` による登録(手順 2 の
+  コマンドの道)と、対話の CLI での `/mcp` の一覧(手順 3)。CLI のある環境で流したら、
+  CLI の版と結果をここに書き足す。
