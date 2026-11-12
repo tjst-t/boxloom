@@ -165,9 +165,9 @@ type GanttValues struct {
 	SmallText float64 `json:"smallText" scale:"type"` // グループ名・区間の文字・節目
 
 	// 描く処理の細部の寸法(#70 でコードから移した。値は移す前のまま)。
-	// 余白・間隔・箱の大きさのうち段に載るものは scale:"space"。段から外れて
-	// いるもの(6・5・3・2・13 など)は、寄せると出力が変わるので印を付けずに置いた
-	// (docs/template-values.md の「段から外れたままの寸法」)。
+	// ページのリズムに属する余白・間隔と段で揃える箱の大きさは scale:"space"。
+	// 図の中の細部の寸法は、線の太さ・角と同じく段の外(印なし。0 以下は
+	// checkPositive が断る。docs/template-values.md の「subsystems/gantt.json の形」)。
 	LegendSwatchW   float64 `json:"legendSwatchWidth"`             // 凡例の色見本の幅
 	LegendSwatchH   float64 `json:"legendSwatchHeight"`            // 凡例の色見本の高さ
 	LegendSwatchTop float64 `json:"legendSwatchTop"`               // 色見本の上端を凡例の行の上端から下げる分

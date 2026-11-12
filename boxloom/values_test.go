@@ -2,6 +2,7 @@ package boxloom
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -218,5 +219,60 @@ func TestBundledTemplatesDistinctRolesAndReadableDetail(t *testing.T) {
 		if v.FigureDetail <= v.Small || v.CaptionText <= v.Small {
 			t.Errorf("%s: figureDetail %v / captionText %v should be above small %v", name, v.FigureDetail, v.CaptionText, v.Small)
 		}
+	}
+}
+
+// ganttFineDetailKeys は図の中の細部の寸法(#70)。線の太さ・角と同じく段の外で、
+// 値の表の名前つきのキーとして置き、0 以下だけを読み込みで断る
+// (docs/template-values.md の「subsystems/gantt.json の形」)。
+var ganttFineDetailKeys = []string{
+	"legendSwatchWidth", "legendSwatchHeight", "legendSwatchTop", "legendLabelRaise", "legendLabelGap",
+	"milestoneLabelGap", "tickLabelHeight", "axisGap", "groupInsetX", "subgroupInsetLeft",
+	"barInset", "segmentLabelInsetLeft", "segmentLabelInsetRight", "noteInsetX",
+	"extNoteLabelHeight", "extNoteLabelGap", "leaderGap",
+	"breakMarkWidth", "breakMarkHeight", "breakMarkSpacing", "openEndDotOffset", "openEndDotStep",
+}
+
+// 細部の寸法は段で見ない(段から外れた既定の値が読める)が、0 以下は既定のファイルの
+// 読み込みでも、テンプレートの差し替えでも誤り。
+func TestGanttFineDetailSizes(t *testing.T) {
+	// 段の印が付いていない(付いていれば既定の 6・5・13 などで読み込みが断る)。
+	tags := map[string]string{}
+	rt := reflect.TypeOf(GanttValues{})
+	for i := 0; i < rt.NumField(); i++ {
+		name, _, _ := strings.Cut(rt.Field(i).Tag.Get("json"), ",")
+		tags[name] = rt.Field(i).Tag.Get("scale")
+	}
+	raw, _ := valueFiles.ReadFile("subsystems/gantt.json")
+	for _, k := range ganttFineDetailKeys {
+		tag, ok := tags[k]
+		if !ok {
+			t.Fatalf("%s: not a GanttValues key", k)
+		}
+		if tag != "" {
+			t.Errorf("%s: fine detail size must be outside the scale, has scale:%q", k, tag)
+		}
+		for _, bad := range []float64{0, -1} {
+			var gv map[string]any
+			_ = json.Unmarshal(raw, &gv)
+			gv[k] = bad
+			b, _ := json.Marshal(gv)
+			want := "gantt." + k + ": must be greater than 0"
+			if _, err := parseGanttValues(b); err == nil || !strings.Contains(err.Error(), want) {
+				t.Errorf("subsystems/gantt.json %s=%v: err = %v, want %q", k, bad, err, want)
+			}
+			data := mutate(t, func(m map[string]any) { m["subsystems"] = map[string]any{"gantt": gv} })
+			want = "subsystems.gantt." + k + ": must be greater than 0"
+			if _, err := parseTemplateFile("light", data); err == nil || !strings.Contains(err.Error(), want) {
+				t.Errorf("subsystems.gantt %s=%v: err = %v, want %q", k, bad, err, want)
+			}
+		}
+	}
+	// 段の外の細部の寸法は、段から外れた値(既定と違う値)でも差し替えられる。
+	var gv map[string]any
+	_ = json.Unmarshal(raw, &gv)
+	gv["barInset"], gv["axisGap"] = 7, 3
+	if _, err := parseTemplateFile("light", mutate(t, func(m map[string]any) { m["subsystems"] = map[string]any{"gantt": gv} })); err != nil {
+		t.Errorf("off-scale fine detail sizes were rejected: %v", err)
 	}
 }

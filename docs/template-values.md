@@ -101,8 +101,9 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 | 余白 | `pagePadding` `pagePaddingY` `coverPadding` `sectionGap` `blockGap` `itemGap` `headerGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` `sectionTrackerPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap`、#70 で移した `legendSwatchGap` `milestonePaddingX` `milestoneAxisGap` `groupBoxGap` `subgroupInsetRight` `rowLabelGap` `annotationFixedPaddingX` `annotationFixedPaddingY` `annotationGap` `annotationShift`、箱の大きさ `milestoneMinWidth` `tickLabelWidth` `tickSubLabelOffset` `tickSubLabelWidth` `tickSubLabelHeight` | `padding` `textInsetX` `textInsetY` |
 | 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `leadText` `body` `subPoint` `optionLabel` `optionItem` `small` `figureDetail` `captionText` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
-ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率は段階に載せない
-(図の寸法で、刻みに合わせても読みやすさは変わらないため)。
+ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率、図の中の細部の寸法は
+段階に載せない(図の寸法で、刻みに合わせても読みやすさは変わらないため)。0 以下は
+誤り。Gantt のキーの分け方は下の「subsystems/gantt.json の形」の表。
 
 - 検査:段階そのもの(刻みが 0 以下、段が空・小さい順でない)と、段から外れた値は誤り。
   誤りの文は近い段の値を添える(例 `values.subPoint: 12.5 is not on the type scale
@@ -449,16 +450,22 @@ process・orgchart・funnel の状態の凡例(`docs/subsystem.md` の11節)の�
 | `lineWidth` | 軸・仮の帯の破線の枠・延伸ノートの線・注釈の箱の枠(1.25) |
 | `leaderLineWidth` `emphasisLineWidth` | 引き出し線と区間圧縮の印の線(1)、強調した注釈の縦の線(2) |
 
-**段から外れたままの寸法**(Backlog #70):余白・間隔・箱の大きさのうち、いまの値が
-段(dark / light の `spacingUnit` 4)から外れているものは、近い段に寄せると出力が
-変わるので寄せず、`scale:"space"` の印を付けずに置いた(0 より大きいことだけを見る):
-`legendSwatchWidth` 15・`legendSwatchHeight` 7・`legendSwatchTop` 2・`legendLabelRaise` 2・
-`legendLabelGap` 6・`milestoneLabelGap` 6・`tickLabelHeight` 13・`axisGap` 5・
-`groupInsetX` 3・`subgroupInsetLeft` 2・`barInset` 6・`segmentLabelInsetLeft` 5・
-`segmentLabelInsetRight` 3・`noteInsetX` 5・`extNoteLabelHeight` 13・`extNoteLabelGap` 2・
-`leaderGap` 2、印の形の `breakMarkWidth` 6・`breakMarkSpacing` 6・`openEndDotOffset` 5・
-`openEndDotStep` 6。段に寄せるかは出力を変える別の判断として残す。線の太さ・角・
-点の大きさは、ほかの値の表と同じく段に載せない。
+**決まり:図の中の細部の寸法は段の外**(Backlog #70)。図の中の細部の寸法は、線の太さ・
+角と同じく段に載せない。値の表に名前つきのキーとして置き(テンプレートは
+`subsystems.gantt` で差し替えられる)、0 以下は読み込みで誤り(`checkPositive`)。
+段の刻みには寄せない。ページのリズムに属する余白・間隔(図の外周・図と凡例の間・
+グループの間・注釈のレーンなど)と、文字の箱の大きさのうち段で揃えるものは、
+これまでどおり段で見る。
+
+subsystems/gantt.json のキーの分け方:
+
+| 種類 | 検査 | キー |
+|---|---|---|
+| 段で見る余白・間隔・箱の大きさ(`scale:"space"`) | `spacingUnit` の倍数・0 より大きい | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap` `legendSwatchGap` `milestonePaddingX` `milestoneAxisGap` `milestoneMinWidth` `tickLabelWidth` `tickSubLabelOffset` `tickSubLabelWidth` `tickSubLabelHeight` `groupBoxGap` `subgroupInsetRight` `rowLabelGap` `annotationFixedPaddingX` `annotationFixedPaddingY` `annotationGap` `annotationShift` |
+| 字(`scale:"type"`) | `typeSizes` のどれか | `annotationText` `labelText` `smallText` |
+| 図の中の細部の寸法(段の外) | 0 より大きい | `legendSwatchWidth` `legendSwatchHeight` `legendSwatchTop` `legendLabelRaise` `legendLabelGap` `milestoneLabelGap` `tickLabelHeight` `axisGap` `groupInsetX` `subgroupInsetLeft` `barInset` `segmentLabelInsetLeft` `segmentLabelInsetRight` `noteInsetX` `extNoteLabelHeight` `extNoteLabelGap` `leaderGap` `breakMarkWidth` `breakMarkHeight` `breakMarkSpacing` `openEndDotOffset` `openEndDotStep` |
+| 線の太さ・角・点の大きさ(段の外) | 0 より大きい | `thinLineWidth` `lineWidth` `leaderLineWidth` `emphasisLineWidth` `breakMarkHaloWidth` `legendSwatchOutlineWidth` `legendSwatchRadius` `groupRadius` `barRadius` `annotationRadius` `tickDotRadius` `anchorDotRadius` `openEndDotRadius` |
+| 図の大きさ・行の高さ・欄の幅(段の外。以前から) | 0 より大きい | `legendHeight` `gutterGroupWidth` `gutterSubgroupWidth` `gutterLabelWidth` `milestoneHeight` `axisLabelHeight` `minRowHeight` `naturalRowHeight` `maxRowHeight` `naturalChartWidth` `minChartWidth` `annotationFixedWidth` `annotationFixedHeight` `annotationMinWidth` `annotationMaxWidth` |
 
 行の数・段の数・比などの決まりの数は値の表に置かず、名前つきの定数としてコードに
 残した(`docs/subsystem.md` の13節)。
