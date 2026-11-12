@@ -1675,7 +1675,7 @@
       "number": 71,
       "kind": "bug",
       "title": "pairs の中のブロックが意味の検査(empty-text・variant-exists など)を通らない",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -1687,7 +1687,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T13:22:50.220Z",
-      "updatedAt": "2026-11-12T13:22:50.220Z",
+      "updatedAt": "2026-11-12T13:23:38.793Z",
       "closedAt": null,
       "extra": {}
     },
