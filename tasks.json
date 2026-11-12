@@ -1696,7 +1696,7 @@
       "number": 72,
       "kind": "bug",
       "title": "色のトークンを持たない文字の葉が誤りにならず、コアの16進の既定色で描かれる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -1708,7 +1708,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T13:22:55.398Z",
-      "updatedAt": "2026-11-12T13:22:55.398Z",
+      "updatedAt": "2026-11-12T13:23:40.210Z",
       "closedAt": null,
       "extra": {}
     },
