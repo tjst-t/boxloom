@@ -1159,7 +1159,7 @@
       "number": 65,
       "kind": "task",
       "title": "pairs(対の並び)を最初の標準でない型として足す:代わりの組み方は columns、組み方は dark・light",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [
         "type-vocabulary"
@@ -1175,7 +1175,7 @@
       ],
       "threads": [],
       "createdAt": "2026-11-11T23:50:28.739Z",
-      "updatedAt": "2026-11-11T23:50:28.739Z",
+      "updatedAt": "2026-11-12T06:50:23.052Z",
       "closedAt": null,
       "extra": {}
     },
