@@ -166,40 +166,41 @@ func plainInline(s string) Inline { return Inline{{Text: s}} }
 func (t *Template) buildCover(d *IRDeck, s *IRSlide) *BuiltSlide {
 	v, th := t.Values, t.Theme
 	title, subtitle, author := s.Title, s.Subtitle, s.Author
+	titleAt, subtitleAt, authorAt := "title", "subtitle", "author"
 	if d.Meta != nil {
 		if title == nil {
-			title = d.Meta.Title
+			title, titleAt = d.Meta.Title, "/meta/title"
 		}
 		if subtitle == nil {
-			subtitle = d.Meta.Subtitle
+			subtitle, subtitleAt = d.Meta.Subtitle, "/meta/subtitle"
 		}
 		if author == nil {
-			author = d.Meta.Author
+			author, authorAt = d.Meta.Author, "/meta/author"
 		}
 	}
 	var kids []*Spec
 	kids = append(kids, Col(nil, WithGrow(1))) // 上の余白
 	if title != nil {
-		kids = append(kids, t.text(title, v.CoverTitle, th.c("text_primary"), true, WithPlaceholder("ctrTitle")))
+		kids = append(kids, t.text(title, v.CoverTitle, th.c("text_primary"), true, WithPlaceholder("ctrTitle"), fromIR(titleAt)))
 	}
 	kids = append(kids, Col(nil, WithWidth(v.CoverRuleW), WithHeight(v.CoverRuleH), WithBackground(th.c("accent"))))
 	if subtitle != nil {
-		kids = append(kids, t.text(subtitle, v.CoverSubtitle, th.c("text_muted"), false, WithPlaceholder("subTitle")))
+		kids = append(kids, t.text(subtitle, v.CoverSubtitle, th.c("text_muted"), false, WithPlaceholder("subTitle"), fromIR(subtitleAt)))
 	}
 	kids = append(kids, Col(nil, WithGrow(2))) // 下の余白(題を少し上に置く)
 	// 下の段: 作者・日付、その下に機密区分・免責(文書の頭の値)。
 	var foot []*Spec
 	if author != nil {
-		foot = append(foot, t.text(author, v.CoverAuthor, th.c("text_muted"), false))
+		foot = append(foot, t.text(author, v.CoverAuthor, th.c("text_muted"), false, fromIR(authorAt)))
 	}
 	if d.Meta != nil && d.Meta.Date != "" {
-		foot = append(foot, TextNode(t.Marks.formatDate(d.Meta.Date), WithFontSize(v.CoverAuthor), WithColor(th.c("text_muted"))))
+		foot = append(foot, TextNode(t.Marks.formatDate(d.Meta.Date), WithFontSize(v.CoverAuthor), WithColor(th.c("text_muted")), fromIR("/meta/date")))
 	}
 	if d.Meta != nil && d.Meta.Confidential != nil {
-		foot = append(foot, t.text(d.Meta.Confidential, v.Small, th.c("text_primary"), true))
+		foot = append(foot, t.text(d.Meta.Confidential, v.Small, th.c("text_primary"), true, fromIR("/meta/confidential")))
 	}
 	if d.Meta != nil && d.Meta.Disclaimer != nil {
-		foot = append(foot, t.text(d.Meta.Disclaimer, v.Small, th.c("text_muted"), false))
+		foot = append(foot, t.text(d.Meta.Disclaimer, v.Small, th.c("text_muted"), false, fromIR("/meta/disclaimer")))
 	}
 	switch len(foot) {
 	case 0:
@@ -230,14 +231,14 @@ func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, erro
 	// フッターを縮めず、先に本文の図のゆとり(自然〜最小)から返させる。
 	body := Col(blocks, WithGap(v.BlockGap), WithGrow(1), nestedSlack())
 
-	title := t.text(s.Title, v.SlideTitle, th.c("text_primary"), true, WithPlaceholder("title"))
+	title := t.text(s.Title, v.SlideTitle, th.c("text_primary"), true, WithPlaceholder("title"), fromIR("title"))
 	head := title
 	if s.Lead != nil {
-		head = Col([]*Spec{head, t.prose(s.Lead, v.LeadText, th.c("text_primary"), false)}, WithGap(v.HeaderGap))
+		head = Col([]*Spec{head, t.prose(s.Lead, v.LeadText, th.c("text_primary"), false, fromIR("lead"))}, WithGap(v.HeaderGap))
 	}
 	kids := []*Spec{head, body}
 	if s.Source != nil {
-		kids = append(kids, t.slideSource(s.Source))
+		kids = append(kids, apply(t.slideSource(s.Source), []SpecOpt{fromIR("source")}))
 	}
 	kids = append(kids, t.footer(d, i))
 	root := Col(kids, WithGap(v.SectionGap), WithPaddingXY(v.PagePadding, v.PagePaddingY), WithBackground(th.c("bg")))
@@ -309,7 +310,7 @@ func (t *Template) buildSection(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
 	kids := []*Spec{
 		Col(nil, WithGrow(3)),
 		t.accentRule(),
-		t.text(s.Title, v.SectionTitle, th.c("text_primary"), true, WithPlaceholder("title")),
+		t.text(s.Title, v.SectionTitle, th.c("text_primary"), true, WithPlaceholder("title"), fromIR("title")),
 	}
 	if tr := t.sectionTracker(d, i); tr != nil {
 		kids = append(kids, Col(nil, WithHeight(v.SectionGap)), tr)
@@ -364,12 +365,12 @@ func (t *Template) buildStatement(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
 	main := Col([]*Spec{
 		Col(nil, WithGrow(2)),
 		t.accentRule(),
-		t.prose(s.Content, v.StatementText, th.c("text_primary"), true, WithPlaceholder("title")),
+		t.prose(s.Content, v.StatementText, th.c("text_primary"), true, WithPlaceholder("title"), fromIR("content")),
 		Col(nil, WithGrow(3)),
 	}, WithGap(v.SectionGap), WithPadding(v.StatementInset), WithGrow(1))
 	kids := []*Spec{main}
 	if s.Source != nil {
-		kids = append(kids, t.slideSource(s.Source))
+		kids = append(kids, apply(t.slideSource(s.Source), []SpecOpt{fromIR("source")}))
 	}
 	kids = append(kids, t.footer(d, i))
 	root := Col(kids, WithGap(v.SectionGap), WithPaddingXY(v.PagePadding, v.PagePaddingY), WithBackground(th.c("bg")))

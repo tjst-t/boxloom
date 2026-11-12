@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/layout/0.1/layout.schema.json",
+  "title": "Boxloom layout dump (0.1)",
+  "description": "`boxloom layout` の出力:配置の段の木(部品が組んだ箱・計測の印・値の表から引いた数と色)と、エンジンが決めた座標(pt)。人と AI が読むための出力で、入力としては読まない(IR ではない)。docs/build.md の「配置の段の木を見る」。",
+  "type": "object",
+  "required": ["format", "template", "page", "slides"],
+  "additionalProperties": false,
+  "properties": {
+    "format": {"const": "boxloom-layout/0.1"},
+    "file": {"description": "読んだ文書(コマンドが添える)。", "type": "string"},
+    "template": {"description": "組んだテンプレートの名前。", "type": "string"},
+    "page": {"$ref": "#/$defs/size"},
+    "slides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "type", "root"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"description": "IR のスライドの場所(/slides/S)。", "type": "string", "pattern": "^/slides/[0-9]+$"},
+          "line": {"$ref": "#/$defs/line"},
+          "type": {"enum": ["cover", "content", "section", "statement"]},
+          "root": {"$ref": "#/$defs/node"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "pt": {"type": "number"},
+    "line": {"description": "Markdown の行(.md を読んだときだけ)。", "type": "integer", "minimum": 1},
+    "size": {
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {"width": {"$ref": "#/$defs/pt"}, "height": {"$ref": "#/$defs/pt"}}
+    },
+    "box": {
+      "description": "確定した矩形(pt。ページの左上から。0.01pt に丸める)。PPTX の図形の a:off / a:ext(EMU / 12700)と同じ。",
+      "type": "object",
+      "required": ["x", "y", "width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {"$ref": "#/$defs/pt"},
+        "y": {"$ref": "#/$defs/pt"},
+        "width": {"$ref": "#/$defs/pt"},
+        "height": {"$ref": "#/$defs/pt"}
+      }
+    },
+    "color": {"description": "16進の色(値の表から引いたもの)。", "type": "string", "pattern": "^[0-9A-Fa-f]{6}$"},
+    "run": {
+      "type": "object",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": {
+        "text": {"type": "string"},
+        "color": {"$ref": "#/$defs/color"},
+        "bold": {"type": "boolean"},
+        "size": {"description": "塊だけの字の大きさ(無ければ葉の fontSize)。", "$ref": "#/$defs/pt"},
+        "mark": {"description": "頭の印(PPTX では段落の箇条の印)。", "type": "boolean"},
+        "keep": {"description": "塊の中で折り返さない。", "type": "boolean"},
+        "field": {"description": "アプリが値を入れる欄(slidenum)。", "type": "string"},
+        "role": {"description": "色の役割名(値の表で1つに決まるときだけ)。", "type": "string"}
+      }
+    },
+    "marks": {
+      "description": "計測と書き出しの印(docs/layers.md の2.1)。",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "irType": {"description": "この箱を作った IR のブロックの type。", "type": "string"},
+        "cardRow": {"description": "横に同じ幅のカードを並べる行。IR の並びの名前(options・items)。", "type": "string"},
+        "columnGroups": {"description": "並列のまとまりの行。まとまりの数。", "type": "integer", "minimum": 1},
+        "keepLine": {"description": "1行に収めたい文字の葉(警告の文に使う名前)。", "type": "string"},
+        "nestedSlack": {"description": "列の中で足りないとき、中の図を文字より先に縮める。", "const": true},
+        "list": {"description": "箇条(PPTX では1つの文字の枠の段落)。", "const": true},
+        "card": {"description": "カード(PPTX では地と中の文字を持つ1つの図形)。", "const": true}
+      }
+    },
+    "subsystem": {
+      "description": "サブシステムの葉。名前と申告した大きさだけ(中身は出さない)。",
+      "type": "object",
+      "required": ["name", "width", "natural", "min", "max", "draw"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "width": {"description": "申告を尋ねた幅(割り当てられた幅)。", "$ref": "#/$defs/pt"},
+        "natural": {"$ref": "#/$defs/size"},
+        "min": {"$ref": "#/$defs/size"},
+        "max": {"description": "0 は上限なし。", "$ref": "#/$defs/size"},
+        "fixedAspect": {"type": "boolean"},
+        "draw": {"description": "描いた矩形(縦横比を保つ図・上限のある図は box より小さいことがある)。", "$ref": "#/$defs/box"}
+      }
+    },
+    "tokenName": {"type": "string", "minLength": 1},
+    "node": {
+      "type": "object",
+      "required": ["kind", "path", "box"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"enum": ["row", "col", "text", "subsystem"]},
+        "path": {"description": "箱を作った IR の場所(JSON Pointer。無ければ一番近い親の場所)。", "type": "string", "pattern": "^/"},
+        "line": {"$ref": "#/$defs/line"},
+        "box": {"$ref": "#/$defs/box"},
+        "gap": {"$ref": "#/$defs/pt"},
+        "padding": {
+          "description": "内側の余白(x は左右、y は上下)。",
+          "type": "object",
+          "required": ["x", "y"],
+          "additionalProperties": false,
+          "properties": {"x": {"$ref": "#/$defs/pt"}, "y": {"$ref": "#/$defs/pt"}}
+        },
+        "grow": {"type": "number"},
+        "basis": {"$ref": "#/$defs/pt"},
+        "width": {"description": "決めた幅。", "$ref": "#/$defs/pt"},
+        "height": {"description": "決めた高さ。", "$ref": "#/$defs/pt"},
+        "alignItems": {"description": "既定の stretch は省く。", "const": "center"},
+        "justifyContent": {"description": "既定の start は省く。", "const": "spaceBetween"},
+        "background": {"$ref": "#/$defs/color"},
+        "radius": {"$ref": "#/$defs/pt"},
+        "text": {"description": "文字の葉の文字(runs があればそれをつないだもの)。", "type": "string"},
+        "runs": {"type": "array", "items": {"$ref": "#/$defs/run"}},
+        "fontSize": {"$ref": "#/$defs/pt"},
+        "color": {"description": "装飾の無い文字の葉の色(runs があれば塊ごと)。", "$ref": "#/$defs/color"},
+        "bold": {"type": "boolean"},
+        "textAlign": {"description": "left 以外のとき。", "enum": ["center", "right"]},
+        "anchor": {"description": "top 以外のとき。", "enum": ["middle", "bottom"]},
+        "placeholder": {"description": "スライドのレイアウトのプレースホルダーとして書く種類。", "enum": ["title", "ctrTitle", "subTitle", "ftr", "sldNum"]},
+        "marks": {"$ref": "#/$defs/marks"},
+        "subsystem": {"$ref": "#/$defs/subsystem"},
+        "tokens": {
+          "description": "数・色の値の表の名前(1つに決まるものだけ。間隔・余白は scale:space の値、字の大きさは scale:type の値、色はテーマの役割名)。",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "gap": {"$ref": "#/$defs/tokenName"},
+            "padding": {"$ref": "#/$defs/tokenName"},
+            "paddingY": {"$ref": "#/$defs/tokenName"},
+            "fontSize": {"$ref": "#/$defs/tokenName"},
+            "color": {"$ref": "#/$defs/tokenName"},
+            "background": {"$ref": "#/$defs/tokenName"},
+            "radius": {"$ref": "#/$defs/tokenName"}
+          }
+        },
+        "children": {"type": "array", "items": {"$ref": "#/$defs/node"}}
+      },
+      "allOf": [
+        {"if": {"properties": {"kind": {"const": "text"}}}, "then": {"required": ["text", "fontSize"]}},
+        {"if": {"properties": {"kind": {"const": "subsystem"}}}, "then": {"required": ["subsystem"]}}
+      ]
+    }
+  }
+}

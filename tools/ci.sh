@@ -5,7 +5,8 @@
 #
 # 手順:
 #   go        gofmt の差・go vet・go test
-#   python    validate_ir.py --self-test(schema/ で)と --bundle(boxloom schema の出力で)
+#   python    validate_ir.py --self-test(schema/ で)と --bundle(boxloom schema の出力で)、
+#             validate_layout.py --self-test(boxloom layout の出力を schema/layout.schema.json で)
 #   pptx      validate_pptx.py --self-test(XSD は無ければ取ってくる)
 #   readers   validate_pptx.py --self-test --soffice(LibreOffice が要る。重いので既定では流さない)
 #   terms     check_terms.py --history(一覧は環境変数 BOXLOOM_FORBIDDEN_TERMS。
@@ -33,6 +34,7 @@ step_python() {
   (cd boxloom && go run ./cmd/boxloom schema) > "$bundle"
   python3 tools/validate_ir.py --bundle "$bundle" --self-test
   rm -f "$bundle"
+  python3 tools/validate_layout.py --self-test
 }
 
 step_pptx() {

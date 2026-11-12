@@ -98,6 +98,10 @@ type Spec struct {
 	// keepLine は、1行に収めたい文字の葉(Keep の塊だけの葉)の名前(警告の文に
 	// 使う。例 "stat: items[1]")。幅に入りきらなければ stat-value の警告(keepline.go)。
 	keepLine string
+	// irPath はこの箱を作った IR の場所(fromIR。layout の出力の path に使う)。
+	// "/" で始まれば文書の中の絶対の場所、そうでなければスライドからの相対
+	// ("title"・"lead" など)。空なら親の場所を継ぐ。
+	irPath string
 
 	Box LBox // compute_layout()実行後に確定する
 }
@@ -167,6 +171,11 @@ func keepLine(name string) SpecOpt { return func(s *Spec) { s.keepLine = name } 
 
 // nestedSlack は箱の属性: 列の中で足りないとき、中の図を文字より先に縮める。
 func nestedSlack() SpecOpt { return func(s *Spec) { s.nestedSlack = true } }
+
+// fromIR は箱を作った IR の場所(layout の出力の path。読むのは layoutdump.go だけで、
+// 配置・計測・書き出しは見ない)。rel はスライドからの相対("title" など)か、
+// "/" で始まる文書の中の場所("/meta/title" など)。
+func fromIR(rel string) SpecOpt { return func(s *Spec) { s.irPath = rel } }
 
 // asList は箱の種類: 箇条(PPTX では項目を1つの文字の枠の段落として書く)。
 func asList() SpecOpt { return func(s *Spec) { s.List = true } }

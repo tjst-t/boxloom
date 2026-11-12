@@ -129,3 +129,29 @@ func TestYAMLDeckCommands(t *testing.T) {
 		t.Errorf("deckBaseName for YAML")
 	}
 }
+
+func TestLayoutCommand(t *testing.T) {
+	var stdout bytes.Buffer
+	if c := run([]string{"layout", "-template", "dark", demoDeckPath}, &stdout, io.Discard); c != 0 {
+		t.Fatalf("exit %d", c)
+	}
+	var out struct {
+		Format   string `json:"format"`
+		Template string `json:"template"`
+		Slides   []struct {
+			Path string `json:"path"`
+		} `json:"slides"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Format != "boxloom-layout/0.1" || out.Template != "dark" || len(out.Slides) == 0 || out.Slides[0].Path != "/slides/0" {
+		t.Errorf("layout output = %+v", out)
+	}
+	if c := run([]string{"layout"}, io.Discard, io.Discard); c != 2 {
+		t.Errorf("no deck: exit %d, want 2", c)
+	}
+	if c := run([]string{"layout", "-template", "nope", demoDeckPath}, io.Discard, io.Discard); c != 1 {
+		t.Errorf("unknown template: exit %d, want 1", c)
+	}
+}

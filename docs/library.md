@@ -92,6 +92,7 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 | `WriteDemo(w, theme)` | 従来の Go で組んだデモ(引数なしの `boxloom`)。v11 の再現 |
 | `NewFontCheck`・`FontCheck`・`WriteFontList` | `boxloom fonts`(`docs/fonts.md`)の測りと一覧 |
 | `WriteDeck` | 組んだスライド(`PPTXBuilder`)を PPTX にする低い層 |
+| `Layout(file, src, BuildOptions)` | `boxloom layout` の配置の段の木(`*LayoutDump`。JSON にすると `schema/layout.schema.json` の形。`docs/build.md` の「配置の段の木を見る」)。木の形は `docs/layers.md` の7章の4段目で変わるので安定させない |
 | `IsTemplateFile` | `-template` の値がファイルのパスか(`.json` で終わるか、パスの区切りを含む) |
 
 ## 別のモジュールから使う

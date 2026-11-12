@@ -162,6 +162,47 @@ python3 tools/validate_pptx.py --self-test    # examples を dark/light で作�
 - **限り**:XSD と参照の整合は見るが、PowerPoint 自身が開けるかは見ていない
   (PowerPoint だけが嫌う形は捕まらない)。
 
+## 配置の段の木を見る(boxloom layout)
+
+部品が組んだ箱の木(配置の段。`docs/layers.md`)と、エンジンが決めた座標を JSON で出す。
+なぜその大きさ・はみ出しになったかを人と AI が読むためのもので、**出すだけ**
+(この形を入力として読む口は無い。`docs/layers.md` の4章)。
+
+```sh
+cd boxloom
+go run ./cmd/boxloom layout ../examples/md/blocks.bx.md            # 標準出力に JSON
+go run ./cmd/boxloom layout -template dark ../examples/ir/demo-deck.json
+```
+
+形は `schema/layout.schema.json`(`format` は `boxloom-layout/0.1`)。テンプレートの
+選び方・画像の読み方は `build` と同じ。
+
+- スライドごとに `root` の箱から木を出す。箱は `kind`(row・col・text・subsystem)・
+  `path`(箱を作った IR の場所。JSON Pointer で、題は `/slides/S/title`、本文は
+  `/slides/S/body`、ブロックは `…/body/N`、カードは `…/options/K`・`…/items/K`、並列の
+  まとまりは `…/columns/C`(題は `…/title`、中のブロックは `…/body/K`)、表紙の頭の値は
+  `/meta/title` など。場所を持たない箱(余白・フッター・箇条の項目)は一番近い親の場所)・
+  `.md`・`.yaml` なら `line`・`box{x,y,width,height}`(pt、0.01pt に丸める)。
+- 箱の属性は値のあるものだけ:`gap`・`padding{x,y}`・`grow`・`basis`・`width`・`height`・
+  `alignItems`(center のとき)・`justifyContent`(spaceBetween のとき)・`background`・`radius`。
+- 文字の葉は `text`・`fontSize`、装飾つきなら `runs`(塊ごとの文字・色・太字・大きさ・
+  印・折らない・欄)、装飾なしなら `color`・`bold`。`textAlign`・`anchor`・`placeholder`。
+- 計測の印は `marks`:`irType`・`cardRow`・`columnGroups`(まとまりの数)・`keepLine`・
+  `nestedSlack`・`list`・`card`。
+- サブシステム(表・画像・図・グラフ・Gantt)は `subsystem` に名前と、割り当てられた幅で
+  尋ねた申告(`natural`・`min`・`max`・`fixedAspect`)と、描いた矩形 `draw` だけ。中身は出さない。
+- いまの木は値の表から引いた**数と色**を持つ(値を後で解決する形は `docs/layers.md` の
+  7章の4段目)。値の表の名前(トークン)は、その値に当たる名前が1つだけのときに
+  `tokens` に添える(間隔・余白は `scale:"space"` の値、字の大きさは `scale:"type"` の値、
+  色はテーマの役割名、角は `…Radius`。塊の色は `runs[].role`)。同じ値の名前が2つ以上
+  あれば添えない(どちらから引いたかを今の木は覚えていない)。
+- `box` は build と同じ配置(PPTX はこれをそのまま `a:off`/`a:ext` に書く)。文字の葉・
+  カード・箇条・地の箱が PPTX の図形と一致することを `TestLayoutBoxesMatchPPTX`
+  (`boxloom/layoutdump_test.go`)が examples の全 deck で確かめる。カードと箇条の中の
+  文字の葉は PPTX では図形でなく段落なので、その box は段落の位置(字下げ・段落の前の間)の元になる。
+- 出力が Schema に通ることは `python3 tools/validate_layout.py --self-test`(examples の
+  全 deck × 同梱のテンプレートと `examples/templates/forest.json`。CI の `python` の手順)。
+
 ## CI と検査の道具
 
 手順は `tools/ci.sh` に1つにまとめ、GitHub Actions(`.github/workflows/ci.yml`)も
@@ -175,7 +216,7 @@ sh tools/ci.sh readers    # LibreOffice で読めるか(重いので既定では
 | 手順 | 中身 |
 |---|---|
 | `go` | `gofmt -l` が空・`go vet`・`go test` |
-| `python` | `validate_ir.py --self-test` と、`boxloom schema` の出力での `--bundle --self-test` |
+| `python` | `validate_ir.py --self-test` と、`boxloom schema` の出力での `--bundle --self-test`、`validate_layout.py --self-test`(`boxloom layout` の出力を `schema/layout.schema.json` で) |
 | `pptx` | `validate_pptx.py --self-test` |
 | `readers` | `validate_pptx.py --self-test --soffice` |
 | `terms` | `check_terms.py --history`:書いてはいけない語(業務に関わる固有名など) |

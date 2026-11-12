@@ -263,6 +263,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `yaml_deck.go` = YAML の deck(IR の写し。同じキー・同じ type)→ IR。拡張子 `.yaml`・`.yml` で
     parse・check・build・`ReadDeck` が受け取る。誤りには YAML の行と列(IR の場所から引く)。
     例は `examples/yaml/charts.yaml`(`examples/ir/charts.json` と同じ PPTX。`docs/content-syntax.md` の1章)
+  - `layoutdump.go` = `go run ./cmd/boxloom layout deck.(bx.md|yaml|json)`。配置の段の木(箱・
+    IR の場所・印・値・決まった座標)を JSON で出す(出すだけ。形は `schema/layout.schema.json`、
+    `docs/build.md` の「配置の段の木を見る」)。box が PPTX の図形と一致することは
+    `TestLayoutBoxesMatchPPTX`
   - `vocab.go` / `schema_cmd.go` = `go run ./cmd/boxloom schema`。名乗る囲み・文書の頭の
     キー・記法の約束事の表と、それを1つの JSON に組むコマンド
   - `api.go` / `doc.go` = ライブラリの入口とパッケージの説明(`docs/library.md`)

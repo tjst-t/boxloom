@@ -6,6 +6,7 @@
 //	boxloom check [-format text|json] [-capacity] [-template dark|light|./my.json] [-strict] deck.json|deck.yaml|deck.bx.md ...
 //	boxloom parse [-format text|json] deck.bx.md|deck.yaml
 //	boxloom schema [-template NAME]
+//	boxloom layout [-template dark|light|./my.json] deck.json|deck.bx.md|deck.yaml   # 配置の段の木(JSON)
 //	boxloom fonts [-template 名前] [-against "欧文/和文;…"] [-v] deck… | -list
 //	boxloom                      # 従来の Go で組んだデモ(out/boxloom_dark.pptx・out/boxloom_light.pptx)
 //
@@ -44,6 +45,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return runSchema(args[1:], stdout, stderr)
 		case "parse":
 			return runParse(args[1:], stdout, stderr)
+		case "layout":
+			return runLayout(args[1:], stdout, stderr)
 		}
 	}
 	return runDemo(stdout, stderr)
@@ -283,6 +286,47 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, e.String())
 	}
 	return 1
+}
+
+// runLayout は「boxloom layout」: 配置の段の木(箱・印・値・決まった座標)を JSON で
+// 標準出力に書く(docs/build.md の「配置の段の木を見る」)。出すだけで、この形を
+// 入力として読む口は無い。
+func runLayout(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("layout", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	tmpl := fs.String("template", "", "テンプレートの名前か値の表のファイル(./my.json。省くと IR の template)")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 1 {
+		fmt.Fprintln(stderr, "usage: boxloom layout [-template dark|light|./my.json] deck.json|deck.bx.md|deck.yaml")
+		return 2
+	}
+	in := fs.Arg(0)
+	tname, tvalues, tissue := templateFlag(*tmpl)
+	if tissue != nil {
+		fmt.Fprintln(stderr, "error:", tissue.String())
+		return 1
+	}
+	src, err := os.ReadFile(in)
+	if err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		return 1
+	}
+	dump, err := boxloom.Layout(in, src, boxloom.BuildOptions{Template: tname, Values: tvalues, Assets: deckAssets(in)})
+	if err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		return 1
+	}
+	dump.File = in
+	enc := json.NewEncoder(stdout)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(dump); err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		return 1
+	}
+	return 0
 }
 
 // runSchema は「boxloom schema」: AI に渡す一覧(docs/schema-command.md)。

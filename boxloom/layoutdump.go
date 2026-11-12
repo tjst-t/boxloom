@@ -1,0 +1,394 @@
+// 配置の段の木を外に出す(`boxloom layout`。docs/layers.md の4章・docs/build.md)。
+//
+// 部品が組んだ箱の木(Spec)を、エンジンが決めた座標(box)と一緒に JSON にする。
+// なぜその大きさ・はみ出しになったかを人と AI が読むためのもので、出すだけ
+// (この形を入力として読む口は無い)。形は schema/layout.schema.json。
+//
+// 座標は build と同じ配置(computeLayout の直後。PPTX はこの box をそのまま
+// a:off / a:ext に書く)。サブシステムは名前と申告した大きさだけで、中身は出さない。
+// 間隔・余白・字の大きさ・色は、いまの木では値の表から引いた数と色なので、
+// 値の表の名前(トークン)が1つに決まるときだけ tokens に添える。
+
+package boxloom
+
+import (
+	"fmt"
+	"math"
+	"reflect"
+	"sort"
+	"strings"
+)
+
+// LayoutFormat は layout の出力の形の名前と版(LayoutDump.Format)。
+const LayoutFormat = "boxloom-layout/0.1"
+
+// LayoutDump は文書の全スライドの配置の段の木。
+type LayoutDump struct {
+	Format   string        `json:"format"`
+	File     string        `json:"file,omitempty"`
+	Template string        `json:"template"`
+	Page     LayoutSize    `json:"page"`
+	Slides   []LayoutSlide `json:"slides"`
+}
+
+// LayoutSize は大きさ(pt)。
+type LayoutSize struct {
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
+// LayoutBox は確定した矩形(pt。ページの左上から)。
+type LayoutBox struct {
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
+// LayoutSlide は1枚のスライドの木。
+type LayoutSlide struct {
+	Path string      `json:"path"` // /slides/S
+	Line int         `json:"line,omitempty"`
+	Type string      `json:"type"` // IR のスライドの type
+	Root *LayoutNode `json:"root"`
+}
+
+// LayoutPadding は箱の内側の余白(x は左右、y は上下)。
+type LayoutPadding struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
+// LayoutRun は装飾つきの文字の塊。
+type LayoutRun struct {
+	Text  string  `json:"text"`
+	Color string  `json:"color,omitempty"`
+	Bold  bool    `json:"bold,omitempty"`
+	Size  float64 `json:"size,omitempty"`  // 0 なら葉の fontSize
+	Mark  bool    `json:"mark,omitempty"`  // 箇条などの頭の印
+	Keep  bool    `json:"keep,omitempty"`  // 塊の中で折り返さない
+	Field string  `json:"field,omitempty"` // アプリが値を入れる欄(slidenum)
+	// Role は色の役割名(値の表で1つに決まるときだけ)。
+	Role string `json:"role,omitempty"`
+}
+
+// LayoutMarks は計測と書き出しの印(docs/layers.md の2.1)。
+type LayoutMarks struct {
+	IRType       string `json:"irType,omitempty"`
+	CardRow      string `json:"cardRow,omitempty"`      // カードの並びの IR の名前(options・items)
+	ColumnGroups int    `json:"columnGroups,omitempty"` // 並列のまとまりの数
+	KeepLine     string `json:"keepLine,omitempty"`
+	NestedSlack  bool   `json:"nestedSlack,omitempty"`
+	List         bool   `json:"list,omitempty"`
+	Card         bool   `json:"card,omitempty"`
+}
+
+// LayoutSubsystem はサブシステムの葉の、名前と申告した大きさ(中身は出さない)。
+type LayoutSubsystem struct {
+	Name string `json:"name"`
+	// Width は申告を尋ねた幅(割り当てられた幅)。
+	Width       float64    `json:"width"`
+	Natural     LayoutSize `json:"natural"`
+	Min         LayoutSize `json:"min"`
+	Max         LayoutSize `json:"max"` // 0 は上限なし
+	FixedAspect bool       `json:"fixedAspect,omitempty"`
+	Draw        LayoutBox  `json:"draw"` // 描いた矩形(縦横比を保つ図は box より小さいことがある)
+}
+
+// LayoutNode は箱の木の1つの箱。
+type LayoutNode struct {
+	Kind string `json:"kind"` // row・col・text・subsystem
+	// Path は箱を作った IR の場所(無ければ一番近い親の場所)。
+	Path string    `json:"path"`
+	Line int       `json:"line,omitempty"`
+	Box  LayoutBox `json:"box"`
+
+	Gap            float64        `json:"gap,omitempty"`
+	Padding        *LayoutPadding `json:"padding,omitempty"`
+	Grow           float64        `json:"grow,omitempty"`
+	Basis          *float64       `json:"basis,omitempty"`
+	Width          *float64       `json:"width,omitempty"`
+	Height         *float64       `json:"height,omitempty"`
+	AlignItems     string         `json:"alignItems,omitempty"`     // center(既定の stretch は省く)
+	JustifyContent string         `json:"justifyContent,omitempty"` // spaceBetween(既定の start は省く)
+	Background     string         `json:"background,omitempty"`
+	Radius         *float64       `json:"radius,omitempty"`
+
+	Text        *string     `json:"text,omitempty"`
+	Runs        []LayoutRun `json:"runs,omitempty"`
+	FontSize    float64     `json:"fontSize,omitempty"`
+	Color       string      `json:"color,omitempty"`
+	Bold        bool        `json:"bold,omitempty"`
+	TextAlign   string      `json:"textAlign,omitempty"` // left 以外のとき
+	Anchor      string      `json:"anchor,omitempty"`    // top 以外のとき
+	Placeholder string      `json:"placeholder,omitempty"`
+
+	Marks     *LayoutMarks     `json:"marks,omitempty"`
+	Subsystem *LayoutSubsystem `json:"subsystem,omitempty"`
+	// Tokens は数・色の値の表の名前(1つに決まるものだけ)。
+	// キーは gap・padding・paddingY・fontSize・color・background・radius。
+	Tokens   map[string]string `json:"tokens,omitempty"`
+	Children []*LayoutNode     `json:"children,omitempty"`
+}
+
+// lineMap は IR の場所 → 元の文書の行(Markdown の SourceMap・YAML の YAMLSourceMap)。
+type lineMap interface{ Line(path string) int }
+
+// noLines は IR(JSON)を読んだとき(行を添えない)。
+type noLines struct{}
+
+func (noLines) Line(string) int { return 0 }
+
+// Layout は文書を組み、スライドごとの配置の段の木を返す。file の拡張子が .md なら
+// Boxloom Markdown、.yaml・.yml なら YAML の deck(記法の誤りはどちらも
+// MarkdownErrors。箱に元の文書の行を添える)、それ以外は IR(JSON)。テンプレートの選び方と画像の読み方は Build と同じ。
+func Layout(file string, src []byte, opt BuildOptions) (*LayoutDump, error) {
+	var deck *IRDeck
+	var lines lineMap = noLines{}
+	if isYAMLPath(file) {
+		// 読むのは ReadDeck(IR の誤りにも YAML の行と列を添える)。行の表だけここで取る。
+		d, err := ReadDeck(file, src)
+		if err != nil {
+			return nil, err
+		}
+		_, _, m := parseYAMLDeck(file, src)
+		deck, lines = d, m
+	} else if isMarkdownPath(file) {
+		ir, issues, m := ParseMarkdownWithMap(src, file)
+		if len(issues) > 0 {
+			return nil, MarkdownErrors(issues)
+		}
+		d, err := ReadIR(file, ir)
+		if err != nil {
+			return nil, err
+		}
+		deck, lines = d, m
+	} else {
+		d, err := ReadIR(file, src)
+		if err != nil {
+			return nil, err
+		}
+		deck = d
+	}
+	return layoutDeck(deck, opt, lines)
+}
+
+// layoutDeck は読んだ deck の配置の段の木。lines で箱に元の文書の行を添える。
+func layoutDeck(deck *IRDeck, opt BuildOptions, lines lineMap) (*LayoutDump, error) {
+	defer useFonts(activeFonts)()
+	t := opt.Values
+	if t == nil {
+		name := deck.Template
+		if opt.Template != "" {
+			name = opt.Template
+		}
+		var err error
+		if t, err = LookupTemplate(name); err != nil {
+			return nil, err
+		}
+	}
+	t.SetAssets(opt.Assets)
+	built, err := t.BuildDeck(deck)
+	if err != nil {
+		return nil, err
+	}
+	v := t.Values
+	tk := newLayoutTokens(t)
+	out := &LayoutDump{Format: LayoutFormat, Template: t.Name, Page: LayoutSize{v.PageW, v.PageH}, Slides: []LayoutSlide{}}
+	for i, b := range built {
+		computeLayout(b.Root, 0, 0, v.PageW, v.PageH)
+		sp := fmt.Sprintf("/slides/%d", i)
+		d := &layoutDumper{slide: sp, tokens: tk, lines: lines, body: b.Body, groups: map[*Spec]columnInfo{}}
+		out.Slides = append(out.Slides, LayoutSlide{Path: sp, Line: lines.Line(sp), Type: deck.Slides[i].Type, Root: d.node(b.Root, sp)})
+	}
+	return out, nil
+}
+
+type layoutDumper struct {
+	slide  string
+	tokens *layoutTokens
+	lines  lineMap
+	body   *Spec
+	// groups は並列のまとまりの箱(まとまり全体・本文の列)→ そのまとまり。
+	groups map[*Spec]columnInfo
+}
+
+// round2 は 0.01pt に丸める(読みやすさのため。PPTX の EMU とは 127 未満の差)。
+func round2(v float64) float64 { return math.Round(v*100) / 100 }
+
+func layoutBoxOf(b LBox) LayoutBox {
+	return LayoutBox{round2(b.X), round2(b.Y), round2(b.Width), round2(b.Height)}
+}
+
+var layoutKinds = map[Kind]string{KindRow: "row", KindCol: "col", KindText: "text", KindSubsystem: "subsystem"}
+
+// node は s を出す。path は親から決まった IR の場所(s.irPath があればそちら)。
+func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
+	if s.irPath != "" {
+		if strings.HasPrefix(s.irPath, "/") {
+			path = s.irPath
+		} else {
+			path = d.slide + "/" + s.irPath
+		}
+	}
+	if s == d.body {
+		path = d.slide + "/body"
+	}
+	n := &LayoutNode{Kind: layoutKinds[s.Kind], Path: path, Line: d.lines.Line(path), Box: layoutBoxOf(s.Box)}
+	tok := map[string]string{}
+	addTok := func(key, name string) {
+		if name != "" {
+			tok[key] = name
+		}
+	}
+	n.Gap = s.Gap
+	if s.Gap != 0 {
+		addTok("gap", d.tokens.space(s.Gap))
+	}
+	if s.Padding != 0 || s.padY() != 0 {
+		n.Padding = &LayoutPadding{X: s.padX(), Y: s.padY()}
+		addTok("padding", d.tokens.space(s.padX()))
+		if s.padY() != s.padX() {
+			addTok("paddingY", d.tokens.space(s.padY()))
+		}
+	}
+	n.Grow, n.Basis, n.Width, n.Height = s.Grow, s.Basis, s.Width, s.Height
+	if s.AlignItems == AlignCenter {
+		n.AlignItems = "center"
+	}
+	if s.JustifyContent == JustifySpaceBetween {
+		n.JustifyContent = "spaceBetween"
+	}
+	if s.Background != "" {
+		n.Background = s.Background
+		addTok("background", d.tokens.color(s.Background))
+	}
+	if s.HasRadius {
+		r := s.Radius
+		n.Radius = &r
+		addTok("radius", d.tokens.radius(r))
+	}
+	if s.Kind == KindText {
+		txt := s.Text
+		n.Text = &txt
+		n.FontSize = s.FontSize
+		addTok("fontSize", d.tokens.typeSize(s.FontSize))
+		if len(s.Runs) > 0 {
+			for _, r := range s.Runs {
+				n.Runs = append(n.Runs, LayoutRun{Text: r.Text, Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep, Field: r.Field, Role: d.tokens.color(r.Color)})
+			}
+		} else {
+			n.Color, n.Bold = s.Color, s.Bold
+			addTok("color", d.tokens.color(s.Color))
+		}
+		if s.Align != "" && s.Align != "left" {
+			n.TextAlign = s.Align
+		}
+		if s.Anchor != "" && s.Anchor != "top" {
+			n.Anchor = s.Anchor
+		}
+		n.Placeholder = s.Placeholder
+	}
+	m := LayoutMarks{IRType: s.irType, CardRow: s.cards, KeepLine: s.keepLine, NestedSlack: s.nestedSlack, List: s.List, Card: s.card}
+	if s.columns != nil {
+		m.ColumnGroups = len(s.columns.cols)
+	}
+	if m != (LayoutMarks{}) {
+		n.Marks = &m
+	}
+	if s.Kind == KindSubsystem && s.Subsystem != nil {
+		ms := s.Subsystem.Measure(Constraint{Width: s.Box.Width})
+		size := func(z Size) LayoutSize { return LayoutSize{round2(z.Width), round2(z.Height)} }
+		n.Subsystem = &LayoutSubsystem{Name: s.Subsystem.Name(), Width: round2(s.Box.Width),
+			Natural: size(ms.Natural), Min: size(ms.Min), Max: size(ms.Max), FixedAspect: ms.FixedAspect,
+			Draw: layoutBoxOf(subsystemDrawBox(s))}
+	}
+	if len(tok) > 0 {
+		n.Tokens = tok
+	}
+	for i, c := range s.Children {
+		n.Children = append(n.Children, d.node(c, d.childPath(s, i, c, path)))
+	}
+	return n
+}
+
+// childPath は子の IR の場所。本文のブロック(body/N)・カードの並び(options/K・
+// items/K)・並列のまとまり(columns/C、その題と本文のブロック)は木の形と印から
+// 決まる。ほかは親の場所を継ぐ。
+func (d *layoutDumper) childPath(s *Spec, i int, c *Spec, path string) string {
+	if s == d.body {
+		return fmt.Sprintf("%s/body/%d", d.slide, i)
+	}
+	if s.cards != "" {
+		return fmt.Sprintf("%s/%s/%d", path, s.cards, i)
+	}
+	if s.columns != nil {
+		for ci, col := range s.columns.cols {
+			d.groups[col.spec], d.groups[col.body] = col, col
+			if col.spec == c {
+				return fmt.Sprintf("%s/columns/%d", path, ci)
+			}
+		}
+	}
+	if col, ok := d.groups[s]; ok {
+		switch {
+		case s == col.body:
+			return fmt.Sprintf("%s/body/%d", path, i)
+		case c == col.title && c != nil:
+			return path + "/title"
+		}
+	}
+	return path
+}
+
+// --- 値の表の名前(トークン)。数・色が1つの名前にだけ当たるときに添える ---
+
+type layoutTokens struct {
+	spaces, types, radii, colors map[string][]string
+}
+
+func tokenKey(v float64) string { return fmt.Sprintf("%g", v) }
+
+func newLayoutTokens(t *Template) *layoutTokens {
+	tk := &layoutTokens{spaces: map[string][]string{}, types: map[string][]string{}, radii: map[string][]string{}, colors: map[string][]string{}}
+	rv := reflect.ValueOf(t.Values)
+	rt := rv.Type()
+	for i := 0; i < rt.NumField(); i++ {
+		f := rt.Field(i)
+		if f.Type.Kind() != reflect.Float64 {
+			continue
+		}
+		name := strings.Split(f.Tag.Get("json"), ",")[0]
+		val := tokenKey(rv.Field(i).Float())
+		switch {
+		case f.Tag.Get("scale") == "space":
+			tk.spaces[val] = append(tk.spaces[val], name)
+		case f.Tag.Get("scale") == "type":
+			tk.types[val] = append(tk.types[val], name)
+		case strings.HasSuffix(name, "Radius"):
+			tk.radii[val] = append(tk.radii[val], name)
+		}
+	}
+	roles := make([]string, 0, len(t.Theme))
+	for r := range t.Theme {
+		roles = append(roles, r)
+	}
+	sort.Strings(roles)
+	for _, r := range roles {
+		c := strings.ToUpper(t.Theme[r])
+		tk.colors[c] = append(tk.colors[c], r)
+	}
+	return tk
+}
+
+func only(names []string) string {
+	if len(names) == 1 {
+		return names[0]
+	}
+	return ""
+}
+
+func (tk *layoutTokens) space(v float64) string    { return only(tk.spaces[tokenKey(v)]) }
+func (tk *layoutTokens) typeSize(v float64) string { return only(tk.types[tokenKey(v)]) }
+func (tk *layoutTokens) radius(v float64) string   { return only(tk.radii[tokenKey(v)]) }
+func (tk *layoutTokens) color(c string) string     { return only(tk.colors[strings.ToUpper(c)]) }
