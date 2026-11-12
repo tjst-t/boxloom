@@ -19,6 +19,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 
 	"boxloom"
@@ -140,7 +141,7 @@ func handleMCPLine(line []byte, logw io.Writer) *rpcResponse {
 			return resp
 		}
 		fmt.Fprintf(logw, "boxloom mcp: tools/call %s\n", p.Name)
-		resp.Result = callMCPTool(tool, p.Arguments)
+		resp.Result = callMCPTool(tool, p.Arguments, logw)
 	default:
 		resp.Error = &rpcError{-32601, "method not found: " + req.Method}
 	}
@@ -164,7 +165,20 @@ var mcpToolFuncs = map[string]mcpTool{
 
 // callMCPTool は道具を呼び、MCP の CallToolResult にする。道具の誤りは
 // JSON-RPC の誤りではなく isError で返す(エージェントが読んで直せるように)。
-func callMCPTool(tool mcpTool, args json.RawMessage) map[string]any {
+//
+// 道具の中(ライブラリ)で panic が起きても、サーバは落とさず isError の結果で
+// 返して次の要求に答え続ける(長く動かすサーバなので、1つの文書のせいで
+// セッション全体を切らない)。字体などのプロセスの状態は、ライブラリの側が
+// defer で戻すので、panic の後も元のまま(TestMCPToolPanic)。
+// panic の要旨と呼び出しの跡は logw(stderr)にも書く。
+func callMCPTool(tool mcpTool, args json.RawMessage, logw io.Writer) (result map[string]any) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(logw, "boxloom mcp: panic: %v\n%s", r, debug.Stack())
+			result = map[string]any{"isError": true, "content": []map[string]any{{"type": "text",
+				"text": fmt.Sprintf("internal error (panic) in boxloom: %v. This is a bug in boxloom, not in the deck; the server keeps running.", r)}}}
+		}
+	}()
 	if len(args) == 0 || string(args) == "null" {
 		args = json.RawMessage("{}")
 	}
