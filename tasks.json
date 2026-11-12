@@ -1184,7 +1184,7 @@
       "number": 67,
       "kind": "task",
       "title": "配置の段の木を JSON で出す(layout コマンド:箱・印・値・決まった座標)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -1198,7 +1198,7 @@
       ],
       "threads": [],
       "createdAt": "2026-11-12T01:23:37.679Z",
-      "updatedAt": "2026-11-12T01:23:37.679Z",
+      "updatedAt": "2026-11-12T06:39:14.850Z",
       "closedAt": null,
       "extra": {}
     },
