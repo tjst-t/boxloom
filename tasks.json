@@ -1803,7 +1803,7 @@
       "number": 77,
       "kind": "bug",
       "title": "配置の段の木の入力で、row・col の生の色が誤りにならず捨てられ、負の grow・basis も通る",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [
         "text-color-required"
@@ -1817,7 +1817,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T13:23:31.203Z",
-      "updatedAt": "2026-11-12T13:23:31.203Z",
+      "updatedAt": "2026-11-12T13:32:38.729Z",
       "closedAt": null,
       "extra": {}
     }
