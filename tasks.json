@@ -1753,6 +1753,27 @@
       "updatedAt": "2026-11-12T13:23:06.370Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "unexport-and-stale-comment",
+      "number": 75,
+      "kind": "bug",
+      "title": "公開の名前 YAMLSourceMap・PairMeasure を非公開にし、runLayout の古い注釈を直す",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "fable のレビューの低6・低7。\n\n## 低7:公開 API に増えた名前\nYAMLSourceMap(中身は非公開の yamlPos)と PairMeasure は、公開する理由が無いので非公開にする。人が決めた。\n- PairCapacity・TypeSchema・LayoutReadOptions・BuildLayout・Layout* は今のまま。\n- docs/library.md の「安定させない」の書き方を、実際に公開しているものに合わせる。\n\n## 低6:古い注釈\nboxloom/cmd/boxloom/main.go:287-289 の runLayout の注釈「入力として読む口は無い」は、#69 の後では古い。開発者・試験用の読む口があることに直す。",
+      "doneWhen": "YAMLSourceMap と PairMeasure が package の外から見えない(go doc で出ない)。docs/library.md が実際の公開の名前と合う。runLayout の注釈が #69 の後の姿を書く。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-12T13:23:10.772Z",
+      "updatedAt": "2026-11-12T13:23:10.772Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
