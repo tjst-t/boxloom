@@ -1254,6 +1254,31 @@
       "extra": {}
     },
     {
+      "id": "subsystems-gantt",
+      "number": 70,
+      "kind": "task",
+      "title": "サブシステムの中に直に書いた寸法を、値の表(subsystems.*)か段の刻みに寄せる(主に Gantt)",
+      "status": "ready",
+      "parent": "tokens-template",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "docs/layers.md 8.3 で、#68 の範囲の外とした分(#1398948)。\n\n## なぜ\n#68 のあとは、部品の組み方で段に無い数を書けなくなる。一方、サブシステムの中にはまだ直に書いた寸法が残っている。主に gantt.go で、たとえば次のものがある。\n- マイルストーンの箱の最小幅 148\n- 目盛りの副ラベルの箱 80×12、そのずらし 40・12\n- 定数の ganttNoteBarInset 6・ganttMilestoneGap 6・ganttLeaderGap 2\n- 文字の余白の +8・-10・-6 など\n\nfunnel・shapes・chart にも少しある。これらはテンプレートを替えても変わらず、#1301886 の段の検査も素通りする。\n\n## やること\n- サブシステムの中の寸法を洗い出し、2つに分ける。\n  - (a) 見た目の寸法:余白・間隔・箱の大きさ。\n  - (b) 決まりの数:行の上限(ganttSegLabelMaxLines 3・ganttMilestoneMaxRows 2)・比・0 や 1・半分にする 2 など。\n- (a) は値の表(boxloom/subsystems/gantt.json と、テンプレートの subsystems.gantt)の名前に移し、段(spacingUnit の倍数・typeSizes)で検査する。いまの値が段から外れているときは、近い段に寄せずに止めて報告する(出力が変わるため)。\n- (b) は名前つきの定数のまま残し、なぜその数かを注釈に書く。\n- 渡し方は今のまま:寸法はテンプレートを選んだ時に Factory へ渡し、色は Roles で引く。\n- docs/subsystem.md・docs/template-values.md の値の表の説明を直す。",
+      "doneWhen": "gantt.go・funnel.go・shapes.go・chart.go などのサブシステムの描画と計測に、見た目の寸法の直の数が無い(残る数は決まりの数として、名前つきの定数と理由の注釈がある)。移した寸法は値の表にあり、段から外れると読み込みで誤りになる。examples の出力が変わらない(TestOutputsGolden の記録が同じ)。変わるものがあれば、取り込まずに止めて報告する。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [
+        "docs/layers.md",
+        "docs/subsystem.md",
+        "docs/template-values.md"
+      ],
+      "threads": [],
+      "createdAt": "2026-11-12T09:32:13.992Z",
+      "updatedAt": "2026-11-12T09:32:13.992Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "oss-release-prep",
       "number": 6,
       "kind": "story",
