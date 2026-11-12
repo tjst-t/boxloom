@@ -1134,7 +1134,7 @@
       "number": 64,
       "kind": "task",
       "title": "型の語彙をプロセスに1つにする(名前・Schema・囲み・代わりの組み方)、組み方だけテンプレートごと",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [
         "public-measure-marks"
@@ -1150,7 +1150,7 @@
       ],
       "threads": [],
       "createdAt": "2026-11-11T23:50:24.521Z",
-      "updatedAt": "2026-11-11T23:50:24.521Z",
+      "updatedAt": "2026-11-12T06:39:12.591Z",
       "closedAt": null,
       "extra": {}
     },
