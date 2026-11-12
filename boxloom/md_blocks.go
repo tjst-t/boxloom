@@ -20,12 +20,12 @@ type mdTableBlk struct {
 	rows        []mdTableLine
 	caption     mdText // 表のすぐ次の行の「: 説明」
 	captionLine int
-	attrs       string // その行の末尾の {…}(total=last)
+	attrs       string // その行の末尾の {…}(total=last・groups=first)
 	attrsCol    int
 }
 
 // tableAttributeNames は表の説明の行の末尾 {…} に書ける属性。
-var tableAttributeNames = []string{"total"}
+var tableAttributeNames = []string{"total", "groups"}
 
 var reTableDelim = regexp.MustCompile(`^:?-+:?$`)
 
@@ -123,12 +123,31 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 			total = true
 		}
 	}
+	grouped := false
+	if v, ok := attrs["groups"]; ok {
+		if v != "first" {
+			p.fail(tb.captionLine, tb.attrsCol, path+"/groups", codeInvalidValue, fmt.Sprintf("groups の値 %q はありません", v), []string{"first"}, "先頭の列が行の群の名前なら {groups=first} と書きます")
+		} else if len(header) < 2 {
+			p.fail(tb.captionLine, tb.attrsCol, path+"/groups", codeMisplaced, "群の列のほかに列がありません", nil, "群の列(先頭の列)の右に、行の中身の列を書いてください")
+		} else {
+			grouped = true
+		}
+	}
 	hdr := []any{}
 	for c, cell := range header {
 		hdr = append(hdr, p.parseInline(cell, fmt.Sprintf("%s/header/%d", path, c)))
 	}
 	out := []any{}
 	var totalCells []any
+	var groups []any
+	var group *jobj
+	groupRows := 0
+	closeGroup := func() {
+		if group != nil {
+			group.set("rows", groupRows)
+			groups = append(groups, group)
+		}
+	}
 	for r, row := range body {
 		rp := fmt.Sprintf("%s/rows/%d", path, r)
 		isTotal := total && r == len(body)-1
@@ -141,8 +160,24 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 			p.fail(tl.line, tl.col, rp, codeTableShape, fmt.Sprintf("行のセルが %d 個で、見出しの行(%d 個)と合いません", len(row), len(header)), nil, "どの行も見出しと同じ数のセルを書きます。空のセルは | | と書けます")
 			continue
 		}
+		first := 0
+		if grouped && !isTotal {
+			// 先頭のセルが群の名前。空なら上の群の続き。
+			first = 1
+			if len(row[0].r) > 0 {
+				closeGroup()
+				gp := fmt.Sprintf("%s/groups/%d", path, len(groups))
+				p.mark(gp, tl.line)
+				group = obj("label", p.parseInline(row[0], gp+"/label"))
+				groupRows = 0
+			} else if group == nil {
+				p.fail(tl.line, tl.col, path+"/groups/0/label", codeTableGroups, "最初の行の群の名前(先頭のセル)が空です", nil, "{groups=first} の表では、最初の行の先頭のセルに群の名前を書きます。空のセルは上の群の続きです")
+				continue
+			}
+			groupRows++
+		}
 		cells := []any{}
-		for c, cell := range row {
+		for c, cell := range row[first:] {
 			cells = append(cells, p.parseInline(cell, fmt.Sprintf("%s/%d", rp, c)))
 		}
 		if isTotal {
@@ -151,7 +186,11 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 		}
 		out = append(out, cells)
 	}
+	closeGroup()
 	b := obj("type", "table", "header", hdr, "rows", out)
+	if groups != nil {
+		b.set("groups", groups)
+	}
 	if totalCells != nil {
 		b.set("total", totalCells)
 	}

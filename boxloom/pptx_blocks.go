@@ -28,6 +28,10 @@ func (p *PPTXBuilder) AddPicture(box LBox, img *imageAsset, alt string) {
 type TableCell struct {
 	Runs  []TextRun
 	Align string // "left" | "right"
+	// RowSpan は縦に結合する行の数(2 以上で結合の始まり。a:tc の rowSpan)。
+	// VMerge は上のセルに結合された続きのセル(a:tc の vMerge。文字は持たない)。
+	RowSpan int
+	VMerge  bool
 }
 
 // TableDraw は表の描き方(テンプレートが決めた見た目)。
@@ -89,6 +93,19 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 		}
 		return fmt.Sprintf(`<a:%s w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:%s>`, tag, ptToEMU(t.RuleWidth), hexColor(t.RuleColor), tag)
 	}
+	dark := func(tag string) string {
+		return fmt.Sprintf(`<a:%s w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:%s>`, tag, ptToEMU(t.RuleWidth), hexColor(t.TotalRuleColor), tag)
+	}
+	totalRule := t.TotalRow && t.TotalRuleColor != ""
+	// rowLnB は行 r の下の線。線は行の下だけ(見出しの下と行の間。最後の行の下にも
+	// 引いて表の終わりを示す)。合計の行の上の線は濃い色(本体の行と見分ける)で、同じ
+	// 線を上の行の下の線としても書く(隣り合うセルの線はアプリによってどちらかが勝つため)。
+	rowLnB := func(r int) string {
+		if totalRule && r == len(t.Cells)-2 {
+			return dark("lnB")
+		}
+		return rule("lnB")
+	}
 	for r, row := range t.Cells {
 		fmt.Fprintf(&b, `<a:tr h="%d">`, ptToEMU(t.RowHeights[r]))
 		fill := t.BodyFill
@@ -99,25 +116,26 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 		if fill != "" {
 			fillXML = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, hexColor(fill))
 		}
-		// 線は行の下だけ(見出しの下と行の間。最後の行の下にも引いて表の終わりを示す)。
 		lnT := noLine("lnT")
-		lnB := rule("lnB")
-		if t.TotalRow && t.TotalRuleColor != "" {
-			// 合計の行の上の線は濃い色(本体の行と見分ける)。同じ線を上の行の下の線
-			// としても書く(隣り合うセルの線はアプリによってどちらかが勝つため)。
-			dark := func(tag string) string {
-				return fmt.Sprintf(`<a:%s w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:%s>`, tag, ptToEMU(t.RuleWidth), hexColor(t.TotalRuleColor), tag)
-			}
-			switch r {
-			case len(t.Cells) - 1:
-				lnT = dark("lnT")
-			case len(t.Cells) - 2:
-				lnB = dark("lnB")
-			}
+		if totalRule && r == len(t.Cells)-1 {
+			lnT = dark("lnT")
 		}
-		for _, c := range row {
-			fmt.Fprintf(&b, `<a:tc><a:txBody><a:bodyPr/><a:lstStyle/>%s</a:txBody><a:tcPr marL="%d" marR="%d" marT="%d" marB="%d">%s%s%s%s%s</a:tcPr></a:tc>`,
-				p.cellParaXML(c, t.FontSize), ptToEMU(t.PadX), ptToEMU(t.PadX), ptToEMU(t.PadY), ptToEMU(t.PadY),
+		for ci, c := range row {
+			// 縦に結合したセル(行の群の名前)は、結合の始まりが rowSpan、続きが vMerge。
+			// 結合の中の行の境目には線を引かず、結合の終わりの行の下の線が群の境目になる。
+			span, lnB := "", rowLnB(r)
+			switch {
+			case c.RowSpan > 1:
+				span = fmt.Sprintf(` rowSpan="%d"`, c.RowSpan)
+				lnB = rowLnB(r + c.RowSpan - 1)
+			case c.VMerge:
+				span = ` vMerge="1"`
+				if r+1 < len(t.Cells) && ci < len(t.Cells[r+1]) && t.Cells[r+1][ci].VMerge {
+					lnB = noLine("lnB")
+				}
+			}
+			fmt.Fprintf(&b, `<a:tc%s><a:txBody><a:bodyPr/><a:lstStyle/>%s</a:txBody><a:tcPr marL="%d" marR="%d" marT="%d" marB="%d">%s%s%s%s%s</a:tcPr></a:tc>`,
+				span, p.cellParaXML(c, t.FontSize), ptToEMU(t.PadX), ptToEMU(t.PadX), ptToEMU(t.PadY), ptToEMU(t.PadY),
 				noLine("lnL"), noLine("lnR"), lnT, lnB, fillXML)
 		}
 		b.WriteString(`</a:tr>`)
@@ -156,6 +174,10 @@ func (p *PPTXBuilder) cellParaXML(c TableCell, size float64) string {
 	}
 	end := strings.Replace(rpr(lastRun), "<a:rPr", "<a:endParaRPr", 1)
 	end = strings.Replace(end, "</a:rPr>", "</a:endParaRPr>", 1)
+	if len(c.Runs) == 0 {
+		// 文字を持たないセル(縦に結合した続きのセル)は色を書かない。
+		end = fmt.Sprintf(`<a:endParaRPr lang="ja-JP" sz="%d"/>`, sz)
+	}
 	b.WriteString(end + `</a:p>`)
 	return b.String()
 }

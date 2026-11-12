@@ -393,10 +393,20 @@ func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
 	case "table":
 		header, _ := bm["header"].([]any)
 		rows, _ := bm["rows"].([]any)
+		groups, grouped := bm["groups"].([]any)
+		want := len(header)
+		if grouped {
+			want--
+			c.checkTableGroups(groups, len(header), len(rows), bp)
+		}
 		for ri, r := range rows {
 			cells, ok := r.([]any)
-			if ok && len(header) > 0 && len(cells) != len(header) {
-				c.add(fmt.Sprintf("%s/rows/%d", bp, ri), fmt.Sprintf("row has %d cells but the header has %d (every row has one cell per column)", len(cells), len(header)), "table-shape")
+			if ok && len(header) > 0 && len(cells) != want {
+				msg := fmt.Sprintf("row has %d cells but the header has %d (every row has one cell per column)", len(cells), len(header))
+				if grouped {
+					msg = fmt.Sprintf("row has %d cells but the header has %d (with groups, every row has one cell per column except the group column: %d)", len(cells), len(header), want)
+				}
+				c.add(fmt.Sprintf("%s/rows/%d", bp, ri), msg, "table-shape")
 			}
 		}
 		if cells, ok := bm["total"].([]any); ok && len(header) > 0 && len(cells) != len(header) {
@@ -931,4 +941,30 @@ func warningIssue(file, w string) Issue {
 		}
 	}
 	return Issue{File: file, Path: path, Message: msg, Code: rule}
+}
+
+// checkTableGroups は表の行の群(groups)の決まりを見る(table-groups): 群の列の
+// ほかに列があること、名前が空でないこと、行の数の和が本体の行の数であること。
+func (c *checker) checkTableGroups(groups []any, cols, rows int, bp string) {
+	if cols > 0 && cols < 2 {
+		c.add(bp+"/groups", "the table has only the group column (groups need at least one more column)", "table-groups")
+	}
+	sum := 0
+	for gi, g := range groups {
+		gm, _ := g.(map[string]any)
+		if gm == nil {
+			return
+		}
+		if l, ok := gm["label"]; ok && strings.TrimSpace(inlinePlainAny(l)) == "" {
+			c.add(fmt.Sprintf("%s/groups/%d/label", bp, gi), "the group label is empty", "table-groups")
+		}
+		n, ok := gm["rows"].(float64)
+		if !ok {
+			return
+		}
+		sum += int(n)
+	}
+	if sum != rows {
+		c.add(bp+"/groups", fmt.Sprintf("the groups cover %d rows but the table has %d body rows (the rows of the groups add up to the body rows)", sum, rows), "table-groups")
+	}
 }

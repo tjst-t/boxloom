@@ -123,18 +123,46 @@ func (t *tableLeaf) colWidths(w float64) []float64 {
 	return out
 }
 
+// rowHeights は行ごとの高さと、文の行の数の和。縦に結合したセル(行の群の名前)は
+// 行ごとの高さに入れず、結合した行の高さの和に収まらなければ、足りない分の行を
+// 群の最後の行に足す(群の境目は行の境目なので、行ごとに測ったまま)。
 func (t *tableLeaf) rowHeights(widths []float64) ([]float64, int) {
 	hs := make([]float64, len(t.cells))
-	total := 0
+	lineH := t.size * lineHeightMult
+	rowLines := make([]int, len(t.cells))
 	for r, row := range t.cells {
 		lines := 1
 		for c, cell := range row {
+			if cell.VMerge || cell.RowSpan > 1 {
+				continue
+			}
 			if n := runsLines(cell.Runs, t.size, widths[c]-2*t.padX); n > lines {
 				lines = n
 			}
 		}
+		rowLines[r] = lines
+	}
+	for r, row := range t.cells {
+		for c, cell := range row {
+			if cell.RowSpan < 2 || r+cell.RowSpan > len(t.cells) {
+				continue
+			}
+			need := runsLines(cell.Runs, t.size, widths[c]-2*t.padX)
+			// 結合した行が持つ文の行の数(行ごとの上下の余白も文の行に数える)。
+			have := 0.0
+			for k := r; k < r+cell.RowSpan; k++ {
+				have += float64(rowLines[k]) + 2*t.padY/lineH
+			}
+			have -= 2 * t.padY / lineH
+			if short := float64(need) - have; short > 0 {
+				rowLines[r+cell.RowSpan-1] += int(math.Ceil(short - 1e-9))
+			}
+		}
+	}
+	total := 0
+	for r, lines := range rowLines {
 		total += lines
-		hs[r] = float64(lines)*t.size*lineHeightMult + 2*t.padY
+		hs[r] = float64(lines)*lineH + 2*t.padY
 	}
 	return hs, total
 }
@@ -222,7 +250,21 @@ func (t *Template) table(b *IRBlock) *Spec {
 	if b.Total != nil {
 		body = append(append([][]Inline{}, b.Rows...), b.Total)
 	}
+	grouped := b.Groups != nil
+	if grouped {
+		// 群の列は数の列として右に揃えない(群の名前の列)。本体の行のセルは群の列を除く。
+		body = nil
+		for _, r := range b.Rows {
+			body = append(body, append([]Inline{nil}, r...))
+		}
+		if b.Total != nil {
+			body = append(body, b.Total)
+		}
+	}
 	numeric := numericColumns(body, len(b.Header))
+	if grouped {
+		numeric[0] = false
+	}
 	leaf := &tableLeaf{size: v.TableText, padX: v.TableCellPadX, padY: v.TableCellPadY,
 		capSize: v.CaptionText, capGap: v.CaptionGap,
 		draw: TableDraw{HeaderFill: th.c("card_alt"), BodyFill: th.c("card"), RuleColor: th.c("grid"), RuleWidth: v.TableRuleWidth}}
@@ -238,8 +280,27 @@ func (t *Template) table(b *IRBlock) *Spec {
 		return out
 	}
 	leaf.cells = append(leaf.cells, cellRow(b.Header, true))
-	for _, r := range b.Rows {
-		leaf.cells = append(leaf.cells, cellRow(r, false))
+	if grouped {
+		// 群の名前は先頭の列の縦に結合したセル(a:tbl の rowSpan と vMerge)。
+		// 名前は見出しと同じく太字にして、行の中身と見分ける。
+		ri := 0
+		for _, g := range b.Groups {
+			for k := 0; k < g.Rows; k++ {
+				var lead TableCell
+				if k == 0 {
+					lead = TableCell{Runs: t.leafRuns(g.Label, "text_primary", true), Align: "left", RowSpan: g.Rows}
+				} else {
+					lead = TableCell{Align: "left", VMerge: true}
+				}
+				rest := cellRow(append([]Inline{nil}, b.Rows[ri]...), false)[1:]
+				leaf.cells = append(leaf.cells, append([]TableCell{lead}, rest...))
+				ri++
+			}
+		}
+	} else {
+		for _, r := range b.Rows {
+			leaf.cells = append(leaf.cells, cellRow(r, false))
+		}
 	}
 	if b.Total != nil {
 		// 合計の行は本体の行と見分ける: 太字にし、上に濃い線を引く(TableDraw.TotalRow)。

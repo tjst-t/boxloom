@@ -68,10 +68,11 @@ type IRBlock struct {
 
 	Columns []IRColumn // columns: 並列のまとまり(2〜3個)
 
-	Header  []Inline   // table: 見出しの行
-	Rows    [][]Inline // table: 本体の行(どの行もセルの数は見出しと同じ)
-	Total   []Inline   // table: 合計の行(任意。セルの数は見出しと同じ)
-	Caption Inline     // table・image: 説明の文(任意)
+	Header  []Inline       // table: 見出しの行
+	Rows    [][]Inline     // table: 本体の行(どの行もセルの数は見出しと同じ)
+	Total   []Inline       // table: 合計の行(任意。セルの数は見出しと同じ)
+	Groups  []IRTableGroup // table: 行の群(任意。先頭の列が群の列。本体の行のセルは見出しより1つ少ない)
+	Caption Inline         // table・image: 説明の文(任意)
 
 	Src    string    // image: 文書からの相対パス
 	Alt    string    // image: 代わりの文
@@ -524,12 +525,13 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		*k = out
 	case "table":
 		var v struct {
-			Type    string     `json:"type"`
-			Variant string     `json:"variant"`
-			Caption Inline     `json:"caption"`
-			Header  []Inline   `json:"header"`
-			Rows    [][]Inline `json:"rows"`
-			Total   []Inline   `json:"total"`
+			Type    string         `json:"type"`
+			Variant string         `json:"variant"`
+			Caption Inline         `json:"caption"`
+			Header  []Inline       `json:"header"`
+			Rows    [][]Inline     `json:"rows"`
+			Total   []Inline       `json:"total"`
+			Groups  []IRTableGroup `json:"groups"`
 		}
 		if err := strictUnmarshal(b, &v); err != nil {
 			return err
@@ -537,15 +539,22 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		if len(v.Header) == 0 || len(v.Rows) == 0 {
 			return fmt.Errorf("table needs \"header\" and at least one row in \"rows\"")
 		}
+		if err := validateTableGroups(v.Groups, len(v.Header), len(v.Rows)); err != nil {
+			return err
+		}
+		want := v.Header
+		if v.Groups != nil {
+			want = v.Header[1:]
+		}
 		for i, r := range v.Rows {
-			if len(r) != len(v.Header) {
-				return fmt.Errorf("rows[%d]: row has %d cells but the header has %d", i, len(r), len(v.Header))
+			if len(r) != len(want) {
+				return fmt.Errorf("rows[%d]: row has %d cells but %s", i, len(r), tableRowWant(len(v.Header), v.Groups != nil))
 			}
 		}
 		if v.Total != nil && len(v.Total) != len(v.Header) {
 			return fmt.Errorf("total: row has %d cells but the header has %d", len(v.Total), len(v.Header))
 		}
-		*k = IRBlock{Type: v.Type, Variant: v.Variant, Caption: v.Caption, Header: v.Header, Rows: v.Rows, Total: v.Total}
+		*k = IRBlock{Type: v.Type, Variant: v.Variant, Caption: v.Caption, Header: v.Header, Rows: v.Rows, Total: v.Total, Groups: v.Groups}
 	case "image":
 		var v struct {
 			Type    string `json:"type"`
@@ -782,4 +791,47 @@ func parseIRDate(s string) (time.Time, error) {
 		return t, nil
 	}
 	return time.Time{}, fmt.Errorf("bad date %q (want YYYY-MM or YYYY-MM-DD)", s)
+}
+
+// IRTableGroup は表の行の群1つ(IR の table の groups)。群の名前と、その群が
+// まとめる本体の行の数。群は上から順に並ぶ。
+type IRTableGroup struct {
+	Label Inline `json:"label"`
+	Rows  int    `json:"rows"`
+}
+
+// validateTableGroups は groups の形を見る(群の列のほかに列があり、名前が空でなく、
+// 行の数の和が本体の行の数)。
+func validateTableGroups(gs []IRTableGroup, cols, rows int) error {
+	if gs == nil {
+		return nil
+	}
+	if len(gs) == 0 {
+		return fmt.Errorf("groups: needs at least one group")
+	}
+	if cols < 2 {
+		return fmt.Errorf("groups: the table needs a column besides the group column")
+	}
+	sum := 0
+	for i, g := range gs {
+		if g.Rows < 1 {
+			return fmt.Errorf("groups[%d]: rows must be at least 1", i)
+		}
+		if strings.TrimSpace(g.Label.Plain()) == "" {
+			return fmt.Errorf("groups[%d]: label is empty", i)
+		}
+		sum += g.Rows
+	}
+	if sum != rows {
+		return fmt.Errorf("groups: the groups cover %d rows but the table has %d", sum, rows)
+	}
+	return nil
+}
+
+// tableRowWant は本体の行のセルの数の決まりを文で言う。
+func tableRowWant(header int, grouped bool) string {
+	if grouped {
+		return fmt.Sprintf("the header has %d (with groups, a row has one cell per column except the group column: %d)", header, header-1)
+	}
+	return fmt.Sprintf("the header has %d", header)
 }

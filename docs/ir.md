@@ -297,6 +297,29 @@ Schema では書けないので `boxloom check` が見る。
 - 本文の領域(はみ出し・容量の測り)は、出典の枠の高さと gap を引いたものになる
   (下の「はみ出しの測り方」)。
 
+### 12. 表の行の群(#79)
+
+- **群は表の `groups`(群ごとの `{label, rows}`)。** 先頭の列を群の列とし、群の名前と、
+  その群がまとめる本体の行の数だけを持つ。群は上から順に並び、`rows` の和は本体の行の数。
+  行ごとに群の名前を書く形(同じ名前の繰り返し)は採らなかった:同じ名前の群が離れて2回
+  出るのか、続きなのかを IR の上で区別できず、「この行はこの群に属する」という意味を
+  文字の一致に頼ることになるため。
+- `groups` があると、`header` の先頭は群の列の見出しで、本体の各行(`rows`)のセルは
+  `header` より1つ少ない(群の列を除く。群の名前を空のセルで繰り返さない)。合計の行
+  (`total`)は群に入らず、セルの数は `header` と同じ(先頭のセルは「合計」など)。
+- 結合したセル・太字・群の境目の線は見た目なのでテンプレートが決める。dark / light は
+  先頭の列を本物の `a:tbl` の縦の結合(始まりのセルが `rowSpan`、続きが `vMerge`)にし、
+  群の名前を見出しと同じ太字にする。結合の中の行の境目には群の列だけ線を引かない。
+- **強調は持たない。** 群そのものを推す意味は、いまの表の語彙(行・合計)に無い。群の名前
+  を強めたいときは、文中の強調(`em`)を名前に書く(ほかのセルと同じ)。推す項目を1つ選ぶ
+  意味(matrix・chart の `emphasis`)が表に要るようになったら、群ではなく行・列の名前で
+  指す形にそろえる。
+- 誤りは `boxloom check` の `table-groups`:群の名前が空(path は `…/groups/G/label`)、
+  `rows` の和が本体の行の数と違う、群の列のほかに列が無い(どれも path は `…/groups`)。
+  群があるときの行のセルの数の違いは従来どおり `table-shape`。`rows` が 1 未満は Schema。
+- はみ出しと容量は行ごとに測る(群の境目は行の境目)。群の名前が結合した行の高さに
+  収まらなければ、群の最後の行を伸ばす。
+
 ## 意味の検査(boxloom check)
 
 JSON Schema では書けない検査は Go の `boxloom check` がする。
@@ -350,7 +373,8 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `empty-text` | 区切りの `title`・本文のスライドの `lead`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label`・スライドの `source`・`meta` の `confidential` と `disclaimer`・`pairs` の2つの見出し(`headings`)と段落の側の `content` に、見える文字がある(Schema は `""` や空白だけを通す)。`pairs` の側の引用・`variant` も本文のブロックと同じに見る(path は IR の場所 `…/pairs/K/subject/…`。テンプレートや代わりの組み方に依らない) |
 | `matrix-cells` | matrix の各行の `cells` の数が `columns` の数と同じ(path はその行の `cells`) |
 | `matrix-emphasis` | matrix の `emphasis`(推す列)が `columns` の見出しのどれか(文中の記法を除いた文字)と同じ(path は `…/data/emphasis`) |
-| `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`) |
+| `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`)。`groups` があると本体の行は見出しより1つ少ない |
+| `table-groups` | 表の `groups` の名前が空でなく(path は `…/groups/G/label`)、`rows` の和が本体の行の数で、群の列のほかに列がある(path は `…/groups`) |
 | `image-path` | 画像の `src` が文書からの相対パス(URL・絶対パス・`..`・`\` は断る) |
 | `image-missing` | 画像のファイルが読める(`CheckOptions.Assets` から。コマンドは文書のフォルダ) |
 | `image-format` | 画像が PNG か JPEG(中身で見る。SVG・GIF などは断る) |

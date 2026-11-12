@@ -236,7 +236,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
     `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
   - `blocks.go` / `image.go` / `pptx_blocks.go` / `md_blocks.go` = 第1層のブロックの
-    並列のまとまり(`columns`)・表(`table`、本物の `a:tbl`)・画像(`image`・`gallery`、
+    並列のまとまり(`columns`)・表(`table`、本物の `a:tbl`。行の群 `groups` は先頭の列の `rowSpan`・`vMerge`)・画像(`image`・`gallery`、
     本物の `p:pic`)。表と画像は Subsystem の約束で測って描く葉(登録簿には載せない)。
     画像はライブラリに渡す `fs.FS`(`BuildOptions.Assets`)から読む(`docs/library.md`)
   - `fit.go` = 図と枠の橋渡し。`FixedAspect` の図・Max を越える枠は図の大きさまで
