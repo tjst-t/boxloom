@@ -1203,6 +1203,31 @@
       "extra": {}
     },
     {
+      "id": "token-spec",
+      "number": 68,
+      "kind": "task",
+      "title": "配置の段をトークンのまま持つ(値の表の名前・役割名で持ち、エンジンに渡す直前に解決する)",
+      "status": "backlog",
+      "parent": "tokens-template",
+      "dependsOn": [
+        "public-measure-marks"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "docs/layers.md の 2.1 と 7章の4段目。\n\n## なぜ\nいまの Spec は値の表から引いた pt と色の文字列を持つ。名前(blockGap・cardPadding・body・accent など)のまま持ち、解決をエンジンに渡す直前にすれば、組み方の中で値の表から外れた数を書けなくなる(#1301886 の段の検査を組み方にも効かせる)。配置の段の木を入力として読む口(layout-input)の前提でもある。\n\n## まだ決めていないこと(着手の前に決める)\n- 刻み(spacingUnit の倍数)・字の段(typeSizes)の直の値を、名前と並べて許すか(layers.md 8.3 の「値の表に無い数を許すか」)。\n- 解決の時点(テンプレートを選んだ後・計測の前)と、サブシステムへの渡し方。\n\n着手は上の2つを決めてから(だから backlog)。",
+      "doneWhen": "標準の部品が Spec に解決済みの数・色を書かず、名前(または許した刻み・段)だけを書く(試験で確かめる)。名前の解決はエンジンに渡す直前の1か所。examples の出力が変わらない(TestOutputsGolden の記録が同じ)。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [
+        "docs/layers.md"
+      ],
+      "threads": [],
+      "createdAt": "2026-11-12T01:24:55.354Z",
+      "updatedAt": "2026-11-12T01:24:55.354Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "oss-release-prep",
       "number": 6,
       "kind": "story",
