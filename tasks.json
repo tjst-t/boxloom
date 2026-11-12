@@ -1780,7 +1780,7 @@
       "number": 76,
       "kind": "bug",
       "title": "代わりの組み方で組んだ型の警告・容量の場所が、IR に無い場所(columns/…)を指す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [
         "pairs-check"
@@ -1794,7 +1794,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T13:23:26.641Z",
-      "updatedAt": "2026-11-12T13:23:26.641Z",
+      "updatedAt": "2026-11-12T13:32:37.418Z",
       "closedAt": null,
       "extra": {}
     },
