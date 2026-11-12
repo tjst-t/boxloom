@@ -557,7 +557,7 @@
   "build ir/check-invalid/unknown-target.json@": "error: slides[2]: body[0]: gantt: annotations[0].target: no group or row has id \"gen9\"",
   "build ir/check-invalid/unknown-target.json@dark": "error: slides[2]: body[0]: gantt: annotations[0].target: no group or row has id \"gen9\"",
   "build ir/check-invalid/unknown-target.json@light": "error: slides[2]: body[0]: gantt: annotations[0].target: no group or row has id \"gen9\"",
-  "build ir/check-invalid/unknown-template.json@": "error: unknown template \"corporate\" (known: dark, light)",
+  "build ir/check-invalid/unknown-template.json@": "error: unknown template \"corporate\" (known: dark, light, report)",
   "build ir/check-invalid/unknown-template.json@dark [Content_Types].xml": "1501582880af700182b0115df2ae2fc4323c2cb40a45143972fcacc854049057",
   "build ir/check-invalid/unknown-template.json@dark _rels/.rels": "e2103f280425e47976aad4f4f21d3040f0930a57447c28a71387af6f57a2c95f",
   "build ir/check-invalid/unknown-template.json@dark docProps/app.xml": "983231f6aff16afc3a48269d3264309a89a87c3dc8876d3cbec668f780832cf2",
@@ -4022,7 +4022,7 @@
   "check ir/check-invalid/unknown-target.json@": "98637c96a767fbbae3124dcb14cfb3fede30869d20260b6b079357a95cbbf693",
   "check ir/check-invalid/unknown-target.json@dark": "98637c96a767fbbae3124dcb14cfb3fede30869d20260b6b079357a95cbbf693",
   "check ir/check-invalid/unknown-target.json@light": "98637c96a767fbbae3124dcb14cfb3fede30869d20260b6b079357a95cbbf693",
-  "check ir/check-invalid/unknown-template.json@": "393412a95130e471dc54694e038ed4bb3b2b4f0b044b257c247fafe00eb3ee10",
+  "check ir/check-invalid/unknown-template.json@": "3f1f8772b465a6ab6dd8de8e467ddf684a10f232f9d55f3dc59a2fce77275329",
   "check ir/check-invalid/unknown-template.json@dark": "7c461445bd6733fc20cafc4384b572645c041594b87bbca61f825447b283122d",
   "check ir/check-invalid/unknown-template.json@light": "7c461445bd6733fc20cafc4384b572645c041594b87bbca61f825447b283122d",
   "check ir/check-invalid/unknown-variant.json@": "cf250e18a0885ab4e110760644c5964f967a52de521eb3ec484d9e9285d47ae8",
@@ -4157,7 +4157,8 @@
   "check md/warnings/title-wrap.bx.md@": "0936316a4b336b48c78cad746014d3babcfbe7ddb8ae231a78977d07925c4435",
   "check md/warnings/title-wrap.bx.md@dark": "0936316a4b336b48c78cad746014d3babcfbe7ddb8ae231a78977d07925c4435",
   "check md/warnings/title-wrap.bx.md@light": "0936316a4b336b48c78cad746014d3babcfbe7ddb8ae231a78977d07925c4435",
-  "schema @": "882a7ea55f4a730e54ab8cae0e382f852e031985f1d7acc04fb1d4e6e83b8932",
+  "schema @": "b2d28f04ae2e6b5f8b1042fe9d5cd5a65eb1d4d37002d4ad78af0238ccda9d7d",
   "schema @dark": "065d4bf05a2188e171e613ba62fef652b180fce8015d39fc7addc91fbe37cb89",
-  "schema @light": "421abff7186ca3bc5edeb54f84d090e64eb8ea5d5c54c13806319cad6f2f470c"
+  "schema @light": "421abff7186ca3bc5edeb54f84d090e64eb8ea5d5c54c13806319cad6f2f470c",
+  "schema @report": "b612a79d57b34313f67da155d0a65561f7c3ef7a53dafae5ca4cc93f2c6964ef"
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -153,5 +154,19 @@ func TestLayoutCommand(t *testing.T) {
 	}
 	if c := run([]string{"layout", "-template", "nope", demoDeckPath}, io.Discard, io.Discard); c != 1 {
 		t.Errorf("unknown template: exit %d, want 1", c)
+	}
+}
+
+// `boxloom templates` は同梱したテンプレートの名前を1行に1つ書く(report を含む)。
+func TestTemplatesCommand(t *testing.T) {
+	var out strings.Builder
+	if c := run([]string{"templates"}, &out, io.Discard); c != 0 {
+		t.Fatalf("exit %d", c)
+	}
+	if out.String() != "dark\nlight\nreport\n" {
+		t.Errorf("templates = %q", out.String())
+	}
+	if c := run([]string{"templates", "x"}, io.Discard, io.Discard); c != 2 {
+		t.Errorf("extra argument: exit %d", c)
 	}
 }

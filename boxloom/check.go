@@ -1,6 +1,6 @@
 // boxloom check: JSON Schema では書けない IR の検査。
 //
-//	go run ./cmd/boxloom check [-format text|json] [-capacity] [-template dark|light] [-strict] deck.json|deck.yaml|deck.bx.md ...
+//	go run ./cmd/boxloom check [-format text|json] [-capacity] [-template dark|light|report] [-strict] deck.json|deck.yaml|deck.bx.md ...
 //
 // 誤りと警告は docs/content-syntax.md の5章の形(Issue)で出す:
 //

@@ -2,12 +2,13 @@
 // 入口(docs/library.md)だけを使い、ここではフラグ・ファイルの読み書き・
 // 終了コードを受け持つ。
 //
-//	boxloom build [-o out.pptx] [-template dark|light|./my.json] deck.json|deck.yaml|deck.bx.md
-//	boxloom check [-format text|json] [-capacity] [-template dark|light|./my.json] [-strict] deck.json|deck.yaml|deck.bx.md ...
+//	boxloom build [-o out.pptx] [-template dark|light|report|./my.json] deck.json|deck.yaml|deck.bx.md
+//	boxloom check [-format text|json] [-capacity] [-template dark|light|report|./my.json] [-strict] deck.json|deck.yaml|deck.bx.md ...
 //	boxloom parse [-format text|json] deck.bx.md|deck.yaml
 //	boxloom schema [-template NAME]
-//	boxloom layout [-template dark|light|./my.json] deck.json|deck.bx.md|deck.yaml   # 配置の段の木(JSON)
+//	boxloom layout [-template dark|light|report|./my.json] deck.json|deck.bx.md|deck.yaml   # 配置の段の木(JSON)
 //	boxloom layout-build [-o out.pptx] [-deck deck] [-template …] tree.json  # 開発者・試験用:木を読み直して組む
+//	boxloom templates            # 同梱したテンプレートの名前(1行に1つ)
 //	boxloom mcp                  # stdio の MCP サーバ(道具 schema・check・build。docs/mcp.md)
 //	boxloom fonts [-template 名前] [-against "欧文/和文;…"] [-v] deck… | -list
 //	boxloom                      # 従来の Go で組んだデモ(out/boxloom_dark.pptx・out/boxloom_light.pptx)
@@ -51,6 +52,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return runLayout(args[1:], stdout, stderr)
 		case "layout-build":
 			return runLayoutBuild(args[1:], stdout, stderr)
+		case "templates":
+			return runTemplates(args[1:], stdout, stderr)
 		case "mcp":
 			return runMCP(args[1:], os.Stdin, stdout, stderr)
 		}
@@ -147,7 +150,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(stderr, "usage: boxloom build [-o out.pptx] [-template dark|light|./my.json] deck.json|deck.yaml|deck.bx.md")
+		fmt.Fprintln(stderr, "usage: boxloom build [-o out.pptx] [-template dark|light|report|./my.json] deck.json|deck.yaml|deck.bx.md")
 		return 2
 	}
 	in := fs.Arg(0)
@@ -201,7 +204,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() == 0 || (*format != "text" && *format != "json") {
-		fmt.Fprintln(stderr, "usage: boxloom check [-format text|json] [-capacity] [-template dark|light|./my.json] [-strict] deck.json|deck.yaml|deck.bx.md ...")
+		fmt.Fprintln(stderr, "usage: boxloom check [-format text|json] [-capacity] [-template dark|light|report|./my.json] [-strict] deck.json|deck.yaml|deck.bx.md ...")
 		return 2
 	}
 	res := boxloom.CheckResult{OK: true, Errors: []boxloom.Issue{}, Warnings: []boxloom.Issue{}, Capacity: []boxloom.SlideCapacity{}}
@@ -306,7 +309,7 @@ func runLayout(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(stderr, "usage: boxloom layout [-template dark|light|./my.json] deck.json|deck.bx.md|deck.yaml")
+		fmt.Fprintln(stderr, "usage: boxloom layout [-template dark|light|report|./my.json] deck.json|deck.bx.md|deck.yaml")
 		return 2
 	}
 	in := fs.Arg(0)
@@ -349,7 +352,7 @@ func runLayoutBuild(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(stderr, "usage: boxloom layout-build [-o out.pptx] [-deck deck.bx.md] [-template dark|light|./my.json] tree.json")
+		fmt.Fprintln(stderr, "usage: boxloom layout-build [-o out.pptx] [-deck deck.bx.md] [-template dark|light|report|./my.json] tree.json")
 		return 2
 	}
 	in := fs.Arg(0)
@@ -397,6 +400,18 @@ func runLayoutBuild(args []string, stdout, stderr io.Writer) int {
 }
 
 // runSchema は「boxloom schema」: AI に渡す一覧(docs/schema-command.md)。
+// runTemplates は同梱したテンプレートの名前を1行に1つ書く(既定は light)。
+func runTemplates(args []string, stdout, stderr io.Writer) int {
+	if len(args) != 0 {
+		fmt.Fprintln(stderr, "usage: boxloom templates")
+		return 2
+	}
+	for _, n := range boxloom.Templates() {
+		fmt.Fprintln(stdout, n)
+	}
+	return 0
+}
+
 func runSchema(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("schema", flag.ContinueOnError)
 	fs.SetOutput(stderr)

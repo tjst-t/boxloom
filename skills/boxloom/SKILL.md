@@ -28,7 +28,7 @@ results are the same JSON.
 
 ## 1. Read the schema first
 
-`boxloom schema [-template light|dark]` prints one JSON document. It is the source of
+`boxloom schema [-template light|dark|report]` prints one JSON document. It is the source of
 truth; if this file and the schema disagree, **the schema wins**.
 
 - `markdown.rules` — the syntax rules (short list; obey all of them).
@@ -40,7 +40,13 @@ truth; if this file and the schema disagree, **the schema wins**.
   giving every allowed key).
 - Anything not listed is an error. Do not invent block names, attributes or keys.
 - Templates are chosen by name (`template: light` in the front matter, or
-  `-template dark`). A custom template is a value table file passed by path:
+  `-template dark`). `dark` and `light` are for **presenting** (16 pt body). For a
+  document people **read** (a report handed out or read on screen, with much more
+  text per slide) use `template: report`: same colors as light, 12 pt body, 10 pt
+  sub-points and tables, 8 pt notes, tighter gaps — about 27 body lines per slide
+  (~418 pt body area under a one-line lead, ~70 CJK characters per line, a one-line
+  title holds ~48 CJK characters). The limits in section 4 are for dark / light;
+  run `check -format json` with `-template report` for report's capacity. A custom template is a value table file passed by path:
   `-template ./my.json` (works for `schema`, `check`, `build`, `fonts`; example
   `examples/templates/forest.json`). When the deck will be built with a custom
   template, run `schema` and `check` with the same `-template` — role names and

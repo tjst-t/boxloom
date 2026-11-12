@@ -10,7 +10,7 @@ import (
 // 同梱したテンプレートと Gantt の値の表は、どれも厳しい読み込みを通る。
 func TestBundledValueFilesLoad(t *testing.T) {
 	names := TemplateNames
-	if strings.Join(names, ",") != "dark,light" {
+	if strings.Join(names, ",") != "dark,light,report" {
 		t.Fatalf("bundled templates = %v", names)
 	}
 	for _, n := range names {
@@ -21,7 +21,7 @@ func TestBundledValueFilesLoad(t *testing.T) {
 	if gv := defaultGanttValues(); gv.NaturalRowH != 26 || gv.MaxRowH != 40 || gv.MinRowH != 17 {
 		t.Errorf("gantt defaults = %+v", gv)
 	}
-	if _, err := LookupTemplate("nope"); err == nil || !strings.Contains(err.Error(), "known: dark, light") {
+	if _, err := LookupTemplate("nope"); err == nil || !strings.Contains(err.Error(), "known: dark, light, report") {
 		t.Errorf("unknown template error = %v", err)
 	}
 	if tp, err := LookupTemplate(""); err != nil || tp.Name != "light" {

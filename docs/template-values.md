@@ -8,7 +8,7 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 
 | ファイル | 中身 |
 |---|---|
-| `boxloom/templates/<名前>.json` | テンプレート1つ(`dark.json`・`light.json`)。名前はファイル名 |
+| `boxloom/templates/<名前>.json` | テンプレート1つ(`dark.json`・`light.json`・`report.json`)。名前はファイル名 |
 | `boxloom/subsystems/gantt.json` | Gantt の既定の寸法。テンプレートが差し替えなければこれ |
 | `boxloom/subsystems/shapes.json` | shapes(生の図形への逃げ道)の既定の寸法 |
 | `boxloom/subsystems/process.json`・`orgchart.json`・`matrix.json`・`funnel.json` | 箱と線の図(`docs/subsystem.md` の11節)の既定の寸法 |
@@ -17,6 +17,64 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 
 どちらも `go:embed` でバイナリに同梱する。テンプレートの一覧はこのフォルダの
 ファイルから作るので、`templates/` にファイルを1つ足せば `-template <名前>` で選べる。
+
+## report(読む資料向けの密なテンプレート、Backlog #78)
+
+dark / light は**発表**のためのテンプレート(本文 16pt。遠くから読める大きさ)。
+report は**読む資料**(手元や画面で読む報告書。本文が 8〜10pt ほどの資料の量を
+1枚に入れる)のためのテンプレート。コアの字の大きさ・仕組みは変えず、値の表だけで
+密度を上げた。色(theme)・段階(scale)・字体(fonts)・印(marks)・`fillRatioMin`(0.65)は
+light と同じ。pairs の組み方も dark / light と同じく持つ(`component-fallback` は出ない)。
+
+字の大きさの下限は、本文 12pt・注 8pt。8pt より小さい段は使わない(`TestReportTypeFloor`)。
+
+| 値 | light | report |
+|---|---|---|
+| `pagePadding` / `pagePaddingY` | 40 / 24 | 32 / 20 |
+| `coverPadding` | 64 | 48 |
+| `sectionGap`・`blockGap` | 20 | 12 |
+| `itemGap`・`headerGap` | 8 | 4 |
+| `slideTitle` | 24 | 18 |
+| `leadText` | 18 | 14 |
+| `body`・`takeawayText`・`quoteText`・`optionLabel`・`columnTitle` | 16 | 12 |
+| `subPoint`・`tableText` | 14 | 10 |
+| `optionItem`・`figureDetail`・`captionText`・`statLabel`・`quoteSource` | 12 | 10 |
+| `sectionTrackerText` | 14 | 10 |
+| `small` | 10 | 8 |
+| `coverTitle`・`sectionTitle`・`statementText`・`statValue`・`quoteMark` | 36 | 24 |
+| `coverSubtitle` / `coverAuthor` / `statUnit` | 16 / 12 / 16 | 14 / 10 / 12 |
+| `cardPadding` | 20 | 12 |
+| `cardRadius` / `subsystemRadius` | 10 / 12 | 6 / 8 |
+| `statementInset` | 24 | 16 |
+| `columnGap` | 32 | 20 |
+| `tableCellPaddingX` / `tableCellPaddingY` | 8 / 4 | 4 / 4 |
+| `imageMinHeight` | 96 | 64 |
+
+**Gantt(`subsystems.gantt`)**:既定の Gantt の字(`labelText`・`annotationText` 10、
+`smallText` 8)は、もともと report の注と従の段(8・10)に合っているので変えない
+(8pt より下げない)。余白と行だけを詰める。ほかのキーは `subsystems/gantt.json` と同じ。
+
+| キー | 既定 | report |
+|---|---|---|
+| `padding` | 16 | 12 |
+| `groupGap` | 8 | 4 |
+| `annotationLaneGap` | 8 | 4 |
+| `naturalRowHeight` | 26 | 22 |
+| `maxRowHeight` | 40 | 32 |
+
+行の下限 `minRowHeight`(17。文字とバーが重ならない高さ)・注釈の箱・目盛りの寸法は
+字が同じなので変えない。ほかの図(process・orgchart・matrix・funnel・chart・shapes)の
+字は values の段から引くので、report の段で小さくなる(寸法の表は既定のまま)。
+
+**測った値**(試験 `TestReportFitsDensePairs`):架空の対の1枚(左に2行ほどの「分かったこと」
+5つ、右にそれぞれ3項目の打ち手)は、light では要る高さ 514pt に対し本文の領域 374pt で
+はみ出し、report では要る高さ 351pt に対し本文の領域 418pt で 67pt 余る。report の本文の
+領域は、リード文なしで約 441pt(12pt の本文で約 27 行)、1行のリード文で約 418pt、
+さらに出典1行で約 395pt。
+
+examples の deck を report で組むと、はみ出し(`layout-overflow`)も題の折り返し
+(`title-wrap`)も出ない。量が発表向けのままなので `fill-ratio` の警告は増える
+(内容が少なければ dark / light を選ぶ、の合図)。
 
 ## 外の値の表を使う(Backlog #31)
 
@@ -340,7 +398,7 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 
 書くと、このテンプレートで作る Gantt だけがその寸法で測られ、描かれる
 (登録簿の `Override` で差し替える。既定の表は変わらない)。形は次の節と同じで、
-全部のキーが要る。dark / light は書いていない(既定を使う)。
+全部のキーが要る。dark / light は書いていない(既定を使う)。report は書いている(下の「report」の節)。
 
 ### subsystems.shapes(任意)
 

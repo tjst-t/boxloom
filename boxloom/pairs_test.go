@@ -128,8 +128,8 @@ func TestPairsFallback(t *testing.T) {
 	if len(fb) != 1 || fb[0].Path != "/slides/1/body/0" || !strings.Contains(fb[0].Message, `"pairs"`) || !strings.Contains(fb[0].Message, "built as columns") {
 		t.Fatalf("component-fallback warnings = %+v", fb)
 	}
-	// dark・light は組み方を持つので警告は出ない。
-	for _, name := range []string{"dark", "light"} {
+	// dark・light・report は組み方を持つので警告は出ない。
+	for _, name := range []string{"dark", "light", "report"} {
 		for _, w := range Check("pairs.json", data, CheckOptions{Template: name}).Warnings {
 			if w.Code == "component-fallback" {
 				t.Errorf("%s: %+v", name, w)

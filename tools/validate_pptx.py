@@ -10,7 +10,7 @@ PowerPoint が「修復が必要です」と言う種類の誤り(Schema に合�
 
     --python-pptx  別の実装(python-pptx)で開き直し、全部の図形の文字を読めるか確かめる
     --soffice      LibreOffice で PDF に変換でき、ページの数がスライドの数と合うか確かめる
-    --self-test    examples から dark/light で PPTX を作って全部が通ること、
+    --self-test    examples から dark/light/report で PPTX を作って全部が通ること、
                    それを壊したもの(19 通り)がそれぞれ決まった code で断られることを確かめる。
                    Go(PATH に go)が要る
 
@@ -507,14 +507,14 @@ def mutations(shapes, notes, blocks, charts):
 
 
 def build_examples(outdir):
-    """examples から dark/light で PPTX を作る。従来のデモ(go run ./cmd/boxloom)も。"""
+    """examples から dark/light/report で PPTX を作る。従来のデモ(go run ./cmd/boxloom)も。"""
     go = shutil.which("go") or "/usr/local/go/bin/go"
     gdir = ROOT / "boxloom"
     srcs = sorted((ROOT / "examples" / "ir").glob("*.json")) + sorted((ROOT / "examples" / "md").glob("*.bx.md")) \
         + sorted((ROOT / "examples" / "ir" / "check-warnings").glob("*.json")) + sorted((ROOT / "examples" / "md" / "warnings").glob("*.bx.md"))
     out = []
     for src in srcs:
-        for tpl in ("dark", "light"):
+        for tpl in ("dark", "light", "report"):
             dst = outdir / f"{src.parent.name}-{src.name}-{tpl}.pptx"
             r = subprocess.run([go, "run", "./cmd/boxloom", "build", "-template", tpl, "-o", str(dst), str(src)], cwd=gdir, capture_output=True, text=True)
             if r.returncode != 0:

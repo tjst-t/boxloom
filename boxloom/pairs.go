@@ -8,7 +8,7 @@
 //   - 型の宣言(pairsTypeDecl):Schema は schema/types/pairs.schema.json の写し、
 //     IR を読むときの形の検査、Markdown の囲み(::::pairs と :::subject・:::response)
 //     とその読み方、代わりの組み方(左右2つのまとまりの columns)。
-//   - 組み方(pairsComponent):同梱のテンプレート(dark・light)が持つ。対ごとに
+//   - 組み方(pairsComponent):同梱のテンプレート(dark・light・report)が持つ。対ごとに
 //     1つの行にし、2つの側を同じ上端から置いて、行の高さを高い方に合わせる。
 //     はみ出しは対ごとに測る(測る単位の印 measurePairRows)。
 
@@ -253,7 +253,7 @@ func pairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
 	return Col([]*Spec{info.head, info.list}, tokGap("itemGap"), measurePairRows(info)), nil
 }
 
-// registerBundledComponents は同梱のテンプレート(templates/*.json。いまは dark・light)が
+// registerBundledComponents は同梱のテンプレート(templates/*.json。いまは dark・light・report)が
 // 持つ、標準でない型の組み方を r に足す。外の値の表だけのテンプレート(ParseTemplate)は
 // 持たず、代わりの組み方で組む。
 func registerBundledComponents(r *componentRegistry) {
