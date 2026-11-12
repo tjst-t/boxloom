@@ -268,9 +268,16 @@ func TestTableColumnWidths(t *testing.T) {
 }
 
 func TestNumericColumns(t *testing.T) {
-	rows := [][]Inline{
-		{plainInline("第1世代"), plainInline("120台"), plainInline("2027-03"), plainInline("1,200"), plainInline("12.5%")},
-		{plainInline("第2世代"), plainInline("85台"), plainInline("—"), plainInline(""), plainInline("-3%")},
+	cells := func(ss ...string) []IRTableCell {
+		var out []IRTableCell
+		for _, x := range ss {
+			out = append(out, IRTableCell{Text: plainInline(x)})
+		}
+		return out
+	}
+	rows := [][]IRTableCell{
+		cells("第1世代", "120台", "2027-03", "1,200", "12.5%"),
+		cells("第2世代", "85台", "—", "", "-3%"),
 	}
 	got := numericColumns(rows, 5)
 	want := []bool{false, true, false, true, true}

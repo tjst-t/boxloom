@@ -26,6 +26,7 @@
 | `table-shape.json` | 表の2行目のセルを1つ減らした(見出しは4つ) | `table-shape` |
 | `table-total-shape.json` | `table-shape.json` の2行目を直し、セルが3つの合計の行(`total`)を足した(見出しは4つ) | `table-shape` |
 | `table-groups.json` | `../table-groups.json` の表紙と1枚目の表だけを取り出し、最初の群の行の数(`groups/0/rows`)を3から2にした(群の行の和が本体の行より1つ少ない) | `table-groups` |
+| `table-points.json` | `../table-points.json` の表紙と1枚目の表だけを取り出し、2行目の「すぐ打てる手」のセルの箇条の2つ目の項目を空白だけにした | `table-points` |
 | `image-missing.json` | 画像の src を、無いファイルにした | `image-missing` |
 | `image-format.json` | 画像の src を、画像でないファイル(`README.md`)にした | `image-format` |
 | `chart-values.json` | chart(時系列の縦棒)の系列の値を1つ減らした(項目は6つ) | `chart-values` |

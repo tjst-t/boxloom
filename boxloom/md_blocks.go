@@ -20,12 +20,12 @@ type mdTableBlk struct {
 	rows        []mdTableLine
 	caption     mdText // 表のすぐ次の行の「: 説明」
 	captionLine int
-	attrs       string // その行の末尾の {…}(total=last・groups=first)
+	attrs       string // その行の末尾の {…}(total=last・groups=first・points=列名)
 	attrsCol    int
 }
 
 // tableAttributeNames は表の説明の行の末尾 {…} に書ける属性。
-var tableAttributeNames = []string{"total", "groups"}
+var tableAttributeNames = []string{"total", "groups", "points"}
 
 var reTableDelim = regexp.MustCompile(`^:?-+:?$`)
 
@@ -133,6 +133,7 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 			grouped = true
 		}
 	}
+	pointCols := p.tablePointColumns(attrs, header, grouped, tb, path)
 	hdr := []any{}
 	for c, cell := range header {
 		hdr = append(hdr, p.parseInline(cell, fmt.Sprintf("%s/header/%d", path, c)))
@@ -178,7 +179,12 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 		}
 		cells := []any{}
 		for c, cell := range row[first:] {
-			cells = append(cells, p.parseInline(cell, fmt.Sprintf("%s/%d", rp, c)))
+			cp := fmt.Sprintf("%s/%d", rp, c)
+			if pointCols[c+first] {
+				cells = append(cells, p.tablePointsCell(cell, cp, string(header[c+first].r)))
+				continue
+			}
+			cells = append(cells, p.parseInline(cell, cp))
 		}
 		if isTotal {
 			totalCells = cells
@@ -199,6 +205,74 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 		b.set("caption", p.parseInline(tb.caption, path+"/caption"))
 	}
 	return b
+}
+
+// tablePointColumns は {points=列名,…} の列(見出しの文と完全に一致する列)。
+// 知らない列名・群の列は誤り(table-points)。
+func (p *mdParser) tablePointColumns(attrs map[string]string, header []mdText, grouped bool, tb *mdTableBlk, path string) map[int]bool {
+	v, ok := attrs["points"]
+	if !ok {
+		return nil
+	}
+	var names []string
+	for _, h := range header {
+		names = append(names, string(h.r))
+	}
+	cols := map[int]bool{}
+	for _, name := range strings.Split(v, ",") {
+		c := -1
+		for i, n := range names {
+			if n == name {
+				c = i
+				break
+			}
+		}
+		switch {
+		case name == "":
+			p.fail(tb.captionLine, tb.attrsCol, path+"/points", codeTablePoints, "points の列名が空です", names, "{points=列名} の列名は見出しの行の文と同じに書きます。複数なら {points=列名1,列名2}")
+		case c < 0:
+			p.fail(tb.captionLine, tb.attrsCol, path+"/points", codeTablePoints, fmt.Sprintf("points の列名 %q は見出しの行にありません", name), names, "列名は見出しの行の文と完全に一致させます")
+		case grouped && c == 0:
+			p.fail(tb.captionLine, tb.attrsCol, path+"/points", codeTablePoints, fmt.Sprintf("列 %q は群の列で、箇条にできません", name), nil, "群の列({groups=first})の右の列を指してください")
+		default:
+			cols[c] = true
+		}
+	}
+	return cols
+}
+
+// tablePointsCell は箇条の列のセルを半角の ; で区切った箇条にする(\; は文の ;)。
+// 項目が1つならただの文字列のセル、空の項目は誤り(table-points)。
+func (p *mdParser) tablePointsCell(cell mdText, path, col string) any {
+	var parts []mdText
+	start := 0
+	for k := 0; k < len(cell.r); k++ {
+		if cell.r[k] == '\\' && k+1 < len(cell.r) {
+			k++
+			continue
+		}
+		if cell.r[k] == ';' {
+			parts = append(parts, trimText(mdText{r: cell.r[start:k], pos: cell.pos[start:k]}))
+			start = k + 1
+		}
+	}
+	parts = append(parts, trimText(mdText{r: cell.r[start:], pos: cell.pos[start:]}))
+	if len(parts) == 1 {
+		return p.parseInline(parts[0], path)
+	}
+	items := []any{}
+	for i, it := range parts {
+		if len(it.r) == 0 {
+			line, c := 0, 0
+			if len(cell.pos) > 0 {
+				line, c = cell.pos[0].line, cell.pos[0].col
+			}
+			p.fail(line, c, fmt.Sprintf("%s/points/%d", path, i), codeTablePoints, fmt.Sprintf("列 %q のセルの %d 番目の項目が空です", col, i+1), nil, "箇条の項目は半角の ; で区切ります(a;;b や末尾の ; は書きません)。文の ; は \\; と書きます")
+			return nil
+		}
+		items = append(items, p.parseInline(it, fmt.Sprintf("%s/points/%d", path, i)))
+	}
+	return obj("points", items)
 }
 
 func isDelimRow(cells []mdText) bool {

@@ -320,6 +320,29 @@ Schema では書けないので `boxloom check` が見る。
 - はみ出しと容量は行ごとに測る(群の境目は行の境目)。群の名前が結合した行の高さに
   収まらなければ、群の最後の行を伸ばす。
 
+### 13. 表のセルの中の箇条(#80)
+
+- **本体・合計の行のセルは、インラインか `{"points": [...]}`。** `points` は項目
+  (インライン)の並びで2つ以上。項目が1つならただのインラインで書く(同じ意味を2つの形で
+  書けないように)。見出しの行のセルはインラインだけ。
+
+  ```json
+  {"type": "table",
+   "header": ["課題", "見直しの案"],
+   "rows": [["承認が遅い", {"points": ["100 万円未満は2段", "承認の期限を3日に"]}]]}
+  ```
+
+- 列ごとに「この列は箇条」と宣言する欄は IR に持たない:箇条かどうかはセルの意味で、
+  同じ列に箇条のセルと文のセルが混ざってよい(項目が1つのセルは文)。列の宣言
+  (`{points=列名}`)は Markdown の記法の都合で、`;` を区切りと読む範囲を決めるだけ
+  (`docs/content-syntax.md` の3.7)。
+- 印・字下げは見た目なのでテンプレートが決める。dark / light は本文の箇条と同じ印
+  (`marks.point`)を、本物の `a:tbl` のセルの段落の箇条の印(`a:buChar`)で書く。項目ごとに
+  1つの段落で、折り返しはアプリに任せる。箇条のセルは数の列として右に揃えない。
+- はみ出しと容量は、セルの中の箇条の行(項目ごとに折り返した行の和)で行の高さを測る。
+- 誤りは `boxloom check` の `table-points`:項目が1つ以下(path は `…/rows/R/C/points`)、
+  空の項目(path は `…/points/I`)。
+
 ## 意味の検査(boxloom check)
 
 JSON Schema では書けない検査は Go の `boxloom check` がする。
@@ -374,6 +397,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `matrix-cells` | matrix の各行の `cells` の数が `columns` の数と同じ(path はその行の `cells`) |
 | `matrix-emphasis` | matrix の `emphasis`(推す列)が `columns` の見出しのどれか(文中の記法を除いた文字)と同じ(path は `…/data/emphasis`) |
 | `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`)。`groups` があると本体の行は見出しより1つ少ない |
+| `table-points` | 表のセルの中の箇条(`{"points": [...]}`)の項目が2つ以上で(path は `…/rows/R/C/points` か `…/total/C/points`)、空の項目が無い(path は `…/points/I`) |
 | `table-groups` | 表の `groups` の名前が空でなく(path は `…/groups/G/label`)、`rows` の和が本体の行の数で、群の列のほかに列がある(path は `…/groups`) |
 | `image-path` | 画像の `src` が文書からの相対パス(URL・絶対パス・`..`・`\` は断る) |
 | `image-missing` | 画像のファイルが読める(`CheckOptions.Assets` から。コマンドは文書のフォルダ) |

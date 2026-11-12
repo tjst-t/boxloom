@@ -74,6 +74,7 @@ const (
 	codeSchema            = "schema"             // できた IR が通らない
 	codeTableShape        = "table-shape"        // 表の行のセルの数が見出しと違う
 	codeTableGroups       = "table-groups"       // 表の行の群の形が違う(最初の行の群の名前が空など)
+	codeTablePoints       = "table-points"       // 表のセルの箇条の書き方が違う(知らない列名・空の項目)
 	codeImagePath         = "image-path"         // 画像の src が絶対パス・URL・文書のフォルダの外
 	codeImageAlt          = "image-alt"          // 画像の代わりの文が無い
 )

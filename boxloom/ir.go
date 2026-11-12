@@ -68,11 +68,11 @@ type IRBlock struct {
 
 	Columns []IRColumn // columns: 並列のまとまり(2〜3個)
 
-	Header  []Inline       // table: 見出しの行
-	Rows    [][]Inline     // table: 本体の行(どの行もセルの数は見出しと同じ)
-	Total   []Inline       // table: 合計の行(任意。セルの数は見出しと同じ)
-	Groups  []IRTableGroup // table: 行の群(任意。先頭の列が群の列。本体の行のセルは見出しより1つ少ない)
-	Caption Inline         // table・image: 説明の文(任意)
+	Header  []Inline        // table: 見出しの行
+	Rows    [][]IRTableCell // table: 本体の行(どの行もセルの数は見出しと同じ)
+	Total   []IRTableCell   // table: 合計の行(任意。セルの数は見出しと同じ)
+	Groups  []IRTableGroup  // table: 行の群(任意。先頭の列が群の列。本体の行のセルは見出しより1つ少ない)
+	Caption Inline          // table・image: 説明の文(任意)
 
 	Src    string    // image: 文書からの相対パス
 	Alt    string    // image: 代わりの文
@@ -525,13 +525,13 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		*k = out
 	case "table":
 		var v struct {
-			Type    string         `json:"type"`
-			Variant string         `json:"variant"`
-			Caption Inline         `json:"caption"`
-			Header  []Inline       `json:"header"`
-			Rows    [][]Inline     `json:"rows"`
-			Total   []Inline       `json:"total"`
-			Groups  []IRTableGroup `json:"groups"`
+			Type    string          `json:"type"`
+			Variant string          `json:"variant"`
+			Caption Inline          `json:"caption"`
+			Header  []Inline        `json:"header"`
+			Rows    [][]IRTableCell `json:"rows"`
+			Total   []IRTableCell   `json:"total"`
+			Groups  []IRTableGroup  `json:"groups"`
 		}
 		if err := strictUnmarshal(b, &v); err != nil {
 			return err
@@ -834,4 +834,46 @@ func tableRowWant(header int, grouped bool) string {
 		return fmt.Sprintf("the header has %d (with groups, a row has one cell per column except the group column: %d)", header, header-1)
 	}
 	return fmt.Sprintf("the header has %d", header)
+}
+
+// IRTableCell は表の本体・合計の行のセル1つ。文(インライン)か、セルの中の箇条
+// ({"points": [...]}、2項目以上)。Points が nil なら Text のセル。
+type IRTableCell struct {
+	Text   Inline
+	Points []Inline
+}
+
+func (c *IRTableCell) UnmarshalJSON(b []byte) error {
+	b = bytes.TrimSpace(b)
+	if len(b) == 0 || b[0] != '{' {
+		return c.Text.UnmarshalJSON(b)
+	}
+	var v struct {
+		Points []Inline `json:"points"`
+	}
+	if err := strictUnmarshal(b, &v); err != nil {
+		return err
+	}
+	if len(v.Points) < 2 {
+		return fmt.Errorf("points: a cell list needs at least 2 items (write a single item as a plain cell)")
+	}
+	for i, p := range v.Points {
+		if strings.TrimSpace(p.Plain()) == "" {
+			return fmt.Errorf("points[%d]: the item is empty", i)
+		}
+	}
+	*c = IRTableCell{Points: v.Points}
+	return nil
+}
+
+// Plain は飾りを外した文字列(箇条の項目は改行でつなぐ)。
+func (c IRTableCell) Plain() string {
+	if c.Points == nil {
+		return c.Text.Plain()
+	}
+	var parts []string
+	for _, p := range c.Points {
+		parts = append(parts, p.Plain())
+	}
+	return strings.Join(parts, "\n")
 }

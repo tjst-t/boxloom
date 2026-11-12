@@ -28,6 +28,9 @@ func (p *PPTXBuilder) AddPicture(box LBox, img *imageAsset, alt string) {
 type TableCell struct {
 	Runs  []TextRun
 	Align string // "left" | "right"
+	// Items はセルの中の箇条(項目ごとの塊。先頭は印の塊 Mark)。nil でなければ
+	// Runs の代わりに項目を段落にし、印は段落の箇条の印(a:buChar)で書く。
+	Items [][]TextRun
 	// RowSpan は縦に結合する行の数(2 以上で結合の始まり。a:tc の rowSpan)。
 	// VMerge は上のセルに結合された続きのセル(a:tc の vMerge。文字は持たない)。
 	RowSpan int
@@ -146,6 +149,9 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 
 // cellParaXML はセルの文を1つの段落にする。意味のある改行(br)は a:br。
 func (p *PPTXBuilder) cellParaXML(c TableCell, size float64) string {
+	if c.Items != nil {
+		return p.cellListXML(c, size)
+	}
 	var b strings.Builder
 	sz := int(size * 100)
 	if p.Fonts != nil && p.Fonts.FixedLineSpacing {
@@ -179,6 +185,45 @@ func (p *PPTXBuilder) cellParaXML(c TableCell, size float64) string {
 		end = fmt.Sprintf(`<a:endParaRPr lang="ja-JP" sz="%d"/>`, sz)
 	}
 	b.WriteString(end + `</a:p>`)
+	return b.String()
+}
+
+// cellListXML はセルの中の箇条を項目ごとの段落にする。印は段落の箇条の印
+// (a:buChar)で、本文は印の幅だけ字下げする(本文の箇条と同じ書き方)。
+// 折り返しはアプリに任せる(セルの文は折り返す)。
+func (p *PPTXBuilder) cellListXML(c TableCell, size float64) string {
+	restore := func() {}
+	if p.Fonts != nil {
+		restore = useFonts(p.Fonts)
+	}
+	defer restore()
+	var b strings.Builder
+	for _, it := range c.Items {
+		mark, rest := splitMark(it)
+		var props, indent string
+		if p.Fonts != nil && p.Fonts.FixedLineSpacing {
+			props = fmt.Sprintf(`<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(size*lineHeightMult*100)))
+		}
+		if mark != nil {
+			var bullet string
+			bullet, indent = p.bulletXML(mark, size, 0)
+			props += bullet
+		}
+		fmt.Fprintf(&b, `<a:p><a:pPr%s algn="%s">%s</a:pPr>`, indent, alignAttr(c.Align), props)
+		for _, r := range rest {
+			for i, part := range strings.Split(r.Text, "\n") {
+				if i > 0 {
+					fmt.Fprintf(&b, `<a:br><a:rPr lang="ja-JP" sz="%d"/></a:br>`, int(size*100))
+				}
+				if part != "" {
+					q := r
+					q.Text = part
+					b.WriteString(runXML(q, size))
+				}
+			}
+		}
+		b.WriteString(`</a:p>`)
+	}
 	return b.String()
 }
 

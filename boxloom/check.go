@@ -408,9 +408,16 @@ func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
 				}
 				c.add(fmt.Sprintf("%s/rows/%d", bp, ri), msg, "table-shape")
 			}
+			for ci, cell := range cells {
+				c.checkTablePoints(cell, fmt.Sprintf("%s/rows/%d/%d", bp, ri, ci))
+			}
 		}
 		if cells, ok := bm["total"].([]any); ok && len(header) > 0 && len(cells) != len(header) {
 			c.add(bp+"/total", fmt.Sprintf("the total row has %d cells but the header has %d (every row has one cell per column)", len(cells), len(header)), "table-shape")
+		} else if ok {
+			for ci, cell := range cells {
+				c.checkTablePoints(cell, fmt.Sprintf("%s/total/%d", bp, ci))
+			}
 		}
 	case "image":
 		img(bm, bp)
@@ -966,5 +973,26 @@ func (c *checker) checkTableGroups(groups []any, cols, rows int, bp string) {
 	}
 	if sum != rows {
 		c.add(bp+"/groups", fmt.Sprintf("the groups cover %d rows but the table has %d body rows (the rows of the groups add up to the body rows)", sum, rows), "table-groups")
+	}
+}
+
+// checkTablePoints は表のセルの中の箇条({"points": [...]})の決まりを見る
+// (table-points): 項目は2つ以上(1つならただの文字列のセル)、空の項目は無い。
+func (c *checker) checkTablePoints(cell any, at string) {
+	m, ok := cell.(map[string]any)
+	if !ok {
+		return
+	}
+	items, ok := m["points"].([]any)
+	if !ok {
+		return
+	}
+	if len(items) < 2 {
+		c.add(at+"/points", fmt.Sprintf("the cell list has %d item (a cell list needs at least 2 items; write a single item as a plain cell)", len(items)), "table-points")
+	}
+	for i, it := range items {
+		if strings.TrimSpace(inlinePlainAny(it)) == "" {
+			c.add(fmt.Sprintf("%s/points/%d", at, i), "the item of the cell list is empty", "table-points")
+		}
 	}
 }
