@@ -399,7 +399,6 @@ func runLayoutBuild(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-// runSchema は「boxloom schema」: AI に渡す一覧(docs/schema-command.md)。
 // runTemplates は同梱したテンプレートの名前を1行に1つ書く(既定は light)。
 func runTemplates(args []string, stdout, stderr io.Writer) int {
 	if len(args) != 0 {
@@ -412,6 +411,7 @@ func runTemplates(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
+// runSchema は「boxloom schema」: AI に渡す一覧(docs/schema-command.md)。
 func runSchema(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("schema", flag.ContinueOnError)
 	fs.SetOutput(stderr)
