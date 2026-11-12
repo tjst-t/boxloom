@@ -627,7 +627,7 @@
       "number": 80,
       "kind": "task",
       "title": "表のセルの中の箇条(本物の a:tbl のセルに箇条の段落)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "slide-patterns",
       "dependsOn": [
         "table-row-groups"
@@ -637,12 +637,12 @@
       "labels": [],
       "body": "サンプル(読む報告書)の p13〜20・86〜93 の形。表のセルの中に2〜4項目の箇条が入る。\n\n## 決めたこと(人が案(b)を選んだ)\n- **Markdown**:GFM の表のまま書く。説明の行の末尾に `{points=列名}` を書くと、その列のセルを「半角の ; で区切った箇条」として読む。\n  - 書き方は `{total=last}`・`{groups=first}` と同じ。\n  - 複数の列は `{points=列名1,列名2}` と書く。\n  - 列名は見出しの行の文と完全に一致させる。\n  - 文としての ; を残したいときは `\\;` と書く。\n  - 空の項目(`a;;b`・末尾の ;)・知らない列名は誤り(Issue の形、場所は表と列)。\n  - 項目が1つだけのセルは、ただの文字列にする。\n- **IR**:セルは文字列か `{points: [...]}`(文字列の配列、2項目以上)。Schema と docs/ir.md に書く。\n- 記号に意味を持たせるのは、名前で指した列の中だけ(#1250902 の「約束事は名前で書く」に沿う)。\n\n## やること\n- PPTX:本物の a:tbl のセルに、箇条の段落(a:buChar、テンプレートの marks.point)を書く。\n- はみ出しと容量:セルの中の箇条の行(折り返しを含む)を数えて、行の高さを決める。\n- docs/content-syntax.md・docs/ir.md・examples(架空の例)・SKILL.md を直す。\n- #79(行の群)と同じ表のコードを触るので、#79 の後にする。",
       "doneWhen": "{points=列名} を付けた GFM の表で、その列のセルが IR の {points:[...]} になり、PPTX では本物の a:tbl のセルの中の箇条の段落(a:buChar)になる(試験)。\\; は文の ; のまま残る。空の項目・知らない列名は Issue の形の誤り(試験)。容量の計測がセルの中の箇条の行を数える。IR・Schema・docs・examples に書き方がある。PPTX が tools/validate_pptx.py を通る。tools/ci.sh go python pptx が通る。",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/table-cell-points）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T14:32:50.117Z",
-      "updatedAt": "2026-11-12T14:57:19.727Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-12T15:05:52.174Z",
+      "closedAt": "2026-11-12T15:05:52.174Z",
       "extra": {}
     },
     {
