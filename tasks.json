@@ -1207,7 +1207,7 @@
       "number": 68,
       "kind": "task",
       "title": "配置の段をトークンのまま持つ(値の表の名前・段の刻み・役割名で持ち、組み立ての直後・計測の前に1か所で解決する)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [
         "public-measure-marks"
@@ -1223,7 +1223,7 @@
       ],
       "threads": [],
       "createdAt": "2026-11-12T01:24:55.354Z",
-      "updatedAt": "2026-11-12T09:29:41.331Z",
+      "updatedAt": "2026-11-12T09:32:28.401Z",
       "closedAt": null,
       "extra": {}
     },
