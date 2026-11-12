@@ -627,7 +627,7 @@
       "number": 80,
       "kind": "task",
       "title": "表のセルの中の箇条(本物の a:tbl のセルに箇条の段落)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "slide-patterns",
       "dependsOn": [
         "table-row-groups"
@@ -641,7 +641,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T14:32:50.117Z",
-      "updatedAt": "2026-11-12T14:38:30.634Z",
+      "updatedAt": "2026-11-12T14:57:19.727Z",
       "closedAt": null,
       "extra": {}
     },
