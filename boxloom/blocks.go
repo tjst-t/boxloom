@@ -481,7 +481,7 @@ type columnInfo struct {
 
 // columns は並列のまとまりを横に並べる。幅の比は意味(role: main)から決める:
 // 主のまとまりは columnMainWeight、ほかは 1。題は本文の上に置く。
-func (t *Template) columns(b *IRBlock) (*Spec, error) {
+func (t *Template) columns(ctx componentContext, b *IRBlock) (*Spec, error) {
 	v, th := t.Values, t.Theme
 	info := &columnsInfo{}
 	var cols []*Spec
@@ -489,7 +489,7 @@ func (t *Template) columns(b *IRBlock) (*Spec, error) {
 		c := &b.Columns[ci]
 		var blocks []*Spec
 		for bi := range c.Body {
-			s, err := t.buildBlock(&c.Body[bi])
+			s, err := t.buildBlockIn(ctx.within(fmt.Sprintf("columns[%d]: body[%d]", ci, bi)), &c.Body[bi])
 			if err != nil {
 				return nil, fmt.Errorf("columns[%d]: body[%d]: %w", ci, bi, err)
 			}

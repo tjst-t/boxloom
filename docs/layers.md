@@ -246,6 +246,16 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
 3. **最初の追加の部品として `pairs` を作る。** 標準でない型として語彙に足し
    (代わりの組み方は `columns`)、組み方は dark・light が持つ(8.1)。
    Backlog の `type-vocabulary`(#64。語彙と組み方を分ける)と `pairs-component`(#65)。
+   **語彙と組み方を分けるのは済み(#64)。** 型の語彙は `boxloom/typevocab.go` の
+   `blockTypes`(`typeDecl{Schema, Markdown, Fallback}`。標準の12の型は Fallback を
+   持たない。標準でない型は `registerType` で足し、Schema と Fallback が必須)。
+   `componentRegistry` は組み方だけを持ち、登録できるのは語彙にある型だけ
+   (標準の型は `override`、標準でない型は `register`)。組み方の無い標準でない型は
+   Fallback で標準の型に書き換えて組み、警告 `component-fallback` を出す(path はその
+   ブロック)。`check` はテンプレートを指したときだけこの警告を足す。`schema` の
+   `templates[].types` に型ごとの組み方(`template`・`fallback`)が出る。型ごとの
+   Schema は `schema/types/<名前>.schema.json`。公開 API は増やしていない。
+   試験用の標準でない型で確かめる(`component_test.go`)。
 4. 配置の段をトークンのまま持つ形(値を後で解決する)に替える。Backlog の
    `token-spec`(#68)。その後で、木を入力として読む口(`layout-input`、#69。
    開発者・試験用、4章)を作る。木を出す口(`layout-dump`、#67)はいつでもよい。

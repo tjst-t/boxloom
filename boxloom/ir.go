@@ -74,6 +74,10 @@ type IRBlock struct {
 	Src    string    // image: 文書からの相対パス
 	Alt    string    // image: 代わりの文
 	Images []IRImage // gallery: 2〜6枚
+
+	// Raw は標準でない型(型の語彙。typevocab.go)のブロックの JSON そのもの。
+	// 組み方と代わりの組み方(Fallback)がこれを読む。標準の型では nil。
+	Raw json.RawMessage
 }
 
 // IRColumn は並列のまとまりの1つ。Role は "" か "main"(主のまとまり)。
@@ -572,7 +576,19 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		}
 		*k = IRBlock{Type: v.Type, Variant: v.Variant, Images: v.Images}
 	default:
-		return fmt.Errorf("unknown block type %q (known: paragraph, points, compare, note, takeaway, stat, quote, columns, table, image, gallery, subsystem)", head.Type)
+		if _, ok := blockTypes.decl(head.Type); ok && !blockTypes.isStandard(head.Type) {
+			// 標準でない型:形の検査は Schema(schema/types/)の仕事。Go は variant だけ
+			// 読み、中身は組み方と代わりの組み方に渡す。
+			var v struct {
+				Variant string `json:"variant"`
+			}
+			if err := json.Unmarshal(b, &v); err != nil {
+				return err
+			}
+			*k = IRBlock{Type: head.Type, Variant: v.Variant, Raw: append(json.RawMessage{}, b...)}
+			return nil
+		}
+		return fmt.Errorf("unknown block type %q (known: %s)", head.Type, strings.Join(blockTypes.known(), ", "))
 	}
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 )
 
@@ -50,7 +51,26 @@ type TemplateSchema struct {
 	Slides     []SlideDecl       `json:"slides"`
 	Blocks     []BlockDecl       `json:"blocks"`
 	Subsystems []SubsystemSchema `json:"subsystems"`
+	// Types は型の語彙の全部(IR の type。テンプレートで隠さない)と、このテンプレートが
+	// その型の組み方を持つか、代わりの組み方で組むか。
+	Types []TypeSchema `json:"types"`
 }
+
+// TypeSchema は型の語彙の1つの型と、テンプレートでの組み方。
+type TypeSchema struct {
+	Name string `json:"name"`
+	// Build は "template"(テンプレートが組み方を持つ)か "fallback"(型の代わりの
+	// 組み方で標準の型に書き換えて組み、check は component-fallback を警告する)。
+	Build string `json:"build"`
+	// Standard は標準の型(どのテンプレートも組める一式)か。
+	Standard bool `json:"standard"`
+	// Schema は標準でない型の Schema の場所(この出力の中の JSON Pointer)。標準の型は
+	// irSchema のコアが持つので空。
+	Schema string `json:"schema,omitempty"`
+}
+
+// typeSchemaDef は標準でない型の Schema を irSchema の $defs に置くときの名前。
+func typeSchemaDef(name string) string { return "type:" + name }
 
 // SubsystemSchema は1つのサブシステムが名乗るもの。
 type SubsystemSchema struct {
@@ -133,6 +153,16 @@ func buildSchemaOutput(templates []*Template) (*SchemaOutput, error) {
 			}
 			ts.Subsystems = append(ts.Subsystems, ss)
 		}
+		for _, name := range blockTypes.names() {
+			ty := TypeSchema{Name: name, Build: "template", Standard: blockTypes.isStandard(name)}
+			if !t.components.has(name) {
+				ty.Build = "fallback"
+			}
+			if !ty.Standard {
+				ty.Schema = "/irSchema/$defs/" + typeSchemaDef(name)
+			}
+			ts.Types = append(ts.Types, ty)
+		}
 		out.Templates = append(out.Templates, ts)
 	}
 	bundleName := "all"
@@ -200,6 +230,48 @@ func bundleIRSchema(name string, subs map[string]SubsystemDecl) (json.RawMessage
 	coreID, err := schemaID(core)
 	if err != nil {
 		return nil, err
+	}
+	// 標準でない型(型の語彙。テンプレートに依らない)は、その Schema を $defs に置き、
+	// コアのブロックの type の enum と振り分け(allOf)に無ければ足す。標準でない型が
+	// 無ければコアはそのまま。
+	if exts := blockTypes.extensions(); len(exts) > 0 {
+		var c obj
+		if err := json.Unmarshal(core, &c); err != nil {
+			return nil, err
+		}
+		cdefs, _ := c["$defs"].(obj)
+		block, _ := cdefs["block"].(obj)
+		props, _ := block["properties"].(obj)
+		typ, _ := props["type"].(obj)
+		enum, _ := typ["enum"].([]any)
+		blockAllOf, _ := block["allOf"].([]any)
+		if enum == nil || blockAllOf == nil {
+			return nil, fmt.Errorf("core schema: $defs.block has no type enum or allOf")
+		}
+		for _, name := range exts {
+			d, _ := blockTypes.decl(name)
+			id, err := schemaID(d.Schema)
+			if err != nil {
+				return nil, fmt.Errorf("block type %q: %w", name, err)
+			}
+			key := typeSchemaDef(name)
+			if _, clash := defs[key]; clash {
+				return nil, fmt.Errorf("block type %q clashes with a subsystem name", name)
+			}
+			defs[key] = d.Schema
+			if slices.Contains(enum, any(name)) {
+				continue // コアの Schema がすでに振り分けている(schema/core.schema.json に足した型)
+			}
+			enum = append(enum, name)
+			blockAllOf = append(blockAllOf, obj{
+				"if":   obj{"properties": obj{"type": obj{"const": name}}, "required": []string{"type"}},
+				"then": obj{"$ref": id},
+			})
+		}
+		typ["enum"], block["allOf"] = enum, blockAllOf
+		if core, err = json.Marshal(c); err != nil {
+			return nil, err
+		}
 	}
 	if _, clash := defs["core"]; clash {
 		return nil, fmt.Errorf("a subsystem must not be named \"core\"")

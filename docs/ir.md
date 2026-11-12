@@ -150,6 +150,11 @@ IR は人が書くものではなく、パーサーの出力・AI の構造化�
 サブシステムを持つときは、同じ形の入口をテンプレート側で作れば、そのテンプレート
 用の検査になる。
 
+標準でない型(型の語彙。`docs/layers.md` の8.2)を足すときは、
+`schema/types/<名前>.schema.json` を型ごとのファイルで書き、コアの `$defs.block` の
+`enum` と `allOf` に1つずつ足す(型の語彙はテンプレートに依らず1つなので、コアに足して
+よい)。Go は語彙の `typeDecl.Schema` に、その写しを `typeSchema` で読ませる。
+
 Go からは、サブシステムの Schema を登録簿の `Declare`(`SubsystemDecl.Schema`)で
 名乗らせる。`boxloom schema` はテンプレートの登録簿から、そのテンプレートで書ける
 サブシステムだけを差し込んだ1つの Schema(`irSchema`)を組む
@@ -326,6 +331,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `spare-width` | 本文のブロックの中の図・画像が、縦横比(または横の上限)を保ったために、ブロックの幅の 20% 以上を横に空けた。path はそのブロック、文に空いた幅(pt と %)。容量の `remainingWidth` と同じ数字。並列のまとまり(columns)の中のグラフ・画像は、まとまりの幅に対して同じく測り、path は `/slides/S/body/N/columns/C/body/K` |
 | `stat-value` | `stat` の数と単位が、カードの幅に1行で入らない。数と単位はそれぞれ途中で折らない(「億ド / ル」「12,345, / 678」と折れると読み違えるため)ので、入らなければ単位が次の行に落ち、数そのものが入らなければ1行のままカードからはみ出す。path はその数(`/slides/S/body/N/items/K`、.md なら `:::value` の行)、文に要る幅と有る幅(pt)。字は縮めない |
 | `layout-overflow` | 本文のブロックが本文の領域に収まらない。はみ出したブロックごとに1件で、`path` はそのブロック(`/slides/S/body/N`)、文にはみ出した高さ(pt)を書く(下の節)。区切りの題・主張の1文がページに収まらないときも出し、`path` はそのスライド(`/slides/S`)。並列のまとまりは、まとまりの中のはみ出したブロック(`/slides/S/body/N/columns/C/body/K`) |
+| `component-fallback` | テンプレートが組み方を持たない標準でない型のブロックを、型の代わりの組み方(標準の型への書き換え)で組んだ。path はそのブロック(`/slides/S/body/N`)。テンプレートを指したとき(`-template`・値の表・IR の `template`)だけ出し、指さなければ型の語彙だけで検査する(`docs/layers.md` の8.2) |
 | `subsystem-min` | サブシステムに割り当てた大きさが、自己申告の最小を下回った(サブシステムの警告の path は、そのブロック `/slides/S/body/N`) |
 | `annotation-overlap` | Gantt の注釈に空いた置き場所が無く、ほかの注釈に重ねて置いた |
 | `milestone-overlap` | Gantt の節目の日付が近すぎて、段を2つにずらしても文字が重なった。path はその節目(`…/data/milestones/N`)(`docs/subsystem.md` の6節「節目の段」) |

@@ -217,8 +217,10 @@ func (t *Template) buildCover(d *IRDeck, s *IRSlide) *BuiltSlide {
 func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, error) {
 	v, th := t.Values, t.Theme
 	var blocks []*Spec
+	var warns []string
+	ctx := componentContext{t: t, warn: func(w string) { warns = append(warns, w) }}
 	for bi := range s.Body {
-		b, err := t.buildBlock(&s.Body[bi])
+		b, err := t.buildBlockIn(ctx.within(fmt.Sprintf("body[%d]", bi)), &s.Body[bi])
 		if err != nil {
 			return nil, fmt.Errorf("body[%d]: %w", bi, err)
 		}
@@ -239,7 +241,7 @@ func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, erro
 	}
 	kids = append(kids, t.footer(d, i))
 	root := Col(kids, WithGap(v.SectionGap), WithPaddingXY(v.PagePadding, v.PagePaddingY), WithBackground(th.c("bg")))
-	return &BuiltSlide{Root: root, Body: body, Notes: s.Notes, Title: title}, nil
+	return &BuiltSlide{Root: root, Body: body, Notes: s.Notes, Title: title, Warnings: warns}, nil
 }
 
 // footer は本文のスライドの下の行(左に作者と機密区分、右に「何枚目 / 全部」)。
@@ -377,10 +379,15 @@ func (t *Template) buildStatement(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
 // --- 部品: ブロック ---
 
 func (t *Template) buildBlock(b *IRBlock) (*Spec, error) {
+	return t.buildBlockIn(componentContext{t: t}, b)
+}
+
+// buildBlockIn は buildBlock に、警告の出し口(ctx.warn)を添えたもの。
+func (t *Template) buildBlockIn(ctx componentContext, b *IRBlock) (*Spec, error) {
 	if err := t.checkVariant(b.Variant); err != nil {
 		return nil, err
 	}
-	s, err := t.components.build(componentContext{t: t}, b)
+	s, err := t.components.build(ctx, b)
 	if s != nil {
 		apply(s, []SpecOpt{markIRType(b.Type)})
 	}

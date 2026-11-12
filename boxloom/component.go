@@ -1,104 +1,154 @@
 // 部品の登録簿(docs/layers.md の2.2・6章)。部品は IR の1ブロックを箱の木
 // (Spec)に組む。サブシステムと違って自分では描かず、箱の木に展開されるだけ。
 //
-// 登録の形はサブシステムの登録簿(SubsystemRegistry)にそろえる。コアは標準の
-// 部品の表(defaultComponents)を持ち、テンプレートは Clone した表の組み方を
-// override で差し替えられる(名前と意味の形は替えられない)。
+// 登録簿が持つのは組み方だけ。型の意味(名前・Schema・囲み・代わりの組み方)は
+// プロセスに1つの型の語彙(typevocab.go)が持ち、登録できるのは語彙にある型だけ。
+// コアは標準の部品の表(defaultComponents)を持ち、テンプレートは Clone した表で
+// 標準の型の組み方を override で差し替え、標準でない型の組み方を register で足す。
+// 組み方を持たない標準でない型は、語彙の代わりの組み方で標準の型に書き換えて組み、
+// 警告 component-fallback を出す。
 // 当面は package の中だけで使う(公開 API は増やさない)。
 
 package boxloom
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 )
 
-// componentDecl は部品が名乗るもの。組み方(component)とは別に持ち、override で
-// 組み方を差し替えても変わらない。
-type componentDecl struct {
-	// Schema は IR の意味の形(Schema の断片)。標準の部品は IR の Schema
-	// (schema/)が持つので空。
-	Schema json.RawMessage
-	// Markdown は部品の囲み(:::名前)。中の囲み(compare の option など)も含む。
-	// 囲みを持たない部品(段落・箇条・表…)は空。
-	Markdown []BlockDecl
-}
-
 // componentContext は組み方に渡すもの:値の表・役割名・入れ子のブロックを組む口
-// (いまはテンプレートそのもの)。
+// (いまはテンプレートそのもの)と、組むときの警告の出し口。
 type componentContext struct {
 	t *Template
+	// warn は組むときの警告("[名前 WARNING] 文" の形)を受け取る。nil なら捨てる。
+	// 入れ子のブロックを組む側(columns)は、場所(columns[C]: body[K]:)を足して渡す。
+	warn func(string)
+}
+
+func (ctx componentContext) warnf(format string, args ...any) {
+	if ctx.warn != nil {
+		ctx.warn(fmt.Sprintf(format, args...))
+	}
+}
+
+// within は入れ子の場所(例 "columns[0]: body[1]")を警告の文の頭に足す口を返す。
+func (ctx componentContext) within(loc string) componentContext {
+	parent := ctx.warn
+	if parent == nil {
+		return ctx
+	}
+	ctx.warn = func(w string) {
+		if k := strings.Index(w, "] "); strings.HasPrefix(w, "[") && k >= 0 {
+			w = w[:k] + "] " + loc + ": " + w[k+2:]
+		}
+		parent(w)
+	}
+	return ctx
 }
 
 // component は部品の組み方。
 type component interface {
 	// build は IR のブロックから箱の木を作る。
 	build(ctx componentContext, b *IRBlock) (*Spec, error)
-	// fallback は標準でない部品だけが持つ:標準の部品の IR に書き換える
-	// (docs/layers.md の5章)。標準の部品は nil, nil を返す。
-	fallback(b *IRBlock) ([]*IRBlock, error)
 }
 
-// componentFunc は代わりの組み方を持たない部品(標準の部品)。
+// componentFunc は関数の組み方。
 type componentFunc func(ctx componentContext, b *IRBlock) (*Spec, error)
 
 func (f componentFunc) build(ctx componentContext, b *IRBlock) (*Spec, error) { return f(ctx, b) }
-func (f componentFunc) fallback(*IRBlock) ([]*IRBlock, error)                 { return nil, nil }
 
-// componentRegistry は「IR の type → 部品」の表。
+// componentRegistry は「IR の type → 組み方」の表。
 type componentRegistry struct {
 	components map[string]component
-	decls      map[string]componentDecl
+	vocab      *typeVocabulary
 }
 
-func newComponentRegistry() *componentRegistry {
-	return &componentRegistry{components: map[string]component{}, decls: map[string]componentDecl{}}
+func newComponentRegistry(vocab *typeVocabulary) *componentRegistry {
+	return &componentRegistry{components: map[string]component{}, vocab: vocab}
 }
 
-// register は部品を足す。同じ名前がすでにあれば誤り(うっかり上書きを防ぐ)。
-func (r *componentRegistry) register(name string, d componentDecl, c component) error {
+// register は標準でない型の組み方を足す。語彙に無い型・標準の型(override で
+// 差し替える)・すでに組み方がある型は誤り。
+func (r *componentRegistry) register(name string, c component) error {
+	if _, ok := r.vocab.decl(name); !ok {
+		return fmt.Errorf("cannot register a component for %q: not in the type vocabulary (known: %v)", name, r.vocab.names())
+	}
+	if r.vocab.isStandard(name) {
+		return fmt.Errorf("%q is a standard type (use override to replace its component)", name)
+	}
 	if _, ok := r.components[name]; ok {
 		return fmt.Errorf("component %q is already registered (use override to replace)", name)
 	}
 	r.components[name] = c
-	r.decls[name] = d
 	return nil
 }
 
-// override は既存の部品の組み方を差し替える。名乗るもの(decl)はそのまま。
-// 無い名前は誤り(打ち間違いを黙って通さない)。
+// override は標準の型の組み方を差し替える。語彙に無い型・標準でない型は誤り
+// (打ち間違いを黙って通さない)。
 func (r *componentRegistry) override(name string, c component) error {
-	if _, ok := r.components[name]; !ok {
-		return fmt.Errorf("cannot override unknown component %q (known: %v)", name, r.names())
+	if _, ok := r.vocab.decl(name); !ok {
+		return fmt.Errorf("cannot override unknown component %q (known: %v)", name, r.vocab.names())
+	}
+	if !r.vocab.isStandard(name) {
+		return fmt.Errorf("%q is not a standard type (use register to add its component)", name)
 	}
 	r.components[name] = c
 	return nil
 }
 
-// decl は部品が名乗るものを返す(無ければ ok=false)。
-func (r *componentRegistry) decl(name string) (componentDecl, bool) {
-	d, ok := r.decls[name]
-	return d, ok
+// has はこの表が型の組み方を持つか(持たなければ代わりの組み方で組む)。
+func (r *componentRegistry) has(name string) bool {
+	_, ok := r.components[name]
+	return ok
 }
 
-// build は IR のブロックを、その type の部品で組む。
+// build は IR のブロックを、その type の組み方で組む。組み方が無く、語彙が
+// 代わりの組み方を持てば、標準の型に書き換えて組み、component-fallback を警告する。
 func (r *componentRegistry) build(ctx componentContext, b *IRBlock) (*Spec, error) {
-	c, ok := r.components[b.Type]
+	if c, ok := r.components[b.Type]; ok {
+		return c.build(ctx, b)
+	}
+	d, ok := r.vocab.decl(b.Type)
 	if !ok {
 		return nil, fmt.Errorf("unknown block type %q", b.Type)
 	}
-	return c.build(ctx, b)
+	if d.Fallback == nil {
+		return nil, fmt.Errorf("template has no component for block type %q", b.Type)
+	}
+	alts, err := d.Fallback(b)
+	if err != nil {
+		return nil, fmt.Errorf("%s: fallback: %w", b.Type, err)
+	}
+	if len(alts) == 0 {
+		return nil, fmt.Errorf("%s: fallback returned no blocks", b.Type)
+	}
+	var kids []*Spec
+	var names []string
+	for i, a := range alts {
+		if !r.vocab.isStandard(a.Type) {
+			return nil, fmt.Errorf("%s: fallback[%d]: %q is not a standard type", b.Type, i, a.Type)
+		}
+		s, err := ctx.t.buildBlockIn(ctx, a)
+		if err != nil {
+			return nil, fmt.Errorf("%s: fallback[%d]: %w", b.Type, i, err)
+		}
+		kids = append(kids, s)
+		names = append(names, a.Type)
+	}
+	ctx.warnf("[COMPONENT-FALLBACK WARNING] template %q has no component for block type %q; built as %s (the type's fallback)",
+		ctx.t.Name, b.Type, strings.Join(names, ", "))
+	if len(kids) == 1 {
+		return kids[0], nil
+	}
+	return Col(kids, WithGap(ctx.t.Values.BlockGap)), nil
 }
 
-// clone はテンプレートごとに表を分けるために写しを作る。
+// clone はテンプレートごとに表を分けるために写しを作る(語彙は共有)。
 func (r *componentRegistry) clone() *componentRegistry {
-	c := newComponentRegistry()
+	c := newComponentRegistry(r.vocab)
 	for k, v := range r.components {
 		c.components[k] = v
-	}
-	for k, d := range r.decls {
-		c.decls[k] = d
 	}
 	return c
 }
@@ -112,68 +162,56 @@ func (r *componentRegistry) names() []string {
 	return ns
 }
 
-// defaultComponents は標準の部品の表(docs/layers.md の5章:どのテンプレートも
+// defaultComponents は標準の型の組み方の表(docs/layers.md の5章:どのテンプレートも
 // 必ず組める一式)。組み方は template.go・blocks.go のもの。
 func defaultComponents() *componentRegistry {
-	r := newComponentRegistry()
-	fences := map[string]BlockDecl{}
-	for _, d := range defaultBlocks() {
-		fences[d.Name] = d
-	}
-	markdown := func(names ...string) []BlockDecl {
-		var out []BlockDecl
-		for _, n := range names {
-			d, ok := fences[n]
-			if !ok {
-				panic(fmt.Sprintf("defaultComponents: no fence %q", n))
-			}
-			out = append(out, d)
+	r := newComponentRegistry(blockTypes)
+	reg := func(name string, f componentFunc) {
+		if !blockTypes.isStandard(name) {
+			panic(fmt.Sprintf("defaultComponents: %q is not a standard type", name))
 		}
-		return out
+		r.components[name] = f
 	}
-	reg := func(name string, fences []BlockDecl, f componentFunc) {
-		must(r.register(name, componentDecl{Markdown: fences}, f))
-	}
-	reg("paragraph", nil, func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("paragraph", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		t := ctx.t
 		return t.text(b.Content, t.Values.Body, t.Theme.c("text_primary"), false), nil
 	})
-	reg("note", markdown("note"), func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("note", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		t := ctx.t
 		return t.text(b.Content, t.Values.Small, t.Theme.c("text_muted"), false), nil
 	})
-	reg("points", nil, func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("points", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		return ctx.t.points(b.Items, 0), nil
 	})
-	reg("compare", markdown("compare", "option", "pros", "cons"), func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("compare", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		return ctx.t.compare(b.Options), nil
 	})
-	reg("stat", markdown("stat", "value"), func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("stat", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		return ctx.t.stat(b.Stats), nil
 	})
-	reg("takeaway", markdown("takeaway"), func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("takeaway", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		return ctx.t.takeaway(b.Content), nil
 	})
-	reg("quote", markdown("quote"), func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("quote", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		return ctx.t.quote(b.Content, b.Source), nil
 	})
-	reg("columns", markdown("columns", "column"), func(ctx componentContext, b *IRBlock) (*Spec, error) {
-		return ctx.t.columns(b)
+	reg("columns", func(ctx componentContext, b *IRBlock) (*Spec, error) {
+		return ctx.t.columns(ctx, b)
 	})
-	reg("table", nil, func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("table", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		return ctx.t.table(b), nil
 	})
-	reg("image", nil, func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("image", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		leaf, err := ctx.t.imageLeaf(b.Src, b.Alt, b.Caption)
 		if err != nil {
 			return nil, fmt.Errorf("src: %w", err)
 		}
 		return SubsystemNode(leaf, WithGrow(1)), nil
 	})
-	reg("gallery", nil, func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("gallery", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		return ctx.t.gallery(b)
 	})
-	reg("subsystem", nil, func(ctx componentContext, b *IRBlock) (*Spec, error) {
+	reg("subsystem", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		t := ctx.t
 		sub, err := t.Subsystems.Build(b.Subsystem, b.Data)
 		if err != nil {

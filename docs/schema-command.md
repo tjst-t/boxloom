@@ -55,6 +55,12 @@ go run ./cmd/boxloom schema -template ./my.json  # 外の値の表(docs/template
          "schemaId": "https://boxloom.invalid/schema/ir/0.1/subsystems/gantt.schema.json"},
         {"name": "shapes", "fence": "```shapes", …},  // 生の図形への逃げ道(最後の手段)
         {"name": "process", "fence": "```process", …}  // ほかに orgchart・matrix・funnel(docs/subsystem.md の11節)
+      ],
+      "types": [                    // 型の語彙の全部(IR の type。テンプレートで隠さない)
+        {"name": "columns", "build": "template", "standard": true},
+        …,
+        {"name": "pairs", "build": "fallback", "standard": false,   // 標準でない型の例
+         "schema": "/irSchema/$defs/type:pairs"}
       ]
     }
   ],
@@ -83,6 +89,18 @@ go run ./cmd/boxloom schema -template ./my.json  # 外の値の表(docs/template
 | `body` | `#` の行の後ろに書けるもの(`notes` は `:::notes`、`source` は `:::source`) |
 | `meaning` / `ir` | 意味と、できる IR の形 |
 
+### `types` の欄(`templates[].types`)
+
+IR のブロックの `type` は型の語彙(プロセスに1つ。`docs/layers.md` の8.2)が決め、
+テンプレートでは変わらない。どのテンプレートでも全部の型を並べ、組み方の違いだけを添える。
+
+| 欄 | 意味 |
+|---|---|
+| `name` | IR の `type` |
+| `build` | `template`(このテンプレートが組み方を持つ)か `fallback`(組み方を持たず、型の代わりの組み方で標準の型に書き換えて組む。`check` は `component-fallback` を警告する) |
+| `standard` | 標準の型(どのテンプレートも組める一式)か。標準の型はいつも `template` |
+| `schema` | 標準でない型の Schema の場所(下の `irSchema` の中の JSON Pointer)。標準の型はコアが持つので無い |
+
 ### `irSchema`
 
 JSON Schema 2020-12 の**複合文書**。外を参照しない1つの文書で、そのまま検査器に
@@ -93,6 +111,10 @@ JSON Schema 2020-12 の**複合文書**。外を参照しない1つの文書で�
   - サブシステムの名前(`gantt` など):各サブシステムが名乗る Schema(`$id` はそのまま)
   - `subsystem`:差し込み口(`$dynamicAnchor: subsystem`)。**そのテンプレートが
     名乗るサブシステムだけ**を `enum` と `allOf` で受け付ける。
+  - `type:<名前>`:標準でない型の Schema(`schema/types/<名前>.schema.json`。`$id` は
+    そのまま)。同梱したコアの `$defs.block` の `enum` と `allOf` にその型が無ければ足す
+    (型の語彙はテンプレートに依らないので、どのテンプレートの出力にも入る)。標準で
+    ない型が無いときは、コアをそのまま同梱する。
 - 中の相対の `$ref` は書き換えない(同梱した文書の `$id` から解決される)。
 - 根の `$id` は `https://boxloom.invalid/schema/ir/0.1/bundle/<テンプレート名|all>.schema.json`。
 - `schema/boxloom-ir.schema.json`(入口)と同じ働き。違いは、受け付けるサブシステムが
@@ -113,7 +135,8 @@ JSON Schema 2020-12 の**複合文書**。外を参照しない1つの文書で�
 | `templates[].variants` | `Template.Variants` |
 | `templates[].slides` | `Template.Slides`。いまは dark・light とも `defaultSlides()`。パーサーの `type` の検査も同じ表から引く |
 | `templates[].subsystems` | テンプレートの `SubsystemRegistry` の種類と、`Declare` で付けた `SubsystemDecl`(Schema と Markdown の約束事) |
-| `irSchema` | 埋め込んだ `boxloom/schemas/`(リポジトリ直下 `schema/` の写し) |
+| `templates[].types` | 型の語彙(`boxloom/typevocab.go` の `blockTypes`)の名前と、テンプレートの部品の登録簿(`component.go`)が組み方を持つか |
+| `irSchema` | 埋め込んだ `boxloom/schemas/`(リポジトリ直下 `schema/` の写し)。標準でない型の Schema は `schema/types/<名前>.schema.json` |
 
 - `go:embed` は上の階層を読めないので、`schema/` を `boxloom/schemas/` に写して
   埋め込む。`schema/` を直したら `go generate` で写し直す。写しがずれると

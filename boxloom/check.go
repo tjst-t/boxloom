@@ -205,8 +205,15 @@ func checkIRCapacity(file string, b []byte, templateOverride string, values *Tem
 		c.add(locationToPointer(berr.Error()), berr.Error(), "build")
 		return c.errs, nil, nil
 	}
+	// テンプレートを指さなければ(-template も値の表も IR の template も無い)、型の語彙
+	// だけで検査する:組み方の無い型を代わりで組んだこと(component-fallback)は言わない。
+	designated := values != nil || templateOverride != "" || getPath(doc, "template") != nil
 	for _, w := range warnings {
-		warns = append(warns, warningIssue(file, w))
+		is := warningIssue(file, w)
+		if is.Code == "component-fallback" && !designated {
+			continue
+		}
+		warns = append(warns, is)
 	}
 	addLayoutHints(warns, caps)
 	for i := range caps {
