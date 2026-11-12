@@ -7,6 +7,7 @@
 //	boxloom parse [-format text|json] deck.bx.md|deck.yaml
 //	boxloom schema [-template NAME]
 //	boxloom layout [-template dark|light|./my.json] deck.json|deck.bx.md|deck.yaml   # 配置の段の木(JSON)
+//	boxloom layout-build [-o out.pptx] [-deck deck] [-template …] tree.json  # 開発者・試験用:木を読み直して組む
 //	boxloom mcp                  # stdio の MCP サーバ(道具 schema・check・build。docs/mcp.md)
 //	boxloom fonts [-template 名前] [-against "欧文/和文;…"] [-v] deck… | -list
 //	boxloom                      # 従来の Go で組んだデモ(out/boxloom_dark.pptx・out/boxloom_light.pptx)
@@ -48,6 +49,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return runParse(args[1:], stdout, stderr)
 		case "layout":
 			return runLayout(args[1:], stdout, stderr)
+		case "layout-build":
+			return runLayoutBuild(args[1:], stdout, stderr)
 		case "mcp":
 			return runMCP(args[1:], os.Stdin, stdout, stderr)
 		}
@@ -329,6 +332,66 @@ func runLayout(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "error:", err)
 		return 1
 	}
+	return 0
+}
+
+// runLayoutBuild は「boxloom layout-build」:layout が出した木を読み直して PPTX に
+// 組む(開発者・試験用。作者の入口ではないので schema・mcp には出さない)。
+// -deck を渡すとサブシステムの中身・ノート・題をその deck から取る。
+func runLayoutBuild(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("layout-build", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	out := fs.String("o", "", "書き出す pptx(省くと out/<木の名前>.pptx)")
+	deckPath := fs.String("deck", "", "サブシステムの中身・ノート・題を取る deck(省くとサブシステムは何も描かない)")
+	tmpl := fs.String("template", "", "テンプレートの名前か値の表のファイル(省くと木の template)")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 1 {
+		fmt.Fprintln(stderr, "usage: boxloom layout-build [-o out.pptx] [-deck deck.bx.md] [-template dark|light|./my.json] tree.json")
+		return 2
+	}
+	in := fs.Arg(0)
+	tname, tvalues, tissue := templateFlag(*tmpl)
+	if tissue != nil {
+		fmt.Fprintln(stderr, "error:", tissue.String())
+		return 1
+	}
+	src, err := os.ReadFile(in)
+	if err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		return 1
+	}
+	opt := boxloom.LayoutReadOptions{Template: tname, Values: tvalues}
+	if *deckPath != "" {
+		deck, err := readDeck(*deckPath)
+		if err != nil {
+			fmt.Fprintln(stderr, "error:", err)
+			return 1
+		}
+		opt.Deck, opt.Assets = deck, deckAssets(*deckPath)
+	}
+	var buf bytes.Buffer
+	res, err := boxloom.BuildLayout(&buf, in, src, opt)
+	if err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		return 1
+	}
+	if *out == "" {
+		*out = filepath.Join("out", deckBaseName(in)+".pptx")
+	}
+	if err := os.MkdirAll(filepath.Dir(*out), 0o755); err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		return 1
+	}
+	if err := os.WriteFile(*out, buf.Bytes(), 0o644); err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		return 1
+	}
+	for _, w := range res.Warnings {
+		fmt.Fprintln(stdout, w)
+	}
+	fmt.Fprintf(stdout, "saved: %s (%d slides, template %s)\n", *out, res.Slides, res.Template)
 	return 0
 }
 

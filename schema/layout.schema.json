@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://boxloom.invalid/schema/layout/0.1/layout.schema.json",
   "title": "Boxloom layout dump (0.1)",
-  "description": "`boxloom layout` の出力:配置の段の木(部品が組んだ箱・計測の印・値の表から引いた数と色)と、エンジンが決めた座標(pt)。人と AI が読むための出力で、入力としては読まない(IR ではない)。docs/build.md の「配置の段の木を見る」。",
+  "description": "`boxloom layout` の出力:配置の段の木(部品が組んだ箱・計測の印・値の表から引いた数と色)と、エンジンが決めた座標(pt)。人と AI が読むための出力(IR ではない)。開発者・試験用に限り、同じ形を `boxloom layout-build` で読み直せる(box と subsystem の申告は読まない。作者の入口ではない)。docs/build.md の「配置の段の木を見る」。",
   "type": "object",
   "required": ["format", "template", "page", "slides"],
   "additionalProperties": false,
@@ -59,6 +59,7 @@
         "size": {"description": "塊だけの字の大きさ(無ければ葉の fontSize)。", "$ref": "#/$defs/pt"},
         "mark": {"description": "頭の印(PPTX では段落の箇条の印)。", "type": "boolean"},
         "keep": {"description": "塊の中で折り返さない。", "type": "boolean"},
+        "phrase": {"description": "折るところを文の切れ目・読点に寄せる。", "type": "boolean"},
         "field": {"description": "アプリが値を入れる欄(slidenum)。", "type": "string"},
         "role": {"description": "色の役割名(部品が書いたもの)。", "type": "string"},
         "sizeToken": {"description": "塊だけの字の大きさのトークン(値の表の名前か type(n))。", "type": "string"}

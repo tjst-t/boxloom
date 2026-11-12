@@ -1,13 +1,14 @@
 // 配置の段の木を外に出す(`boxloom layout`。docs/layers.md の4章・docs/build.md)。
 //
 // 部品が組んだ箱の木(Spec)を、エンジンが決めた座標(box)と一緒に JSON にする。
-// なぜその大きさ・はみ出しになったかを人と AI が読むためのもので、出すだけ
-// (この形を入力として読む口は無い)。形は schema/layout.schema.json。
+// なぜその大きさ・はみ出しになったかを人と AI が読むためのもの。形は
+// schema/layout.schema.json。
 //
 // 座標は build と同じ配置(computeLayout の直後。PPTX はこの box をそのまま
 // a:off / a:ext に書く)。サブシステムは名前と申告した大きさだけで、中身は出さない。
 // 間隔・余白・幅・高さ・角・字の大きさ・色は、解決した数と色に加えて、部品が
 // 書いたトークン(値の表の名前・段の刻み・役割名。token.go)を tokens に出す。
+// この形を開発者・試験用に読み直す口は layoutread.go(作者の入口ではない)。
 
 package boxloom
 
@@ -62,10 +63,12 @@ type LayoutRun struct {
 	Text  string  `json:"text"`
 	Color string  `json:"color,omitempty"`
 	Bold  bool    `json:"bold,omitempty"`
-	Size  float64 `json:"size,omitempty"`  // 0 なら葉の fontSize
-	Mark  bool    `json:"mark,omitempty"`  // 箇条などの頭の印
-	Keep  bool    `json:"keep,omitempty"`  // 塊の中で折り返さない
-	Field string  `json:"field,omitempty"` // アプリが値を入れる欄(slidenum)
+	Size  float64 `json:"size,omitempty"` // 0 なら葉の fontSize
+	Mark  bool    `json:"mark,omitempty"` // 箇条などの頭の印
+	Keep  bool    `json:"keep,omitempty"` // 塊の中で折り返さない
+	// Phrase は折るところを文の切れ目・読点に寄せる(リード文など)。
+	Phrase bool   `json:"phrase,omitempty"`
+	Field  string `json:"field,omitempty"` // アプリが値を入れる欄(slidenum)
 	// Role は色の役割名、SizeToken は字の大きさのトークン(部品が書いたもの)。
 	Role      string `json:"role,omitempty"`
 	SizeToken string `json:"sizeToken,omitempty"`
@@ -277,12 +280,12 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 		n.FontSize = s.FontSize
 		if len(s.Runs) > 0 {
 			for _, r := range s.Runs {
-				n.Runs = append(n.Runs, LayoutRun{Text: r.Text, Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep, Field: r.Field, Role: r.role, SizeToken: r.sizeTok})
+				n.Runs = append(n.Runs, LayoutRun{Text: r.Text, Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep, Phrase: r.Phrase, Field: r.Field, Role: r.role, SizeToken: r.sizeTok})
 			}
 		} else {
 			n.Color, n.Bold = s.Color, s.Bold
-			addTok("color", k.color)
 		}
+		addTok("color", k.color)
 		if s.Align != "" && s.Align != "left" {
 			n.TextAlign = s.Align
 		}

@@ -165,8 +165,9 @@ python3 tools/validate_pptx.py --self-test    # examples を dark/light で作�
 ## 配置の段の木を見る(boxloom layout)
 
 部品が組んだ箱の木(配置の段。`docs/layers.md`)と、エンジンが決めた座標を JSON で出す。
-なぜその大きさ・はみ出しになったかを人と AI が読むためのもので、**出すだけ**
-(この形を入力として読む口は無い。`docs/layers.md` の4章)。
+なぜその大きさ・はみ出しになったかを人と AI が読むためのもの。同じ形を読み直す口
+(`boxloom layout-build`)は開発者・試験用に限る(後述の「配置の段の木を読み直す」。
+`docs/layers.md` の4章)。
 
 ```sh
 cd boxloom
@@ -186,7 +187,7 @@ go run ./cmd/boxloom layout -template dark ../examples/ir/demo-deck.json
 - 箱の属性は値のあるものだけ:`gap`・`padding{x,y}`・`grow`・`basis`・`width`・`height`・
   `alignItems`(center のとき)・`justifyContent`(spaceBetween のとき)・`background`・`radius`。
 - 文字の葉は `text`・`fontSize`、装飾つきなら `runs`(塊ごとの文字・色・太字・大きさ・
-  印・折らない・欄)、装飾なしなら `color`・`bold`。`textAlign`・`anchor`・`placeholder`。
+  印・折らない・文の切れ目で折る `phrase`・欄)、装飾なしなら `color`・`bold`。`textAlign`・`anchor`・`placeholder`。
 - 計測の印は `marks`:`irType`・`cardRow`・`columnGroups`(まとまりの数)・`keepLine`・
   `nestedSlack`・`list`・`card`。
 - サブシステム(表・画像・図・グラフ・Gantt)は `subsystem` に名前と、割り当てられた幅で
@@ -204,6 +205,43 @@ go run ./cmd/boxloom layout -template dark ../examples/ir/demo-deck.json
   文字の葉は PPTX では図形でなく段落なので、その box は段落の位置(字下げ・段落の前の間)の元になる。
 - 出力が Schema に通ることは `python3 tools/validate_layout.py --self-test`(examples の
   全 deck × 同梱のテンプレートと `examples/templates/forest.json`。CI の `python` の手順)。
+
+## 配置の段の木を読み直す(boxloom layout-build。開発者・試験用)
+
+`boxloom layout` が出した木を読み、エンジンで配置して PPTX に書く。エンジンだけを試す、
+崩れた例を木のまま再現する、のための口で、**作者(AI)の入口ではない**(`boxloom schema`・
+MCP の道具・SKILL.md には出さない。作者は意味(IR)だけを書く)。ライブラリでは
+`BuildLayout`(`boxloom/layoutread.go`)。
+
+```sh
+cd boxloom
+go run ./cmd/boxloom layout ../examples/md/figures.bx.md > /tmp/tree.json
+go run ./cmd/boxloom layout-build -deck ../examples/md/figures.bx.md -o /tmp/tree.pptx /tmp/tree.json
+```
+
+- 読むのは**トークン**(`tokens`・`runs[].role`・`runs[].sizeToken`)。読むときに値の表で
+  引き、間隔・余白は `scale:"space"` の名前か `space(n)`、幅・高さ・角は値の表の長さの名前か
+  `space(n)`、字の大きさは `scale:"type"` の名前か `type(n)`(段 `typeSizes` の値)、色は
+  テーマの役割名かを確かめる。外れたら誤り `layout-token`(16進の色も誤り)。数と色に直すのは
+  組み立てと同じ `resolveSpec` の1か所。
+- 解決した値(`gap`・`padding`・`fontSize`・`color`・`background`・`radius`・`width`・
+  `height`・塊の `color`・`size`)は出力の控え。省いてよいが、書くならトークンが要り
+  (無ければ `layout-raw`)、トークンから引いた値と同じでなければならない
+  (`layout-mismatch`)。`grow`・`basis` は比なのでただの数。
+- 座標 `box` とサブシステムの `width`・`draw` は**読まない**(エンジンの出力なので、
+  あっても誤りにせず無視する。出した木をそのまま読み直せるように)。
+- サブシステムの中身は木に無い。`-deck`(ライブラリでは `LayoutReadOptions.Deck`)を渡すと、
+  その deck を同じテンプレートで組んだ木のサブシステムを、スライドごとに出てきた順に当てる
+  (名前・数が違えば `layout-deck`)。発表者ノートと文書の題も deck から取る。渡さなければ
+  サブシステムは木の申告(`natural`・`min`・`max`・`fixedAspect`)を返して何も描かない葉。
+- 並列のまとまり・対の並びの、まとまりごと・対ごとのはみ出しの測り(`columnGroups`・
+  `pairRows` の中身)は木から作り直さない。警告は出さず、PPTX を書くだけ。
+- 誤りは `Issue` の形で、`path` は読んだ JSON の中の場所(例
+  `/slides/1/root/children/1/tokens/gap`)。
+- examples の全 deck(テンプレートの既定・dark・light)で、出した木を `-deck` つきで読み直すと
+  build と同じ PPTX(zip の中身がすべて同じ)になることを `TestLayoutRoundTrip`
+  (`boxloom/layoutread_test.go`)が確かめる。段から外れた値・知らない名前・役割名の誤りは
+  `TestLayoutReadChecksTokens`。
 
 ## CI と検査の道具
 
