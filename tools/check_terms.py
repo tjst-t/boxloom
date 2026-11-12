@@ -12,8 +12,9 @@
     --history を付けると、全部のコミットの文と文字のファイルの差分(git log -p --all)、
       履歴にある全部の版の PPTX などの中の文字も見る
 
-照らし方:大文字と小文字を区別しない。英数字だけの語は、前後が英数字でないときだけ
-当たる(短い略語が別の語の一部に当たらないように)。それ以外の語は部分一致。
+照らし方:大文字と小文字を区別しない。語の端が英数字なら、その端の外が英数字でない
+ときだけ当たる(短い略語や記号を含む語が別の語の一部に当たらないように)。端が英数字で
+ない語(和文など)は部分一致。
 
 画像(PNG など)に描かれた文字は見ない。
 
@@ -36,10 +37,11 @@ def load_terms():
     terms = [t.strip() for t in raw.splitlines() if t.strip() and not t.strip().startswith("#")]
     pats = []
     for t in terms:
-        if re.fullmatch(r"[A-Za-z0-9]+", t):
-            pats.append(re.compile(r"(?<![A-Za-z0-9])" + re.escape(t) + r"(?![A-Za-z0-9])", re.I))
-        else:
-            pats.append(re.compile(re.escape(t), re.I))
+        # 英数字で始まる・終わる語は、その端の外が英数字でないときだけ当てる
+        # (短い略語や記号を含む語が別の語の一部に当たらないように)。
+        pre = r"(?<![A-Za-z0-9])" if re.match(r"[A-Za-z0-9]", t) else ""
+        post = r"(?![A-Za-z0-9])" if re.search(r"[A-Za-z0-9]$", t) else ""
+        pats.append(re.compile(pre + re.escape(t) + post, re.I))
     return pats
 
 
