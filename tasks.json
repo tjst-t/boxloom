@@ -1669,6 +1669,27 @@
       "updatedAt": "2026-11-11T07:16:38.701Z",
       "closedAt": "2026-11-11T07:16:38.701Z",
       "extra": {}
+    },
+    {
+      "id": "pairs-check",
+      "number": 71,
+      "kind": "bug",
+      "title": "pairs の中のブロックが意味の検査(empty-text・variant-exists など)を通らない",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "fable のレビュー(未 push の17コミット)の中1。\n\n## 何が起きるか\ncheck.go の walkDoc(279-312 行あたり)と checkBlock(341-407 行あたり)が、pairs の中に入らない。\n- pairs の側にある quote の `content: \" \"`・`source: \"\"` や、空白だけの見出しが empty-text にならず、check が ok を返す。レビューで実行して確かめた。\n- 側の variant の誤りが variant-exists ではなく code build で出る。場所も light では /pairs/1、代わりの組み方(columns)では /body/0 と変わる。\n\n## なぜ困るか\n標準でない型を足すたびに、意味の検査が黙って抜ける。\n\n## 直し方\ntypeDecl(型の語彙)に「中のブロックを IR の場所つきで返す口」を足し、walkDoc がそれを標準のブロックと同じ検査に通す。pairs はこの口で、各対の subject・response と見出しを返す。",
+      "doneWhen": "pairs の中の空の段落・引用・空白だけの見出しが empty-text になり、側の知らない variant が variant-exists になる。場所はどちらも IR の場所(/slides/S/body/N/pairs/K/subject など)で、テンプレート(light・代わりの組み方)に依らず同じ。試験がある。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-12T13:22:50.220Z",
+      "updatedAt": "2026-11-12T13:22:50.220Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
