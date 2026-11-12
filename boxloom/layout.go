@@ -199,21 +199,21 @@ func apply(s *Spec, opts []SpecOpt) *Spec {
 }
 
 func Row(children []*Spec, opts ...SpecOpt) *Spec {
-	return apply(&Spec{Kind: KindRow, Children: children, Color: defaultTextColor}, opts)
+	return apply(&Spec{Kind: KindRow, Children: children}, opts)
 }
 
 func Col(children []*Spec, opts ...SpecOpt) *Spec {
-	return apply(&Spec{Kind: KindCol, Children: children, Color: defaultTextColor}, opts)
+	return apply(&Spec{Kind: KindCol, Children: children}, opts)
 }
 
 func TextNode(content string, opts ...SpecOpt) *Spec {
-	s := &Spec{Kind: KindText, Text: content, FontSize: 12.5, Color: defaultTextColor, Align: "left", Anchor: "top"}
+	s := &Spec{Kind: KindText, Text: content, FontSize: 12.5, Align: "left", Anchor: "top"}
 	return apply(s, opts)
 }
 
 // RichTextNode は装飾つきの文字の葉。
 func RichTextNode(runs []TextRun, opts ...SpecOpt) *Spec {
-	s := &Spec{Kind: KindText, Runs: runs, Text: runsText(runs), FontSize: 12.5, Color: defaultTextColor, Align: "left", Anchor: "top"}
+	s := &Spec{Kind: KindText, Runs: runs, Text: runsText(runs), FontSize: 12.5, Align: "left", Anchor: "top"}
 	return apply(s, opts)
 }
 
@@ -281,7 +281,7 @@ func heightForWidth(s *Spec, width float64) float64 {
 // SubsystemNode はサブシステムを葉として置く。大きさは Measure の自己申告で
 // 決まる(明示の Width/Height/Basis があればそちらが勝つ)。
 func SubsystemNode(sub Subsystem, opts ...SpecOpt) *Spec {
-	s := &Spec{Kind: KindSubsystem, Subsystem: sub, Color: defaultTextColor}
+	s := &Spec{Kind: KindSubsystem, Subsystem: sub}
 	return apply(s, opts)
 }
 
@@ -319,8 +319,6 @@ func subsystemMaxMain(c *Spec, isRow bool, cross float64) float64 {
 	}
 	return c.Subsystem.Measure(Constraint{Width: cross}).Max.Height
 }
-
-const defaultTextColor = "F5F7FA"
 
 // naturalSize は親からの確定サイズを一切前提にしない、コンテンツだけから決まる
 // 自然サイズ。axis: 'w' または 'h'。box_engine.pyのnatural_size()と同一ロジック。

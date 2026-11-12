@@ -178,6 +178,16 @@ func (tt *tokenTable) color(tok string) (string, error) {
 	return "", fmt.Errorf("%q is not a color role of the theme", tok)
 }
 
+// allRunsHaveRole は、塊があり、すべての塊が色の役割名を持つか。
+func allRunsHaveRole(runs []TextRun) bool {
+	for _, r := range runs {
+		if r.role == "" {
+			return false
+		}
+	}
+	return len(runs) > 0
+}
+
 // resolveSpec は組み立てた木のトークンを値の表で数と色に直す(組み立ての直後・
 // 計測の前の1か所)。トークンの無い数・色、段に無い刻み、知らない名前・役割名は誤り。
 func resolveSpec(t *Template, root *Spec) error {
@@ -206,10 +216,13 @@ func (tt *tokenTable) resolve(s *Spec, at string) error {
 		return raw("height", *s.Height)
 	case k.background == "" && s.Background != "":
 		return raw("background", s.Background)
-	case k.color == "" && s.Color != "" && s.Color != defaultTextColor:
+	case k.color == "" && s.Color != "":
 		return raw("color", s.Color)
 	case k.fontSize == "" && s.Kind == KindText:
 		return fmt.Errorf("layout token at %s: fontSize: a text leaf needs a type size token", at)
+	case k.color == "" && s.Kind == KindText && !allRunsHaveRole(s.Runs):
+		// コアは文字の既定の色を持たない(色は役割名だけ)。
+		return fmt.Errorf("layout token at %s: color: a text leaf needs a color role (a color token on the leaf, or a role on every run)", at)
 	}
 	var err error
 	if k.gap != "" {
@@ -278,6 +291,8 @@ func (tt *tokenTable) resolve(s *Spec, at string) error {
 			if r.Color, err = tt.color(r.role); err != nil {
 				return fail(field+".color", err)
 			}
+		} else {
+			r.Color = s.Color // 役割名の無い塊は葉の色(葉の color トークンは上で必須にした)
 		}
 		if r.sizeTok != "" {
 			if r.Size, err = tt.typeSize(r.sizeTok); err != nil {

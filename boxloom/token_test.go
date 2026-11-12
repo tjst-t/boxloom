@@ -78,8 +78,11 @@ func TestStandardComponentsWriteNamesOnly(t *testing.T) {
 					if s.Width != nil || s.Height != nil {
 						bad("width/height", [2]*float64{s.Width, s.Height})
 					}
-					if s.Background != "" || (s.Color != "" && s.Color != defaultTextColor) {
+					if s.Background != "" || s.Color != "" {
 						bad("color", s.Background+s.Color)
+					}
+					if s.Kind == KindText && s.tok.color == "" && !allRunsHaveRole(s.Runs) {
+						bad("text color", "no color token on the leaf and a run without a role") // コアに文字の既定の色は無い
 					}
 					if s.Kind == KindText && (s.FontSize != 12.5 || s.tok.fontSize == "") {
 						bad("fontSize", s.FontSize) // 12.5 は TextNode の既定(トークンで上書きされる)
@@ -130,7 +133,7 @@ func TestResolveSpec(t *testing.T) {
 
 	ok := Col([]*Spec{
 		text(tokColor("accent")),
-		TextNode("y", tokSize(typeStep(24))),
+		TextNode("y", tokSize(typeStep(24)), tokColor("text_primary")),
 		RichTextNode([]TextRun{{Text: "a", role: "text_muted", sizeTok: "statUnit"}}, tokSize("statValue")),
 		Col(nil, tokSize("subPoint"), tokWidth("pointIndentEm"), tokHeight(spaceStep(3))),
 	}, tokGap("blockGap"), tokPadXY(spaceStep(5), "cardPadding"), tokBackground("card"), tokRadius("cardRadius"))
@@ -149,6 +152,13 @@ func TestResolveSpec(t *testing.T) {
 	if r := ok.Children[2].Runs[0]; r.Color != tm.Theme["text_muted"] || r.Size != v.StatUnit {
 		t.Errorf("run: %q %v", r.Color, r.Size)
 	}
+	inherit := RichTextNode([]TextRun{{Text: "a"}, {Text: "b", role: "accent"}}, tokSize("body"), tokColor("text_muted"))
+	if err := resolveSpec(tm, inherit); err != nil {
+		t.Fatal(err)
+	}
+	if r := inherit.Runs; r[0].Color != tm.Theme["text_muted"] || r[1].Color != tm.Theme["accent"] {
+		t.Errorf("run without a role takes the leaf color: %q %q", r[0].Color, r[1].Color)
+	}
 	if c := ok.Children[3]; *c.Width != v.SubPoint*v.PointIndentEm || *c.Height != 12 {
 		t.Errorf("em width %v height %v", *c.Width, *c.Height)
 	}
@@ -162,20 +172,23 @@ func TestResolveSpec(t *testing.T) {
 		{"type name as gap", Col(nil, tokGap("body")), `"body" is neither a spacing name`},
 		{"space step 0", Col(nil, tokGap("space(0)")), "whole number of at least 1"},
 		{"space step fraction", Col(nil, tokPad("space(1.5)")), `"space(1.5)" is neither a spacing name`},
-		{"type step off the scale", TextNode("x", tokSize("type(13)")), "not on the type scale"},
-		{"unknown type name", TextNode("x", tokSize("huge")), `"huge" is neither a type size name`},
+		{"type step off the scale", TextNode("x", tokSize("type(13)"), tokColor("accent")), "not on the type scale"},
+		{"unknown type name", TextNode("x", tokSize("huge"), tokColor("accent")), `"huge" is neither a type size name`},
 		{"unknown role", Col(nil, tokBackground("brand")), `"brand" is not a color role`},
 		{"hex color", Col(nil, tokBackground("FF0000")), "hex colors cannot be written"},
 		{"run hex", RichTextNode([]TextRun{{Text: "a", role: "#00ff00"}}, tokSize("body")), "hex colors cannot be written"},
-		{"run size off the scale", RichTextNode([]TextRun{{Text: "a", sizeTok: "type(9)"}}, tokSize("body")), "not on the type scale"},
+		{"run size off the scale", RichTextNode([]TextRun{{Text: "a", role: "accent", sizeTok: "type(9)"}}, tokSize("body")), "not on the type scale"},
 		{"em without font", Col(nil, tokWidth("pointIndentEm")), "has no fontSize token"},
 		{"ratio is no length", Col(nil, tokWidth("fillRatioMin")), `"fillRatioMin" is neither a length name`},
 		{"raw gap", Col(nil, WithGap(8)), "gap: 8 is written without a token"},
 		{"raw width", Col(nil, WithWidth(3)), "width: 3 is written without a token"},
 		{"raw background", Col(nil, WithBackground("12203D")), "background: 12203D is written without a token"},
 		{"raw font size", TextNode("x", WithFontSize(14)), "a text leaf needs a type size token"},
-		{"raw run color", RichTextNode([]TextRun{{Text: "a", Color: "FFFFFF"}}, tokSize("body")), "runs[0].color: FFFFFF is written without a token"},
-		{"raw run size", RichTextNode([]TextRun{{Text: "a", Size: 9}}, tokSize("body")), "runs[0].size: 9 is written without a token"},
+		{"raw run color", RichTextNode([]TextRun{{Text: "a", Color: "FFFFFF"}}, tokSize("body"), tokColor("accent")), "runs[0].color: FFFFFF is written without a token"},
+		{"raw run size", RichTextNode([]TextRun{{Text: "a", role: "accent", Size: 9}}, tokSize("body")), "runs[0].size: 9 is written without a token"},
+		{"text without color", TextNode("x", tokSize("body")), "a text leaf needs a color role"},
+		{"run without role", RichTextNode([]TextRun{{Text: "a", role: "accent"}, {Text: "b"}}, tokSize("body")), "a text leaf needs a color role"},
+		{"text with only a raw color", TextNode("x", tokSize("body"), WithColor("FFFFFF")), "color: FFFFFF is written without a token"},
 		{"nested", Col([]*Spec{Col(nil), Col(nil, tokGap("nope"))}), "at root/children/1: gap"},
 	} {
 		err := resolveSpec(tm, c.spec)

@@ -214,7 +214,7 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 		r.add(at+"/kind", "layout-node", fmt.Sprintf("unknown kind %q", n.Kind), "row", "col", "text", "subsystem")
 		return &Spec{Kind: KindCol}
 	}
-	s := &Spec{Kind: kind, Color: defaultTextColor}
+	s := &Spec{Kind: kind}
 	if kind == KindText {
 		s.Align, s.Anchor = "left", "top"
 	}
@@ -247,7 +247,7 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 	checkColor := func(field, key, got string) string {
 		name := tok[key]
 		if name == "" {
-			if got != "" && !(key == "color" && got == defaultTextColor) {
+			if got != "" {
 				r.add(at+"/"+field, "layout-raw", fmt.Sprintf("%s %s is written without a role name in tokens.%s", field, got, key))
 			}
 			return ""
