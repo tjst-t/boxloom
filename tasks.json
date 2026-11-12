@@ -1350,7 +1350,7 @@
       "number": 78,
       "kind": "task",
       "title": "読む資料向けの密なテンプレート report を足す(字の段 10〜12pt 中心、pairs の組み方も持つ)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -1362,7 +1362,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T14:32:39.642Z",
-      "updatedAt": "2026-11-12T14:32:39.642Z",
+      "updatedAt": "2026-11-12T14:44:45.332Z",
       "closedAt": null,
       "extra": {}
     },
