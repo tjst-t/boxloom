@@ -650,7 +650,7 @@
       "number": 81,
       "kind": "task",
       "title": "長い表を次のスライドへ続ける(見出しの行を繰り返し、「続く 1/7」を出す)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "slide-patterns",
       "dependsOn": [
         "table-cell-points"
@@ -664,7 +664,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T14:32:55.564Z",
-      "updatedAt": "2026-11-12T14:38:36.879Z",
+      "updatedAt": "2026-11-12T15:06:01.047Z",
       "closedAt": null,
       "extra": {}
     },
