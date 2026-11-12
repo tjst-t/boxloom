@@ -1717,7 +1717,7 @@
       "number": 73,
       "kind": "bug",
       "title": "MCP サーバの道具の呼び出しに recover が無く、ライブラリの panic でサーバごと落ちる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -1729,7 +1729,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T13:23:01.956Z",
-      "updatedAt": "2026-11-12T13:23:01.956Z",
+      "updatedAt": "2026-11-12T13:23:41.628Z",
       "closedAt": null,
       "extra": {}
     },
