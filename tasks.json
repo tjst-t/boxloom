@@ -1279,6 +1279,27 @@
       "extra": {}
     },
     {
+      "id": "report-template",
+      "number": 78,
+      "kind": "task",
+      "title": "読む資料向けの密なテンプレート report を足す(字の段 10〜12pt 中心、pairs の組み方も持つ)",
+      "status": "ready",
+      "parent": "tokens-template",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "人が決めた方向:コアの字の大きさや仕組みは変えず、値の表だけで密度を上げた「読む資料」向けのテンプレートを足す。サンプル(読む報告書、本文は目測 8〜10pt)の量を1枚に入れるため。\n\n## 値の案(light を元に。色は light のまま)\n試しの値の表で、架空の対の1枚(左に2行ほどの「分かったこと」5つ、右にそれぞれ3項目の打ち手)を check した結果は次のとおり。\n- light:要る高さ 514pt に対し本文の領域 374pt で、はみ出した。\n- この案:要る高さ 351pt に対し本文の領域 418pt で、67pt 余った。\n- ただし、この試しは pairs の組み方が無いので columns で組んだもの。\n\n| 値 | light | report |\n|---|---|---|\n| pagePadding / pagePaddingY | 40 / 24 | 32 / 20 |\n| coverPadding | 64 | 48 |\n| sectionGap・blockGap | 20 | 12 |\n| itemGap・headerGap | 8 | 4 |\n| slideTitle | 24 | 18 |\n| leadText | 18 | 14 |\n| body・takeawayText・quoteText・optionLabel・columnTitle | 16 | 12 |\n| subPoint・tableText・optionItem・figureDetail・captionText・statLabel・quoteSource・sectionTrackerText | 12〜14 | 10 |\n| small | 10 | 8 |\n| coverTitle・sectionTitle・statementText・statValue・quoteMark | 36 | 24 |\n| coverSubtitle / coverAuthor / statUnit | 16 / 12 / 16 | 14 / 10 / 12 |\n| cardPadding | 20 | 12 |\n| cardRadius / subsystemRadius | 10 / 12 | 6 / 8 |\n| statementInset | 24 | 16 |\n| columnGap | 32 | 20 |\n| tableCellPaddingX / Y | 8 / 4 | 4 / 4 |\n| imageMinHeight | 96 | 64 |\n\nその他:\n- fillRatioMin 0.65・scale・fonts・marks・theme は light のまま。\n- Gantt などのサブシステムの寸法は、字の段に合わせて小さくする(subsystems.gantt)。値は実装で決め、docs に書く。\n\n## やること\n- boxloom/templates/report.json を足す。\n- pairs の組み方を dark・light と同じく持たせ、component-fallback が出ないようにする。\n- 箇条の字下げ・題の1行(title-wrap)など、字が小さくなって崩れるところが無いかを見る。\n- examples の代表の deck を report でも build し、PPTX の検査(tools/validate_pptx.py)を通す。\n- docs/template-values.md に report の立ち位置(発表でなく読む資料)と値を書く。SKILL.md に「読む資料なら report」を足す。\n\n## 字の大きさの下限\n本文 12pt・注 8pt を下限とする。8pt より小さい字の段は使わない。",
+      "doneWhen": "boxloom templates に report が出る。架空の対の1枚(対5つ・右3項目ずつ)が report で layout-overflow も component-fallback も出さない(試験)。examples の deck を report で build した PPTX が tools/validate_pptx.py を通る。dark・light の出力は変わらない(TestOutputsGolden)。docs/template-values.md と SKILL.md に report がある。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-12T14:32:39.642Z",
+      "updatedAt": "2026-11-12T14:32:39.642Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "oss-release-prep",
       "number": 6,
       "kind": "story",
