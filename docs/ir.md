@@ -347,7 +347,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `shape-bounds` | shapes の座標・大きさ・線の点が 0〜1 にあり、`x+w`・`y+h` が 1 以下(path は和が越えた `w`・`h`) |
 | `role-exists` | shapes の色(`fill`・`line`・`textColor`・`color`)の役割名が、そのテンプレートのテーマにある |
 | `connector-self` | shapes のコネクタの `from` と `to` が同じ図形 |
-| `empty-text` | 区切りの `title`・本文のスライドの `lead`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label`・スライドの `source`・`meta` の `confidential` と `disclaimer` に、見える文字がある(Schema は `""` や空白だけを通す) |
+| `empty-text` | 区切りの `title`・本文のスライドの `lead`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label`・スライドの `source`・`meta` の `confidential` と `disclaimer`・`pairs` の2つの見出し(`headings`)と段落の側の `content` に、見える文字がある(Schema は `""` や空白だけを通す)。`pairs` の側の引用・`variant` も本文のブロックと同じに見る(path は IR の場所 `…/pairs/K/subject/…`。テンプレートや代わりの組み方に依らない) |
 | `matrix-cells` | matrix の各行の `cells` の数が `columns` の数と同じ(path はその行の `cells`) |
 | `matrix-emphasis` | matrix の `emphasis`(推す列)が `columns` の見出しのどれか(文中の記法を除いた文字)と同じ(path は `…/data/emphasis`) |
 | `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`) |

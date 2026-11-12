@@ -261,7 +261,9 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
    (代わりの組み方は `columns`)、組み方は dark・light が持つ(8.1)。
    **`pairs` は済み(#65)。** `boxloom/pairs.go`:型の宣言(Schema は
    `schema/types/pairs.schema.json`。コアの `block` の振り分けもそこを指すので、
-   `tools/validate_ir.py` も読める)・IR の形の検査(`typeDecl.Validate`)・Markdown の読み方
+   `tools/validate_ir.py` も読める)・IR の形の検査(`typeDecl.Validate`)・意味の検査に渡す中身
+   (`typeDecl.Inner`:見出しと各対の側を IR の場所つきで返し、check が本文のブロックと同じ
+   empty-text・variant-exists などに通す。#71)・Markdown の読み方
    (`typeDecl.readMarkdown`。8.3)・代わりの組み方・組み方。組み方は同梱のテンプレート
    (`templates/*.json`。いまは dark・light)が読み込みのときに持ち(`registerBundledComponents`)、
    外の値の表だけのテンプレート(`ParseTemplate`、例 `examples/templates/forest.json`)は

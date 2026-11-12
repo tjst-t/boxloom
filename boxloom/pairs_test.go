@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -365,6 +366,39 @@ func TestPairsIRErrors(t *testing.T) {
 		res := Check("deck.json", pairDeck("", c.block), CheckOptions{})
 		if len(res.Errors) != 1 || res.Errors[0].Path != c.path {
 			t.Errorf("%s: errors %+v (want one at %s)", c.name, res.Errors, c.path)
+		}
+	}
+}
+
+// pairs の中のブロックと見出しも、本文のブロックと同じ意味の検査(empty-text・
+// variant-exists)を通る。場所は IR の場所で、組み方を持つテンプレート(dark・light)
+// でも代わりの組み方(columns)で組むテンプレートでも同じ。
+func TestPairsSemanticCheck(t *testing.T) {
+	block := `{"type": "pairs", "headings": {"subject": "  ", "response": "打ち手"}, "pairs": [
+	  {"subject": {"type": "quote", "content": " ", "source": ""}, "response": {"type": "paragraph", "content": " "}},
+	  {"subject": {"type": "paragraph", "content": "a", "variant": "nope"}, "response": {"type": "points", "items": ["x"]}}]}`
+	want := []string{
+		"empty-text /slides/1/body/0/headings/subject",
+		"empty-text /slides/1/body/0/pairs/0/subject/content",
+		"empty-text /slides/1/body/0/pairs/0/subject/source",
+		"empty-text /slides/1/body/0/pairs/0/response/content",
+		"variant-exists /slides/1/body/0/pairs/1/subject/variant",
+	}
+	for _, c := range []struct {
+		name string
+		opts CheckOptions
+	}{
+		{"light", CheckOptions{Template: "light"}},
+		{"dark", CheckOptions{Template: "dark"}},
+		{"fallback", CheckOptions{Values: noPairsTemplate(t)}},
+	} {
+		res := Check("deck.json", pairDeck("", block), c.opts)
+		var got []string
+		for _, e := range res.Errors {
+			got = append(got, e.Code+" "+e.Path)
+		}
+		if !slices.Equal(got, want) {
+			t.Errorf("%s: errors\n%s\nwant\n%s", c.name, strings.Join(got, "\n"), strings.Join(want, "\n"))
 		}
 	}
 }

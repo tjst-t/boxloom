@@ -280,35 +280,7 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		for bi, blk := range body {
 			bp := fmt.Sprintf("%s/body/%d", sp, bi)
 			bm, _ := blk.(map[string]any)
-			c.checkVariant(bm, bp, tm)
-			c.checkBlock(bm, bp, tm)
-			switch bm["type"] {
-			case "takeaway":
-				c.checkNotEmpty(bm, bp, "content")
-			case "quote":
-				c.checkNotEmpty(bm, bp, "content", "source")
-			case "stat":
-				items, _ := bm["items"].([]any)
-				for ii, it := range items {
-					im, _ := it.(map[string]any)
-					c.checkNotEmpty(im, fmt.Sprintf("%s/items/%d", bp, ii), "label")
-				}
-			}
-			if bm["type"] == "subsystem" && bm["subsystem"] == "gantt" {
-				if data, ok := bm["data"].(map[string]any); ok {
-					c.checkGantt(data, bp+"/data", ids)
-				}
-			}
-			if bm["type"] == "subsystem" && bm["subsystem"] == "shapes" {
-				if data, ok := bm["data"].(map[string]any); ok {
-					c.checkShapes(data, bp+"/data", ids, tm)
-				}
-			}
-			if bm["type"] == "subsystem" && bm["subsystem"] == "matrix" {
-				if data, ok := bm["data"].(map[string]any); ok {
-					c.checkMatrix(data, bp+"/data")
-				}
-			}
+			c.checkBodyBlock(bm, bp, tm, ids)
 		}
 	}
 
@@ -333,6 +305,48 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		}
 	})
 	c.checkDates(doc)
+}
+
+// checkBodyBlock は本文の1つのブロックの意味の検査。標準でない型は、型の語彙の
+// Inner が返す中のブロックと欄を、IR の場所つきで同じ検査に通す。
+func (c *checker) checkBodyBlock(bm map[string]any, bp string, tm *Template, ids map[string]string) {
+	c.checkVariant(bm, bp, tm)
+	c.checkBlock(bm, bp, tm)
+	switch bm["type"] {
+	case "takeaway":
+		c.checkNotEmpty(bm, bp, "content")
+	case "quote":
+		c.checkNotEmpty(bm, bp, "content", "source")
+	case "stat":
+		items, _ := bm["items"].([]any)
+		for ii, it := range items {
+			im, _ := it.(map[string]any)
+			c.checkNotEmpty(im, fmt.Sprintf("%s/items/%d", bp, ii), "label")
+		}
+	}
+	if bm["type"] == "subsystem" {
+		if data, ok := bm["data"].(map[string]any); ok {
+			switch bm["subsystem"] {
+			case "gantt":
+				c.checkGantt(data, bp+"/data", ids)
+			case "shapes":
+				c.checkShapes(data, bp+"/data", ids, tm)
+			case "matrix":
+				c.checkMatrix(data, bp+"/data")
+			}
+		}
+	}
+	if name, ok := bm["type"].(string); ok && !blockTypes.isStandard(name) {
+		if d, ok := blockTypes.decl(name); ok && d.Inner != nil {
+			for _, part := range d.Inner(bm) {
+				p := bp + part.Path
+				if part.Block {
+					c.checkBodyBlock(part.Map, p, tm, ids)
+				}
+				c.checkNotEmpty(part.Map, p, part.Texts...)
+			}
+		}
+	}
 }
 
 // checkBlock は表・画像・並列のまとまりの、Schema で書けない決まりを見る:

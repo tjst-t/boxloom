@@ -35,6 +35,21 @@ type typeDecl struct {
 	// (任意)。囲みの名乗り(BlockDecl)は置き場所と中に書けるものを宣言するだけで、
 	// 中身から意味の欄への写し方は型ごとのコードが持つ(docs/layers.md の8.3)。
 	readMarkdown func(p *mdParser, f *mdFenceBlk, path string) any
+	// Inner は標準でない型の中にあるもの(中のブロックと、意味がその文だけで決まる欄)を
+	// IR の場所つきで返す(任意)。check はこれを本文のブロックと同じ意味の検査
+	// (empty-text・variant-exists…)に通す。型を足しても意味の検査が黙って抜けない
+	// ための口。場所は IR の場所なので、テンプレートや代わりの組み方に依らない。
+	Inner func(m map[string]any) []innerPart
+}
+
+// innerPart は型の中の1か所。Path はブロックからの相対の IR の場所("/pairs/0/subject")、
+// Map はその場所のオブジェクト。Block なら Map を本文のブロックと同じ検査に通す。
+// Texts は Map の中で見える文字が要る欄(empty-text)。
+type innerPart struct {
+	Path  string
+	Map   map[string]any
+	Block bool
+	Texts []string
 }
 
 // typeVocabulary は「IR の type → 型の宣言」の表。

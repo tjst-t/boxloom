@@ -164,7 +164,34 @@ func pairsTypeDecl() typeDecl {
 			return err
 		},
 		readMarkdown: (*mdParser).pairsBlock,
+		Inner:        pairsInner,
 	}
+}
+
+// pairsInner は check に渡す pairs の中:2つの側の見出し(見える文字が要る)と、各対の
+// subject・response(本文のブロックと同じ検査。段落の側はその1文が側の意味なので、
+// 見える文字が要る)。
+func pairsInner(m map[string]any) []innerPart {
+	var out []innerPart
+	if h, ok := m["headings"].(map[string]any); ok {
+		out = append(out, innerPart{Path: "/headings", Map: h, Texts: []string{"subject", "response"}})
+	}
+	pairs, _ := m["pairs"].([]any)
+	for k, p := range pairs {
+		pm, _ := p.(map[string]any)
+		for _, side := range []string{"subject", "response"} {
+			sm, ok := pm[side].(map[string]any)
+			if !ok {
+				continue
+			}
+			part := innerPart{Path: fmt.Sprintf("/pairs/%d/%s", k, side), Map: sm, Block: true}
+			if sm["type"] == "paragraph" {
+				part.Texts = []string{"content"}
+			}
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 // --- 組み方(同梱のテンプレート) ---
