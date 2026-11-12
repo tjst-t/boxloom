@@ -1,5 +1,5 @@
 // YAML の部分集合を読む(Boxloom Markdown の文書の頭と、サブシステムの
-// コードブロックの中身に使う)。標準ライブラリだけで書く。
+// コードブロックの中身、YAML の deck(yaml_deck.go)に使う)。標準ライブラリだけで書く。
 //
 // 読めるもの: ブロックの対応表(key: value)・ブロックの列(- …)・流れの書き方
 // ({a: b} と [a, b]、1行の中だけ)・引用なしの文字列・"…" と '…' の文字列・
@@ -31,6 +31,7 @@ type yNode struct {
 
 	keys    []string
 	keyLine []int
+	keyCol  []int
 	vals    []*yNode
 
 	items []*yNode
@@ -234,6 +235,7 @@ func (p *yParser) mapping(ind int) *yNode {
 		}
 		n.keys = append(n.keys, key)
 		n.keyLine = append(n.keyLine, l.no)
+		n.keyCol = append(n.keyCol, ind+1)
 		n.vals = append(n.vals, val)
 	}
 	return n
@@ -320,6 +322,12 @@ func readQuoted(s string) (string, int, error) {
 				b.WriteByte('\n')
 			case 't':
 				b.WriteByte('\t')
+			case 'r':
+				b.WriteByte('\r')
+			case 'b':
+				b.WriteByte('\b')
+			case 'f':
+				b.WriteByte('\f')
 			case '"', '\\', '/':
 				b.WriteByte(e)
 			case 'u':
@@ -404,6 +412,7 @@ func (f *yFlow) value(isKey bool) *yNode {
 			}
 			n.keys = append(n.keys, k.str)
 			n.keyLine = append(n.keyLine, f.line)
+			n.keyCol = append(n.keyCol, kcol)
 			n.vals = append(n.vals, v)
 			f.skip()
 			if f.i < len(f.r) && f.r[f.i] == ',' {

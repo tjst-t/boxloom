@@ -1,6 +1,6 @@
 // boxloom check: JSON Schema では書けない IR の検査。
 //
-//	go run ./cmd/boxloom check [-format text|json] [-capacity] [-template dark|light] [-strict] deck.json|deck.bx.md ...
+//	go run ./cmd/boxloom check [-format text|json] [-capacity] [-template dark|light] [-strict] deck.json|deck.yaml|deck.bx.md ...
 //
 // 誤りと警告は docs/content-syntax.md の5章の形(Issue)で出す:
 //
@@ -11,7 +11,8 @@
 //
 // capacity は本文を持つスライドごとの容量(capacity.go、docs/ir.md の「容量の計測」)。
 //
-// IR(JSON)を検査したときは line・column を出さない。.md を検査したときは、
+// IR(JSON)を検査したときは line・column を出さない。.yaml・.yml(IR の写し)
+// を検査したときは、IR の場所から引いた YAML の line・column を添える。.md を検査したときは、
 // 記法の誤りならパーサーの誤り(line・column つき)を、意味の誤りなら IR の
 // 場所から引いた Markdown の行(line だけ)を添える。
 //
@@ -69,7 +70,9 @@ type CheckOptions struct {
 // Check は1つの文書(file の名前、data の中身)を検査する。file の拡張子が
 // .md なら Boxloom Markdown として読み、記法の誤りがあればそれを返す。無ければ
 // できた IR を検査し、誤りと警告に Markdown の行を添える(IR の場所から、その
-// 場所を作った Markdown の行を引く)。.md でなければ IR(JSON)として読む。
+// 場所を作った Markdown の行を引く)。.yaml・.yml なら YAML の deck(IR の写し)
+// として読み、誤りと警告に YAML の行と列を添える。どちらでもなければ IR(JSON)
+// として読む。
 //
 // 誤りが無ければ組み立て(build)まで通し、そのときの警告と本文の容量も返す。
 // 返す CheckResult の切れ端は nil にならない(JSON で [] になる)。
@@ -87,6 +90,9 @@ func Check(file string, data []byte, opt CheckOptions) *CheckResult {
 // checkCapacity は Check の中身。.md なら容量のスライドとブロックにも
 // Markdown の行を添える。
 func checkCapacity(file string, b []byte, templateOverride string, values *Template, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
+	if isYAMLPath(file) {
+		return checkYAMLCapacity(file, b, templateOverride, values, assets)
+	}
 	if !isMarkdownPath(file) {
 		return checkIRCapacity(file, b, templateOverride, values, assets)
 	}
@@ -100,6 +106,32 @@ func checkCapacity(file string, b []byte, templateOverride string, values *Templ
 			list[i].Line = lines.Line(list[i].Path)
 		}
 	}
+	addCapacityLines(caps, lines)
+	return errs, warns, caps
+}
+
+// checkYAMLCapacity は YAML の deck の check。記法の誤りはそのまま返し、
+// 無ければ IR として検査して、誤りと警告に YAML の行と列を、容量に行を添える。
+func checkYAMLCapacity(file string, b []byte, templateOverride string, values *Template, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
+	ir, yErrs, pos := parseYAMLDeck(file, b)
+	if len(yErrs) > 0 {
+		return yErrs, nil, nil
+	}
+	errs, warns, caps = checkIRCapacity(file, ir, templateOverride, values, assets)
+	for _, list := range [][]Issue{errs, warns} {
+		for i := range list {
+			list[i].Line, list[i].Column = pos.Pos(list[i].Path)
+			if list[i].Code == codeSchema && list[i].Hint == "" {
+				list[i].Hint = yamlTypeHint(list[i].Message)
+			}
+		}
+	}
+	addCapacityLines(caps, pos)
+	return errs, warns, caps
+}
+
+// addCapacityLines は容量のスライド・ブロック・列に、元の文書の行を添える。
+func addCapacityLines(caps []SlideCapacity, lines interface{ Line(string) int }) {
 	for i := range caps {
 		caps[i].Line = lines.Line(caps[i].Path)
 		for j := range caps[i].Blocks {
@@ -114,7 +146,6 @@ func checkCapacity(file string, b []byte, templateOverride string, values *Templ
 			}
 		}
 	}
-	return errs, warns, caps
 }
 
 // CheckIR はバイト列の IR を検査する(試験から直接呼べるように分けてある)。

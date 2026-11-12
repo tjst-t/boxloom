@@ -93,3 +93,39 @@ func TestTemplateFileFlag(t *testing.T) {
 		t.Fatalf("build bad template: exit %d, stderr %q", c, be.String())
 	}
 }
+
+// parse・check・build は YAML の deck(.yaml)を受け取る。parse の出力は
+// 同じ内容の JSON の IR と同じ、build の PPTX は JSON から組んだものと同じ。
+func TestYAMLDeckCommands(t *testing.T) {
+	const y, j = "../../../examples/yaml/charts.yaml", "../../../examples/ir/charts.json"
+	var ir bytes.Buffer
+	if c := run([]string{"parse", y}, &ir, io.Discard); c != 0 {
+		t.Fatalf("parse: exit %d", c)
+	}
+	want, err := os.ReadFile(j)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var a, b bytes.Buffer
+	if json.Compact(&a, ir.Bytes()) != nil || json.Compact(&b, want) != nil || a.String() != b.String() {
+		t.Errorf("parse output differs from %s", j)
+	}
+	if c := run([]string{"check", y}, io.Discard, io.Discard); c != 0 {
+		t.Errorf("check: exit %d", c)
+	}
+	dir := t.TempDir()
+	if c := run([]string{"build", "-o", dir + "/y.pptx", y}, io.Discard, io.Discard); c != 0 {
+		t.Fatalf("build yaml: exit %d", c)
+	}
+	if c := run([]string{"build", "-o", dir + "/j.pptx", j}, io.Discard, io.Discard); c != 0 {
+		t.Fatalf("build json: exit %d", c)
+	}
+	py, _ := os.ReadFile(dir + "/y.pptx")
+	pj, _ := os.ReadFile(dir + "/j.pptx")
+	if !bytes.Equal(py, pj) {
+		t.Errorf("PPTX from YAML differs from PPTX from JSON")
+	}
+	if deckBaseName("a/charts.yaml") != "charts" || deckBaseName("a/x.yml") != "x" {
+		t.Errorf("deckBaseName for YAML")
+	}
+}

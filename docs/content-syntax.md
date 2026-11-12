@@ -12,9 +12,31 @@ Boxloom の作者が書くコンテンツの記法を定める。候補の比較
 | 入口 | 位置づけ | 誰が使うか |
 |---|---|---|
 | **Boxloom Markdown**(`.bx.md`) | **主な入口**。作者が書くのはこれ | 人、AI |
-| **IR の写し(YAML / JSON)** | 併存する入口。IR とほぼ1対1 | 他のプログラム、構造化出力で書く AI |
+| **IR の写し(YAML / JSON)**(`.yaml`・`.yml`・`.json`) | 併存する入口。IR と1対1(同じキー・同じ `type`) | 他のプログラム、構造化出力で書く AI、構造の多い資料(compare・stat・Gantt など)を書く人 |
 | Go DSL | 作者向けにはしない。テンプレート・プラグイン・試験用 | 開発者 |
 | TeX 風 | **採らない** | — |
+
+`boxloom parse`・`check`・`build` とライブラリの `ReadDeck` は、拡張子で入口を見分ける
+(`.md` は Markdown、`.yaml`・`.yml` は YAML の deck、それ以外は JSON の IR)。既定は当面
+Markdown。
+
+**YAML の deck**(IR の写し。例は `examples/yaml/charts.yaml` = `examples/ir/charts.json`):
+
+- キーと `type` は JSON の IR とまったく同じ(写し方を独自にしない)。読んだ結果は JSON の IR に
+  して、Go の読み込み(知らないキー・型の違い)と `boxloom check` にそのまま通す。
+  `boxloom parse deck.yaml` で JSON の IR が出る。
+- 読むのは 3.5 と同じ YAML の部分集合(参照 `&` `*`・タグ `!`・複数文書 `---`・ブロックの
+  文字列 `|` `>`・複数行にまたがる値は誤り。改行は `"…\n…"` で書く)。依存は増やさない。
+- 値は JSON の形だけで読む:引用(`"…"`・`'…'`)はいつも文字列、引用なしの `true`・`false` は
+  真偽値、`null` と空の値は null、引用なしで JSON の数の形(`-1`・`0.5`・`1e3`)なら数、ほかは
+  文字列。日付(`2026-04`)は日付型にせず文字列のまま、`yes`・`on` も文字列。題に `2024` のような
+  数だけを書くときは `"2024"` と引用する(引用しないと型の誤り。hint で知らせる)。
+- 文の中の記法(強調など)は JSON の IR と同じ(インラインの配列 `[{strong: …}]` で書く。
+  Markdown の `**…**` は読まない)。
+- 誤りは 5章の形で、YAML の `line`・`column` を付ける。YAML の部分集合の外は code `yaml`、
+  Go の読み込みが断るもの(知らないキー・型の違い)は `schema`、意味の誤り・警告は
+  `boxloom check` の code のまま。場所は IR の場所(`path`)から引いた YAML のキー(列の項目
+  なら `-` の後ろ)の位置。
 
 決め手は次の3つ。
 

@@ -7,9 +7,9 @@ Boxloom は Go のパッケージ `boxloom`(モジュールの根 `boxloom/`)と
 
 ```go
 src, _ := os.ReadFile("deck.bx.md")
-deck, err := boxloom.ReadDeck("deck.bx.md", src) // .md は Markdown、それ以外は IR(JSON)
+deck, err := boxloom.ReadDeck("deck.bx.md", src) // .md は Markdown、.yaml・.yml は YAML の deck、それ以外は IR(JSON)
 if err != nil {
-	return err // 記法の誤りなら boxloom.MarkdownErrors(行・列つきの Issue の一覧)
+	return err // Markdown・YAML の誤りなら boxloom.MarkdownErrors(行・列つきの Issue の一覧)
 }
 f, _ := os.Create("deck.pptx")
 defer f.Close()
@@ -35,7 +35,9 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 | `ParseMarkdown` | `(file string, src []byte) (*IRDeck, []Issue, error)` | Boxloom Markdown → IR。記法の誤りは `[]Issue`(行・列つき)で返し、そのとき deck は nil。記法は通ったのに IR として読めなかったときだけ error |
 | `MarkdownToIR` | `(file string, src []byte) ([]byte, []Issue)` | Boxloom Markdown → IR の JSON(`boxloom parse` の出力) |
 | `ReadIR` | `(file string, data []byte) (*IRDeck, error)` | IR(JSON)を読む。知らないキー・足りない欄は断る。誤りは「file: 場所: 文」 |
-| `ReadDeck` | `(file string, data []byte) (*IRDeck, error)` | 拡張子で選ぶ。`.md` は `ParseMarkdown`(記法の誤りは `MarkdownErrors`)、それ以外は `ReadIR` |
+| `ParseYAMLDeck` | `(file string, src []byte) (*IRDeck, []Issue)` | YAML の deck(IR の写し。`docs/content-syntax.md` の1章)→ IR。YAML の部分集合の外(code `yaml`)と、Go の読み込みが断るもの(知らないキー・型の違い。code `schema`)を、YAML の行・列つきの `[]Issue` で返す。そのとき deck は nil |
+| `YAMLToIR` | `(file string, src []byte) ([]byte, []Issue)` | YAML の deck → IR の JSON(`boxloom parse deck.yaml` の出力)。誤りは `ParseYAMLDeck` と同じ |
+| `ReadDeck` | `(file string, data []byte) (*IRDeck, error)` | 拡張子で選ぶ。`.md` は `ParseMarkdown`(記法の誤りは `MarkdownErrors`)、`.yaml`・`.yml` は `ParseYAMLDeck`(誤りは `MarkdownErrors`)、それ以外は `ReadIR` |
 | `Check` | `(file string, data []byte, CheckOptions) *CheckResult` | 意味の検査と組み立ての警告と本文の容量(`boxloom check` の1ファイル分) |
 | `Build` | `(w io.Writer, *IRDeck, BuildOptions) (*BuildResult, error)` | テンプレートで組んで PPTX を w に書く |
 | `Schema` | `(template string) ([]byte, error)` | AI に渡す一覧の JSON(`boxloom schema`。空なら全部のテンプレート) |
@@ -49,7 +51,7 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 |---|---|
 | `IRDeck` | 読んだ IR(`docs/ir.md`)。中の欄は IR の形のまま |
 | `Issue` | 誤りと警告の1件(`docs/content-syntax.md` の5章の形。`File`・`Line`・`Column`・`Path`・`Code`・`Message`・`Expected`・`Hint`)。`String()` で1行の文 |
-| `MarkdownErrors` | `[]Issue` の error。`errors.As` で取り出す |
+| `MarkdownErrors` | `[]Issue` の error(Markdown と YAML の deck の誤り。行・列つき)。`errors.As` で取り出す |
 | `CheckOptions` | `Template`(IR の template より優先)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Strict`(警告も誤り扱い)・`Assets`(画像を読む `fs.FS`) |
 | `CheckResult` | `OK`・`Errors`・`Warnings`・`Capacity`。JSON にすると `boxloom check -format json` と同じ形(切れ端は nil にならない) |
 | `SlideCapacity` | 本文を持つスライドごとの容量(`docs/ir.md` の「容量の計測」) |
@@ -64,6 +66,7 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 - 警告を `Issue` の形で欲しいときは `Check` を使う。`Check` は誤りが無ければ組み立てまで
   通すので、`Build` の警告と同じものが code つきで返る。
 - `Check` は file の拡張子で読み方を選ぶ。`.md` なら誤りと警告に Markdown の行が付く。
+  `.yaml`・`.yml` なら誤りと警告に YAML の行と列が、容量に行が付く。
 
 ## 画像(Assets)
 

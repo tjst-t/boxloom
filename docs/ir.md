@@ -27,6 +27,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `examples/ir/figures.json` | process・orgchart・matrix・funnel の例(`examples/md/figures.bx.md` と同じ IR) |
 | `examples/ir/blocks.json` | 並列のまとまり・表・画像・画像の並びの例(画像は `examples/ir/images/`。`tools/gen_example_images.go` で作った架空の図) |
 | `examples/ir/charts.json` | chart の例。比べ方の5分類ごと(`examples/md/charts.bx.md` と同じ IR) |
+| `examples/yaml/charts.yaml` | `examples/ir/charts.json` を YAML の deck(IR の写し。`docs/content-syntax.md` の1章)で書いたもの。同じ IR・同じ PPTX になる |
 | `examples/ir/invalid/` | 断られるべき例(色・位置・見た目の装飾などを1か所だけ足したもの) |
 | `tools/validate_ir.py` | 検査のコマンド |
 
@@ -38,7 +39,8 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 
 誤りは `docs/content-syntax.md` の5章の形で返す(Go の `boxloom check`・Markdown の
 パーサーと同じ形)。`path` は IR の中の場所(JSON Pointer)で、AI に渡せばその場所を
-直せる。IR を直接検査するので `line`・`column` は無い。`code` はいつも `schema` で、
+直せる。IR を直接検査するので `line`・`column` は無い。YAML の deck を Schema で検査するときは、
+`boxloom parse deck.yaml > deck.json` で JSON の IR にしてから渡す(`validate_ir.py` は YAML を読まない)。`code` はいつも `schema` で、
 当たった Schema の規則は `hint` に、選べる値が決まっていれば `expected` に入れる。
 
 ```json
@@ -261,6 +263,7 @@ JSON Schema では書けない検査は Go の `boxloom check` がする。
 cd boxloom
 go run ./cmd/boxloom check ../examples/ir/demo-deck.json            # 誤りが無ければ exit 0
 go run ./cmd/boxloom check ../examples/md/demo-deck.bx.md            # Markdown もそのまま検査する
+go run ./cmd/boxloom check ../examples/yaml/charts.yaml              # YAML の deck(IR の写し)も
 go run ./cmd/boxloom check -format json deck.json                    # 機械が読む形(既定は1件1行の text)
 go run ./cmd/boxloom check -strict deck.json                         # 警告も exit 1 にする
 go run ./cmd/boxloom check -template dark deck.json                  # IR の template の代わりに
@@ -273,6 +276,10 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 - Markdown を検査したときは、記法の誤りならパーサーの誤り(`line`・`column` つき)を
   そのまま返す。記法が通れば、できた IR を同じように検査し、誤りと警告には IR の
   場所(`path`)を作った Markdown の行を `line` に添える(`column` は無い)。
+- YAML の deck(`.yaml`・`.yml`。IR の写し)を検査したときは、YAML の部分集合の外なら
+  code `yaml` の誤り(`line`・`column` つき)を返す。通れば JSON の IR と同じように検査し、
+  誤りと警告には IR の場所(`path`。無ければ一番近い親)の YAML の位置を `line`・`column` に
+  添える(キーならキーの頭、列の項目なら `-` の後ろ)。容量には `line` だけを添える。
 
 ```json
 {"ok": false,
@@ -392,7 +399,7 @@ check でも断られるもの。
 
 ```
 "capacity": [{
-  "file": "deck.bx.md", "line": 37,          // .md なら Markdown の行(IR なら省く)
+  "file": "deck.bx.md", "line": 37,          // .md なら Markdown の行、.yaml なら YAML の行(JSON の IR なら省く)
   "path": "/slides/1",
   "bodyArea": 406.1,      // 本文の領域(ページの内側 − 題・リード文・出典・フッター − gap)
   "need": 210.2,          // ブロックを縮めずに積んだ高さ(ブロックの間の gap を含む)

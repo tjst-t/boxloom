@@ -1,6 +1,6 @@
 # IR から PPTX を作る(boxloom build)
 
-IR(`docs/ir.md`)か Boxloom Markdown(`docs/content-syntax.md`。拡張子 `.md`)を読んで、テンプレートで Box の木に組み、PPTX に書き出す道。
+IR(`docs/ir.md`。JSON か、その写しの YAML `.yaml`・`.yml`)か Boxloom Markdown(`docs/content-syntax.md`。拡張子 `.md`)を読んで、テンプレートで Box の木に組み、PPTX に書き出す道。
 Go 版(`boxloom/`)だけにある。コマンドは `boxloom/cmd/boxloom`、同じことを Go の
 プログラムから呼ぶなら `docs/library.md`(`ReadDeck` → `Build`)。
 
@@ -8,6 +8,7 @@ Go 版(`boxloom/`)だけにある。コマンドは `boxloom/cmd/boxloom`、同�
 cd boxloom
 go run ./cmd/boxloom build ../examples/ir/demo-deck.json                  # → out/demo-deck.pptx
 go run ./cmd/boxloom build ../examples/md/demo-deck.bx.md                 # Markdown からも同じものができる
+go run ./cmd/boxloom build ../examples/yaml/charts.yaml                    # YAML の deck(IR の写し)。charts.json と同じ PPTX
 go run ./cmd/boxloom build -template dark -o out/x.pptx ../examples/ir/gantt-full.json
 go run ./cmd/boxloom build -template dark -o out/text_patterns_dark.pptx ../examples/md/text-patterns.bx.md   # 文字のパターン(light も同じく)
 go run ./cmd/boxloom                                                      # 従来の Go で組んだデモ(変わらない)
@@ -54,7 +55,11 @@ go run ./cmd/boxloom                                                      # 従�
   ページでも見える)。
 - 字体が置き換わったときに文字がはみ出すかは `go run ./cmd/boxloom fonts deck.json`
   (`docs/fonts.md`)。`go run ./cmd/boxloom fonts -list` で寸法を持つ字体の一覧。
-- 書き出さずに検査だけするなら `go run ./cmd/boxloom check deck.json`(`.bx.md` も可。誤りと
+- YAML の deck(`.yaml`・`.yml`)は JSON の IR と同じキーで書いた写し(`docs/content-syntax.md` の
+  1章)。読んで JSON の IR にしてから組むので、同じ内容の JSON と PPTX の部品がバイト単位で
+  同じになる(`TestYAMLExampleSameAsJSON`・`TestYAMLMirrorsAllIRExamples`)。誤りには YAML の
+  行と列が付く。
+- 書き出さずに検査だけするなら `go run ./cmd/boxloom check deck.json`(`.bx.md`・`.yaml` も可。誤りと
   警告を `docs/content-syntax.md` の5章の形で出す。`-format json` で JSON。
   `docs/ir.md` の「意味の検査」)。JSON には本文の容量(残りの高さ・行の数)も
   付く(`-capacity` で text でも出る。`docs/ir.md` の「容量の計測」)。

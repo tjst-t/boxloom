@@ -2,9 +2,9 @@
 // 入口(docs/library.md)だけを使い、ここではフラグ・ファイルの読み書き・
 // 終了コードを受け持つ。
 //
-//	boxloom build [-o out.pptx] [-template dark|light|./my.json] deck.json|deck.bx.md
-//	boxloom check [-format text|json] [-capacity] [-template dark|light|./my.json] [-strict] deck.json|deck.bx.md ...
-//	boxloom parse [-format text|json] deck.bx.md
+//	boxloom build [-o out.pptx] [-template dark|light|./my.json] deck.json|deck.yaml|deck.bx.md
+//	boxloom check [-format text|json] [-capacity] [-template dark|light|./my.json] [-strict] deck.json|deck.yaml|deck.bx.md ...
+//	boxloom parse [-format text|json] deck.bx.md|deck.yaml
 //	boxloom schema [-template NAME]
 //	boxloom fonts [-template 名前] [-against "欧文/和文;…"] [-v] deck… | -list
 //	boxloom                      # 従来の Go で組んだデモ(out/boxloom_dark.pptx・out/boxloom_light.pptx)
@@ -102,7 +102,7 @@ func templateFlag(v string) (name string, values *boxloom.Template, issue *boxlo
 	return "", t, nil
 }
 
-// readDeck は path を読み、拡張子で IR(JSON)か Boxloom Markdown かを選ぶ。
+// readDeck は path を読み、拡張子で IR(JSON か YAML)か Boxloom Markdown かを選ぶ。
 func readDeck(path string) (*boxloom.IRDeck, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -119,7 +119,7 @@ func deckAssets(deckPath string) fs.FS {
 // deckBaseName は出力の名前の元(deck.bx.md → deck)。
 func deckBaseName(path string) string {
 	b := filepath.Base(path)
-	for _, ext := range []string{".bx.md", ".md", ".json"} {
+	for _, ext := range []string{".bx.md", ".md", ".json", ".yaml", ".yml"} {
 		if strings.HasSuffix(strings.ToLower(b), ext) {
 			return b[:len(b)-len(ext)]
 		}
@@ -127,7 +127,7 @@ func deckBaseName(path string) string {
 	return strings.TrimSuffix(b, filepath.Ext(b))
 }
 
-// runBuild は「boxloom build」: IR(JSON)か Boxloom Markdown を読んで pptx を書く。
+// runBuild は「boxloom build」: IR(JSON か YAML)か Boxloom Markdown を読んで pptx を書く。
 // テンプレートは -template > IR の template > light の順で決まる。
 func runBuild(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("build", flag.ContinueOnError)
@@ -138,7 +138,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(stderr, "usage: boxloom build [-o out.pptx] [-template dark|light|./my.json] deck.json|deck.bx.md")
+		fmt.Fprintln(stderr, "usage: boxloom build [-o out.pptx] [-template dark|light|./my.json] deck.json|deck.yaml|deck.bx.md")
 		return 2
 	}
 	in := fs.Arg(0)
@@ -192,7 +192,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() == 0 || (*format != "text" && *format != "json") {
-		fmt.Fprintln(stderr, "usage: boxloom check [-format text|json] [-capacity] [-template dark|light|./my.json] [-strict] deck.json|deck.bx.md ...")
+		fmt.Fprintln(stderr, "usage: boxloom check [-format text|json] [-capacity] [-template dark|light|./my.json] [-strict] deck.json|deck.yaml|deck.bx.md ...")
 		return 2
 	}
 	res := boxloom.CheckResult{OK: true, Errors: []boxloom.Issue{}, Warnings: []boxloom.Issue{}, Capacity: []boxloom.SlideCapacity{}}
@@ -241,7 +241,8 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-// runParse は「boxloom parse」: Boxloom Markdown を IR(JSON)にして標準出力に書く。
+// runParse は「boxloom parse」: Boxloom Markdown か YAML の deck(.yaml・.yml)を
+// IR(JSON)にして標準出力に書く。
 func runParse(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("parse", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -250,7 +251,7 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if fs.NArg() != 1 || (*format != "text" && *format != "json") {
-		fmt.Fprintln(stderr, "usage: boxloom parse [-format text|json] deck.bx.md")
+		fmt.Fprintln(stderr, "usage: boxloom parse [-format text|json] deck.bx.md|deck.yaml")
 		return 2
 	}
 	in := fs.Arg(0)
@@ -259,7 +260,13 @@ func runParse(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "error:", err)
 		return 1
 	}
-	ir, errs := boxloom.MarkdownToIR(in, src)
+	var ir []byte
+	var errs []boxloom.Issue
+	if ext := strings.ToLower(filepath.Ext(in)); ext == ".yaml" || ext == ".yml" {
+		ir, errs = boxloom.YAMLToIR(in, src)
+	} else {
+		ir, errs = boxloom.MarkdownToIR(in, src)
+	}
 	if len(errs) == 0 {
 		stdout.Write(ir)
 		return 0
@@ -320,7 +327,7 @@ func runFonts(args []string, stdout, stderr io.Writer) int {
 	list := fs.Bool("list", false, "寸法を持つ字体の一覧を出して終わる")
 	verbose := fs.Bool("v", false, "はみ出す行を1行ずつ出す")
 	fs.Usage = func() {
-		fmt.Fprintln(stderr, "usage: boxloom fonts [-template 名前] [-against \"欧文/和文;…\"] deck.json|deck.bx.md …")
+		fmt.Fprintln(stderr, "usage: boxloom fonts [-template 名前] [-against \"欧文/和文;…\"] deck.json|deck.yaml|deck.bx.md …")
 		fmt.Fprintln(stderr, "       boxloom fonts -list")
 		fs.PrintDefaults()
 	}

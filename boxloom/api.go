@@ -1,6 +1,7 @@
 // ライブラリの入口(docs/library.md)。コマンド(cmd/boxloom)はこれだけを使う。
 //
-// 流れは Markdown か IR(JSON)を読む(ParseMarkdown・ReadIR・ReadDeck)→
+// 流れは Markdown か IR(JSON・YAML)を読む(ParseMarkdown・ReadIR・
+// ParseYAMLDeck・ReadDeck)→
 // 検査する(Check)→ PPTX を書く(Build)。ファイルの読み書きはしない。
 // 名前と中身(バイト列)を受け取り、書き出しは io.Writer に書く。
 
@@ -21,8 +22,8 @@ func isMarkdownPath(path string) bool {
 	return strings.EqualFold(filepath.Ext(path), ".md")
 }
 
-// MarkdownErrors は Markdown の記法の誤りの一覧(error として返すため)。
-// ReadDeck が返す。
+// MarkdownErrors は Markdown と YAML の deck の記法の誤りの一覧(行と列つき。
+// error として返すため)。ReadDeck が返す。
 type MarkdownErrors []Issue
 
 func (es MarkdownErrors) Error() string {
@@ -49,8 +50,16 @@ func ParseMarkdown(file string, src []byte) (deck *IRDeck, issues []Issue, err e
 }
 
 // ReadDeck は file の拡張子で読み方を選ぶ。.md なら Boxloom Markdown
-// (記法の誤りは MarkdownErrors)、それ以外は IR(JSON。ReadIR)。
+// (記法の誤りは MarkdownErrors)、.yaml・.yml なら YAML の deck(IR の写し。
+// 誤りは行と列つきの MarkdownErrors)、それ以外は IR(JSON。ReadIR)。
 func ReadDeck(file string, data []byte) (*IRDeck, error) {
+	if isYAMLPath(file) {
+		d, issues := ParseYAMLDeck(file, data)
+		if len(issues) > 0 {
+			return nil, MarkdownErrors(issues)
+		}
+		return d, nil
+	}
 	if !isMarkdownPath(file) {
 		return ReadIR(file, data)
 	}
