@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -142,7 +143,7 @@ func TestPairsFallback(t *testing.T) {
 		t.Fatal(err)
 	}
 	blk := &deck.Slides[1].Body[0]
-	alts, err := pairsFallback(blk)
+	alts, _, err := pairsFallback(blk)
 	if err != nil || len(alts) != 1 || alts[0].Type != "columns" {
 		t.Fatalf("fallback = %+v, %v", alts, err)
 	}
@@ -399,6 +400,135 @@ func TestPairsSemanticCheck(t *testing.T) {
 		}
 		if !slices.Equal(got, want) {
 			t.Errorf("%s: errors\n%s\nwant\n%s", c.name, strings.Join(got, "\n"), strings.Join(want, "\n"))
+		}
+	}
+}
+
+// pointerResolves は JSON Pointer p が doc の中の値を指すか。
+func pointerResolves(doc any, p string) bool {
+	if p == "" {
+		return true
+	}
+	if !strings.HasPrefix(p, "/") {
+		return false
+	}
+	v := doc
+	for _, tok := range strings.Split(p[1:], "/") {
+		tok = strings.ReplaceAll(strings.ReplaceAll(tok, "~1", "/"), "~0", "~")
+		switch x := v.(type) {
+		case map[string]any:
+			n, ok := x[tok]
+			if !ok {
+				return false
+			}
+			v = n
+		case []any:
+			var i int
+			if _, err := fmt.Sscanf(tok, "%d", &i); err != nil || fmt.Sprint(i) != tok || i < 0 || i >= len(x) {
+				return false
+			}
+			v = x[i]
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// 組み方を持たないテンプレートで pairs を check したとき、layout-overflow・fill-ratio の
+// hint・容量の path は、書き換えた columns/… ではなく IR にある場所を指す。
+func TestPairsFallbackPathsInIR(t *testing.T) {
+	overflow, err := os.ReadFile("../examples/ir/check-warnings/pairs-overflow.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 対を2つに減らした pairs.json は薄い(fill-ratio が出て、hint が本文の場所を挙げる)。
+	full, err := os.ReadFile("../examples/ir/pairs.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var thinDoc map[string]any
+	if err := json.Unmarshal(full, &thinDoc); err != nil {
+		t.Fatal(err)
+	}
+	blk := thinDoc["slides"].([]any)[1].(map[string]any)["body"].([]any)[0].(map[string]any)
+	blk["pairs"] = blk["pairs"].([]any)[:2]
+	thin, _ := json.Marshal(thinDoc)
+
+	slidePtr := regexp.MustCompile(`/slides/[0-9]+(/[^\s(、。,]*)?`)
+	tm := noPairsTemplate(t)
+	seen := map[string]bool{}
+	for _, c := range []struct {
+		name string
+		data []byte
+	}{{"pairs-overflow.json", overflow}, {"pairs.json", full}, {"thin.json", thin}} {
+		var doc any
+		if err := json.Unmarshal(c.data, &doc); err != nil {
+			t.Fatal(err)
+		}
+		res := Check(c.name, c.data, CheckOptions{Values: tm})
+		if len(res.Errors) > 0 {
+			t.Fatalf("%s: errors %+v", c.name, res.Errors)
+		}
+		var paths []string
+		for _, w := range res.Warnings {
+			seen[w.Code] = true
+			paths = append(paths, w.Path)
+			for _, m := range slidePtr.FindAllString(w.Hint, -1) {
+				paths = append(paths, m)
+				seen["hint-path"] = true
+			}
+		}
+		var block func(b BlockCapacity)
+		block = func(b BlockCapacity) {
+			paths = append(paths, b.Path)
+			for _, k := range b.Cards {
+				paths = append(paths, k.Path)
+			}
+			for _, p := range b.Pairs {
+				paths = append(paths, p.Path)
+			}
+			for _, col := range b.Columns {
+				paths = append(paths, col.Path)
+				for _, ib := range col.Blocks {
+					block(ib)
+				}
+			}
+		}
+		for _, sc := range res.Capacity {
+			paths = append(paths, sc.Path)
+			for _, b := range sc.Blocks {
+				block(b)
+			}
+		}
+		for _, p := range paths {
+			if strings.Contains(p, "/columns/") || !pointerResolves(doc, p) {
+				t.Errorf("%s: path %q is not a place in the IR", c.name, p)
+			}
+		}
+	}
+	for _, code := range []string{"layout-overflow", "fill-ratio", "hint-path"} {
+		if !seen[code] {
+			t.Errorf("no %s in the cases (the test does not cover it)", code)
+		}
+	}
+
+	// 写し方:引用の注は出どころに、同じブロックの下はそのまま、表に無い場所はブロックに丸める。
+	fb := map[string]fallbackPaths{"/slides/1/body/0": {
+		"/columns/0/body/2": {To: "/pairs/2/subject"},
+		"/columns/0/body/3": {To: "/pairs/2/subject/source"},
+		"/columns/1/body/0": {To: "/pairs/0/response", Same: true},
+	}}
+	for in, want := range map[string]string{
+		"/slides/1/body/0/columns/0/body/3":         "/slides/1/body/0/pairs/2/subject/source",
+		"/slides/1/body/0/columns/0/body/2/x":       "/slides/1/body/0/pairs/2/subject",
+		"/slides/1/body/0/columns/1/body/0/items/1": "/slides/1/body/0/pairs/0/response/items/1",
+		"/slides/1/body/0/columns/1/body/9":         "/slides/1/body/0",
+		"/slides/1/body/0":                          "/slides/1/body/0",
+		"/slides/1/body/1/columns/0":                "/slides/1/body/1/columns/0",
+	} {
+		if got := remapFallbackPath(in, fb); got != want {
+			t.Errorf("remap %s = %s, want %s", in, got, want)
 		}
 	}
 }

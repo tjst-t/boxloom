@@ -214,8 +214,9 @@ IR の1ブロックを受け取り、配置の段の木を返す。いまの `po
 type TypeDecl struct {
 	Schema   json.RawMessage // IR の意味の形(Schema の断片)
 	Markdown BlockDecl       // 囲み
-	// Fallback は標準でない型だけ。標準の型の IR に書き換える。
-	Fallback func(b *IRBlock) ([]*IRBlock, error)
+	// Fallback は標準でない型だけ。標準の型の IR に書き換え、書き換えた中の場所を
+	// 元の IR の場所に写す表も返す(check の警告・容量の path に使う)。
+	Fallback func(b *IRBlock) ([]*IRBlock, fallbackPaths, error)
 }
 func RegisterType(name string, d TypeDecl) error
 
@@ -279,7 +280,11 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
    `componentRegistry` は組み方だけを持ち、登録できるのは語彙にある型だけ
    (標準の型は `override`、標準でない型は `register`)。組み方の無い標準でない型は
    Fallback で標準の型に書き換えて組み、警告 `component-fallback` を出す(path はその
-   ブロック)。`check` はテンプレートを指したときだけこの警告を足す。`schema` の
+   ブロック)。`check` はテンプレートを指したときだけこの警告を足す。代わりで組んだ
+   ブロックの中を指す警告(`layout-overflow` など)・容量・hint の path は、Fallback が
+   返す場所の表で元の IR の場所に写す(pairs なら書き換えた `columns/C/body/K` を
+   `pairs/K/subject` などに、まとまりを `headings/subject` などに。表に無い場所は
+   ブロックの path に丸める。`component.go` の `remapFallbackPath`、#76)。`schema` の
    `templates[].types` に型ごとの組み方(`template`・`fallback`)が出る。型ごとの
    Schema は `schema/types/<名前>.schema.json`。公開 API は増やしていない。
    試験用の標準でない型で確かめる(`component_test.go`)。

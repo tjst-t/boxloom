@@ -114,28 +114,37 @@ func readPairs(raw json.RawMessage) (*irPairs, error) {
 // pairsFallback は代わりの組み方:2つのまとまりの columns。見出しはまとまりの題に、
 // 各対の2つの側はそれぞれのまとまりに順に入れる(行は2つのまとまりでそろわなく
 // なるが読める)。まとまりには引用を置けないので、引用は言葉の段落と出どころの注に
-// 分ける。
-func pairsFallback(b *IRBlock) ([]*IRBlock, error) {
+// 分ける。場所の表は、まとまりを見出し(/headings/subject・/headings/response)に、
+// まとまりの中のブロックを元の対の側(/pairs/K/subject など。引用の注は …/source)に写す。
+func pairsFallback(b *IRBlock) ([]*IRBlock, fallbackPaths, error) {
 	p, err := readPairs(b.Raw)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	subject := IRColumn{Title: p.Subject}
-	response := IRColumn{Title: p.Response}
-	put := func(c *IRColumn, side IRBlock) {
+	cols := []IRColumn{{Title: p.Subject}, {Title: p.Response}}
+	paths := fallbackPaths{
+		"/columns/0": {To: "/headings/subject"},
+		"/columns/1": {To: "/headings/response"},
+	}
+	put := func(ci, k int, name string, side IRBlock) {
+		c := &cols[ci]
+		at := func() string { return fmt.Sprintf("/columns/%d/body/%d", ci, len(c.Body)) }
+		orig := fmt.Sprintf("/pairs/%d/%s", k, name)
 		if side.Type == "quote" {
-			c.Body = append(c.Body,
-				IRBlock{Type: "paragraph", Variant: side.Variant, Content: side.Content},
-				IRBlock{Type: "note", Variant: side.Variant, Content: side.Source})
+			paths[at()] = fallbackPath{To: orig}
+			c.Body = append(c.Body, IRBlock{Type: "paragraph", Variant: side.Variant, Content: side.Content})
+			paths[at()] = fallbackPath{To: orig + "/source"}
+			c.Body = append(c.Body, IRBlock{Type: "note", Variant: side.Variant, Content: side.Source})
 			return
 		}
+		paths[at()] = fallbackPath{To: orig, Same: true}
 		c.Body = append(c.Body, side)
 	}
-	for _, pr := range p.Pairs {
-		put(&subject, pr.Subject)
-		put(&response, pr.Response)
+	for k, pr := range p.Pairs {
+		put(0, k, "subject", pr.Subject)
+		put(1, k, "response", pr.Response)
 	}
-	return []*IRBlock{{Type: "columns", Variant: p.Variant, Columns: []IRColumn{subject, response}}}, nil
+	return []*IRBlock{{Type: "columns", Variant: p.Variant, Columns: cols}}, paths, nil
 }
 
 // pairsTypeDecl は pairs が語彙に名乗るもの。

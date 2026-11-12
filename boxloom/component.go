@@ -116,7 +116,7 @@ func (r *componentRegistry) build(ctx componentContext, b *IRBlock) (*Spec, erro
 	if d.Fallback == nil {
 		return nil, fmt.Errorf("template has no component for block type %q", b.Type)
 	}
-	alts, err := d.Fallback(b)
+	alts, _, err := d.Fallback(b)
 	if err != nil {
 		return nil, fmt.Errorf("%s: fallback: %w", b.Type, err)
 	}
@@ -225,3 +225,100 @@ func defaultComponents() *componentRegistry {
 
 // standardComponents は標準の部品の表の元(一度だけ作り、テンプレートは写しを持つ)。
 var standardComponents = defaultComponents()
+
+// fallbackPath は代わりの組み方が書き換えたブロックの中の1か所を、元の IR のどこに
+// 写すか。To は元のブロックからの相対の IR の場所("/pairs/3/response")。Same は
+// 書き換えの前後で中身が同じブロックであること:その下の場所(…/items/2 など)も
+// そのまま足して写せる。Same でなければ、その下の場所も To に丸める。
+type fallbackPath struct {
+	To   string
+	Same bool
+}
+
+// fallbackPaths は書き換えたブロックの中の場所(相対の JSON Pointer。代わりの組み方が
+// ブロックを1つだけ返したときの、そのブロックからの場所)→ 元の IR の場所。
+type fallbackPaths map[string]fallbackPath
+
+// fallbackBlocks は deck の本文のブロックのうち、tm が組み方を持たず代わりの組み方で
+// 組んだもの(場所 /slides/S/body/N → 場所の表)。標準でない型は本文にだけ置ける
+// (まとまりの中には置けない)ので、本文だけを見る。表が無いもの・ブロックを2つ以上に
+// 書き換えたものは nil(ブロックに丸める)。
+func fallbackBlocks(deck *IRDeck, tm *Template) map[string]fallbackPaths {
+	out := map[string]fallbackPaths{}
+	if deck == nil || tm == nil || tm.components == nil {
+		return out
+	}
+	for si := range deck.Slides {
+		for bi := range deck.Slides[si].Body {
+			b := &deck.Slides[si].Body[bi]
+			if tm.components.has(b.Type) {
+				continue
+			}
+			d, ok := tm.components.vocab.decl(b.Type)
+			if !ok || d.Fallback == nil {
+				continue
+			}
+			alts, paths, err := d.Fallback(b)
+			if err != nil || len(alts) != 1 {
+				paths = nil
+			}
+			out[fmt.Sprintf("/slides/%d/body/%d", si, bi)] = paths
+		}
+	}
+	return out
+}
+
+// remapFallbackPath は、代わりの組み方で組んだブロックの中を指す場所 p を元の IR の
+// 場所に写す。表に無い場所はブロックの場所に丸める。ほかの場所はそのまま返す。
+func remapFallbackPath(p string, fb map[string]fallbackPaths) string {
+	for bp, paths := range fb {
+		if !strings.HasPrefix(p, bp+"/") {
+			continue
+		}
+		rel := p[len(bp):]
+		best := ""
+		for k := range paths {
+			if (rel == k || strings.HasPrefix(rel, k+"/")) && len(k) > len(best) {
+				best = k
+			}
+		}
+		if best == "" {
+			return bp
+		}
+		v := paths[best]
+		if v.Same {
+			return bp + v.To + rel[len(best):]
+		}
+		return bp + v.To
+	}
+	return p
+}
+
+// remapFallbackCapacity は容量の中の場所を remapFallbackPath で写す。
+func remapFallbackCapacity(caps []SlideCapacity, fb map[string]fallbackPaths) {
+	if len(fb) == 0 {
+		return
+	}
+	var block func(b *BlockCapacity)
+	block = func(b *BlockCapacity) {
+		b.Path = remapFallbackPath(b.Path, fb)
+		for i := range b.Cards {
+			b.Cards[i].Path = remapFallbackPath(b.Cards[i].Path, fb)
+		}
+		for i := range b.Pairs {
+			b.Pairs[i].Path = remapFallbackPath(b.Pairs[i].Path, fb)
+		}
+		for i := range b.Columns {
+			c := &b.Columns[i]
+			c.Path = remapFallbackPath(c.Path, fb)
+			for j := range c.Blocks {
+				block(&c.Blocks[j])
+			}
+		}
+	}
+	for i := range caps {
+		for j := range caps[i].Blocks {
+			block(&caps[i].Blocks[j])
+		}
+	}
+}

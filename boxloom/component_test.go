@@ -75,15 +75,15 @@ func readTestPair(b *IRBlock) (testPair, error) {
 	return p, err
 }
 
-func testPairFallback(b *IRBlock) ([]*IRBlock, error) {
+func testPairFallback(b *IRBlock) ([]*IRBlock, fallbackPaths, error) {
 	p, err := readTestPair(b)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	col := func(s string) IRColumn {
 		return IRColumn{Body: []IRBlock{{Type: "paragraph", Content: Inline{{Text: s}}}}}
 	}
-	return []*IRBlock{{Type: "columns", Columns: []IRColumn{col(p.Left), col(p.Right)}}}, nil
+	return []*IRBlock{{Type: "columns", Columns: []IRColumn{col(p.Left), col(p.Right)}}}, nil, nil
 }
 
 // withTestPair は試験の間だけ testpair を語彙に足す。

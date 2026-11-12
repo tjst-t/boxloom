@@ -27,7 +27,9 @@ type typeDecl struct {
 	Markdown []BlockDecl
 	// Fallback は標準でない型だけが持つ:そのブロックを標準の型のブロックに
 	// 書き換える(docs/layers.md の5章)。組み方を持たないテンプレートはこれで組む。
-	Fallback func(b *IRBlock) ([]*IRBlock, error)
+	// 書き換えたブロックの中の場所を元の IR の場所に写す表(fallbackPaths)も返す
+	// (check が警告と容量の path を IR にある場所へ写すため。nil ならブロックに丸める)。
+	Fallback func(b *IRBlock) ([]*IRBlock, fallbackPaths, error)
 	// Validate は標準でない型の形を IR を読むときに見る(任意)。Schema と同じ決まりを
 	// Go でも見て、check と build が Schema の検査なしでも誤りを場所つきで返すため。
 	Validate func(b *IRBlock) error

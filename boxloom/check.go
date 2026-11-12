@@ -218,6 +218,14 @@ func checkIRCapacity(file string, b []byte, templateOverride string, values *Tem
 		}
 		warns = append(warns, is)
 	}
+	// 代わりの組み方で組んだブロックの中の場所(書き換えた columns/…)は、元の IR の
+	// 場所に写す。hint は写した容量から作る。
+	if fb := fallbackBlocks(deck, tm); len(fb) > 0 {
+		for i := range warns {
+			warns[i].Path = remapFallbackPath(warns[i].Path, fb)
+		}
+		remapFallbackCapacity(caps, fb)
+	}
 	addLayoutHints(warns, caps)
 	for i := range caps {
 		caps[i].File = file
