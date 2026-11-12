@@ -1797,6 +1797,29 @@
       "updatedAt": "2026-11-12T13:23:26.641Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "layout-input-raw-values",
+      "number": 77,
+      "kind": "bug",
+      "title": "配置の段の木の入力で、row・col の生の色が誤りにならず捨てられ、負の grow・basis も通る",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [
+        "text-color-required"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "fable のレビューの低5。#72 と同じところ(token.go・layoutread.go)を触るので、#72 の後にする。\n\n## 何が起きるか\n- boxloom/layoutread.go(301-305 行あたり)で、row・col に書いた生の color が layout-raw の誤りにならず、黙って捨てられる。これはレビューで実行して確かめた。\n- 負の grow・basis にも検査が無く、そのまま通る。こちらはコードを読んだ結論。\n\n## 直し方\n- 開発者・試験用の入口だが、「トークンの無い色は誤り」にそろえる。生の color は layout-raw の誤りにする。\n- 負の grow・basis も誤りにする。\n- 文字の葉の色の必須(#72)も、読み直しのときに同じく掛ける。",
+      "doneWhen": "木の入力で、row・col の生の color、負の grow・basis、色のトークンの無い文字の葉が、Issue の形の誤り(path は木の中の場所)になる(試験)。layout で出した木の往復の試験は今のまま通る。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-12T13:23:31.203Z",
+      "updatedAt": "2026-11-12T13:23:31.203Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
