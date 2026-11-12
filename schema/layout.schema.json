@@ -72,6 +72,7 @@
         "irType": {"description": "この箱を作った IR のブロックの type。", "type": "string"},
         "cardRow": {"description": "横に同じ幅のカードを並べる行。IR の並びの名前(options・items)。", "type": "string"},
         "columnGroups": {"description": "並列のまとまりの行。まとまりの数。", "type": "integer", "minimum": 1},
+        "pairRows": {"description": "対の並び(pairs)の箱。対の数(対ごとにはみ出しを測る)。", "type": "integer", "minimum": 1},
         "keepLine": {"description": "1行に収めたい文字の葉(警告の文に使う名前)。", "type": "string"},
         "nestedSlack": {"description": "列の中で足りないとき、中の図を文字より先に縮める。", "const": true},
         "list": {"description": "箇条(PPTX では1つの文字の枠の段落)。", "const": true},

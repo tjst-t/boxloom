@@ -224,6 +224,11 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     組み方の無い標準でない型は代わりの組み方で組み `component-fallback` を警告。
     package の中だけ。`docs/layers.md` の7章)。出力が変わらないことは `TestOutputsGolden`
     (`testdata/outputs-golden.json`。出力を変える変更では `-update-golden` で書き直す)
+  - `pairs.go` = 対の並び(`pairs`)。型の語彙に足した最初の標準でない型(Schema は
+    `schema/types/pairs.schema.json`、Markdown は `::::pairs 見出し | 見出し` の中に
+    `:::subject`・`:::response` を交互に)。組み方は同梱のテンプレート(dark・light)が持ち、
+    対ごとに2つの側の行をそろえる。はみ出しは対ごと(印 `measurePairRows`)。組み方を
+    持たないテンプレートは `columns` で組んで `component-fallback`。`docs/layers.md` の8.1・8.3
   - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
     `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
   - `blocks.go` / `image.go` / `pptx_blocks.go` / `md_blocks.go` = 第1層のブロックの

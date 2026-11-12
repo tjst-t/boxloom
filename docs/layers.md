@@ -83,6 +83,7 @@ Boxloom にはすでに「三層」が2つある。ここで書くのはその�
 | `irType` | はみ出しの警告に出すブロックの種類 | 部品の段が付ける(作者の IR の場所) |
 | `columns` | まとまりごとにはみ出しを測る | 「測る単位」の印 |
 | `cards` | カードごとの高さを容量に出す | 「測る単位」の印(並びの名前つき) |
+| `pairs` | 対(行)ごとにはみ出しを測り、容量に側ごとの高さを出す(#65 で足した) | 「測る単位」の印(`measurePairRows`) |
 | `keepLine` | 1行に収めたい文字 | 文字の葉の属性 |
 | `nestedSlack` | 中の図を文字より先に縮める | 箱の属性 |
 | `List`・`card` | PPTX で1つの図形・段落にまとめて書く | 箱の種類(箇条・カード) |
@@ -247,6 +248,17 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
    出力が変わらないことは `TestOutputsGolden` で確かめる(記録は変えていない)。
 3. **最初の追加の部品として `pairs` を作る。** 標準でない型として語彙に足し
    (代わりの組み方は `columns`)、組み方は dark・light が持つ(8.1)。
+   **`pairs` は済み(#65)。** `boxloom/pairs.go`:型の宣言(Schema は
+   `schema/types/pairs.schema.json`。コアの `block` の振り分けもそこを指すので、
+   `tools/validate_ir.py` も読める)・IR の形の検査(`typeDecl.Validate`)・Markdown の読み方
+   (`typeDecl.readMarkdown`。8.3)・代わりの組み方・組み方。組み方は同梱のテンプレート
+   (`templates/*.json`。いまは dark・light)が読み込みのときに持ち(`registerBundledComponents`)、
+   外の値の表だけのテンプレート(`ParseTemplate`、例 `examples/templates/forest.json`)は
+   持たない(代わりの `columns` で組み、`component-fallback`)。対ごとに1つの行(2つの側は
+   同じ幅・交差軸は STRETCH)にするので、2つの側の上端がそろい、行の高さは高い方になる。
+   はみ出しは測る単位の印 `measurePairRows` で対ごとに測る(2.1 の表)。例は
+   `examples/md/pairs.bx.md`、代わりの組み方の IR は `examples/ir/pairs-fallback.json`、
+   試験は `boxloom/pairs_test.go`。
    Backlog の `type-vocabulary`(#64。語彙と組み方を分ける)と `pairs-component`(#65)。
    **語彙と組み方を分けるのは済み(#64)。** 型の語彙は `boxloom/typevocab.go` の
    `blockTypes`(`typeDecl{Schema, Markdown, Fallback}`。標準の12の型は Fallback を
@@ -292,14 +304,27 @@ IR の Schema はテンプレートに依らず1つ。型の語彙(名前・意�
   サブシステムと同じく正本は schema/、Go は写しを埋め込む。
 - このため 2.3 のとおり、テンプレートは新しい意味を作れない。
 
-### 8.3 決めていないこと
+### 8.3 決めたこと・決めていないこと
 
-はじめの2つは `pairs` を作る中で決める。
+はじめの2つは `pairs` を作る中で決めた(#65)。
 
-- **Markdown の囲みを `BlockDecl` から一般に読めるか。** いまの md_blocks.go は
-  ブロックごとに読み方を書いている。部品が囲みを名乗るだけで読めるようにするには、
-  囲みの中身(箇条・段落・入れ子の囲み)から意味の欄への写し方も名乗る必要がある。
-- **ライブラリの API の広さ。** `Spec` と登録簿を公開すると、安定させる API
-  (#1281259)が増える。当面は package の中だけで使い、公開は後にする手もある。
+- **Markdown の囲みを `BlockDecl` から一般に読めるか(決めた:読まない)。** `BlockDecl` は
+  名乗り(名前・見出しの文の意味・置き場所 `Inside`・中に書けるもの・属性)だけで、
+  中身から意味の欄への写し方は型ごとの読み方(Go の関数。`typeDecl.readMarkdown`)が持つ。
+  `pairs` の「`:::subject` と `:::response` を交互に書いて1組」「見出しを `|` で2つに分ける」
+  のような約束事は、宣言の小さな言語で書くより、コードで書いて場所つきの誤りを返すほうが
+  読みやすく、6章の「まずコードで」と同じ理由で、データで書く形は部品がそろってから考える。
+  パーサーの側は一般にした:本文に置いた囲みの名前が語彙の型の(本文に置く)囲みなら
+  その読み方を呼び、ほかの囲みの中だけの囲み(`Inside` を持つもの)を本文に書けば
+  宣言から誤りの文を作る。受け付ける囲みの一覧(誤りの `expected`)と `boxloom schema` の
+  `blocks` も語彙から作る(テンプレートは型を隠さないので、どのテンプレートも語彙の
+  すべての囲みを名乗る)。
+- **ライブラリの API の広さ(決めた:当面は増やさない)。** 型の語彙(`registerType`・
+  `typeDecl`)・部品の登録簿(`componentRegistry`)・`Spec` と計測の印は package の中だけ。
+  外から見えるのは、これまでの入口(`ParseMarkdown`・`ReadDeck`・`Check`・`Build`・`Schema`
+  など)が `pairs` を読み・検査し・組むことと、`schema` の出力・容量(`BlockCapacity.Pairs`・
+  `PairCapacity`)・layout の印(`LayoutMarks.PairRows`)だけ。部品を外から足せるように
+  するのは、`Spec` がトークンを持つ形(7章の4段目、#68)にしてからにする(いま公開すると、
+  値の決まった pt の木が安定させる API になり、段の検査を素通りする口になるため)。
 - **配置の段で、値の表に無い数を許すか。** 許さないほうが段の検査が効くが、
   部品の作者が新しい値を欲しくなったら値の表に足すことになる。

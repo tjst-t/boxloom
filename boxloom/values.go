@@ -360,8 +360,8 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		Subsystems: DefaultSubsystems().Clone(),
 		components: standardComponents.clone(),
 		Variants:   variants,
-		// 名乗る囲みは部品(コード)と対になるので、まだコードの一式を使う。
-		Blocks: defaultBlocks(),
+		// 囲みは型の語彙が名乗る(テンプレートは型を隠さない)。
+		Blocks: blockTypes.fences(),
 		Slides: defaultSlides(),
 	}
 	// サブシステムの寸法も、このテンプレートの段に載っていなければならない
@@ -575,6 +575,8 @@ func loadTemplate(name string) (*Template, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", file, err)
 	}
+	// 同梱のテンプレートは、コアの標準でない型の組み方も持つ(pairs.go)。
+	registerBundledComponents(t.components)
 	return t, nil
 }
 

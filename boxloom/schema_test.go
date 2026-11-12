@@ -88,8 +88,8 @@ func TestSchemaMatchesParser(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, ts := range out.Templates {
-		if got := strings.Join(blockNames(append(append([]BlockDecl{}, out.Markdown.Blocks...), ts.Blocks...)), ","); got != strings.Join(knownFences, ",") {
-			t.Errorf("%s: blocks %s, parser accepts %s", ts.Name, got, strings.Join(knownFences, ","))
+		if got := strings.Join(blockNames(append(append([]BlockDecl{}, out.Markdown.Blocks...), ts.Blocks...)), ","); got != strings.Join(knownFences(), ",") {
+			t.Errorf("%s: blocks %s, parser accepts %s", ts.Name, got, strings.Join(knownFences(), ","))
 		}
 		for _, ss := range ts.Subsystems {
 			if _, ok := mdSubsystems[ss.Name]; ok != (ss.Fence != "") {
@@ -99,7 +99,7 @@ func TestSchemaMatchesParser(t *testing.T) {
 	}
 	// 名乗っていない囲みを書くと、expected に名乗る囲みの一覧が返る。
 	_, issues := MarkdownToIR("x.bx.md", []byte("# 題\n\n:::nope\n文\n:::\n"))
-	if len(issues) == 0 || strings.Join(issues[0].Expected, ",") != strings.Join(knownFences, ",") {
+	if len(issues) == 0 || strings.Join(issues[0].Expected, ",") != strings.Join(knownFences(), ",") {
 		t.Errorf("unknown block issues = %+v", issues)
 	}
 	// 文書の頭のキーも同じ表から。

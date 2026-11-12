@@ -139,8 +139,10 @@ func coreBlocks() []BlockDecl {
 	}
 }
 
-// knownFences は Markdown のパーサーが受け付ける囲みの名前(コアと既定の一式)。
-var knownFences = blockNames(append(coreBlocks(), defaultBlocks()...))
+// knownFences は Markdown のパーサーが受け付ける囲みの名前(コアと型の語彙の囲み)。
+func knownFences() []string {
+	return blockNames(append(coreBlocks(), blockTypes.fences()...))
+}
 
 func blockNames(bs []BlockDecl) []string {
 	var out []string

@@ -13,8 +13,18 @@ import (
 // 型の意味は語彙にあり、標準の部品の表は組み方だけを持つ。
 func TestStandardComponents(t *testing.T) {
 	want := []string{"columns", "compare", "gallery", "image", "note", "paragraph", "points", "quote", "stat", "subsystem", "table", "takeaway"}
-	if got := blockTypes.names(); !reflect.DeepEqual(got, want) {
-		t.Fatalf("vocabulary = %v, want %v", got, want)
+	var std []string
+	for _, n := range blockTypes.names() {
+		if blockTypes.isStandard(n) {
+			std = append(std, n)
+		}
+	}
+	if !reflect.DeepEqual(std, want) {
+		t.Fatalf("standard types = %v, want %v", std, want)
+	}
+	// 標準でない型はコアの pairs だけ(docs/layers.md の8.1)。
+	if got := blockTypes.extensions(); !reflect.DeepEqual(got, []string{"pairs"}) {
+		t.Fatalf("non-standard types = %v", got)
 	}
 	if got := defaultComponents().names(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("components = %v, want %v", got, want)
@@ -35,7 +45,7 @@ func TestStandardComponents(t *testing.T) {
 		t.Errorf("fences of the standard types differ from defaultBlocks")
 	}
 	// 誤りの文の順は前と同じ。
-	if got := strings.Join(blockTypes.known(), ", "); got != "paragraph, points, compare, note, takeaway, stat, quote, columns, table, image, gallery, subsystem" {
+	if got := strings.Join(blockTypes.known(), ", "); got != "paragraph, points, compare, note, takeaway, stat, quote, columns, table, image, gallery, subsystem, pairs" {
 		t.Errorf("known = %s", got)
 	}
 }
@@ -123,10 +133,10 @@ func TestComponentRegistry(t *testing.T) {
 	if err := r.register("note", componentFunc(nil)); err == nil {
 		t.Error("register of a standard type succeeded")
 	}
-	if err := r.register("pairs", componentFunc(nil)); err == nil {
+	if err := r.register("nosuchtype", componentFunc(nil)); err == nil {
 		t.Error("register of a type outside the vocabulary succeeded")
 	}
-	if err := r.override("pairs", componentFunc(nil)); err == nil {
+	if err := r.override("nosuchtype", componentFunc(nil)); err == nil {
 		t.Error("override of an unknown name succeeded")
 	}
 	if err := r.override(testPairType, componentFunc(nil)); err == nil {
@@ -138,7 +148,7 @@ func TestComponentRegistry(t *testing.T) {
 	if err := r.register(testPairType, componentFunc(nil)); err == nil {
 		t.Error("second register succeeded")
 	}
-	if _, err := r.build(componentContext{}, &IRBlock{Type: "pairs"}); err == nil || err.Error() != `unknown block type "pairs"` {
+	if _, err := r.build(componentContext{}, &IRBlock{Type: "nosuchtype"}); err == nil || err.Error() != `unknown block type "nosuchtype"` {
 		t.Errorf("unknown type: err = %v", err)
 	}
 	if err := registerType("note", typeDecl{}); err == nil {
@@ -291,11 +301,15 @@ func TestSchemaTypes(t *testing.T) {
 	}
 	for i, wantBuild := range []string{"fallback", "template"} {
 		ts := out.Templates[i]
-		if len(ts.Types) != 13 {
+		if len(ts.Types) != 14 {
 			t.Fatalf("types = %+v", ts.Types)
 		}
 		for _, ty := range ts.Types {
 			switch {
+			case ty.Name == pairsType:
+				if ty.Build != "template" || ty.Standard || ty.Schema != "/irSchema/$defs/type:pairs" {
+					t.Errorf("template %d: %+v", i, ty)
+				}
 			case ty.Name == testPairType:
 				if ty.Build != wantBuild || ty.Standard || ty.Schema != "/irSchema/$defs/type:testpair" {
 					t.Errorf("template %d: %+v", i, ty)

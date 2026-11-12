@@ -54,6 +54,8 @@ type BlockCapacity struct {
 	// ときだけ、カードごとの測り値。ブロックの need を決めるのは一番高いカード
 	// (tallest)で、ほかのカードに文を足しても need は増えない。
 	Cards []CardCapacity `json:"cards,omitempty"`
+	// Pairs は対の並び(pairs)のときだけ、対ごとの測り値。
+	Pairs []PairCapacity `json:"pairs,omitempty"`
 }
 
 // CardCapacity は横に並ぶカードの1枚の測り値。
@@ -125,6 +127,9 @@ func blockCapacity(b BlockMeasure, path, typ string) BlockCapacity {
 		Bottom:   round1(b.Bottom),
 		Overflow: round1(b.Overflow),
 	}
+	for _, p := range b.Pairs {
+		bc.Pairs = append(bc.Pairs, pairCapacity(p, path))
+	}
 	tall := tallestCard(b.Cards)
 	for i, c := range b.Cards {
 		bc.Cards = append(bc.Cards, CardCapacity{Path: fmt.Sprintf("%s/%s/%d", path, b.CardsKey, c.Index),
@@ -156,6 +161,12 @@ func (c SlideCapacity) String() string {
 			out += fmt.Sprintf("\n    %s: %d lines, %.1fpt", c.Path, c.Lines, c.Need)
 			if c.Tallest {
 				out += " (tallest: sets the block height)"
+			}
+		}
+		for _, p := range b.Pairs {
+			out += fmt.Sprintf("\n    %s: %d lines, %.1fpt (subject %.1fpt, response %.1fpt)", p.Path, p.Lines, p.Need, p.Subject, p.Response)
+			if p.Overflow > 0 {
+				out += fmt.Sprintf(", overflows by %.1fpt", p.Overflow)
 			}
 		}
 		for _, c := range b.Columns {

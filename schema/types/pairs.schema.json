@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/types/pairs.schema.json",
+  "title": "Boxloom IR: pairs block (0.1)",
+  "description": "対の並び(標準でない型。docs/layers.md の8.1)。「分かったこと ↔ 打ち手」のように、2つの側の見出しを1回だけ書き、その下に対を並べる。対の2つの側は行がそろう。側の名前は意味で、subject はその対が何についてか(分かったこと・課題・問い)、response はそれに応えるもの(打ち手・対策・答え)。どちらの側に置くか・幅・色は書けない。組み方を持たないテンプレートは columns で組む(component-fallback)。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "pairs"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "headings": {
+      "description": "2つの側の見出し(列の題)。1回だけ書く。",
+      "type": "object",
+      "properties": {
+        "subject": {
+          "description": "対の何についての側の見出し(例: 分かったこと)。",
+          "$ref": "../core.schema.json#/$defs/inline"
+        },
+        "response": {
+          "description": "それに応える側の見出し(例: 打ち手)。",
+          "$ref": "../core.schema.json#/$defs/inline"
+        }
+      },
+      "required": ["subject", "response"],
+      "additionalProperties": false
+    },
+    "pairs": {
+      "description": "対の並び(2つ以上)。上から順に読む。",
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/pair"
+      }
+    }
+  },
+  "required": ["type", "headings", "pairs"],
+  "additionalProperties": false,
+  "$defs": {
+    "pair": {
+      "description": "1つの対。2つの側はそれぞれ段落・箇条・引用のどれか1つ。",
+      "type": "object",
+      "properties": {
+        "subject": {
+          "$ref": "#/$defs/side"
+        },
+        "response": {
+          "$ref": "#/$defs/side"
+        }
+      },
+      "required": ["subject", "response"],
+      "additionalProperties": false
+    },
+    "side": {
+      "oneOf": [
+        {
+          "$ref": "../core.schema.json#/$defs/paragraph"
+        },
+        {
+          "$ref": "../core.schema.json#/$defs/points"
+        },
+        {
+          "$ref": "../core.schema.json#/$defs/quote"
+        }
+      ]
+    }
+  }
+}

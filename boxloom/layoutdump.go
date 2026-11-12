@@ -77,6 +77,7 @@ type LayoutMarks struct {
 	IRType       string `json:"irType,omitempty"`
 	CardRow      string `json:"cardRow,omitempty"`      // カードの並びの IR の名前(options・items)
 	ColumnGroups int    `json:"columnGroups,omitempty"` // 並列のまとまりの数
+	PairRows     int    `json:"pairRows,omitempty"`     // 対の並びの対の数
 	KeepLine     string `json:"keepLine,omitempty"`
 	NestedSlack  bool   `json:"nestedSlack,omitempty"`
 	List         bool   `json:"list,omitempty"`
@@ -198,7 +199,7 @@ func layoutDeck(deck *IRDeck, opt BuildOptions, lines lineMap) (*LayoutDump, err
 	for i, b := range built {
 		computeLayout(b.Root, 0, 0, v.PageW, v.PageH)
 		sp := fmt.Sprintf("/slides/%d", i)
-		d := &layoutDumper{slide: sp, tokens: tk, lines: lines, body: b.Body, groups: map[*Spec]columnInfo{}}
+		d := &layoutDumper{slide: sp, tokens: tk, lines: lines, body: b.Body, groups: map[*Spec]columnInfo{}, pairParts: map[*Spec]string{}}
 		out.Slides = append(out.Slides, LayoutSlide{Path: sp, Line: lines.Line(sp), Type: deck.Slides[i].Type, Root: d.node(b.Root, sp)})
 	}
 	return out, nil
@@ -211,6 +212,8 @@ type layoutDumper struct {
 	body   *Spec
 	// groups は並列のまとまりの箱(まとまり全体・本文の列)→ そのまとまり。
 	groups map[*Spec]columnInfo
+	// pairParts は対の並びの中の箱 → "list"(対の行の列)か "row"(見出しの行・対の行)。
+	pairParts map[*Spec]string
 }
 
 // round2 は 0.01pt に丸める(読みやすさのため。PPTX の EMU とは 127 未満の差)。
@@ -293,6 +296,9 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 	if s.columns != nil {
 		m.ColumnGroups = len(s.columns.cols)
 	}
+	if s.pairs != nil {
+		m.PairRows = len(s.pairs.rows)
+	}
 	if m != (LayoutMarks{}) {
 		n.Marks = &m
 	}
@@ -329,6 +335,25 @@ func (d *layoutDumper) childPath(s *Spec, i int, c *Spec, path string) string {
 				return fmt.Sprintf("%s/columns/%d", path, ci)
 			}
 		}
+	}
+	if s.pairs != nil {
+		d.pairParts[s.pairs.list], d.pairParts[s.pairs.head] = "list", "row"
+		for _, r := range s.pairs.rows {
+			d.pairParts[r.row] = "row"
+		}
+		if c == s.pairs.head {
+			return path + "/headings"
+		}
+		return path
+	}
+	switch d.pairParts[s] {
+	case "list":
+		return fmt.Sprintf("%s/pairs/%d", path, i)
+	case "row":
+		if i == 0 {
+			return path + "/subject"
+		}
+		return path + "/response"
 	}
 	if col, ok := d.groups[s]; ok {
 		switch {

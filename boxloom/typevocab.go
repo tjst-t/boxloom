@@ -28,6 +28,13 @@ type typeDecl struct {
 	// Fallback は標準でない型だけが持つ:そのブロックを標準の型のブロックに
 	// 書き換える(docs/layers.md の5章)。組み方を持たないテンプレートはこれで組む。
 	Fallback func(b *IRBlock) ([]*IRBlock, error)
+	// Validate は標準でない型の形を IR を読むときに見る(任意)。Schema と同じ決まりを
+	// Go でも見て、check と build が Schema の検査なしでも誤りを場所つきで返すため。
+	Validate func(b *IRBlock) error
+	// readMarkdown は型の本文の囲み(Markdown の Inside の無いもの)を IR にする読み方
+	// (任意)。囲みの名乗り(BlockDecl)は置き場所と中に書けるものを宣言するだけで、
+	// 中身から意味の欄への写し方は型ごとのコードが持つ(docs/layers.md の8.3)。
+	readMarkdown func(p *mdParser, f *mdFenceBlk, path string) any
 }
 
 // typeVocabulary は「IR の type → 型の宣言」の表。
@@ -148,6 +155,49 @@ func defaultTypes() *typeVocabulary {
 
 // blockTypes はプロセスに1つの型の語彙。
 var blockTypes = defaultTypes()
+
+// コアが持つ標準でない型(pairs.go)。Markdown の読み方がパーサーを指すので、
+// 変数の初期化の後(init)で足す。
+func init() {
+	must(registerType(pairsType, pairsTypeDecl()))
+}
+
+// fences は語彙のすべての型の囲み(名前の順)。テンプレートは型を隠さないので、
+// どのテンプレートもこれを名乗る(docs/layers.md の8.2)。
+func (v *typeVocabulary) fences() []BlockDecl {
+	var out []BlockDecl
+	for _, n := range v.order {
+		out = append(out, v.decls[n].Markdown...)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+// fenceReader は本文に置ける囲み name の読み方を持つ標準でない型を探す。
+func (v *typeVocabulary) fenceReader(name string) (func(p *mdParser, f *mdFenceBlk, path string) any, bool) {
+	for _, n := range v.order {
+		d := v.decls[n]
+		for _, b := range d.Markdown {
+			if b.Name == name && len(b.Inside) == 0 && d.readMarkdown != nil {
+				return d.readMarkdown, true
+			}
+		}
+	}
+	return nil, false
+}
+
+// innerFence は、ほかの囲みの中にだけ置ける囲み name の宣言を探す(本文に置いた
+// ときの誤りの文に使う)。
+func (v *typeVocabulary) innerFence(name string) (BlockDecl, bool) {
+	for _, n := range v.order {
+		for _, b := range v.decls[n].Markdown {
+			if b.Name == name && len(b.Inside) > 0 && !v.standard[n] {
+				return b, true
+			}
+		}
+	}
+	return BlockDecl{}, false
+}
 
 // registerType は標準でない型を語彙に足す。Schema(schema/types/ の写し。
 // typeSchema で読む)と Fallback は必須。

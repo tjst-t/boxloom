@@ -92,6 +92,8 @@ type Spec struct {
 	// 並びの名前("options"・"items")。容量の計測でカードごとの高さを出し、
 	// 一番高いカードがブロックの高さを決めることを作者に見せる。
 	cards string
+	// pairs は対の並び(pairs)の箱が持つ、対ごとの部品(はみ出しを対ごとに測る。pairs.go)。
+	pairs *pairsInfo
 	// nestedSlack は、この箱が列の中で足りないとき、中のサブシステムの縮められる
 	// 分を Phase3a で先に返すか(並列のまとまりで、画像を文字より先に縮めるため)。
 	nestedSlack bool
@@ -165,6 +167,9 @@ func measureColumnGroups(info *columnsInfo) SpecOpt { return func(s *Spec) { s.c
 // measureCardRow は測る単位の印: 横に同じ幅のカードを並べる行で、カードごとの高さを
 // 容量に出す。name は IR の並びの名前("options"・"items")。
 func measureCardRow(name string) SpecOpt { return func(s *Spec) { s.cards = name } }
+
+// measurePairRows は測る単位の印: 対の並び(pairs)の箱で、対(行)ごとにはみ出しを測る。
+func measurePairRows(info *pairsInfo) SpecOpt { return func(s *Spec) { s.pairs = info } }
 
 // keepLine は文字の葉の属性: 1行に収めたい文字。name は警告の文に使う名前。
 func keepLine(name string) SpecOpt { return func(s *Spec) { s.keepLine = name } }

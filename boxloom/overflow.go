@@ -49,6 +49,10 @@ type BlockMeasure struct {
 	// カードごとの測り値。ブロックの Need は一番高いカードの Need + 余白。
 	CardsKey string // IR の並びの名前("options"・"items")
 	Cards    []CardMeasure
+
+	// Pairs は対の並び(pairs)のときだけ、対ごとの測り値。ブロックの Need は
+	// 見出しの行と対の行を積んだ高さ。
+	Pairs []PairMeasure
 }
 
 // CardMeasure は横に並ぶカードの1枚の測り値。
@@ -115,6 +119,9 @@ func measureBody(root, body *Spec) (blocks []BlockMeasure, capacity, need float6
 		}
 		if b.cards != "" {
 			m.CardsKey, m.Cards = b.cards, measureCards(b)
+		}
+		if b.pairs != nil {
+			m.Pairs = measurePairs(b, b.pairs, start, max0(widths[b]-2*b.padX()), capacity)
 		}
 		blocks = append(blocks, m)
 	}
@@ -233,6 +240,11 @@ func overflowWarnings(blocks []BlockMeasure, capacity, need float64, kinds []str
 						o.Index, c.Index, ib.Index, ib.Type, c.Index, ib.Overflow, ib.Need, c.Need, capacity, need))
 				}
 			}
+			continue
+		}
+		if ws := pairOverflowWarnings(o, capacity, need); len(ws) > 0 {
+			// 対の並びは、はみ出した対ごとに出す。
+			out = append(out, ws...)
 			continue
 		}
 		out = append(out, fmt.Sprintf("[LAYOUT-OVERFLOW WARNING] body[%d]: block%s overflows the body area by %.1fpt (block needs %.1fpt; body area %.1fpt, all blocks need %.1fpt)",

@@ -33,3 +33,5 @@
 | `image-empty-alt.json` | 画像の代わりの文を空にした(`boxloom check` は `image-alt`。このフォルダに画像は無いので `image-missing` も出る) |
 | `chart-color-on-series.json` | chart の系列に色(color)を足した(色はテーマの役割名からサブシステムが決める) |
 | `chart-form-as-compare.json` | chart の比べ方(compare)にグラフの形の名前(bar)を書いた(形はサブシステムが選ぶ) |
+| `pairs-left-right.json` | 対の並び(pairs)の見出しを位置の名前(`left`・`right`)で書いた(側の名前は意味の `subject`・`response`) |
+| `pairs-side-table.json` | 対の1つの側に表を置いた(側は段落・箇条・引用のどれか) |

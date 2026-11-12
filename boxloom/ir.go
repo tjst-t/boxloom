@@ -586,6 +586,9 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 				return err
 			}
 			*k = IRBlock{Type: head.Type, Variant: v.Variant, Raw: append(json.RawMessage{}, b...)}
+			if d, _ := blockTypes.decl(head.Type); d.Validate != nil {
+				return d.Validate(k)
+			}
 			return nil
 		}
 		return fmt.Errorf("unknown block type %q (known: %s)", head.Type, strings.Join(blockTypes.known(), ", "))

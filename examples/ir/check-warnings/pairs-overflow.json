@@ -1,0 +1,90 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "対の並びのはみ出しの例",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "公園の清掃の見直し",
+      "body": [
+        {
+          "type": "paragraph",
+          "content": "段落を1つ置き、その下に対を5つ並べる。4つ目の対の打ち手の箇条が長く、本文の領域の下端を越える(5つ目の対も越える)。"
+        },
+        {
+          "type": "pairs",
+          "headings": {
+            "subject": "分かったこと",
+            "response": "打ち手"
+          },
+          "pairs": [
+            {
+              "subject": {
+                "type": "paragraph",
+                "content": "落ち葉は 11 月に集中する"
+              },
+              "response": {
+                "type": "paragraph",
+                "content": "11 月だけ当番を2人にする"
+              }
+            },
+            {
+              "subject": {
+                "type": "paragraph",
+                "content": "道具の置き場が遠い"
+              },
+              "response": {
+                "type": "paragraph",
+                "content": "入口の倉庫に熊手を置く"
+              }
+            },
+            {
+              "subject": {
+                "type": "paragraph",
+                "content": "ごみ袋が足りなくなる"
+              },
+              "response": {
+                "type": "paragraph",
+                "content": "袋を2箱多めに頼む"
+              }
+            },
+            {
+              "subject": {
+                "type": "paragraph",
+                "content": "当番の引き継ぎが口頭だけになっている"
+              },
+              "response": {
+                "type": "points",
+                "items": [
+                  "当番の表を掲示板に貼る",
+                  "終わった場所に印を付ける",
+                  "気づいたことを帳面に書く",
+                  "帳面は月に1度読み合わせる",
+                  "読み合わせの結果を次の当番に渡す",
+                  "渡した記録を倉庫に置く",
+                  "倉庫の鍵の置き場所を決める"
+                ]
+              }
+            },
+            {
+              "subject": {
+                "type": "paragraph",
+                "content": "雨の翌日は作業が進まない"
+              },
+              "response": {
+                "type": "paragraph",
+                "content": "雨の翌日は清掃を1日ずらす"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

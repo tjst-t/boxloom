@@ -1267,7 +1267,7 @@ func (p *mdParser) parseInlineAt(t mdText, path string) any {
 	return v
 }
 
-func fenceExpected() []string { return append([]string{}, knownFences...) }
+func fenceExpected() []string { return knownFences() }
 
 // fenceBlock は本文に置いた囲みを IR のブロックにする。
 func (p *mdParser) fenceBlock(f *mdFenceBlk, path string) any {
@@ -1330,6 +1330,14 @@ func (p *mdParser) fenceBlock(f *mdFenceBlk, path string) any {
 			where = ":::compare"
 		}
 		p.fail(f.line, 1, path, codeMisplaced, fmt.Sprintf("囲み :::%s は %s の中にだけ書けます", f.name, where), nil, "")
+		return nil
+	}
+	// 型の語彙の標準でない型の囲み(読み方は型が持つ)。
+	if read, ok := blockTypes.fenceReader(f.name); ok {
+		return read(p, f, path)
+	}
+	if d, ok := blockTypes.innerFence(f.name); ok {
+		p.fail(f.line, 1, path, codeMisplaced, fmt.Sprintf("囲み :::%s は :::%s の中にだけ書けます", f.name, strings.Join(d.Inside, "・:::")), nil, "")
 		return nil
 	}
 	p.fail(f.line, 1, path, codeUnknownBlock, fmt.Sprintf("囲み :::%s はありません", f.name), fenceExpected(), "見た目を変えたいときはテンプレートの variant を選んでください")

@@ -61,11 +61,12 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer? }   日付
          { type: "content",   variant?, title, lead?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead
          { type: "section",   variant?, title, notes? }          章の区切り(本文なし)
          { type: "statement", variant?, content, source?, notes? }        言うことが1文だけ(本文なし)
-ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem   (どれも type で選ぶ)
+ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem | pairs   (どれも type で選ぶ。pairs は標準でない型)
          takeaway { content }                                     本文の中の結論の1文
          stat     { items: [{ value: "3 → 12", unit?: "機種", label }] }   1〜4個
          quote    { content, source }                             出どころは必須
 並列     { type: "columns", columns: [{ title?, role?: "main", body: [paragraph|points|note|table|image] }] }  (2〜3個)
+対の並び  { type: "pairs", headings: { subject, response }, pairs: [{ subject: 側, response: 側 }] }  (2組以上。側は paragraph|points|quote)
 表       { type: "table", header: [セル], rows: [[セル]], total?: [セル], caption? }   (セルはインライン。どの行も見出しと同じ数。total は合計の行)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
@@ -227,6 +228,42 @@ Schema では書けないので `boxloom check` が見る。
   差分で読めるように)。代わりの文 `alt` は必須で、空白だけも不可。
   `caption` は画像の下に出す説明の文(インライン)。
 
+### 10.1 対の並び(pairs。最初の標準でない型、#65)
+
+「分かったこと ↔ 打ち手」のように、2つの側の見出しを1回だけ書き、その下に対を並べる。
+対の2つの側は行がそろう(`columns` では2つのまとまりの行がそろわない)。標準の型には
+しない(`docs/layers.md` の8.1)。Schema は `schema/types/pairs.schema.json`(コアの
+`block` の振り分けがそこを指す)。
+
+```json
+{ "type": "pairs",
+  "headings": { "subject": "分かったこと", "response": "打ち手" },
+  "pairs": [
+    { "subject":  { "type": "paragraph", "content": "雨の日は箱の口から本が濡れる" },
+      "response": { "type": "points", "items": ["口に庇を付ける", "濡れた本は乾かしてから戻す"] } },
+    … ] }
+```
+
+- **欄の名前は意味で付ける**(位置の名前にしない、#1279989)。`subject` はその対が
+  何についてか(分かったこと・課題・問い)、`response` はそれに応えるもの(打ち手・
+  対策・答え・確かめ方)。どちらを左に置くか・幅・色は書けない(テンプレートが決める。
+  dark / light は subject を左、2つの側を同じ幅に)。`left`・`right` のような位置の名前は
+  知らないキーとして断る(`examples/ir/invalid/pairs-left-right.json`)。
+- `headings` は2つの側の見出し(列の題。インライン)で、文書の中で1回だけ書く。両方必須。
+- `pairs` は2組以上。対の2つの側はそれぞれ段落・箇条・引用(`paragraph`・`points`・
+  `quote`)のどれか1つ。表・図・注記などは置けない(`examples/ir/invalid/pairs-side-table.json`)。
+  1組なら段落か `columns` にする。
+- Schema と同じ決まりを Go の読み込みも見る(型の語彙の `Validate`)。誤りの path は
+  欄まで指す(`/slides/S/body/N/headings/left`・`…/pairs/K/response`)。
+- **組み方を持たないテンプレート**(値の表だけの外のテンプレート、例
+  `examples/templates/forest.json`)は、代わりの組み方で `columns` に書き換えて組み、
+  警告 `component-fallback` を1件出す(path はそのブロック)。見出しはまとまりの題に、
+  各対の側はそれぞれのまとまりに順に入れる。まとまりには引用を置けないので、引用は
+  言葉の段落と出どころの注(`note`)に分ける。書き換えた IR の例は
+  `examples/ir/pairs-fallback.json`(`examples/ir/pairs.json` を書き換えたもの。Schema と
+  check を通る)。
+- **はみ出しは対ごとに測る**(下の「はみ出しの測り方」と容量の `pairs`)。
+
 ### 11. 根拠の置き場所:出典・日付・機密区分・免責・合計の行(#47)
 
 資料の根拠(どこから来た数か・いつの時点か・誰に見せてよいか)を、注記(`note`)に
@@ -362,6 +399,12 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
   ブロックの要る高さになる。はみ出しの警告は、まとまりの中で下端を越えたブロックごとに
   1件で、path は `/slides/S/body/N/columns/C/body/K`(例
   `examples/ir/check-warnings/columns-overflow.json`)。
+- **対の並び(pairs)**は、見出しの行の下に対の行を gap を挟んで積み、対の高さは
+  2つの側の高い方。はみ出しの警告は下端を越えた対ごとに1件で、path は
+  `/slides/S/body/N/pairs/K`、文に対の高さと側ごとの高さを書く(例
+  `examples/ir/check-warnings/pairs-overflow.json`)。見出しの行だけが越えたときは
+  ブロックの警告になる。対の側の中の警告(折り返しなど)の path は `…/pairs/K/subject`
+  (`response`)。
 - ブロックを上から gap を挟んで積み、領域の下端を越えたブロックごとに1件出す。
   越えた高さは、下端をまたぐブロックなら下端より下の分、丸ごと下に落ちたブロックなら
   要る高さ全部。0.5pt 未満は丸めの誤差として見ない。
@@ -434,6 +477,10 @@ check でも断られるもの。
   ブロックの `need` は一番高いカードの `need` なので、**ほかのカードに文を足しても
   `need` も `fill-ratio` も変わらない**。中身を足して埋まりを変えたいなら、
   `tallest` のカードに足すか、別のブロックとして足す。
+- **対の並び**(`pairs`)のブロックには `pairs` が付く(対ごとに `path`(`…/pairs/K`)・
+  `need`・`lines`・`top`・`bottom`・`overflow`・側ごとの高さ `subject`・`response` と、
+  対の高さを決める側 `tallest`(`"subject"` か `"response"`))。低い方の側に文を足しても
+  対の高さは増えない。ブロックの `need` は見出しの行と対の行を gap を挟んで積んだ高さ。
 - 表の `lines` は行ごとの一番多いセルの行の数の和(と説明の文の行)、画像は説明の文の行。
 - **使い方の目安**:箇条を1項目足せるかは `remainingBodyLines`(1項目が1行なら
   その数まで)。新しいブロックを足すなら `remaining − blockGap` に入るか。

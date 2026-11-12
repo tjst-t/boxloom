@@ -248,6 +248,7 @@ func bundleIRSchema(name string, subs map[string]SubsystemDecl) (json.RawMessage
 		if enum == nil || blockAllOf == nil {
 			return nil, fmt.Errorf("core schema: $defs.block has no type enum or allOf")
 		}
+		changed := false
 		for _, name := range exts {
 			d, _ := blockTypes.decl(name)
 			id, err := schemaID(d.Schema)
@@ -262,15 +263,18 @@ func bundleIRSchema(name string, subs map[string]SubsystemDecl) (json.RawMessage
 			if slices.Contains(enum, any(name)) {
 				continue // コアの Schema がすでに振り分けている(schema/core.schema.json に足した型)
 			}
+			changed = true
 			enum = append(enum, name)
 			blockAllOf = append(blockAllOf, obj{
 				"if":   obj{"properties": obj{"type": obj{"const": name}}, "required": []string{"type"}},
 				"then": obj{"$ref": id},
 			})
 		}
-		typ["enum"], block["allOf"] = enum, blockAllOf
-		if core, err = json.Marshal(c); err != nil {
-			return nil, err
+		if changed {
+			typ["enum"], block["allOf"] = enum, blockAllOf
+			if core, err = json.Marshal(c); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if _, clash := defs["core"]; clash {

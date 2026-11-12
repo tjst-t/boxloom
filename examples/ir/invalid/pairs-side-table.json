@@ -1,0 +1,87 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "対の並びの例",
+    "subtitle": "分かったことと打ち手を、行をそろえて並べる",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "図書館の夜間返却を見直す",
+      "lead": "利用者への聞き取りで分かったことごとに、次の打ち手を1つずつ決めた",
+      "body": [
+        {
+          "type": "pairs",
+          "headings": {
+            "subject": "分かったこと",
+            "response": "打ち手"
+          },
+          "pairs": [
+            {
+              "subject": {
+                "type": "paragraph",
+                "content": "返却の半分は閉館後の 20 時から 23 時に集まる"
+              },
+              "response": {
+                "type": "points",
+                "items": [
+                  "返却箱を2つに増やす",
+                  "箱が満ちたら翌朝の当番に知らせる"
+                ]
+              }
+            },
+            {
+              "subject": {
+                "type": "paragraph",
+                "content": "雨の日は箱の口から本が濡れる"
+              },
+              "response": {
+                "type": "table",
+                "header": [
+                  "当番",
+                  "作業"
+                ],
+                "rows": [
+                  [
+                    "朝",
+                    "乾かす"
+                  ]
+                ]
+              }
+            },
+            {
+              "subject": {
+                "type": "quote",
+                "content": "返したのに延滞の知らせが来て驚いた",
+                "source": "利用者 B、聞き取りにて"
+              },
+              "response": {
+                "type": "points",
+                "items": [
+                  "箱の中身は開館と同時に読み取る",
+                  "前の晩の返却日で記録する"
+                ]
+              }
+            },
+            {
+              "subject": {
+                "type": "paragraph",
+                "content": "返却箱の場所が入口から見えにくい"
+              },
+              "response": {
+                "type": "paragraph",
+                "content": "入口の案内板に返却箱の矢印を足す"
+              }
+            }
+          ]
+        }
+      ],
+      "source": "架空の聞き取り(利用者 12 人)"
+    }
+  ]
+}

@@ -13,7 +13,7 @@ import (
 // keepLine・nestedSlack・List・card)を部品が Spec の欄に直接書かず、配置の段の
 // 語彙(layout.go の SpecOpt)だけで付けていることを確かめる。
 func TestMarksOnlyThroughVocabulary(t *testing.T) {
-	marks := map[string]bool{"irType": true, "columns": true, "cards": true, "keepLine": true,
+	marks := map[string]bool{"irType": true, "columns": true, "cards": true, "pairs": true, "keepLine": true,
 		"nestedSlack": true, "List": true, "card": true}
 	files, err := filepath.Glob("*.go")
 	if err != nil {
