@@ -377,7 +377,7 @@
       "number": 66,
       "kind": "task",
       "title": "YAML の deck を入口にする(IR の写し。parse・check・build が .yaml/.yml を受け取る)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "agent-entry",
       "dependsOn": [],
       "milestone": null,
@@ -392,7 +392,7 @@
       ],
       "threads": [],
       "createdAt": "2026-11-12T01:23:31.304Z",
-      "updatedAt": "2026-11-12T01:23:31.304Z",
+      "updatedAt": "2026-11-12T06:39:13.709Z",
       "closedAt": null,
       "extra": {}
     },
