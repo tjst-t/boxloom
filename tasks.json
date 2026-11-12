@@ -1232,7 +1232,7 @@
       "number": 69,
       "kind": "task",
       "title": "配置の段の木を入力として読む(開発者・試験用。読むとき値の表の段で検査)",
-      "status": "backlog",
+      "status": "ready",
       "parent": "tokens-template",
       "dependsOn": [
         "layout-dump",
@@ -1249,7 +1249,7 @@
       ],
       "threads": [],
       "createdAt": "2026-11-12T01:25:10.512Z",
-      "updatedAt": "2026-11-12T01:25:10.512Z",
+      "updatedAt": "2026-11-12T10:11:43.979Z",
       "closedAt": null,
       "extra": {}
     },
