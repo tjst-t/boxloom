@@ -644,6 +644,27 @@
       "extra": {}
     },
     {
+      "id": "table-continuation",
+      "number": 81,
+      "kind": "task",
+      "title": "長い表を次のスライドへ続ける(見出しの行を繰り返し、「続く 1/7」を出す)",
+      "status": "backlog",
+      "parent": "slide-patterns",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "サンプル(読む報告書)の p13〜19 の形。1つの長い表が7枚にわたって続き、各枚に「1/7」などが付く。\n\n## 決めること(着手の前に)\n- **自動で送るか、作者が分けるか。** いまの決まりは「はみ出しは警告するだけで、自動で縮めたり送ったりしない」(#1265405)。自動で次のスライドへ送ると、この決まりと、IR の1スライド=1枚の対応が崩れる。候補は次の3つ。\n  - (a) 作者が表を分け、各スライドの表に `continues`(同じ表の続き)を書く。Boxloom は見出しの行の繰り返しと「続く n/m」の印を出し、列の幅を全部の枚でそろえる。\n  - (b) 1つの表を IR に書くと、組み立てで枚数に分ける。#1265405 の例外になる。\n  - (c) check が「この表は n 枚に分けられる」と分け方の案を出し、分けるのは作者(AI)。(a) と組み合わせる。\n- **列の幅をそろえる範囲**と、**「続く」の印の場所・文**(テンプレートの marks)。\n\n私の推しは (a)+(c)。#1265405 と IR の対応を保ったまま、サンプルの見た目に届く。",
+      "doneWhen": "決めた方式で、長い表が複数のスライドに続き、各枚に見出しの行と「続く n/m」の印が出て、列の幅が全部の枚でそろう(試験)。IR・Schema・docs に書き方がある。PPTX が tools/validate_pptx.py を通る。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-12T14:32:55.564Z",
+      "updatedAt": "2026-11-12T14:32:55.564Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "canvas-patterns",
       "number": 4,
       "kind": "story",
