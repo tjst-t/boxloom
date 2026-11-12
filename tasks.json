@@ -1774,6 +1774,29 @@
       "updatedAt": "2026-11-12T13:23:10.772Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "fallback-paths",
+      "number": 76,
+      "kind": "bug",
+      "title": "代わりの組み方で組んだ型の警告・容量の場所が、IR に無い場所(columns/…)を指す",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [
+        "pairs-check"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "fable のレビューの中2。#71 と同じあたり(型の語彙・pairs)を触るので、#71 の後にする。\n\n## 何が起きるか\ncomponent.go(119-144 行あたり)の代わりの組み方(Fallback)で pairs を columns に書き換えて組むと、場所がずれる。\n- 例:外の値の表(組み方を持たないテンプレート)で examples/ir/check-warnings/pairs-overflow.json を check すると、layout-overflow と capacity の path が /slides/1/body/1/columns/1/body/3 になる。\n- pairs に columns は無い。quote を段落と注に分けるので、番号もずれる。\n- fill-ratio の hint も同じ場所を作者に勧める。\n\n## なぜ困るか\n作者(AI)が直す場所を IR の中で引けない。\n\n## 直し方\nFallback が書き換えたブロックごとに、元の IR の場所(pairs/K/subject など)を返す。警告・容量の path はそれに写す。写せないときは、少なくとも元のブロックの path(/slides/S/body/N)に丸める。",
+      "doneWhen": "組み方を持たないテンプレートで pairs を check したとき、layout-overflow・fill-ratio の hint・capacity の path がどれも IR にある場所を指す(試験で、IR の JSON Pointer として引けることを確かめる)。組み方を持つテンプレート(dark・light)の出力は変わらない(TestOutputsGolden)。tools/ci.sh go python pptx が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-12T13:23:26.641Z",
+      "updatedAt": "2026-11-12T13:23:26.641Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
