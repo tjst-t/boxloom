@@ -1759,7 +1759,7 @@
       "number": 75,
       "kind": "bug",
       "title": "公開の名前 YAMLSourceMap・PairMeasure を非公開にし、runLayout の古い注釈を直す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -1771,7 +1771,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-12T13:23:10.772Z",
-      "updatedAt": "2026-11-12T13:23:10.772Z",
+      "updatedAt": "2026-11-12T13:27:23.345Z",
       "closedAt": null,
       "extra": {}
     },
