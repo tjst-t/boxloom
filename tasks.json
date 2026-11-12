@@ -1258,7 +1258,7 @@
       "number": 70,
       "kind": "task",
       "title": "サブシステムの中に直に書いた寸法を、値の表(subsystems.*)か段の刻みに寄せる(主に Gantt)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -1274,7 +1274,7 @@
       ],
       "threads": [],
       "createdAt": "2026-11-12T09:32:13.992Z",
-      "updatedAt": "2026-11-12T09:32:13.992Z",
+      "updatedAt": "2026-11-12T09:32:29.753Z",
       "closedAt": null,
       "extra": {}
     },
