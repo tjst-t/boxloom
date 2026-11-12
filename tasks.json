@@ -1232,7 +1232,7 @@
       "number": 69,
       "kind": "task",
       "title": "配置の段の木を入力として読む(開発者・試験用。読むとき値の表の段で検査)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "tokens-template",
       "dependsOn": [
         "layout-dump",
@@ -1243,14 +1243,14 @@
       "labels": [],
       "body": "docs/layers.md の 4章(開発者・試験用の入口)。人が決めた。\n\n## 立ち位置\n- 開発者・試験用に限る(Go DSL と同じ)。エンジンだけを試す、崩れた例を木のまま再現する、などに使う。\n- 作者(AI)の入口にしない:`boxloom schema` の出力・SKILL.md・作者向けの文書に載せない。作者は意味(IR)だけを書く(#1362887)。\n- 形は layout-dump(#67)の出力と同じ JSON(座標の欄 box は読まない・あれば無視せず誤りにするかは実装で決めて docs に書く)。\n\n## 前提\n- token-spec(#68):木がトークンのまま持てるようになってから作る。\n- 読むとき、間隔・余白・字の大きさ・色が値の表の名前か段(scale)に載っているかを検査し、外れたら #1259847 の Issue の形で誤り(path は木の中の場所)。\n\n## 確かめ方\nlayout で出した木を読み直して build すると、元の deck と同じ PPTX になる(往復の試験)。段から外れた値・知らない役割名は誤り。",
       "doneWhen": "layout(#67)が出した JSON を読み直して組むと、examples の全 deck で元と同じ PPTX の部品になる(試験)。段から外れた余白・字の大きさ、知らない役割名・値の表の名前が誤りになる(試験)。schema の出力に現れない(TestOutputsGolden の schema の記録が同じ)。tools/ci.sh go python pptx が通る。",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/layout-input）",
       "refs": [
         "docs/layers.md"
       ],
       "threads": [],
       "createdAt": "2026-11-12T01:25:10.512Z",
-      "updatedAt": "2026-11-12T10:11:50.960Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-12T10:20:12.957Z",
+      "closedAt": "2026-11-12T10:20:12.957Z",
       "extra": {}
     },
     {
