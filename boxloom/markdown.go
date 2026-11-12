@@ -13,8 +13,10 @@ package boxloom
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -75,6 +77,7 @@ const (
 	codeTableShape        = "table-shape"        // 表の行のセルの数が見出しと違う
 	codeTableGroups       = "table-groups"       // 表の行の群の形が違う(最初の行の群の名前が空など)
 	codeTablePoints       = "table-points"       // 表のセルの箇条の書き方が違う(知らない列名・空の項目)
+	codeTableContinues    = "table-continues"    // 続きの表({continues})の形が違う(見出しの行を書いた・前の表と列や群が違う)
 	codeImagePath         = "image-path"         // 画像の src が絶対パス・URL・文書のフォルダの外
 	codeImageAlt          = "image-alt"          // 画像の代わりの文が無い
 )
@@ -210,6 +213,9 @@ type mdParser struct {
 	file  string
 	errs  []Issue
 	lines map[string]int // IR の場所(JSON Pointer)→ Markdown の行
+	// lastTable は直前に読んだ表(続きの表 {continues} が見出しの列・groups・points を
+	// 引き継ぐ。md_blocks.go)。
+	lastTable *mdTableShape
 }
 
 // mark は IR の場所が Markdown の何行目から来たかを覚える(boxloom check が
@@ -682,6 +688,9 @@ func (p *mdParser) placeListEnt(list *mdItem, ent *mdListEnt) {
 // --- 属性 ---
 
 // parseAttrs は {variant=dense} の中身を読む。allowed にない名前は誤り。
+// flagAttributes は値を書かない属性({continues})。
+var flagAttributes = map[string]bool{"continues": true}
+
 func (p *mdParser) parseAttrs(s string, line, col int, path string, allowed []string) map[string]string {
 	out := map[string]string{}
 	for _, tok := range strings.Fields(s) {
@@ -690,6 +699,13 @@ func (p *mdParser) parseAttrs(s string, line, col int, path string, allowed []st
 		switch {
 		case strings.HasPrefix(tok, "#") || strings.HasPrefix(tok, "."):
 			p.fail(line, col, path, codeUnknownAttribute, fmt.Sprintf("属性 %s の書き方は使えません", tok), allowed, "変種は {variant=名前} で選びます")
+			continue
+		case !ok && flagAttributes[k] && slices.Contains(allowed, k):
+			// 値を持たない属性(印)。{continues} など。
+			out[k] = ""
+			continue
+		case ok && flagAttributes[k] && slices.Contains(allowed, k):
+			p.fail(line, col, path, codeInvalidValue, fmt.Sprintf("属性 %s は値を書きません", k), nil, fmt.Sprintf("{%s} と書きます", k))
 			continue
 		case !ok:
 			p.fail(line, col, path, codeUnknownAttribute, fmt.Sprintf("属性 %s に値がありません", tok), allowed, "{名前=値} の形で書いてください")
@@ -962,7 +978,14 @@ func (p *mdParser) parseMarkdown(src []byte) ([]byte, []Issue) {
 	if len(p.errs) == 0 {
 		// できた IR を Go の読み手にも通す(Schema と同じ「知らないキーは断る」)。
 		if _, err := ParseIR(out); err != nil {
-			p.fail(1, 1, "", codeSchema, err.Error(), nil, "")
+			var ce *tableChainError
+			if errors.As(err, &ce) {
+				// 続きの表の形の外れは、IR の場所から Markdown の行を引く。
+				path := errPointer(err)
+				p.fail(max(1, SourceMap(p.lines).Line(path)), 1, path, ce.Code, err.Error(), nil, ce.Hint)
+			} else {
+				p.fail(1, 1, "", codeSchema, err.Error(), nil, "")
+			}
 		}
 	}
 	sortErrors(p.errs)

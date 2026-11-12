@@ -156,7 +156,7 @@ Available now (check `boxloom schema` — more may have been added):
 | A series of numbers (3+ points): ranking, change over time, share of a whole, distribution, relation of two quantities | ```` ```chart ```` | `compare:` `item` / `timeSeries` / `component` / `frequency` / `correlation` — the chart type is chosen for you (never write bar/line/pie). `categories: [...]`, `series: [{name, values: [...]}]` (one value per category, unquoted numbers, max 3 series), optional `unit`, `emphasis: [category]` (one series) or `emphasis: true` on one series, `stacked: true` when series are parts of a total. `correlation` uses `xAxis: {title, unit?}`, `yAxis` and `points: [[x, y], …]` instead of categories. `component` (share) has 1 series and ≤ 6 parts — merge small parts into "Other" |
 | Someone else's words | `:::quote Source text` + the words inside | The source (heading text) is required. Never quote your own conclusion |
 | One sentence to emphasise inside a normal slide | `:::takeaway` + one sentence | At most one per slide, usually last |
-| Rows × columns of plain text or numbers | GFM table: `\| A \| B \|` + `\| --- \| --- \|` + rows | First row is the header; every row has one cell per column (`table-shape`). **No alignment markers** (`:--`, `--:` are errors); numeric columns are right-aligned for you. Cells are inline only (except points, below). A line `: caption` right after the table is its caption. If the last row is a total, end that line with `{total=last}` (`: Estimates {total=last}`, or just `: {total=last}`); it is drawn as a total row. Totals are not computed — write the value. If rows fall into groups (e.g. process / organization), make the first column the group name, write the name only on the group's first row, leave that cell empty (`\| \|`) on the following rows, and end the caption line with `{groups=first}` (combine: `{groups=first total=last}`); the group names become merged cells. The first row's group cell must not be empty (`table-groups`). If a column's cells hold 2–4 short points (measures, steps), end the caption line with `{points=Column heading}` (the header text exactly; several: `{points=A,B}`) and separate the points in that column's cells with `;` (a literal `;` there is `\;`); they become bullets inside the cell. A cell with one point stays plain text; empty points (`a;;b`, trailing `;`) and unknown column names are `table-points`. Put a unit once in the caption or header, not in every cell. Ratings in cells → `matrix` (below) |
+| Rows × columns of plain text or numbers | GFM table: `\| A \| B \|` + `\| --- \| --- \|` + rows | First row is the header; every row has one cell per column (`table-shape`). **No alignment markers** (`:--`, `--:` are errors); numeric columns are right-aligned for you. Cells are inline only (except points, below). A line `: caption` right after the table is its caption. If the last row is a total, end that line with `{total=last}` (`: Estimates {total=last}`, or just `: {total=last}`); it is drawn as a total row. Totals are not computed — write the value. If rows fall into groups (e.g. process / organization), make the first column the group name, write the name only on the group's first row, leave that cell empty (`\| \|`) on the following rows, and end the caption line with `{groups=first}` (combine: `{groups=first total=last}`); the group names become merged cells. The first row's group cell must not be empty (`table-groups`). If a column's cells hold 2–4 short points (measures, steps), end the caption line with `{points=Column heading}` (the header text exactly; several: `{points=A,B}`) and separate the points in that column's cells with `;` (a literal `;` there is `\;`); they become bullets inside the cell. A cell with one point stays plain text; empty points (`a;;b`, trailing `;`) and unknown column names are `table-points`. Put a unit once in the caption or header, not in every cell. A table too long for one slide is split by you across consecutive slides (see "Splitting an overflowing slide"): each continuing table starts with the delimiter row (**no header row**) and its caption line ends with `{continues}`; header, columns, `groups` and `points` carry over from the first table, Boxloom repeats the header, adds an `n/m` mark and keeps the column widths the same (`table-continues` if a slide sits between them, the header is written, or the column count differs). Ratings in cells → `matrix` (below) |
 | Rows × columns where every cell is a rating (supported / conditional / not / risk) | ```` ```matrix ```` | `columns: [A, B]`, `rows: [{label, cells: [{status, text?}]}]`, optional `legend: {support: Good}`. One cell per column (`matrix-cells`). The recommended option: `emphasis: <column heading text>` (exactly as written in `columns`, `matrix-emphasis`) — never say "the blue column" in prose. Cells that are plain text or numbers are a table, not a matrix |
 | 3–7 steps without dates, in a direction (the output of one is the input of the next) | ```` ```process ```` | `steps: [{title, detail?, status?, emphasis?}]`, optional `caption`. Numbers (1. 2. …) and arrows are added for you; long processes wrap to a second row. If you use `status`, say what it means in `legend: {conditional: Needs approval}` (`figure-legend`) |
 | Two or more options, each with pros and cons | `:::compare` → `:::option` → `:::pros` / `:::cons` | If 3+ shared criteria apply to every option, a matrix fits better (above) |
@@ -438,6 +438,7 @@ Fixes by code:
 | `planned-syntax`, `unsupported-syntax`, `raw-html` | Rewrite with what exists (§3); no `##`, italics, table alignment markers or HTML |
 | `table-shape` | Give every table row exactly as many cells as the header (empty cell: `\| \|`) |
 | `table-points` | In `{points=…}` use a column heading exactly as written in the header row (not the group column); remove empty points (`a;;b`, a leading or trailing `;`); in IR a `points` cell has 2+ non-empty items |
+| `table-continues` | A `{continues}` table must come right after a slide whose last table it continues (no slide between, not inside `columns`, the first table on its slide); write no header row (start with `\| --- \|`); keep the first table's column count and `groups`/`points` (or omit them); `{total=last}` only on the last part. In IR: `"continues": true`, no `header` |
 | `table-groups` | In a `{groups=first}` table, write a group name in the first cell of the first row; in IR, the `rows` of `groups` must add up to the body rows and labels must not be empty |
 | `image-alt`, `image-path`, `image-missing`, `image-format` | Write alt text; use a path relative to the deck file (no URL, `/…` or `..`); make sure the file exists next to the deck and is PNG or JPEG |
 | `yaml` | Restricted YAML (§2): quote values starting with `*`, remove anchors and multi-line values |
@@ -450,7 +451,7 @@ Fixes by code:
 | `matrix-emphasis` | `matrix`: `emphasis` must be one of the `columns` headings, written exactly the same (without `**` etc.) |
 | `chart-values` | `chart`: one value per category in every series; `component` needs one series of non-negative parts; `stacked` needs 2+ series; `correlation` needs `xAxis`, `yAxis` and `points` (no `categories`); at most 3 series |
 | `chart-emphasis` | `chart`: `emphasis` must name existing categories and needs a single series; with several series mark one series `emphasis: true` instead |
-| `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently. Inside `columns` the path ends in `/columns/C/body/K`: shorten that group or move it to its own slide. In `pairs` the path ends in `/pairs/K` (one warning per pair that overflows): move that pair and the ones after it to the next slide, repeating the headings |
+| `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently. Inside `columns` the path ends in `/columns/C/body/K`: shorten that group or move it to its own slide. In `pairs` the path ends in `/pairs/K` (one warning per pair that overflows): move that pair and the ones after it to the next slide, repeating the headings. For a **table**, the `hint` and `capacity` (`blocks[].split`) say how many tables to split it into and before which rows: follow "Splitting a long table" below |
 | `title-wrap` (warning) | The slide title wraps to a second line. Make it a short headline (the topic in a few words) and move the claim into `:::lead`. Do not just cut words until it fits |
 | `fill-ratio` (warning) | Slide is mostly empty. Always fix (§4): merge with the neighbour the `hint` names, add the missing evidence or figure, or turn a one-message slide into `{type=statement}` |
 | `spare-width` (warning) | A figure/image leaves the side empty: put it in `columns` with text beside it (images and charts can go in a column), or give it more height by cutting text on that slide. In a column: remove `role=main` from the chart's group |
@@ -473,6 +474,26 @@ Fixes by code:
 4. If one block alone is taller than `bodyArea`, split the block itself (a long list
    into two lists by theme, a compare with 4 options into two compares).
 5. Run `check` again.
+
+### Splitting a long table
+
+Boxloom never moves table rows to the next slide by itself. When a table overflows, the
+`layout-overflow` hint and `capacity` give a proposal, e.g.
+`"split": {"tables": 3, "splitBefore": [7, 14], "rows": [7, 7, 4]}`
+(`splitBefore` counts body rows from 0: `7` is the 8th body row).
+
+1. Keep rows before the first `splitBefore` in the original table. Move each following
+   run of rows into a new table on a new slide placed **right after** the previous one
+   (no other slide between). You may split a little earlier at a natural break (a new
+   group or category); never later than proposed.
+2. Each continuing table: start with the delimiter row `| --- | --- |` (no header row),
+   then the rows, then the caption line `: {continues}` (`: {continues total=last}` on
+   the last part if the table has a total row; remove `{total=last}` from the earlier
+   parts). Do not repeat `{groups=…}` or `{points=…}`; they carry over. In a grouped
+   table, write the group name again on the first row of each part.
+3. Give each slide a short title and its own `:::lead` (what this part shows), and the
+   same `:::source`.
+4. Run `check` again; every part must pass with no `layout-overflow`.
 
 ### Merging thin slides
 

@@ -73,6 +73,13 @@ type IRBlock struct {
 	Total   []IRTableCell   // table: 合計の行(任意。セルの数は見出しと同じ)
 	Groups  []IRTableGroup  // table: 行の群(任意。先頭の列が群の列。本体の行のセルは見出しより1つ少ない)
 	Caption Inline          // table・image: 説明の文(任意)
+	// Continues は前のスライドの表の続き(table。見出しの行を書かず、最初の表の
+	// 見出しの行・列の数・groups を引き継ぐ。tablechain.go)。
+	Continues bool
+
+	// chain は続きの表のひと続き(linkTableChains が入れる。続きの無い表では nil)。
+	chain    *tableChain
+	chainPos int // ひと続きの中の何枚目か(0 が最初の表)
 
 	Src    string    // image: 文書からの相対パス
 	Alt    string    // image: 代わりの文
@@ -532,29 +539,34 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 			Rows    [][]IRTableCell `json:"rows"`
 			Total   []IRTableCell   `json:"total"`
 			Groups  []IRTableGroup  `json:"groups"`
+			// Continues は書かなければ false。false と書くのは誤り(続きでない表は書かない)。
+			Continues *bool `json:"continues"`
 		}
 		if err := strictUnmarshal(b, &v); err != nil {
 			return err
 		}
-		if len(v.Header) == 0 || len(v.Rows) == 0 {
+		if v.Continues != nil && !*v.Continues {
+			return fmt.Errorf("continues: write continues only as true (omit it for a table that does not continue)")
+		}
+		cont := v.Continues != nil
+		if cont {
+			// 続きの表は見出しの行を書かない(最初の表の見出しの行を繰り返す)。
+			// 列の数の検査は linkTableChains が最初の表の見出しの行で行う。
+			if v.Header != nil {
+				return fmt.Errorf("header: a continuing table (continues: true) has no header; the header of the first table is repeated")
+			}
+			if len(v.Rows) == 0 {
+				return fmt.Errorf("table needs at least one row in \"rows\"")
+			}
+		} else if len(v.Header) == 0 || len(v.Rows) == 0 {
 			return fmt.Errorf("table needs \"header\" and at least one row in \"rows\"")
 		}
-		if err := validateTableGroups(v.Groups, len(v.Header), len(v.Rows)); err != nil {
-			return err
-		}
-		want := v.Header
-		if v.Groups != nil {
-			want = v.Header[1:]
-		}
-		for i, r := range v.Rows {
-			if len(r) != len(want) {
-				return fmt.Errorf("rows[%d]: row has %d cells but %s", i, len(r), tableRowWant(len(v.Header), v.Groups != nil))
+		if !cont {
+			if err := validateTableShape(v.Header, v.Rows, v.Total, v.Groups); err != nil {
+				return err
 			}
 		}
-		if v.Total != nil && len(v.Total) != len(v.Header) {
-			return fmt.Errorf("total: row has %d cells but the header has %d", len(v.Total), len(v.Header))
-		}
-		*k = IRBlock{Type: v.Type, Variant: v.Variant, Caption: v.Caption, Header: v.Header, Rows: v.Rows, Total: v.Total, Groups: v.Groups}
+		*k = IRBlock{Type: v.Type, Variant: v.Variant, Caption: v.Caption, Header: v.Header, Rows: v.Rows, Total: v.Total, Groups: v.Groups, Continues: cont}
 	case "image":
 		var v struct {
 			Type    string `json:"type"`
@@ -702,6 +714,9 @@ func ParseIR(b []byte) (*IRDeck, error) {
 		}
 		d.Slides = append(d.Slides, s)
 	}
+	if err := linkTableChains(d); err != nil {
+		return nil, err
+	}
 	return d, nil
 }
 
@@ -824,6 +839,27 @@ func validateTableGroups(gs []IRTableGroup, cols, rows int) error {
 	}
 	if sum != rows {
 		return fmt.Errorf("groups: the groups cover %d rows but the table has %d", sum, rows)
+	}
+	return nil
+}
+
+// validateTableShape は表の行の群と、本体・合計の行のセルの数を見る(header は
+// 最初の表の見出しの行)。
+func validateTableShape(header []Inline, rows [][]IRTableCell, total []IRTableCell, groups []IRTableGroup) error {
+	if err := validateTableGroups(groups, len(header), len(rows)); err != nil {
+		return err
+	}
+	want := len(header)
+	if groups != nil {
+		want--
+	}
+	for i, r := range rows {
+		if len(r) != want {
+			return fmt.Errorf("rows[%d]: row has %d cells but %s", i, len(r), tableRowWant(len(header), groups != nil))
+		}
+	}
+	if total != nil && len(total) != len(header) {
+		return fmt.Errorf("total: row has %d cells but the header has %d", len(total), len(header))
 	}
 	return nil
 }

@@ -56,6 +56,18 @@ type BlockCapacity struct {
 	Cards []CardCapacity `json:"cards,omitempty"`
 	// Pairs は対の並び(pairs)のときだけ、対ごとの測り値。
 	Pairs []PairCapacity `json:"pairs,omitempty"`
+	// Split は本文の表がはみ出したときだけ、表を何枚に分けられるかの案。
+	Split *TableSplitCapacity `json:"split,omitempty"`
+}
+
+// TableSplitCapacity ははみ出した表の分け方の案。表を tables 枚に分け、2枚目からの
+// 表は splitBefore の本体の行(IR の rows の番号)から始める。続きの表には
+// continues: true を書き、見出しの行は書かない(docs/ir.md の 14章)。続きの枚は
+// 本文が表だけで、題・出典・フッターは同じと見込む。
+type TableSplitCapacity struct {
+	Tables      int   `json:"tables"`
+	SplitBefore []int `json:"splitBefore"`
+	Rows        []int `json:"rows"` // 表ごとの本体の行の数
 }
 
 // CardCapacity は横に並ぶカードの1枚の測り値。
@@ -130,6 +142,9 @@ func blockCapacity(b BlockMeasure, path, typ string) BlockCapacity {
 	for _, p := range b.Pairs {
 		bc.Pairs = append(bc.Pairs, pairCapacity(p, path))
 	}
+	if s := b.TableSplit; s != nil {
+		bc.Split = &TableSplitCapacity{Tables: s.Tables, SplitBefore: s.SplitBefore, Rows: s.Rows}
+	}
 	tall := tallestCard(b.Cards)
 	for i, c := range b.Cards {
 		bc.Cards = append(bc.Cards, CardCapacity{Path: fmt.Sprintf("%s/%s/%d", path, b.CardsKey, c.Index),
@@ -156,6 +171,9 @@ func (c SlideCapacity) String() string {
 		}
 		if b.RemainingWidth > 0 {
 			out += fmt.Sprintf(", %.1fpt of width unused beside the figure", b.RemainingWidth)
+		}
+		if s := b.Split; s != nil {
+			out += fmt.Sprintf(", can be split into %d tables before rows %v", s.Tables, s.SplitBefore)
 		}
 		for _, c := range b.Cards {
 			out += fmt.Sprintf("\n    %s: %d lines, %.1fpt", c.Path, c.Lines, c.Need)

@@ -343,6 +343,43 @@ Schema では書けないので `boxloom check` が見る。
 - 誤りは `boxloom check` の `table-points`:項目が1つ以下(path は `…/rows/R/C/points`)、
   空の項目(path は `…/points/I`)。
 
+### 14. 長い表を次のスライドへ続ける(continues。#81)
+
+- **Boxloom は表を自動で次のスライドへ送らない。** IR の1スライド = PPTX の1枚を保つ
+  (はみ出しを自動で直さない、と同じ方針)。長い表は**作者が分け**、続きのスライドの
+  表に `"continues": true` を書く。続きの表は `header` を書かない(書くと誤り)。
+
+  ```json
+  {"type": "content", "title": "移す仕組みの一覧",
+   "body": [{"type": "table", "header": ["仕組み", "利用者(人)"], "rows": [["受注の管理", "420"]]}]},
+  {"type": "content", "title": "移す仕組みの一覧",
+   "body": [{"type": "table", "continues": true, "rows": [["請求書の発行", "60"]], "total": ["合計", "480"]}]}
+  ```
+
+- **ひと続きの形**:続きの表は、すぐ前のスライドの本文の**最後の表**に続く。間に別の
+  スライド(区切りを含む)を挟まない。続きの表はそのスライドの本文の最初の表で、本文の
+  ブロック(並列のまとまり `columns` の中ではない)。`continues` は `true` だけを書く
+  (続かない表は書かない)。
+- **最初の表に従うもの**:見出しの行・列の数・`groups` の有無。続きの表の本体の行は
+  最初の表の見出しの行で数える(`groups` があれば1つ少ない)。続きの表の `groups` は
+  その枚の行の群を書き直す(群が枚をまたぐなら、続きの枚の最初の群にも名前を書く)。
+  セルの中の箇条(`points`)はセルの意味なので、IR では表ごとの宣言を持たない
+  (13章。Markdown の `{points=列名}` は最初の表から引き継ぐ)。合計の行(`total`)は
+  ひと続きの最後の表だけ。
+- **Boxloom がそろえるもの**:
+  - 各枚に最初の表の見出しの行を繰り返す。
+  - 各枚に「n/m」の印を付ける(n は何枚目か、m はひと続きの枚数)。文はテンプレートの
+    `marks.tableContinued`(dark / light / report は `{n}/{m}`)、置き場所は組み方が
+    決める(dark / light / report は説明の文の行の右端=表の右端の上)。
+  - 列の幅をひと続きの全部の枚でそろえる(全部の枚の行と見出しの行を合わせて測る)。
+    数の列の右揃えも全部の行で決める。
+  - 説明の文(`caption`)を書かない続きの表は、最初の表の説明の文を繰り返す。
+- 誤りは `boxloom check` の `table-continues`(下の表)と、列の数の違いは `table-shape`。
+  Go の読み込み(`ParseIR`)も同じ形を断る。
+- **分け方の案**:表がはみ出すと、`layout-overflow` の警告の `hint` と容量の
+  `blocks[].split` に「何枚に分けられるか・どの行の前で分けるか」を出す(下の
+  「容量の計測」)。分けるのは作者(AI)。
+
 ## 意味の検査(boxloom check)
 
 JSON Schema では書けない検査は Go の `boxloom check` がする。
@@ -398,6 +435,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `matrix-emphasis` | matrix の `emphasis`(推す列)が `columns` の見出しのどれか(文中の記法を除いた文字)と同じ(path は `…/data/emphasis`) |
 | `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`)。`groups` があると本体の行は見出しより1つ少ない |
 | `table-points` | 表のセルの中の箇条(`{"points": [...]}`)の項目が2つ以上で(path は `…/rows/R/C/points` か `…/total/C/points`)、空の項目が無い(path は `…/points/I`) |
+| `table-continues` | 続きの表(`continues`)が、すぐ前のスライドの本文の最後の表に続く(前のスライドに表が無い・間にスライドを挟む・そのスライドの2つ目の表・並列のまとまりの中は path `…/continues`)。`header` を書かない(path `…/header`)。`groups` の有無が最初の表と同じ(path `…/groups`)。合計の行はひと続きの最後の表だけ(path は続きのある表の `…/total`)。`continues` は `true` だけ |
 | `table-groups` | 表の `groups` の名前が空でなく(path は `…/groups/G/label`)、`rows` の和が本体の行の数で、群の列のほかに列がある(path は `…/groups`) |
 | `image-path` | 画像の `src` が文書からの相対パス(URL・絶対パス・`..`・`\` は断る) |
 | `image-missing` | 画像のファイルが読める(`CheckOptions.Assets` から。コマンドは文書のフォルダ) |
@@ -530,6 +568,18 @@ check でも断られるもの。
   対の高さを決める側 `tallest`(`"subject"` か `"response"`))。低い方の側に文を足しても
   対の高さは増えない。ブロックの `need` は見出しの行と対の行を gap を挟んで積んだ高さ。
 - 表の `lines` は行ごとの一番多いセルの行の数の和(と説明の文の行)、画像は説明の文の行。
+- **はみ出した本文の表**には `split` が付く(はみ出さなければ省く)。表を何枚に分けると
+  どの枚にも収まるかの案で、`tables`(枚数)・`splitBefore`(2枚目からの表が始まる本体の
+  行。IR の `rows` の番号)・`rows`(表ごとの本体の行の数)。最初の枚は表の上端から本文の
+  下端まで、続きの枚は本文が表だけで題・出典・フッターは同じと見込み、各枚に説明の文の
+  行(「n/m」の印)と見出しの行を数える。`groups` の表は群の境目で分け、1つの群が1枚に
+  入らないときだけ群の中で分ける。合計の行は最後の枚。同じ案を `layout-overflow` の警告の
+  `hint` にも書く。分け方は作者が選び、続きの表に `continues: true` を書く(14章)。
+
+  ```
+  "split": {"tables": 3, "splitBefore": [7, 14], "rows": [7, 7, 4]}
+  ```
+
 - **使い方の目安**:箇条を1項目足せるかは `remainingBodyLines`(1項目が1行なら
   その数まで)。新しいブロックを足すなら `remaining − blockGap` に入るか。
   `remaining` が負なら、`overflow` が 0 でない最初のブロックの前でスライドを

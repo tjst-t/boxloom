@@ -1161,7 +1161,7 @@
       ]
     },
     "table": {
-      "description": "表。行×列の文字・数。1行目は見出しの行(header)。列の配置・幅は書かない(テンプレートが中身から決める)。本体・合計の行のセルはインラインか、セルの中の箇条({\"points\": [...]}、2項目以上)。",
+      "description": "表。行×列の文字・数。1行目は見出しの行(header)。列の配置・幅は書かない(テンプレートが中身から決める)。本体・合計の行のセルはインラインか、セルの中の箇条({\"points\": [...]}、2項目以上)。 長い表は作者がスライドごとに分け、続きのスライドの表に continues: true を書く(見出しの行は書かない。最初の表の見出しの行・列の数・groups を引き継ぎ、Boxloom が各枚に見出しの行と「n/m」の印を付け、列の幅をそろえる)。",
       "type": "object",
       "properties": {
         "type": {
@@ -1206,14 +1206,34 @@
           "items": {
             "$ref": "#/$defs/tableCell"
           }
+        },
+        "continues": {
+          "description": "前のスライドの表の続き(true だけを書く)。すぐ前のスライドの本文の最後の表に続く。header を書かない。列の数・groups の有無は最初の表と同じ。total はひと続きの最後の表だけ。",
+          "const": true
         }
       },
       "required": [
         "type",
-        "header",
         "rows"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "if": {
+        "required": [
+          "continues"
+        ]
+      },
+      "then": {
+        "not": {
+          "required": [
+            "header"
+          ]
+        }
+      },
+      "else": {
+        "required": [
+          "header"
+        ]
+      }
     },
     "tableCell": {
       "description": "表の本体・合計の行のセル1つ。インラインか、セルの中の箇条(points。項目はインラインで2つ以上、空の項目は不可。項目が1つならただのインラインで書く)。見出しの行のセルはインラインだけ。",

@@ -237,6 +237,9 @@ type checker struct {
 	file   string
 	errs   []Issue
 	images *imageCache
+	// tableFirst は続きの表(continues)の場所 → ひと続きの最初の表(見出しの行と
+	// groups を引き継ぐ。checkTableChains が入れる)。
+	tableFirst map[string]map[string]any
 }
 
 func (c *checker) add(at, msg, rule string) {
@@ -273,6 +276,7 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		c.checkNotEmpty(meta, "/meta", "confidential", "disclaimer")
 	}
 	slides, _ := getPath(doc, "slides").([]any)
+	c.checkTableChains(slides)
 	for si, s := range slides {
 		sp := fmt.Sprintf("/slides/%d", si)
 		sm, _ := s.(map[string]any)
@@ -392,6 +396,10 @@ func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
 		}
 	case "table":
 		header, _ := bm["header"].([]any)
+		if first, ok := c.tableFirst[bp]; ok {
+			// 続きの表は最初の表の見出しの行で数える。
+			header, _ = first["header"].([]any)
+		}
 		rows, _ := bm["rows"].([]any)
 		groups, grouped := bm["groups"].([]any)
 		want := len(header)
@@ -948,6 +956,71 @@ func warningIssue(file, w string) Issue {
 		}
 	}
 	return Issue{File: file, Path: path, Message: msg, Code: rule}
+}
+
+// checkTableChains は続きの表(continues)のひと続きの形を見る(table-continues。
+// 決まりは tablechain.go の linkTableChains と同じ)。
+func (c *checker) checkTableChains(slides []any) {
+	c.tableFirst = map[string]map[string]any{}
+	type tbl struct {
+		m     map[string]any
+		path  string
+		first map[string]any
+	}
+	var prevTables []tbl
+	for si, s := range slides {
+		sm, _ := s.(map[string]any)
+		body, _ := sm["body"].([]any)
+		var tables []tbl
+		for bi, blk := range body {
+			bp := fmt.Sprintf("/slides/%d/body/%d", si, bi)
+			bm, _ := blk.(map[string]any)
+			if bm["type"] == "columns" {
+				cols, _ := bm["columns"].([]any)
+				for ci, col := range cols {
+					cm, _ := col.(map[string]any)
+					inner, _ := cm["body"].([]any)
+					for k, x := range inner {
+						if xm, _ := x.(map[string]any); xm["type"] == "table" && xm["continues"] != nil {
+							c.addIssue(Issue{Path: fmt.Sprintf("%s/columns/%d/body/%d/continues", bp, ci, k), Message: msgContinuesInColumns, Code: "table-continues", Hint: continuesHint})
+						}
+					}
+				}
+			}
+			if bm["type"] != "table" {
+				continue
+			}
+			t := tbl{m: bm, path: bp, first: bm}
+			cont, has := bm["continues"]
+			switch {
+			case !has:
+			case cont != true:
+				c.addIssue(Issue{Path: bp + "/continues", Message: "continues is written only as true (omit it for a table that does not continue)", Code: "table-continues", Hint: continuesHint})
+			case len(tables) > 0:
+				c.addIssue(Issue{Path: bp + "/continues", Message: msgContinuesNotFirst, Code: "table-continues", Hint: continuesHint})
+			case len(prevTables) == 0:
+				c.addIssue(Issue{Path: bp + "/continues", Message: msgContinuesNoPrev, Code: "table-continues", Hint: continuesHint})
+			default:
+				prev := prevTables[len(prevTables)-1]
+				t.first = prev.first
+				c.tableFirst[bp] = prev.first
+				if _, ok := prev.m["total"]; ok {
+					c.addIssue(Issue{Path: prev.path + "/total", Message: msgContinuesTotal, Code: "table-continues", Hint: continuesHint})
+				}
+				if _, ok := bm["header"]; ok {
+					c.addIssue(Issue{Path: bp + "/header", Code: "table-continues",
+						Message: "a continuing table (continues: true) has no header; the header of the first table is repeated",
+						Hint:    "header を消してください。各枚の見出しの行は Boxloom が最初の表から繰り返します"})
+				}
+				_, fg := prev.first["groups"]
+				if _, g := bm["groups"]; g != fg {
+					c.addIssue(Issue{Path: bp + "/groups", Message: msgContinuesGroups(fg), Code: "table-continues", Hint: continuesHint})
+				}
+			}
+			tables = append(tables, t)
+		}
+		prevTables = tables
+	}
 }
 
 // checkTableGroups は表の行の群(groups)の決まりを見る(table-groups): 群の列の

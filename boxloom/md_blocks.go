@@ -5,6 +5,7 @@ package boxloom
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"strings"
 )
@@ -25,7 +26,14 @@ type mdTableBlk struct {
 }
 
 // tableAttributeNames は表の説明の行の末尾 {…} に書ける属性。
-var tableAttributeNames = []string{"total", "groups", "points"}
+var tableAttributeNames = []string{"total", "groups", "points", "continues"}
+
+// mdTableShape は表の列の名前・群の列・箇条の列(続きの表 {continues} が引き継ぐ)。
+type mdTableShape struct {
+	names   []string
+	grouped bool
+	points  map[int]bool
+}
 
 var reTableDelim = regexp.MustCompile(`^:?-+:?$`)
 
@@ -89,29 +97,69 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 	if bad {
 		return nil
 	}
-	if len(rows) < 2 || !isDelimRow(rows[1]) {
-		p.fail(it.line, 1, path, codeMisplaced, "表の2行目は区切りの行(| --- | --- |)にしてください", nil, "1行目が見出しの行、2行目が区切りの行、3行目からが本体です")
-		return nil
+	attrs := map[string]string{}
+	if tb.attrs != "" {
+		attrs = p.parseAttrs(tb.attrs, tb.captionLine, tb.attrsCol, path, tableAttributeNames)
 	}
-	header := rows[0]
-	for c, d := range rows[1] {
+	_, cont := attrs["continues"]
+	// 続きの表は見出しの行を書かない:1行目が区切りの行で、2行目からが本体。
+	// 見出しの列は直前の表(p.lastTable)から引き継ぐ。
+	var header []mdText
+	var prev *mdTableShape
+	delimAt := 1
+	if cont {
+		prev = p.lastTable
+		if !isDelimRow(rows[0]) {
+			hint := "1行目を区切りの行(| --- | --- |)にし、本体の行を続けます。見出しの行は最初の表のものを Boxloom が繰り返します"
+			if len(rows) >= 2 && isDelimRow(rows[1]) {
+				p.fail(tb.rows[0].line, tb.rows[0].col, path+"/header", codeTableContinues, "続きの表({continues})には見出しの行を書きません", nil, hint)
+			} else {
+				p.fail(it.line, 1, path, codeMisplaced, "続きの表({continues})の1行目は区切りの行(| --- | --- |)にしてください", nil, hint)
+			}
+			return nil
+		}
+		delimAt = 0
+		if prev != nil {
+			for _, n := range prev.names {
+				header = append(header, mdText{r: []rune(n)})
+			}
+		} else {
+			// 前の表が無い(誤りは IR の検査が table-continues で言う)。列の数は区切りの行から。
+			header = make([]mdText, len(rows[0]))
+		}
+	} else {
+		if isDelimRow(rows[0]) {
+			p.fail(it.line, 1, path, codeMisplaced, "表の1行目が区切りの行で、見出しの行がありません", nil,
+				"前のスライドの表の続きなら、説明の行に {continues} と書きます(見出しの行は最初の表のものを繰り返します)。そうでなければ1行目に見出しの行を書きます")
+			return nil
+		}
+		if len(rows) < 2 || !isDelimRow(rows[1]) {
+			p.fail(it.line, 1, path, codeMisplaced, "表の2行目は区切りの行(| --- | --- |)にしてください", nil, "1行目が見出しの行、2行目が区切りの行、3行目からが本体です")
+			return nil
+		}
+		header = rows[0]
+	}
+	for c, d := range rows[delimAt] {
 		if strings.ContainsRune(string(d.r), ':') {
 			ps := d.pos[0]
 			p.fail(ps.line, ps.col, path, codeUnsupportedSyntax, "列の配置の指定(:--: など)は使えません。配置はテンプレートが決めます", nil,
 				fmt.Sprintf("%d 列目の区切りを --- にしてください(数だけの列はテンプレートが右に揃えます)", c+1))
 		}
 	}
-	if len(rows[1]) != len(header) {
-		p.fail(tb.rows[1].line, tb.rows[1].col, path, codeTableShape, fmt.Sprintf("区切りの行のセルが %d 個で、見出しの行(%d 個)と合いません", len(rows[1]), len(header)), nil, "")
+	if len(rows[delimAt]) != len(header) {
+		dl := tb.rows[delimAt]
+		if cont {
+			p.fail(dl.line, dl.col, path, codeTableContinues, fmt.Sprintf("区切りの行のセルが %d 個で、前の表の列(%d 個)と合いません", len(rows[delimAt]), len(header)), nil,
+				"続きの表の列の数は最初の表と同じにします")
+		} else {
+			p.fail(dl.line, dl.col, path, codeTableShape, fmt.Sprintf("区切りの行のセルが %d 個で、見出しの行(%d 個)と合いません", len(rows[delimAt]), len(header)), nil, "")
+		}
 	}
-	body := rows[2:]
+	bodyAt := delimAt + 1
+	body := rows[bodyAt:]
 	if len(body) == 0 {
 		p.fail(it.line, 1, path, codeMisplaced, "表に本体の行がありません", nil, "区切りの行の下に行を書いてください")
 		return nil
-	}
-	attrs := map[string]string{}
-	if tb.attrs != "" {
-		attrs = p.parseAttrs(tb.attrs, tb.captionLine, tb.attrsCol, path, tableAttributeNames)
 	}
 	total := false
 	if v, ok := attrs["total"]; ok {
@@ -134,9 +182,26 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 		}
 	}
 	pointCols := p.tablePointColumns(attrs, header, grouped, tb, path)
+	if cont && prev != nil {
+		// groups と points は最初の表に従う(書かなければ引き継ぎ、書くなら同じに)。
+		if _, ok := attrs["groups"]; ok && grouped != prev.grouped {
+			p.fail(tb.captionLine, tb.attrsCol, path+"/groups", codeTableContinues, "続きの表の groups が前の表と違います", nil, "続きの表の groups は書かずに前の表から引き継ぎます")
+		}
+		if _, ok := attrs["points"]; ok && !maps.Equal(pointCols, prev.points) {
+			p.fail(tb.captionLine, tb.attrsCol, path+"/points", codeTableContinues, "続きの表の points の列が前の表と違います", nil, "続きの表の points は書かずに前の表から引き継ぎます")
+		}
+		grouped, pointCols = prev.grouped, prev.points
+	}
+	shape := &mdTableShape{grouped: grouped, points: pointCols}
+	for _, h := range header {
+		shape.names = append(shape.names, string(h.r))
+	}
+	p.lastTable = shape
 	hdr := []any{}
-	for c, cell := range header {
-		hdr = append(hdr, p.parseInline(cell, fmt.Sprintf("%s/header/%d", path, c)))
+	if !cont {
+		for c, cell := range header {
+			hdr = append(hdr, p.parseInline(cell, fmt.Sprintf("%s/header/%d", path, c)))
+		}
 	}
 	out := []any{}
 	var totalCells []any
@@ -155,7 +220,7 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 		if isTotal {
 			rp = path + "/total"
 		}
-		tl := tb.rows[r+2]
+		tl := tb.rows[r+bodyAt]
 		p.mark(rp, tl.line)
 		if len(row) != len(header) {
 			p.fail(tl.line, tl.col, rp, codeTableShape, fmt.Sprintf("行のセルが %d 個で、見出しの行(%d 個)と合いません", len(row), len(header)), nil, "どの行も見出しと同じ数のセルを書きます。空のセルは | | と書けます")
@@ -193,7 +258,13 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 		out = append(out, cells)
 	}
 	closeGroup()
-	b := obj("type", "table", "header", hdr, "rows", out)
+	b := obj("type", "table")
+	if cont {
+		b.set("continues", true)
+	} else {
+		b.set("header", hdr)
+	}
+	b.set("rows", out)
 	if groups != nil {
 		b.set("groups", groups)
 	}

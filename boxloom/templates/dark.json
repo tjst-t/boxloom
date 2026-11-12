@@ -82,7 +82,8 @@
     "con": "－ ",
     "quote": "“",
     "quoteSource": "— ",
-    "statUnit": ""
+    "statUnit": "",
+    "tableContinued": "{n}/{m}"
   },
   "fonts": {
     "latin": "Noto Sans CJK JP",

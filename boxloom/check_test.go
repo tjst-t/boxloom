@@ -57,6 +57,7 @@ func TestCheckInvalidSemanticExamples(t *testing.T) {
 		"table-total-shape.json":        {"table-shape", "/slides/1/body/0/total"},
 		"table-groups.json":             {"table-groups", "/slides/1/body/0/groups"},
 		"table-points.json":             {"table-points", "/slides/1/body/0/rows/1/1/points/1"},
+		"table-continues.json":          {"table-continues", "/slides/3/body/0/continues"},
 		"image-missing.json":            {"image-missing", "/slides/1/body/0/src"},
 		"image-format.json":             {"image-format", "/slides/1/body/0/src"},
 	}

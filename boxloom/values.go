@@ -132,6 +132,9 @@ type TemplateMarks struct {
 	Quote     string `json:"quote"`       // 引用の言葉の頭
 	Source    string `json:"quoteSource"` // 引用の出どころの頭
 	Unit      string `json:"statUnit"`    // 統計強調の数と単位の間(空でもよい)
+	// TableContinued は続けた表(continues)の各枚に付ける印。{n} を何枚目か、{m} を
+	// 全部の枚数に置き換える(例 "{n}/{m}")。
+	TableContinued string `json:"tableContinued"`
 }
 
 // GanttValues は Gantt サブシステムの寸法(pt)。既定は subsystems/gantt.json。
@@ -598,7 +601,17 @@ func checkMarks(m TemplateMarks) error {
 	if err := checkDateMark("yearMonth", m.YearMonth, false); err != nil {
 		return err
 	}
+	for _, ph := range []string{"{n}", "{m}"} {
+		if !strings.Contains(m.TableContinued, ph) {
+			return fmt.Errorf("marks.tableContinued: %q needs %s (the page number {n} and the number of pages {m} of a continued table)", m.TableContinued, ph)
+		}
+	}
 	return nil
+}
+
+// replaceNM は印の {n} と {m} を数にする。
+func replaceNM(f string, n, m int) string {
+	return strings.NewReplacer("{n}", strconv.Itoa(n), "{m}", strconv.Itoa(m)).Replace(f)
 }
 
 func sortedKeys(m map[string]string) []string {

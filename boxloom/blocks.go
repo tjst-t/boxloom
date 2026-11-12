@@ -86,10 +86,13 @@ type tableLeaf struct {
 	padY    float64
 	draw    TableDraw // 見た目(塗り・線)。幅と高さは Render で入れる
 	caption []TextRun
-	capSize float64
-	capGap  float64
-	natural []float64 // 列ごとの折り返さない幅(余白込み)
-	minimum []float64 // 列ごとの最小の幅(余白込み)
+	mark    []TextRun // 続けた表の「n/m」の印(説明の文の行の右端。続きの無い表では nil)
+	// markProbe は分け方の案(split)で、分けた後の印の幅を見込むための印。
+	markProbe []TextRun
+	capSize   float64
+	capGap    float64
+	natural   []float64 // 列ごとの折り返さない幅(余白込み)
+	minimum   []float64 // 列ごとの最小の幅(余白込み)
 }
 
 func (t *tableLeaf) Name() string { return "table" }
@@ -184,11 +187,32 @@ func (t *tableLeaf) rowHeights(widths []float64) ([]float64, int) {
 	return hs, total
 }
 
+// labelWidths は説明の文の行の、説明の文の幅と印の幅(印が無ければ 0)。印は右端に
+// 置き、説明の文は印の左で折り返す。
+func (t *tableLeaf) labelWidths(w float64) (capW, markW float64) {
+	if len(t.mark) == 0 {
+		return w, 0
+	}
+	markW = naturalRunsWidth(t.mark, t.capSize)
+	return max0(w - markW - t.capGap*2), markW
+}
+
+// captionLines は説明の文の行の行の数(印だけなら1行)。
+func (t *tableLeaf) captionLines(w float64) int {
+	capW, _ := t.labelWidths(w)
+	n := runsLines(t.caption, t.capSize, capW)
+	if len(t.mark) > 0 && n < 1 {
+		n = 1
+	}
+	return n
+}
+
 func (t *tableLeaf) captionHeight(w float64) float64 {
-	if len(t.caption) == 0 {
+	n := t.captionLines(w)
+	if n == 0 {
 		return 0
 	}
-	return float64(runsLines(t.caption, t.capSize, w))*t.capSize*lineHeightMult + t.capGap
+	return float64(n)*t.capSize*lineHeightMult + t.capGap
 }
 
 func (t *tableLeaf) sizeAt(w float64) Size {
@@ -217,14 +241,22 @@ func (t *tableLeaf) Measure(c Constraint) Measurement {
 
 func (t *tableLeaf) textLines(width float64) int {
 	_, n := t.rowHeights(t.colWidths(width))
-	return n + runsLines(t.caption, t.capSize, width)
+	return n + t.captionLines(width)
 }
 
 func (t *tableLeaf) Render(ctx RenderContext, box LBox) {
 	y := box.Y
-	if len(t.caption) > 0 {
-		ch := t.captionHeight(box.Width) - t.capGap
-		ctx.Out.AddRichTextBox(LBox{X: box.X, Y: y, Width: box.Width, Height: ch}, t.caption, t.capSize, "left", "top")
+	if ch := t.captionHeight(box.Width); ch > 0 {
+		ch -= t.capGap
+		capW, markW := t.labelWidths(box.Width)
+		if len(t.caption) > 0 {
+			ctx.Out.AddRichTextBox(LBox{X: box.X, Y: y, Width: capW, Height: ch}, t.caption, t.capSize, "left", "top")
+		}
+		if len(t.mark) > 0 {
+			// 「n/m」の印は説明の文の1行目の右端(表の右端にそろえる)。
+			lh := t.capSize * lineHeightMult
+			ctx.Out.AddRichTextBox(LBox{X: box.X + box.Width - markW, Y: y, Width: markW, Height: lh}, t.mark, t.capSize, "right", "top")
+		}
 		y += ch + t.capGap
 	}
 	d := t.draw
@@ -260,11 +292,68 @@ func numericColumns(rows [][]IRTableCell, n int) []bool {
 	return out
 }
 
-// table は表の葉を作る。
+// table は表の葉を作る。続きの表(continues)は、最初の表の見出しの行を繰り返し、
+// 列の幅と数の列をひと続きの全部の行で決め、「n/m」の印を付ける(tablechain.go)。
 func (t *Template) table(b *IRBlock) *Spec {
 	v, th := t.Values, t.Theme
-	grouped := b.Groups != nil
+	header, grouped := b.tableHeader(), b.tableGrouped()
+	members := []*IRBlock{b}
+	if b.chain != nil {
+		members = b.chain.Tables
+	}
 	// 数の列を決める本体のセル(群の列は空のセルとして数えない)。
+	var body [][]IRTableCell
+	for _, m := range members {
+		body = append(body, tableBodyCells(m, grouped)...)
+	}
+	numeric := numericColumns(body, len(header))
+	if grouped {
+		// 群の列は数の列として右に揃えない(群の名前の列)。
+		numeric[0] = false
+	}
+	leaf := &tableLeaf{size: v.TableText, padX: v.TableCellPadX, padY: v.TableCellPadY,
+		capSize: v.CaptionText, capGap: v.CaptionGap,
+		draw: TableDraw{HeaderFill: th.c("card_alt"), BodyFill: th.c("card"), RuleColor: th.c("grid"), RuleWidth: v.TableRuleWidth}}
+	leaf.cells = t.tableCells(b, header, numeric)
+	if b.Total != nil {
+		// 合計の行は本体の行と見分ける: 太字にし、上に濃い線を引く(TableDraw.TotalRow)。
+		leaf.draw.TotalRow = true
+		leaf.draw.TotalRuleColor = th.c("text_primary")
+	}
+	// 列の幅はひと続きの全部の表の行(と見出しの行)で測る(どの枚でも同じ幅になる)。
+	leaf.natural = make([]float64, len(header))
+	leaf.minimum = make([]float64, len(header))
+	for _, m := range members {
+		cells := leaf.cells
+		if m != b {
+			cells = t.tableCells(m, header, numeric)
+		}
+		for _, row := range cells {
+			for c, cell := range row {
+				for _, runs := range cell.paras() {
+					leaf.natural[c] = math.Max(leaf.natural[c], maxLineWidth(runs, leaf.size)+2*leaf.padX)
+					leaf.minimum[c] = math.Max(leaf.minimum[c], minRunsWidth(runs, leaf.size)+2*leaf.padX)
+				}
+			}
+		}
+	}
+	caption := b.Caption
+	if caption == nil && b.chain != nil {
+		// 続きの表に説明の文が無ければ、最初の表の説明の文を繰り返す。
+		caption = b.chain.first().Caption
+	}
+	if caption != nil {
+		leaf.caption = t.leafRuns(caption, "text_muted", false)
+	}
+	leaf.markProbe = t.leafRuns(Inline{{Text: t.Marks.continuedMark(99, 99)}}, "text_muted", false)
+	if b.chain != nil {
+		leaf.mark = t.leafRuns(Inline{{Text: t.Marks.continuedMark(b.chainPos+1, len(b.chain.Tables))}}, "text_muted", false)
+	}
+	return SubsystemNode(leaf)
+}
+
+// tableBodyCells は本体と合計の行のセル(群の表では先頭に群の列の空のセルを足す)。
+func tableBodyCells(b *IRBlock, grouped bool) [][]IRTableCell {
 	var body [][]IRTableCell
 	for _, r := range b.Rows {
 		if grouped {
@@ -275,14 +364,13 @@ func (t *Template) table(b *IRBlock) *Spec {
 	if b.Total != nil {
 		body = append(body, b.Total)
 	}
-	numeric := numericColumns(body, len(b.Header))
-	if grouped {
-		// 群の列は数の列として右に揃えない(群の名前の列)。
-		numeric[0] = false
-	}
-	leaf := &tableLeaf{size: v.TableText, padX: v.TableCellPadX, padY: v.TableCellPadY,
-		capSize: v.CaptionText, capGap: v.CaptionGap,
-		draw: TableDraw{HeaderFill: th.c("card_alt"), BodyFill: th.c("card"), RuleColor: th.c("grid"), RuleWidth: v.TableRuleWidth}}
+	return body
+}
+
+// tableCells は表の見出しの行・本体の行・合計の行のセル。
+func (t *Template) tableCells(b *IRBlock, header []Inline, numeric []bool) [][]TableCell {
+	th := t.Theme
+	grouped := b.Groups != nil
 	cell := func(c int, in IRTableCell, bold bool) TableCell {
 		align := "left"
 		if numeric[c] {
@@ -307,14 +395,16 @@ func (t *Template) table(b *IRBlock) *Spec {
 		}
 		return out
 	}
+	var rows [][]TableCell
 	var hdr []TableCell
-	for c, in := range b.Header {
+	for c, in := range header {
 		hdr = append(hdr, cell(c, IRTableCell{Text: in}, true))
 	}
-	leaf.cells = append(leaf.cells, hdr)
+	rows = append(rows, hdr)
 	if grouped {
 		// 群の名前は先頭の列の縦に結合したセル(a:tbl の rowSpan と vMerge)。
 		// 名前は見出しと同じく太字にして、行の中身と見分ける。
+		body := tableBodyCells(b, true)
 		ri := 0
 		for _, g := range b.Groups {
 			for k := 0; k < g.Rows; k++ {
@@ -325,35 +415,19 @@ func (t *Template) table(b *IRBlock) *Spec {
 					lead = TableCell{Align: "left", VMerge: true}
 				}
 				rest := cellRow(body[ri], false)[1:]
-				leaf.cells = append(leaf.cells, append([]TableCell{lead}, rest...))
+				rows = append(rows, append([]TableCell{lead}, rest...))
 				ri++
 			}
 		}
 	} else {
 		for _, r := range b.Rows {
-			leaf.cells = append(leaf.cells, cellRow(r, false))
+			rows = append(rows, cellRow(r, false))
 		}
 	}
 	if b.Total != nil {
-		// 合計の行は本体の行と見分ける: 太字にし、上に濃い線を引く(TableDraw.TotalRow)。
-		leaf.cells = append(leaf.cells, cellRow(b.Total, true))
-		leaf.draw.TotalRow = true
-		leaf.draw.TotalRuleColor = th.c("text_primary")
+		rows = append(rows, cellRow(b.Total, true))
 	}
-	leaf.natural = make([]float64, len(b.Header))
-	leaf.minimum = make([]float64, len(b.Header))
-	for _, row := range leaf.cells {
-		for c, cell := range row {
-			for _, runs := range cell.paras() {
-				leaf.natural[c] = math.Max(leaf.natural[c], maxLineWidth(runs, leaf.size)+2*leaf.padX)
-				leaf.minimum[c] = math.Max(leaf.minimum[c], minRunsWidth(runs, leaf.size)+2*leaf.padX)
-			}
-		}
-	}
-	if b.Caption != nil {
-		leaf.caption = t.leafRuns(b.Caption, "text_muted", false)
-	}
-	return SubsystemNode(leaf)
+	return rows
 }
 
 // --- 画像 ---

@@ -82,9 +82,14 @@ func (t *Template) BuildDeck(d *IRDeck) ([]*BuiltSlide, error) {
 	if t.Fonts != nil {
 		activeFonts = t.Fonts
 	}
+	// 続きの表(continues)のひと続きは文書全体から決まる(ParseIR を通らずに
+	// 作った IR もここでつなぐ)。
+	if err := linkTableChains(d); err != nil {
+		return nil, err
+	}
 	var out []*BuiltSlide
 	for i := range d.Slides {
-		s, err := t.BuildSlide(d, i)
+		s, err := t.buildSlide(d, i)
 		if err != nil {
 			return nil, fmt.Errorf("slides[%d]: %w", i, err)
 		}
@@ -103,7 +108,18 @@ func (t *Template) checkVariant(v string) error {
 // BuildSlide は i 枚目を組む。部品と骨組みが書いたトークン(値の表の名前・段の
 // 刻み・役割名)は、組み立ての直後・計測の前にここで1度だけ数と色に直す
 // (resolveSpec。token.go)。
+//
+// 続きの表のひと続きは文書全体から決まるので、ここでつなぎ直す(誤りの場所は
+// 文書の中の場所。slides[S]: …)。
 func (t *Template) BuildSlide(d *IRDeck, i int) (*BuiltSlide, error) {
+	if err := linkTableChains(d); err != nil {
+		return nil, err
+	}
+	return t.buildSlide(d, i)
+}
+
+// buildSlide は BuildSlide のうち、ひと続きをつながないもの(BuildDeck が先につなぐ)。
+func (t *Template) buildSlide(d *IRDeck, i int) (*BuiltSlide, error) {
 	b, err := t.buildSlideTokens(d, i)
 	if err != nil {
 		return nil, err

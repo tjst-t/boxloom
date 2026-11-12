@@ -55,6 +55,10 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 	for i := range warns {
 		w := &warns[i]
 		switch w.Code {
+		case "layout-overflow":
+			if w.Hint == "" {
+				w.Hint = tableSplitHint(w.Path, capOf)
+			}
 		case "stat-value":
 			if w.Hint == "" {
 				w.Hint = statValueHint
@@ -83,6 +87,32 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 			}
 		}
 	}
+}
+
+// tableSplitHint は、はみ出した本文の表の分け方の案(容量の split)を1文にする。
+// 表でなければ空。
+func tableSplitHint(path string, capOf map[string]SlideCapacity) string {
+	var s int
+	if _, err := fmt.Sscanf(path, "/slides/%d/body/", &s); err != nil {
+		return ""
+	}
+	for _, b := range capOf[fmt.Sprintf("/slides/%d", s)].Blocks {
+		if b.Path != path || b.Split == nil {
+			continue
+		}
+		var at, rows []string
+		for _, r := range b.Split.SplitBefore {
+			at = append(at, fmt.Sprintf("rows[%d](本体の %d 行目)", r, r+1))
+		}
+		for _, n := range b.Split.Rows {
+			rows = append(rows, strconv.Itoa(n))
+		}
+		return fmt.Sprintf("この表は %d 枚に分けられます。%s の前で分けます(表ごとの本体の行の数 %s。合計の行は最後の表)。"+
+			"分けた表はすぐ次のスライドに置き、続きの表には continues: true(Markdown は説明の行の {continues})を書いて見出しの行を書きません。"+
+			"見出しの行と「n/m」の印・列の幅は Boxloom がそろえます。字は小さくしません",
+			b.Split.Tables, strings.Join(at, "・"), strings.Join(rows, "・"))
+	}
+	return ""
 }
 
 // cardsHint は、本文に横に並ぶカード(compare の選択肢・stat の数)・並列の

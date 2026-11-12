@@ -53,6 +53,10 @@ type BlockMeasure struct {
 	// Pairs は対の並び(pairs)のときだけ、対ごとの測り値。ブロックの Need は
 	// 見出しの行と対の行を積んだ高さ。
 	Pairs []pairMeasure
+
+	// TableSplit は本文の表がはみ出したときだけ、何枚に分けられるかの案
+	// (続きの枚は本文が表だけで、題・出典・フッターは同じと見込む。tablechain.go)。
+	TableSplit *tableSplit
 }
 
 // CardMeasure は横に並ぶカードの1枚の測り値。
@@ -122,6 +126,9 @@ func measureBody(root, body *Spec) (blocks []BlockMeasure, capacity, need float6
 		}
 		if b.pairs != nil {
 			m.Pairs = measurePairs(b, b.pairs, start, max0(widths[b]-2*b.padX()), capacity)
+		}
+		if tl, ok := b.Subsystem.(*tableLeaf); ok && b.Kind == KindSubsystem && m.Overflow > 0 {
+			m.TableSplit = tl.split(widths[b], capacity-start, capacity)
 		}
 		blocks = append(blocks, m)
 	}

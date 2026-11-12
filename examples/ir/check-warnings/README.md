@@ -2,7 +2,7 @@
 
 形も意味も正しいので `tools/validate_ir.py` も `go run ./cmd/boxloom check` も通す(誤り0件・
 終了コード 0)。組み立てると警告が出る(`-strict` なら終了コード 1)。
-`boxloom/overflow_test.go`・`boxloom/figures_test.go`・`boxloom/shapes_test.go`・`boxloom/gantt_label_test.go`・`boxloom/gantt_milestone_test.go`・`boxloom/patterns_text_test.go`・`boxloom/keepline_test.go`・`boxloom/lead_test.go`・`boxloom/pairs_test.go` が、決まった code の警告が決まった場所に出ることを確かめる。
+`boxloom/overflow_test.go`・`boxloom/figures_test.go`・`boxloom/shapes_test.go`・`boxloom/gantt_label_test.go`・`boxloom/gantt_milestone_test.go`・`boxloom/patterns_text_test.go`・`boxloom/keepline_test.go`・`boxloom/lead_test.go`・`boxloom/pairs_test.go`・`boxloom/table_continues_test.go` が、決まった code の警告が決まった場所に出ることを確かめる。
 
 | ファイル | 中身 | 警告の code と場所 |
 |---|---|---|
@@ -17,7 +17,8 @@
 | `title-wrap.json` | 1枚目は言いたいことの文をそのまま題にして2行に折れた。2枚目は同じ中身を短い題とリード文(`lead`)に分けた | `title-wrap` を `/slides/1/title`(1枚目の題)に。2枚目には出ない。ほかに `fill-ratio`(両方) |
 | `pairs-overflow.json` | 段落の下に対の並び(pairs)を置き、4つ目の対の打ち手の箇条を長くした | `layout-overflow` を `/slides/1/body/1/pairs/3`(長くした対)と `/slides/1/body/1/pairs/4`(その下の対)に。上の3つの対は収まるので出ない |
 | `statement-overflow.json` | `../text-patterns.json` の主張の1文を、ページに収まらないほど長くした | `layout-overflow` を `/slides/4`(主張のスライド。本文を持たないのでスライドを指す)に |
+| `table-overflow.json` | `../table-continues.json` と同じ形の仕組みの一覧(本体の行 18 と合計の行)を、1枚の表に書いた | `layout-overflow` を `/slides/1/body/0`(その表)に。hint と容量の `split` に分け方の案(3枚、`rows[7]`・`rows[14]` の前)。ほかに `subsystem-min` |
 
 `layout-overflow.json`・`columns-overflow.json`・`pairs-overflow.json` は `../../md/warnings/` の同じ名前の `.bx.md` を
 `go run ./cmd/boxloom parse` したもの(.md を check すると、同じ警告に Markdown の行が付く)。
-`gantt-segment-label.json`・`shapes-connector-angle.json`・`figure-legend.json`・`milestone-overlap.json`・`stat-value.json`・`title-wrap.json` も同じく `../../md/warnings/` の同じ名前の `.bx.md` から作った。
+`gantt-segment-label.json`・`shapes-connector-angle.json`・`figure-legend.json`・`milestone-overlap.json`・`stat-value.json`・`title-wrap.json`・`table-overflow.json` も同じく `../../md/warnings/` の同じ名前の `.bx.md` から作った。
