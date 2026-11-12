@@ -167,6 +167,9 @@ func TestLayoutReadChecksTokens(t *testing.T) {
 	gapBox := func(n *LayoutNode) bool { return n.Tokens["gap"] != "" && n.Gap != 0 }
 	textLeaf := func(n *LayoutNode) bool { return n.Kind == "text" && n.Tokens["color"] != "" && len(n.Runs) == 0 }
 	runLeaf := func(n *LayoutNode) bool { return len(n.Runs) > 0 && n.Runs[0].Role != "" }
+	boxNode := func(n *LayoutNode) bool { return n.Kind == "row" || n.Kind == "col" }
+	roleRunLeaf := func(n *LayoutNode) bool { return runLeaf(n) && n.Tokens["color"] == "" }
+	growNode := func(n *LayoutNode) bool { return n.Grow > 0 }
 	cases := []struct {
 		name string
 		pred func(*LayoutNode) bool
@@ -186,6 +189,11 @@ func TestLayoutReadChecksTokens(t *testing.T) {
 		{"color without role", textLeaf, func(n *LayoutNode) { delete(n.Tokens, "color"); n.Color = "FF00FF" }, "/color", "layout-raw"},
 		{"run unknown role", runLeaf, func(n *LayoutNode) { n.Runs[0].Role = "brand_pink"; n.Runs[0].Color = "" }, "/runs/0/role", "layout-token"},
 		{"run color without role", runLeaf, func(n *LayoutNode) { n.Runs[0].Role = "" }, "/runs/0/color", "layout-raw"},
+		{"row/col color without role", boxNode, func(n *LayoutNode) { delete(n.Tokens, "color"); n.Color = "FF00FF" }, "/color", "layout-raw"},
+		{"negative grow", growNode, func(n *LayoutNode) { n.Grow = -1 }, "/grow", "layout-node"},
+		{"negative basis", boxNode, func(n *LayoutNode) { b := -5.0; n.Basis = &b }, "/basis", "layout-node"},
+		{"text leaf without color", textLeaf, func(n *LayoutNode) { delete(n.Tokens, "color"); n.Color = "" }, "/tokens", "layout-raw"},
+		{"runs without every role", roleRunLeaf, func(n *LayoutNode) { n.Runs[0].Role = ""; n.Runs[0].Color = "" }, "/tokens", "layout-raw"},
 		{"unknown token key", gapBox, func(n *LayoutNode) { n.Tokens["margin"] = "blockGap" }, "/tokens/margin", "layout-token"},
 	}
 	for _, c := range cases {

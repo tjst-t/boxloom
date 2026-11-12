@@ -16,7 +16,8 @@
 //     エンジンの出力なので読まない(あっても誤りにしない。読み直しの往復のため)。
 //     subsystem の natural・min・max・fixedAspect は、中身を持たない代わりの葉
 //     (LayoutReadOptions.Deck が無いとき)の申告にだけ使う。
-//   - grow・basis は比なのでただの数のまま。
+//   - grow・basis は比なのでただの数のまま(負なら誤り)。
+//   - 文字の葉は色の役割名が要る(tokens.color か、すべての塊の role)。
 //   - サブシステムの中身は木に無い。Deck を渡せば、その deck を同じテンプレートで
 //     組んだ木のサブシステムを、スライドごとに出てきた順に当てる(名前が違えば
 //     誤り)。発表者ノートと文書の題も Deck から取る。
@@ -298,13 +299,18 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 	has, x = opt(n.Radius)
 	s.tok.radius, _ = check("radius", "radius", has, x, length)
 	s.tok.background = checkColor("background", "background", n.Background)
-	if kind == KindText || tok["color"] != "" {
-		s.tok.color = checkColor("color", "color", n.Color)
-	}
+	// 色はどの箱でもトークン(役割名)だけ。row・col の生の色も捨てずに誤りにする。
+	s.tok.color = checkColor("color", "color", n.Color)
 
+	if n.Grow < 0 {
+		r.add(at+"/grow", "layout-node", fmt.Sprintf("grow %v is negative", n.Grow))
+	}
 	s.Grow = n.Grow
 	if n.Basis != nil {
 		b := *n.Basis
+		if b < 0 {
+			r.add(at+"/basis", "layout-node", fmt.Sprintf("basis %v is negative", b))
+		}
 		s.Basis = &b
 	}
 	switch n.AlignItems {
@@ -405,6 +411,7 @@ func (r *layoutReader) text(n *LayoutNode, s *Spec, at string) {
 		} else {
 			s.Text = *n.Text
 		}
+		r.needColor(n, s, at)
 		return
 	}
 	for i, lr := range n.Runs {
@@ -437,9 +444,20 @@ func (r *layoutReader) text(n *LayoutNode, s *Spec, at string) {
 		s.Runs = append(s.Runs, run)
 	}
 	s.Text = runsText(s.Runs)
+	r.needColor(n, s, at)
 	if n.Text != nil && *n.Text != s.Text {
 		r.add(at+"/text", "layout-mismatch", "text differs from the runs joined (the runs are read)")
 	}
+}
+
+// needColor は文字の葉の色の必須(resolveSpec と同じ:葉の color トークンか、すべての
+// 塊の役割名)を、読み直しのときに Issue として掛ける。生の色を書いた葉は checkColor が
+// layout-raw にしているので重ねない。
+func (r *layoutReader) needColor(n *LayoutNode, s *Spec, at string) {
+	if n.Tokens["color"] != "" || n.Color != "" || allRunsHaveRole(s.Runs) {
+		return
+	}
+	r.add(at+"/tokens", "layout-raw", "a text leaf needs a color role (tokens.color, or a role on every run)")
 }
 
 func (r *layoutReader) subsystem(n *LayoutNode, s *Spec, at string) {

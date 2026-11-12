@@ -227,7 +227,9 @@ go run ./cmd/boxloom layout-build -deck ../examples/md/figures.bx.md -o /tmp/tre
 - 解決した値(`gap`・`padding`・`fontSize`・`color`・`background`・`radius`・`width`・
   `height`・塊の `color`・`size`)は出力の控え。省いてよいが、書くならトークンが要り
   (無ければ `layout-raw`)、トークンから引いた値と同じでなければならない
-  (`layout-mismatch`)。`grow`・`basis` は比なのでただの数。
+  (`layout-mismatch`)。row・col に書いた生の `color` も `layout-raw`。文字の葉は色の役割名
+  (`tokens.color` か、すべての塊の `role`)が要る(無ければ `layout-raw`)。`grow`・`basis` は
+  比なのでただの数(負なら `layout-node`)。
 - 座標 `box` とサブシステムの `width`・`draw` は**読まない**(エンジンの出力なので、
   あっても誤りにせず無視する。出した木をそのまま読み直せるように)。
 - サブシステムの中身は木に無い。`-deck`(ライブラリでは `LayoutReadOptions.Deck`)を渡すと、
