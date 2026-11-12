@@ -11,7 +11,9 @@ package boxloom
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -699,12 +701,74 @@ func strictUnmarshal(b []byte, v any) error {
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
+		if fe := findFieldError(b, v); fe != nil {
+			return fe
+		}
 		return err
 	}
 	if dec.More() {
 		return fmt.Errorf("unexpected data after the value")
 	}
 	return nil
+}
+
+// irFieldError は対応表の1つの欄(Key)の値が読めなかった誤り。誤りの文は
+// 「key: 元の文」で、場所(JSON Pointer)は errPointer が誤りの鎖から組む。
+type irFieldError struct {
+	Key string
+	Err error
+}
+
+func (e *irFieldError) Error() string { return e.Key + ": " + e.Err.Error() }
+func (e *irFieldError) Unwrap() error { return e.Err }
+
+// findFieldError は strictUnmarshal が断った対応表(b)を欄ごとに読み直し、
+// 文書の順で最初に読めない欄を irFieldError にして返す。知らないキー
+// (encoding/json の文が場所を持つ)と、欄ごとでは誤りにならないときは nil。
+func findFieldError(b []byte, v any) error {
+	t := reflect.TypeOf(v)
+	if t == nil || t.Kind() != reflect.Pointer || t.Elem().Kind() != reflect.Struct {
+		return nil
+	}
+	dec := json.NewDecoder(bytes.NewReader(b))
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
+		return nil
+	}
+	for dec.More() {
+		tok, err := dec.Token()
+		if err != nil {
+			return nil
+		}
+		key, _ := tok.(string)
+		var raw json.RawMessage
+		if err := dec.Decode(&raw); err != nil {
+			return nil
+		}
+		one, err := json.Marshal(map[string]json.RawMessage{key: raw})
+		if err != nil {
+			return nil
+		}
+		d := json.NewDecoder(bytes.NewReader(one))
+		d.DisallowUnknownFields()
+		if err := d.Decode(reflect.New(t.Elem()).Interface()); err != nil {
+			if strings.Contains(err.Error(), "json: unknown field") {
+				return nil
+			}
+			return &irFieldError{Key: key, Err: err}
+		}
+	}
+	return nil
+}
+
+// errPointer は ParseIR の誤りの場所を JSON Pointer にする。文の頭の場所
+// (locationToPointer)に、誤りの鎖の irFieldError の欄の名前をつなぐ。
+func errPointer(err error) string {
+	msg := err.Error()
+	var fe *irFieldError
+	if !errors.As(err, &fe) || !strings.HasSuffix(msg, fe.Error()) {
+		return locationToPointer(msg)
+	}
+	return locationToPointer(strings.TrimSuffix(msg, fe.Error())) + "/" + escapePointer(fe.Key) + errPointer(fe.Err)
 }
 
 // --- 日付 ---

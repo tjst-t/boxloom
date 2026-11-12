@@ -316,7 +316,9 @@ func TestYAMLDeckIssuePositions(t *testing.T) {
 		{"anchor", "boxloom: \"0.1\"\nslides: &a\n  - type: cover\n", codeYAML, 2, 9, "", true},
 		{"multi-doc", "---\nboxloom: \"0.1\"\n", codeYAML, 1, 1, "", true},
 		{"unknown key", "boxloom: \"0.1\"\nslides:\n  - type: content\n    title: T\n    titel: x\n", codeSchema, 5, 5, "/slides/0/titel", true},
-		{"number for text", "boxloom: \"0.1\"\nslides:\n  - type: content\n    title: 2024\n", codeSchema, 0, 0, "", true},
+		{"number for text", "boxloom: \"0.1\"\nslides:\n  - type: content\n    title: 2024\n", codeSchema, 4, 5, "/slides/0/title", true},
+		{"body not array", "boxloom: \"0.1\"\nslides:\n  - type: content\n    title: T\n    body: 3\n", codeSchema, 5, 5, "/slides/0/body", true},
+		{"items not array", "boxloom: \"0.1\"\nslides:\n  - type: content\n    title: T\n    body:\n      - type: points\n        items: 5\n", codeSchema, 7, 9, "/slides/0/body/0/items", true},
 		{"variant", "boxloom: \"0.1\"\nslides:\n  - type: content\n    title: T\n    body:\n      - type: points\n        variant: nope\n        items: [a]\n", "variant-exists", 7, 9, "/slides/0/body/0/variant", false},
 	}
 	for _, c := range cases {
@@ -343,6 +345,38 @@ func TestYAMLDeckIssuePositions(t *testing.T) {
 				me, ok := err.(MarkdownErrors)
 				if !ok || len(me) == 0 || me[0].Line == 0 || me[0].Column == 0 {
 					t.Errorf("ReadDeck: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// 欄の型の誤りは、スライドの頭でなくその欄の行・桁と path を指す(YAMLToIR・
+// ParseYAMLDeck の ParseIR の誤り)。
+func TestYAMLDeckFieldTypeErrorPosition(t *testing.T) {
+	cases := []struct {
+		name, src string
+		line, col int
+		path      string
+	}{
+		{"title number", "boxloom: \"0.1\"\nslides:\n  - type: content\n    title: 2026\n", 4, 5, "/slides/0/title"},
+		{"body not array", "boxloom: \"0.1\"\nslides:\n  - type: content\n    title: T\n    body: 3\n", 5, 5, "/slides/0/body"},
+		{"cover subtitle bool", "boxloom: \"0.1\"\nslides:\n  - type: cover\n    title: T\n    subtitle: true\n", 5, 5, "/slides/0/subtitle"},
+		{"items number", "boxloom: \"0.1\"\nslides:\n  - type: content\n    title: T\n    body:\n      - type: points\n        items: 5\n", 7, 9, "/slides/0/body/0/items"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			for _, f := range []func() []Issue{
+				func() []Issue { _, errs := YAMLToIR("deck.yaml", []byte(c.src)); return errs },
+				func() []Issue { _, errs := ParseYAMLDeck("deck.yaml", []byte(c.src)); return errs },
+			} {
+				errs := f()
+				if len(errs) != 1 {
+					t.Fatalf("want 1 issue, got %+v", errs)
+				}
+				e := errs[0]
+				if e.Line != c.line || e.Column != c.col || e.Path != c.path {
+					t.Errorf("at %d:%d %q, want %d:%d %q: %v", e.Line, e.Column, e.Path, c.line, c.col, c.path, e)
 				}
 			}
 		})

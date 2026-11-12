@@ -153,7 +153,7 @@ func parseYAMLDeck(file string, src []byte) ([]byte, []Issue, yamlSourceMap) {
 
 // yamlIRIssue は ParseIR の誤りを、YAML の行と列つきの Issue にする。
 func yamlIRIssue(file string, err error, pos yamlSourceMap) Issue {
-	path := locationToPointer(err.Error())
+	path := errPointer(err)
 	line, col := pos.Pos(path)
 	return Issue{File: file, Line: line, Column: col, Path: path, Code: codeSchema, Message: err.Error(), Hint: yamlTypeHint(err.Error())}
 }

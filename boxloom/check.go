@@ -196,7 +196,7 @@ func checkIRCapacity(file string, b []byte, templateOverride string, values *Tem
 	}
 	deck, perr := ParseIR(b)
 	if perr != nil {
-		c.add(locationToPointer(perr.Error()), perr.Error(), "schema")
+		c.add(errPointer(perr), perr.Error(), "schema")
 		return c.errs, nil, nil
 	}
 	tm.images = c.images // check で読んだ画像をそのまま使う
