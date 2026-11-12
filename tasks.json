@@ -377,7 +377,7 @@
       "number": 66,
       "kind": "task",
       "title": "YAML の deck を入口にする(IR の写し。parse・check・build が .yaml/.yml を受け取る)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "agent-entry",
       "dependsOn": [],
       "milestone": null,
@@ -385,15 +385,15 @@
       "labels": [],
       "body": "## なぜ\ndocs/content-syntax.md は「IR の写し(YAML / JSON)を併存する入口」と書いているが、YAML の deck を受け取る口が CLI・ライブラリに無い。構造の多い資料(compare・stat・Gantt など)は Markdown の囲みの入れ子より YAML のほうが読みやすい。人が決めた:Markdown と YAML(と JSON)の deck の入口を並べて持ち、既定は当面 Markdown。\n\n## 形\n- YAML は IR の写し:JSON の IR と同じキー・同じ type(写し方を独自にしない)。読んだ結果を IR の Schema と check にそのまま通す。\n- 読むのは既存の yaml.go の部分集合(参照・タグ・複数文書は誤り、日付の自動変換なし)。依存は増やさない。\n- 文の中の記法(強調など)は JSON の IR と同じ扱い。\n- 誤りは #1259847 の Issue の形で、YAML の行・列を付ける(IR の場所から YAML の行を引く。Markdown の check と同じ考え)。\n- 拡張子 .yaml/.yml で見分ける。ライブラリの ReadDeck も受ける(docs/library.md)。\n- examples に、既存の JSON の IR の1つを YAML にしたものを置き、同じ PPTX になることを試験で確かめる。\n\n## 書く文書\ndocs/content-syntax.md(入口の表)・docs/ir.md・docs/build.md・docs/library.md。",
       "doneWhen": "`go run ./cmd/boxloom parse|check|build` が .yaml の deck を受け取り、同じ内容の JSON の IR と build の PPTX の部品がバイト単位で同じ(試験)。Schema の誤りと意味の誤りに YAML の line・column が付く(試験)。TestOutputsGolden の既存の記録は変わらない。tools/ci.sh go python pptx が通る。",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/yaml-deck-input）",
       "refs": [
         "docs/content-syntax.md",
         "docs/ir.md"
       ],
       "threads": [],
       "createdAt": "2026-11-12T01:23:31.304Z",
-      "updatedAt": "2026-11-12T06:39:13.709Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-12T06:46:11.770Z",
+      "closedAt": "2026-11-12T06:46:11.770Z",
       "extra": {}
     },
     {
