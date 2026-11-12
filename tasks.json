@@ -328,7 +328,7 @@
       "number": 12,
       "kind": "task",
       "title": "MCP サーバ:schema・check・build を AI エージェントの道具として出す",
-      "status": "in-progress",
+      "status": "done",
       "parent": "agent-entry",
       "dependsOn": [
         "go-library"
@@ -338,12 +338,12 @@
       "labels": [],
       "body": "エージェントが直接呼べる入口。stdio の MCP サーバ(標準ライブラリだけで書けるか、それとも依存を許すかを決める)。道具は schema・check(capacity つき)・build。",
       "doneWhen": "MCP の道具3つがあり、Claude Code から呼んで PPTX を作れることを確かめた手順が docs にある",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/mcp-server）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:00:29.883Z",
-      "updatedAt": "2026-11-12T09:32:31.071Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-12T09:39:12.266Z",
+      "closedAt": "2026-11-12T09:39:12.266Z",
       "extra": {}
     },
     {
