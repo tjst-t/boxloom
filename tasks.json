@@ -2507,7 +2507,7 @@
       "number": 109,
       "kind": "task",
       "title": "report の表紙と終わり(続き):表紙の箱が縁に付いて日付が読めない・終わりの箱が小さく空",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2519,7 +2519,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T05:08:29.681Z",
-      "updatedAt": "2026-11-13T05:08:29.681Z",
+      "updatedAt": "2026-11-13T05:08:41.981Z",
       "closedAt": null,
       "extra": {}
     },
