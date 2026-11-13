@@ -2926,6 +2926,27 @@
       "updatedAt": "2026-11-13T07:29:03.385Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "columns-allow-topics",
+      "number": 129,
+      "kind": "task",
+      "title": "columns のまとまりの中に topics を置けるようにする",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "再現の第6回(元の資料の p100)で、左に概要・右に A/B/C の話題の塊を置きたいが、topics(#119)は列に置けない。記法:`::::::column` の中に `::::topics` / `:::topic 題 {label=A}` を許す(people と同じく縦に積むだけ)。topics を持たないテンプレートでは今の代わりの組み方(component-fallback)のまま。Schema・check(列の中のブロックの検査)・docs/content-syntax.md・CLAUDE.md の列に置けるものの一覧を直す。",
+      "doneWhen": "列の中の topics が Markdown⇔IR・check・build(report・dark・light)で通る試験/golden の既存の値が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:35:00.116Z",
+      "updatedAt": "2026-11-13T07:35:00.116Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
