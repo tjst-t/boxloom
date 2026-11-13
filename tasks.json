@@ -2211,7 +2211,7 @@
       "number": 95,
       "kind": "task",
       "title": "骨組み(表紙・本文の頭・区切り・主張・フッター)を部品にし、テンプレートが差し替えられるようにする(出力は変えない)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2223,7 +2223,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T02:49:50.871Z",
-      "updatedAt": "2026-11-13T02:49:50.871Z",
+      "updatedAt": "2026-11-13T02:50:12.724Z",
       "closedAt": null,
       "extra": {}
     }
