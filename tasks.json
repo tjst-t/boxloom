@@ -2028,7 +2028,7 @@
       "number": 87,
       "kind": "task",
       "title": "対の並び:側に見出しと複数のブロック(型の語彙)、report の pairs の組み方(A・B・C の印・側の間の矢印・罫線)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -2038,12 +2038,12 @@
       "labels": [],
       "body": "## なぜ\n#82 の原因4。読む資料の約4割は詳細のページで、対の並びの各側が次のように作られている。\n- 左の側(特筆すべき点):見出しの文(要因の名前)+箇条、のまとまり。\n- 右の側(聞き取りの声と実施事例):箇条+引用、など複数のブロック。\n\nいまの pairs は、側に1つのブロックしか置けない。\n\n## 決め事\n- **意味(型の語彙の pairs の Schema)**\n  - 対の側(subject・response)は、今の1ブロックの形に加えて `{title?, body: [ブロック…]}` の形も許す。\n  - body に置けるのは paragraph・points・quote・image・table の1〜4個。\n  - title は、文中の記法を読む短い文で、その側の見出し。\n- **Markdown**:`:::subject 見出しの文` と書ける。中に複数のブロックを書ける。引用・表・画像を入れるときはコロンを1つ増やす(今の決まりのまま)。\n- **代わりの組み方**(columns への書き換え):側の title は、そのまとまりの中の段落(強調)にする。\n- **dark・light の pairs の組み方**:title と body を素直に縦に積む。今の1ブロックの形の出力は変わらないこと。\n- **report の pairs の組み方(report が Go で持つ)**\n  - 対ごとに A・B・C… の四角い印(基調色・白い字)を、subject の頭に置く。\n  - 側の間に、丸い山形の印を置く。\n  - 対の間に、罫線(grid)を引く。\n  - 側の見出しは、薄い面(F1F2F1)の帯の上に字の色で書く。\n- はみ出しと容量は、今の対ごとの測り方を body に広げる。\n- docs/content-syntax.md 3.10・ir.md・patterns.md・SKILL.md を直す。\n\n## 確かめ方\n架空の例(側に見出し+箇条、もう一方に箇条+引用)で、試験で見る。",
       "doneWhen": "対の側が {title, body[]} の形で IR・Markdown・Schema で読め、今の1ブロックの形も通る/report で A・B・C の印・側の間の矢印・対の間の罫線が描かれることを試験で確かめる/layout-overflow と容量が側の body を測る/今の形の pairs の dark・light の golden が変わらない/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/pairs-side-body）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:28:26.162Z",
-      "updatedAt": "2026-11-13T03:14:44.756Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T03:30:31.603Z",
+      "closedAt": "2026-11-13T03:30:31.603Z",
       "extra": {}
     },
     {
