@@ -63,12 +63,14 @@ type shape struct {
 	dash           string // "" | "dash"
 
 	// skShape
-	prst      string // rect | roundRect | ellipse | chevron | homePlate
+	prst      string // rect | roundRect | ellipse | chevron | homePlate | rtTriangle
 	adj       []ShapeGuide
 	depth     float64 // chevron・homePlate の先の深さ(0 なら既定)
 	fillAlpha float64 // 0 か 1 なら不透明。0〜1 の間なら塗りをその不透明度で書く(a:alpha)
-	insetX    float64 // 文字の枠の内側の余白
-	insetY    float64
+	// 左右・上下の反転(a:xfrm の flipH・flipV)
+	flipH, flipV bool
+	insetX       float64 // 文字の枠の内側の余白
+	insetY       float64
 
 	// skShape の2つ目以降の段落(題の下の補足など)と、その字の大きさ
 	paras     [][]TextRun
@@ -277,6 +279,8 @@ type ShapeOpts struct {
 	ParaSizes []float64
 	// Adj は形の調整値(a:avLst の a:gd。blockArc の角度・太さなど)。roundRect の角は Radius で書く。
 	Adj []ShapeGuide
+	// FlipH・FlipV は図形を左右・上下に返す(向きのある形。rtTriangle の直角の角など)。
+	FlipH, FlipV bool
 }
 
 // ShapeGuide は形の調整値1つ(a:gd name="…" fmla="val …")。
@@ -305,6 +309,7 @@ func (p *PPTXBuilder) AddShape(box LBox, o ShapeOpts) int {
 		hasOutline: o.Outline != "", outlineColor: o.Outline, outlineDash: o.OutlineDash, outlineWidthPt: o.OutlineWidthPt,
 		runs: o.Runs, text: text, fontSize: o.FontSize, insetX: o.InsetX, insetY: o.InsetY,
 		align: align, anchor: anchor, paras: o.Paras, paraSizes: o.ParaSizes,
+		flipH: o.FlipH, flipV: o.FlipV,
 	})
 	return id
 }
@@ -927,15 +932,27 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 	return fmt.Sprintf(`<p:sp>
 <p:nvSpPr><p:cNvPr id="%d" name="Shape %d"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
 <p:spPr>
-<a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm>
+<a:xfrm%s><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm>
 <a:prstGeom prst="%s">%s</a:prstGeom>
 %s
 %s
 </p:spPr>
 <p:txBody><a:bodyPr wrap="square" anchor="%s" lIns="%d" tIns="%d" rIns="%d" bIns="%d"><a:noAutofit/></a:bodyPr><a:lstStyle/>%s</p:txBody>
 </p:sp>
-`, s.id, s.id, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), s.prst, adj, fillXML, lnXML,
+`, s.id, s.id, flipAttrs(s.flipH, s.flipV), ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), s.prst, adj, fillXML, lnXML,
 		anchorAttr(s.anchor), ptToEMU(insX), ptToEMU(insY), ptToEMU(insX), ptToEMU(insY), paras)
+}
+
+// flipAttrs は a:xfrm の左右・上下を返す属性(返さなければ空)。
+func flipAttrs(h, v bool) string {
+	out := ""
+	if h {
+		out += ` flipH="1"`
+	}
+	if v {
+		out += ` flipV="1"`
+	}
+	return out
 }
 
 // connectorXML は本物のコネクタ(p:cxnSp)。図形に繋ぐなら a:stCxn・a:endCxn を書く。

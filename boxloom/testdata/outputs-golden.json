@@ -7098,8 +7098,8 @@
   "check md/warnings/title-wrap.bx.md@dark": "0936316a4b336b48c78cad746014d3babcfbe7ddb8ae231a78977d07925c4435",
   "check md/warnings/title-wrap.bx.md@light": "0936316a4b336b48c78cad746014d3babcfbe7ddb8ae231a78977d07925c4435",
   "check md/warnings/title-wrap.bx.md@report": "2acafa80da5c0c04af3fe71baf7f5467b3fcc8bb498787526a8df0a8b376c940",
-  "schema @": "adfad4bd38874f8a4c0e19d0034afcf8041eaa655dcb135835d2844c33ff2087",
-  "schema @dark": "d138724c3c83d20e6b52280dfa84403107f5ea822e1ecbc42bdccb7bf56a3444",
-  "schema @light": "5d85470f8520f39b1068815f83e75cc9f0ace36f4603d640a17901e383fe5846",
-  "schema @report": "3adefc26d0946a1e2cd55766481617370854bc653cd307b9561976d5969a270f"
+  "schema @": "1a17e29b6b95d1ca38329557f81befeb6b3e47721ee412983b54dc73ab6a5c86",
+  "schema @dark": "d38a185dd702cc20bf5a25c51f00da1e8e8d8ba4e7fada1ab8583f9515ac7a9b",
+  "schema @light": "b79701e74f00f1f474cc31114edca108884bc317565e41ce9c3e46ef0c981664",
+  "schema @report": "b4533b383bb09e4c7920848c6ed156d4fd5a32108ddc1126160e6aab4257b414"
 }

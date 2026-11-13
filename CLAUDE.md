@@ -247,7 +247,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     印の葉で題の1行を測る。`docs/layers.md` の8.4
   - `report.go` = report(読む資料のテンプレート)が自分で持つ組み方。骨組みの `contentHeader` を
     差し替え、リード文を上の見出し(24pt・基調色)、題(title のプレースホルダー)をその下(16pt)に
-    置く。列の見出し(columns・pairs)は基調色。columns は見出しの下の罫線・列の間の縦の罫線と、`flow`(左が右につながる。Markdown は `{flow=true}`)のときの丸い矢印を描く(標準の組み方は flow のときだけ隙間に小さい矢印)。区切りは level 1・2 が frame(全面の基調色と白い枠)、3 が agenda(親の節の題と兄弟の項目・今の印)、目次は基調色の地に白い字。表は見出しの行が罫線・群のセルが濃い面、結論は丸い矢印、引用は吹き出しと人の印(部品 table・takeaway・quote を override。印は図形の葉 `calloutMark`)。値は読む資料のサンプルを測ったもの(本文 14pt。`docs/template-values.md` の report の節)
+    置く。本文のスライドの `marker`(隅の印。Markdown は `# 題 {marker=A}`、2字まで)があれば、右上の隅に三角の地(48pt・`support`)と丸の中の印、その左にパンくず(直前の区切りの題。自動)を上の余白に描く(標準の contentHeader・dark・light は描かない。`docs/ir.md` の9.2)。列の見出し(columns・pairs)は基調色。columns は見出しの下の罫線・列の間の縦の罫線と、`flow`(左が右につながる。Markdown は `{flow=true}`)のときの丸い矢印を描く(標準の組み方は flow のときだけ隙間に小さい矢印)。区切りは level 1・2 が frame(全面の基調色と白い枠)、3 が agenda(親の節の題と兄弟の項目・今の印)、目次は基調色の地に白い字。表は見出しの行が罫線・群のセルが濃い面、結論は丸い矢印、引用は吹き出しと人の印(部品 table・takeaway・quote を override。印は図形の葉 `calloutMark`)。値は読む資料のサンプルを測ったもの(本文 14pt。`docs/template-values.md` の report の節)
   - `toc.go` = 区切りの階層(section の `level` 1〜3。親の無い level は check の `section-level`)と
     目次(`meta.toc`)。目次のスライドは IR に書かず、組み立てで表紙の直後に足す(`deckPages`)。
     頁番号(目次・フッター)は頁の並びで、check の場所と容量は IR の番号のまま。`docs/ir.md` の9.1

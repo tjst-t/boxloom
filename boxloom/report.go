@@ -26,6 +26,10 @@
 //     本物の a:tbl のまま、罫線と面はセルの書式で書く(reportTableLook)。
 //   - takeaway(#88):左に丸い矢印(基調色の円に白い右向きの矢印。直径 calloutMark)、
 //     右に基調色の太字の結論の文。地の面も左の帯も置かない(上下の余白はカードと同じ)。
+//   - contentHeader の隅の印(#93):marker のある本文のスライドは、ページの右上の隅に
+//     三角の地(幅・高さ 48pt、役割 reportMarkerRole)を置き、その中の丸(地の色)に印を
+//     置く。その左に小さい字(small・薄い字)で今の項目の名前(パンくず。直前の区切りの題)。
+//     どちらもページの上の余白の中なので、題・本文の配置は変わらない。
 //   - quote(#88):薄い面(card)の吹き出し(角丸の面と、右の人の印へ向かう尾)の中に
 //     引用の文、右に人の印(頭と肩。基調色)とその下に出どころ。
 //
@@ -84,7 +88,11 @@ func registerReportParts(t *Template) error {
 		}
 	}
 	return t.skeleton.override(skelContentHeader, skeletonFunc(func(ctx skeletonContext) (*Spec, error) {
-		return ctx.t.reportContentHeader(ctx.slide), nil
+		head := ctx.t.reportContentHeader(ctx.slide)
+		if ctx.slide.Marker == "" {
+			return head, nil
+		}
+		return ctx.t.reportMarked(head, ctx.slide.Marker, breadcrumb(ctx.deck, ctx.index)), nil
 	}))
 }
 
@@ -390,4 +398,68 @@ func (c *calloutMark) Render(ctx RenderContext, box LBox) {
 		ctx.Out.AddShape(LBox{X: box.X - 0.5, Y: box.Y + s*0.15, Width: c.width() + 0.5, Height: h},
 			ShapeOpts{Prst: "rtTriangle", Fill: ctx.Roles.Color("card")})
 	}
+}
+
+// reportMarkerSize は隅の印の三角の幅・高さ(pt。読む資料のサンプルを測った値)。
+const reportMarkerSize float64 = 48
+
+// reportMarkerCircle は三角の中の丸の直径(pt)。三角の内接円(半径 約 14pt)に収まり、中の文字の枠に2字が入る。
+const reportMarkerCircle = 24
+
+// reportMarkerRole は隅の印の三角の地の色の役割(report の濃い基調色)。
+const reportMarkerRole = "support"
+
+// breadcrumb はスライド i のパンくず:手前で最も近い区切りの題(無ければ nil)。区切りは
+// 浅い階層が来ると深い階層を閉じるので、最も近い区切りがいま開いているいちばん深い階層。
+func breadcrumb(d *IRDeck, i int) Inline {
+	for j := i - 1; j >= 0; j-- {
+		if d.Slides[j].Type == "section" {
+			return d.Slides[j].Title
+		}
+	}
+	return nil
+}
+
+// reportMarked は本文のスライドの頭 head の右の端に、隅の印とパンくずを描く葉(幅 0)を
+// 添える。葉は頭の配置を変えず、描くのはページの右上の隅(上の余白の中)。
+func (t *Template) reportMarked(head *Spec, marker string, crumb Inline) *Spec {
+	leaf := SubsystemNode(&reportCornerMark{
+		marker: marker, crumb: crumb.Plain(),
+		pageW: t.Values.PageW, padX: t.Values.PagePadding, size: t.Values.Small,
+	})
+	return Row([]*Spec{apply(head, []SpecOpt{WithGrow(1), WithBasis(0)}), leaf})
+}
+
+// reportCornerMark は隅の印(三角の地と丸の中の印)とパンくずを描く。
+type reportCornerMark struct {
+	marker, crumb string
+	pageW, padX   float64 // ページの幅と左右の外周
+	size          float64 // 印とパンくずの字の大きさ(small)
+}
+
+func (reportCornerMark) Name() string                   { return "cornerMarker" }
+func (reportCornerMark) Measure(Constraint) Measurement { return Measurement{} }
+func (m *reportCornerMark) Render(ctx RenderContext, _ LBox) {
+	x0 := m.pageW - reportMarkerSize
+	// 右の角が直角の三角(rtTriangle の直角は左下にあるので、左右と上下を返す)。
+	ctx.Out.AddShape(LBox{X: x0, Y: 0, Width: reportMarkerSize, Height: reportMarkerSize},
+		ShapeOpts{Prst: "rtTriangle", Fill: ctx.Roles.Color(reportMarkerRole), FlipH: true, FlipV: true})
+	// 丸は三角の内接円の中心に置く(直角の2辺 a の内接円の半径は a(2-√2)/2)。
+	r := reportMarkerSize * (2 - math.Sqrt2) / 2
+	cx, cy := m.pageW-r, r
+	d := float64(reportMarkerCircle)
+	ctx.Out.AddShape(LBox{X: cx - d/2, Y: cy - d/2, Width: d, Height: d}, ShapeOpts{
+		Prst: "ellipse", Fill: ctx.Roles.Color("bg"), FontSize: m.size,
+		Runs: []TextRun{{Text: m.marker, Color: ctx.Roles.Color(reportMarkerRole), Bold: true}},
+	})
+	if m.crumb == "" {
+		return
+	}
+	gap := reportMarkerSize / 6
+	right := x0 - gap
+	if right <= m.padX {
+		return
+	}
+	ctx.Out.AddTextBoxNoWrap(LBox{X: m.padX, Y: cy - d/2, Width: right - m.padX, Height: d},
+		m.crumb, m.size, ctx.Roles.Color("text_muted"), false, "right", "middle")
 }

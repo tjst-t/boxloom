@@ -1057,6 +1057,7 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 			sl.set("variant", v)
 		}
 		level, hasLevel := p.sectionLevel(attrs, s, path, typ)
+		marker, hasMarker := p.slideMarker(attrs, s, path, typ)
 		body, notes := splitNotes(s.items)
 		body, sources := splitSource(body)
 		body, leads := splitLead(body)
@@ -1065,6 +1066,9 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 			sl.set("title", p.parseInline(s.title, path+"/title"))
 			if lead, ok := p.leadInline(leads, path+"/lead"); ok {
 				sl.set("lead", lead)
+			}
+			if hasMarker {
+				sl.set("marker", marker)
 			}
 			sl.set("body", p.blocks(body, path+"/body"))
 		case "section":
@@ -1109,7 +1113,7 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 }
 
 // slideAttributeNames は「# 題 {…}」に書ける属性。
-var slideAttributeNames = []string{"type", "variant", "level"}
+var slideAttributeNames = []string{"type", "variant", "level", "marker"}
 
 // slideType は「# 題 {type=…}」のスライドの種類(省けば content)。表紙は文書の頭から
 // 作るので type=cover は誤り。
@@ -1130,6 +1134,24 @@ func (p *mdParser) slideType(attrs map[string]string, s *mdSlide, path string) s
 	}
 	p.fail(s.line, s.attrsCol, path+"/type", codeInvalidValue, fmt.Sprintf("スライドの種類 %q はありません", typ), names, hint)
 	return "content"
+}
+
+// slideMarker は「# 題 {marker=A}」の隅の印(空白を含まない2字まで)。本文のスライドの
+// ほかに書いたら誤り。
+func (p *mdParser) slideMarker(attrs map[string]string, s *mdSlide, path, typ string) (string, bool) {
+	v, ok := attrs["marker"]
+	if !ok {
+		return "", false
+	}
+	if typ != "content" {
+		p.fail(s.line, s.attrsCol, path, codeMisplaced, fmt.Sprintf("marker は本文のスライド(type=content)にだけ書けます(このスライドは type=%s)", typ), nil, "隅の印は詳細のページで、いまどのパターン・要因の話かを示すものです")
+		return "", false
+	}
+	if err := checkMarker(v); err != nil {
+		p.fail(s.line, s.attrsCol, path+"/marker", codeInvalidValue, fmt.Sprintf("隅の印 %q は書けません(空白を含まない2字まで)", v), nil, "{marker=A} や {marker=1} のように短く書きます")
+		return "", false
+	}
+	return v, true
 }
 
 // sectionLevel は「# 題 {type=section level=n}」の階層(1〜3)。区切りのほかのスライドに

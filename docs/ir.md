@@ -60,7 +60,7 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 文書   { boxloom: "0.1", template?, meta?, slides: [スライド] }
 meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc? }   日付・機密区分・免責は文書に1回。toc: true で表紙の直後に目次(組み立てで作る)
 スライド  { type: "cover",     variant?, title?, subtitle?, author?, notes? }
-         { type: "content",   variant?, title, lead?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead
+         { type: "content",   variant?, title, lead?, marker?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead、marker は隅の印(2字まで)
          { type: "section",   variant?, title, level?, notes? }  章の区切り(本文なし。level は 1 章・2 節・3 項目、既定 1)
          { type: "statement", variant?, content, source?, notes? }        言うことが1文だけ(本文なし)
 ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem | pairs   (どれも type で選ぶ。pairs は標準でない型)
@@ -241,6 +241,22 @@ Schema では書けないので `boxloom check` が見る。
 - 目次を足すと頁番号は IR の番号とずれる。フッター・目次の番号は頁の番号、`boxloom check`
   の場所(`/slides/N`)と容量は IR の番号(作者が直す場所)。目次のスライドの警告は場所
   `/meta/toc`。
+
+### 9.2 スライドの隅の印とパンくず(#93)
+
+- **`marker`** は本文のスライドだけの欄で、空白を含まない1〜2字の文(`1`・`2`・`A`・`B`)。
+  詳細のページで、いまどのパターン・どの要因の話かを示す意味。字の数・空白は Schema
+  (`minLength`・`maxLength`・`pattern`)と読み込みの両方で断る。区切り・主張・表紙に
+  書けば知らない欄で誤り。
+- **パンくずは IR に書かない。** そのスライドより前で最も近い区切りの題を、テンプレートが
+  使う(区切りは浅い階層が来ると深い階層を閉じるので、最も近い区切りがいま開いている
+  いちばん深い level の区切り)。区切りの題を書き直せばパンくずも付いてくるようにするため。
+- 見た目はテンプレートの骨組みの `contentHeader` が決める。標準の `contentHeader` は描かない
+  (dark・light は印を書いても出力が変わらない。check は情報も出さない:level と同じく、
+  意味をどう見せるか・見せないかはテンプレートの方針で、作者の直すことではないため)。
+  report は右上の隅に三角の地(幅・高さ 48pt、役割 `support`)と、その中の丸(地の色 `bg`)に
+  印を、左にパンくず(`small`・`text_muted`)を、ページの上の余白の中に描く。パンくずは印の
+  あるスライドにだけ描き、前に区切りが無ければ印だけ。
 
 ### 10. 並列のまとまり・表・画像(#20・#21・#22)
 

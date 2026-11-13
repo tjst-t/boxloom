@@ -16,6 +16,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 // IRDeck は文書の根。
@@ -51,6 +53,9 @@ type IRSlide struct {
 	Content  Inline // statement だけ(言いたいことの1文)
 	Source   Inline // content・statement: 出典(本文の流れの外。本文の下・フッターの上)
 	Lead     Inline // content だけ: リード文(題の下に置く、このスライドで言いたいことの文)
+	// Marker は content だけ: スライドの隅の印(空白を含まない2字までの短い文。1・2・A・B)。
+	// いまどのパターン・どの要因の話かを示す意味。描くかどうか・形はテンプレートが決める。
+	Marker string
 	// Level は section だけ: 区切りの階層(1 章・2 節・3 節の中の項目)。書かなければ 0
 	// (1 と同じ。sectionLevel で読む)。
 	Level int
@@ -371,6 +376,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 			Variant string            `json:"variant"`
 			Title   Inline            `json:"title"`
 			Lead    Inline            `json:"lead"`
+			Marker  *string           `json:"marker"`
 			Body    []json.RawMessage `json:"body"`
 			Source  Inline            `json:"source"`
 			Notes   string            `json:"notes"`
@@ -385,6 +391,12 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("content slide needs \"body\"")
 		}
 		out := IRSlide{Type: v.Type, Variant: v.Variant, Title: v.Title, Lead: v.Lead, Source: v.Source, Notes: v.Notes}
+		if v.Marker != nil {
+			if err := checkMarker(*v.Marker); err != nil {
+				return fmt.Errorf("marker: %w", err)
+			}
+			out.Marker = *v.Marker
+		}
 		for i, r := range v.Body {
 			var blk IRBlock
 			if err := blk.UnmarshalJSON(r); err != nil {
@@ -933,4 +945,22 @@ func (c IRTableCell) Plain() string {
 		parts = append(parts, p.Plain())
 	}
 	return strings.Join(parts, "\n")
+}
+
+// markerMaxRunes はスライドの隅の印(marker)の字の数の上限。
+const markerMaxRunes = 2
+
+// checkMarker はスライドの隅の印が、空白を含まない1〜2字の文であることを確かめる。
+func checkMarker(m string) error {
+	n := utf8.RuneCountInString(m)
+	if n == 0 {
+		return fmt.Errorf("marker must not be empty")
+	}
+	if n > markerMaxRunes {
+		return fmt.Errorf("marker %q is longer than %d characters", m, markerMaxRunes)
+	}
+	if strings.IndexFunc(m, unicode.IsSpace) >= 0 {
+		return fmt.Errorf("marker %q contains a space", m)
+	}
+	return nil
 }

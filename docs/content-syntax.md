@@ -110,13 +110,13 @@ IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭�
 - `# 題` が1枚の始まり。次の `#` か文書の終わりまでがそのスライド。
 - `#` の行の末尾に属性を `{…}` で付けられる: `# 論点 {variant=dense}`。
   使える属性は `type`(スライドの種類)と `variant`(テンプレートが名乗る名前)と、
-  区切りだけの `level`(下)。
+  区切りだけの `level`・本文のスライドだけの `marker`(下)。
   スライドの `id` は予定(IR 第一版に無い)。
 - **スライドの種類は `type` で選ぶ**(省けば `content`)。`#` の行の文の意味は種類で決まる:
 
   | `type` | `#` の行の文 | 後ろに書けるもの | IR |
   |---|---|---|---|
-  | `content`(既定) | 題(短い見出し。1行) | 本文・`:::lead`・`:::notes`・`:::source` | `{type: "content", title, lead?, body}` |
+  | `content`(既定) | 題(短い見出し。1行) | 本文・`:::lead`・`:::notes`・`:::source` | `{type: "content", title, lead?, marker?, body}` |
   | `section` | 章・節・項目の題 | `:::notes` だけ | `{type: "section", title, level?}` |
   | `statement` | 言いたいことの1文 | `:::notes`・`:::source` だけ | `{type: "statement", content}` |
 
@@ -138,6 +138,16 @@ IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭�
     `boxloom check` の `section-level`。1〜3 のほかは `invalid-value`、区切りでないスライドに
     書けば `misplaced-content`。見た目はテンプレートが決める(標準の区切りは階層によらず同じ。
     report は 1・2 を全面の基調色の枠、3 を親の節の題と兄弟の項目の一覧にする)。
+  - **隅の印**は `marker`(本文のスライドだけ。空白を含まない2字までの短い文):
+    `# 返却箱の使われ方 {marker=A}`。詳細のページで、いまどのパターン・どの要因の話かを示す
+    (1・2・A・B)。IR はスライドの欄 `marker`。3字以上・空は `invalid-value`(場所
+    `/slides/N/marker`)、本文のスライドでないところに書けば `misplaced-content`。
+    今の項目の名前(パンくず)は書かない。テンプレートが、そのスライドより前で最も近い区切り
+    (いま開いているいちばん深い level の区切り)の題から作る。見た目はテンプレートが決める:
+    report は右上の隅に三角の地(48pt・濃い基調色 `support`)と丸の中の印、その左に
+    パンくず(10pt・`text_muted`)を描く(ページの上の余白の中なので、題・本文の配置は
+    変わらない)。dark・light は描かない(区切りの `level` と同じく、意味は IR に残り、
+    描かないことは check の誤りにも警告にもしない。テンプレートを report に替えれば出る)。
   - `type=cover` は誤り(表紙は文書の頭から作る。3.1)。知らない種類は `invalid-value`
     で、選べる名前を `expected` に入れる。
   - 理由:種類を `#` の行の属性にしたのは、どの種類も「1枚の始まり」と「1つの文」を
