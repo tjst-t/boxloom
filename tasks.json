@@ -2654,7 +2654,7 @@
       "number": 116,
       "kind": "task",
       "title": "スライドの密度(density: normal / dense):IR・Markdown に足し、dense の字の大きさは各テンプレートの値の表、はみ出しの警告に「dense にする」案",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2666,7 +2666,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T06:10:07.478Z",
-      "updatedAt": "2026-11-13T06:10:07.478Z",
+      "updatedAt": "2026-11-13T06:10:18.949Z",
       "closedAt": null,
       "extra": {}
     },
