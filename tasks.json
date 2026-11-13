@@ -2612,7 +2612,7 @@
       "number": 114,
       "kind": "task",
       "title": "段階の図:枠が最小より小さいとき凡例が枠の外に描かれ、下の注に重なる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2624,7 +2624,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T05:34:46.314Z",
-      "updatedAt": "2026-11-13T05:34:46.314Z",
+      "updatedAt": "2026-11-13T05:44:28.558Z",
       "closedAt": null,
       "extra": {}
     }
