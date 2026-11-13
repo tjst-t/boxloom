@@ -684,6 +684,11 @@ GFM の表で書く。1行目が見出しの行、2行目が区切りの行、3�
   満たなければ列を減らして段を増やす。対の並びは列の中でも同じ組み方(行がそろう)。
   円グラフと輪は高さで大きさが決まるので、まとまりの幅を使い切らないと `spare-width` に
   なる(図のまとまりに `role=main` を付けない・文を足して縦を使う)。
+- まとまりの中の図・対の並び・表・画像には、本文に置いたときと同じ誤りが同じ code で出る
+  (matrix の `matrix-cells`・`matrix-emphasis`・`matrix-column-groups`、pairs の側の
+  `empty-text`・`variant-exists`、表の `table-shape`、画像の `image-missing` など)。場所は
+  まとまりの中のブロック(`/slides/S/body/N/columns/C/body/K/…`)を指す(`docs/ir.md` の
+  check の表)。
 - 中に囲みを持つ `:::pairs` を置くときは、外の囲みのコロンを増やす(外ほど多い):
 
   ```

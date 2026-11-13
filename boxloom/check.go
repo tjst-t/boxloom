@@ -391,6 +391,23 @@ func (c *checker) checkBodyBlock(bm map[string]any, bp string, tm *Template, ids
 			c.checkNotEmpty(im, fmt.Sprintf("%s/items/%d", bp, ii), "label")
 		}
 	}
+	if bm["type"] == "columns" {
+		// まとまりの中のブロックも本文のブロックと同じ検査に通す(#117。matrix の
+		// matrix-cells・pairs の側の empty-text なども、まとまりの中で同じ場所つきで出る)。
+		// columns の入れ子は IR の読み込みが断るので、ここでは潜らない。
+		cols, _ := bm["columns"].([]any)
+		for ci, col := range cols {
+			cm, _ := col.(map[string]any)
+			body, _ := cm["body"].([]any)
+			for k, blk := range body {
+				m, _ := blk.(map[string]any)
+				if m == nil || m["type"] == "columns" {
+					continue
+				}
+				c.checkBodyBlock(m, fmt.Sprintf("%s/columns/%d/body/%d", bp, ci, k), tm, ids)
+			}
+		}
+	}
 	if bm["type"] == "subsystem" {
 		if data, ok := bm["data"].(map[string]any); ok {
 			switch bm["subsystem"] {
@@ -418,7 +435,7 @@ func (c *checker) checkBodyBlock(bm map[string]any, bp string, tm *Template, ids
 
 // checkBlock は表・画像・並列のまとまりの、Schema で書けない決まりを見る:
 // 表の行のセルの数(table-shape)、画像のファイル(image-path・image-missing・
-// image-format)、まとまりの中のブロック(同じ検査と variant)。
+// image-format)。まとまりの中のブロックは checkBodyBlock が本文と同じ検査に通す。
 func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
 	img := func(m map[string]any, p string) {
 		if alt, ok := m["alt"].(string); ok && strings.TrimSpace(alt) == "" {
@@ -477,20 +494,6 @@ func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
 		for i, x := range images {
 			if m, ok := x.(map[string]any); ok {
 				img(m, fmt.Sprintf("%s/images/%d", bp, i))
-			}
-		}
-	case "columns":
-		cols, _ := bm["columns"].([]any)
-		for ci, col := range cols {
-			cm, _ := col.(map[string]any)
-			body, _ := cm["body"].([]any)
-			for k, blk := range body {
-				p := fmt.Sprintf("%s/columns/%d/body/%d", bp, ci, k)
-				m, _ := blk.(map[string]any)
-				c.checkVariant(m, p, tm)
-				if m["type"] != "columns" {
-					c.checkBlock(m, p, tm)
-				}
 			}
 		}
 	}

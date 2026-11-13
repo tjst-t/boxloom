@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -132,4 +133,50 @@ func walkLayout(n *LayoutNode, f func(*LayoutNode)) {
 func boxWithin(in, out LayoutBox) bool {
 	const eps = 0.01
 	return in.X >= out.X-eps && in.Y >= out.Y-eps && in.X+in.Width <= out.X+out.Width+eps && in.Y+in.Height <= out.Y+out.Height+eps
+}
+
+// inColumn は block を role=main の箇条の横のまとまり(columns[1] の body[0])に置いた
+// columns のブロック。
+func inColumn(block string) string {
+	return `{"type": "columns", "columns": [
+	  {"role": "main", "body": [{"type": "points", "items": ["要点の一つ目", "要点の二つ目"]}]},
+	  {"body": [` + block + `]}]}`
+}
+
+// まとまりの中のブロックも本文のブロックと同じ検査を通る(#117):matrix の
+// matrix-cells・matrix-emphasis、pairs の側の empty-text・variant-exists が、まとまりの
+// 中の場所つきで出る(組み立ての誤り "build" ではなく)。
+func TestColumnBlocksGetBodyChecks(t *testing.T) {
+	const col = "/slides/1/body/0/columns/1/body/0"
+	matrix := `{"type": "subsystem", "subsystem": "matrix", "data": {"columns": ["案 A", "案 B"], "emphasis": "案 C", "rows": [
+	  {"label": "費用", "cells": [{"status": "support", "text": "なし"}]},
+	  {"label": "期限", "cells": [{"status": "support", "text": "2034年"}, {"status": "danger", "text": "2028年"}]}]}}`
+	pairs := `{"type": "pairs", "headings": {"subject": "分かったこと", "response": "打ち手"}, "pairs": [
+	  {"subject": {"type": "quote", "content": " ", "source": "利用者 B"}, "response": {"type": "paragraph", "content": "読み取る"}},
+	  {"subject": {"title": " ", "body": [{"type": "paragraph", "content": "雨で濡れる"}]}, "response": {"body": [{"type": "points", "items": ["庇を付ける"], "variant": "nope"}]}}]}`
+	for _, c := range []struct {
+		name, block string
+		want        []string
+	}{
+		{"matrix", matrix, []string{
+			"matrix-cells " + col + "/data/rows/0/cells",
+			"matrix-emphasis " + col + "/data/emphasis",
+		}},
+		{"pairs", pairs, []string{
+			"empty-text " + col + "/pairs/0/subject/content",
+			"empty-text " + col + "/pairs/1/subject/title",
+			"variant-exists " + col + "/pairs/1/response/body/0/variant",
+		}},
+	} {
+		for _, tmpl := range []string{"report", "dark", "light"} {
+			var got []string
+			for _, e := range Check("deck.json", pairDeck(tmpl, inColumn(c.block)), CheckOptions{}).Errors {
+				got = append(got, e.Code+" "+e.Path)
+			}
+			slices.Sort(got)
+			if !slices.Equal(got, c.want) {
+				t.Errorf("%s/%s: errors %v, want %v", c.name, tmpl, got, c.want)
+			}
+		}
+	}
 }

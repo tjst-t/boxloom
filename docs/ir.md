@@ -581,6 +581,12 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `chart-emphasis` | chart の `emphasis` の名前が `categories` にあり、系列が1つ。系列の `emphasis: true` は1つまでで、項目の強調と一緒に使わない |
 | `schema` / `build` | Go の IR の読み込み・組み立てが断ったもの(知らないキー・知らない状態など。形の誤り。`schema` は Markdown のパーサー・`validate_ir.py` と同じ code) |
 
+並列のまとまり(`columns`)の中のブロックも、本文のブロックと同じ検査を通る(#117)。まとまりの
+中の matrix は `matrix-cells`・`matrix-emphasis`・`matrix-column-groups`、pairs は側の
+`empty-text`・`variant-exists` と側の中の表・画像の検査(`table-shape`・`image-missing` など)、
+表・画像・グラフも本文と同じ code で出る。path はまとまりの中の場所
+(`/slides/S/body/N/columns/C/body/K/…`)。
+
 警告(誤りではない。`-strict` のときだけ exit 1):
 
 | code | 見ること |
