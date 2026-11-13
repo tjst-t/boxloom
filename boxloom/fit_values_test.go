@@ -6,7 +6,8 @@ import (
 )
 
 // 3つのテンプレートは収めの梯子(詰め2段・広げ2段)を持ち、詰めは dense から下へ、
-// 広げは values から上へ並ぶ。report の表の字は 10pt を下回らない。
+// 広げは values から上へ並ぶ。詰めの段はどれもブロックの間を下げる。report の本文は
+// 11pt、表の字は 10pt を下回らない(元の資料の最小。#139)。
 func TestTemplatesHaveFitLadders(t *testing.T) {
 	for _, name := range []string{"dark", "light", "report"} {
 		tm := mustTemplate(name)
@@ -16,8 +17,8 @@ func TestTemplatesHaveFitLadders(t *testing.T) {
 		}
 		prev := fitBaseDense(tm.Dense, tm.Values)
 		for i, s := range f.Shrink {
-			if s.Body >= prev.Body {
-				t.Errorf("%s: shrink[%d] body %v does not go below %v", name, i, s.Body, prev.Body)
+			if s.Body > prev.Body || s.BlockGap >= prev.BlockGap {
+				t.Errorf("%s: shrink[%d] body %v blockGap %v does not pack %v %v", name, i, s.Body, s.BlockGap, prev.Body, prev.BlockGap)
 			}
 			prev = s
 		}
@@ -36,6 +37,9 @@ func TestTemplatesHaveFitLadders(t *testing.T) {
 		if v.Body != f.Shrink[0].Body || v.CardPadding != f.Shrink[0].CardPadding || v.SlideTitle != tm.Values.SlideTitle {
 			t.Errorf("%s: apply = %+v", name, v)
 		}
+	}
+	if s := mustTemplate("report").Fit.Shrink; s[len(s)-1].Body < 11 {
+		t.Errorf("report: shrink floor body %v is below 11", s[len(s)-1].Body)
 	}
 	if s := mustTemplate("report").Fit.Shrink; s[len(s)-1].TableText < 10 {
 		t.Errorf("report: shrink floor table text %v is below 10", s[len(s)-1].TableText)

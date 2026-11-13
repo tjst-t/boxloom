@@ -35,6 +35,24 @@ type fitStep struct {
 	PairsRowGap    *float64 `json:"pairsRowGap,omitempty"`
 	PairMarkSize   *float64 `json:"pairMarkSize,omitempty"`
 	MatrixRowTitle *float64 `json:"matrixRowTitle,omitempty"`
+	// 図の字と寸法(#139。dense と同じ名前)
+	FigureDetail        *float64 `json:"figureDetail,omitempty" scale:"type"`
+	CalloutMark         *float64 `json:"calloutMark,omitempty"`
+	QuoteText           *float64 `json:"quoteText,omitempty" scale:"type"`
+	QuoteMark           *float64 `json:"quoteMark,omitempty" scale:"type"`
+	QuoteSource         *float64 `json:"quoteSource,omitempty" scale:"type"`
+	OrgChartTextInsetY  *float64 `json:"orgchartTextInsetY,omitempty" scale:"space"`
+	OrgChartMinBoxH     *float64 `json:"orgchartMinBoxHeight,omitempty"`
+	OrgChartMemberGap   *float64 `json:"orgchartMemberGap,omitempty" scale:"space"`
+	OrgChartMinLevelGap *float64 `json:"orgchartMinLevelGap,omitempty" scale:"space"`
+	PhasesTextInsetY    *float64 `json:"phasesTextInsetY,omitempty" scale:"space"`
+	PhasesItemGap       *float64 `json:"phasesItemGap,omitempty" scale:"space"`
+	PhasesHeaderGap     *float64 `json:"phasesHeaderGap,omitempty" scale:"space"`
+	PhasesMinHeaderH    *float64 `json:"phasesMinHeaderHeight,omitempty"`
+	MatrixMinRowH       *float64 `json:"matrixMinRowHeight,omitempty"`
+	MatrixTextInsetY    *float64 `json:"matrixTextInsetY,omitempty" scale:"space"`
+	MatrixMarkSize      *float64 `json:"matrixMarkSize,omitempty"`
+	MatrixCellGap       *float64 `json:"matrixCellGap,omitempty" scale:"space"`
 }
 
 // templateFit は値の表の fit の形。
@@ -58,6 +76,24 @@ type FitValues struct {
 	PairsRowGap    float64 `json:"pairsRowGap" scale:"space"`
 	PairMarkSize   float64 `json:"pairMarkSize" scale:"space"`
 	MatrixRowTitle float64 `json:"matrixRowTitle" scale:"type"`
+
+	FigureDetail        float64 `json:"figureDetail" scale:"type"`
+	CalloutMark         float64 `json:"calloutMark"`
+	QuoteText           float64 `json:"quoteText" scale:"type"`
+	QuoteMark           float64 `json:"quoteMark" scale:"type"`
+	QuoteSource         float64 `json:"quoteSource" scale:"type"`
+	OrgChartTextInsetY  float64 `json:"orgchartTextInsetY" scale:"space"`
+	OrgChartMinBoxH     float64 `json:"orgchartMinBoxHeight"`
+	OrgChartMemberGap   float64 `json:"orgchartMemberGap" scale:"space"`
+	OrgChartMinLevelGap float64 `json:"orgchartMinLevelGap" scale:"space"`
+	PhasesTextInsetY    float64 `json:"phasesTextInsetY" scale:"space"`
+	PhasesItemGap       float64 `json:"phasesItemGap" scale:"space"`
+	PhasesHeaderGap     float64 `json:"phasesHeaderGap" scale:"space"`
+	PhasesMinHeaderH    float64 `json:"phasesMinHeaderHeight"`
+	MatrixMinRowH       float64 `json:"matrixMinRowHeight"`
+	MatrixTextInsetY    float64 `json:"matrixTextInsetY" scale:"space"`
+	MatrixMarkSize      float64 `json:"matrixMarkSize"`
+	MatrixCellGap       float64 `json:"matrixCellGap" scale:"space"`
 }
 
 // TemplateFit は収めの梯子(各段は前の段に重ねたあとの値の組)。Shrink は詰める順
@@ -74,14 +110,27 @@ func (f FitValues) apply(v TemplateValues) TemplateValues {
 	v.BlockGap, v.ItemGap, v.CardPadding = f.BlockGap, f.ItemGap, f.CardPadding
 	v.TableCellPadX, v.TableCellPadY = f.TableCellPadX, f.TableCellPadY
 	v.PairsRowGap, v.PairMarkSize, v.MatrixRowTitle = f.PairsRowGap, f.PairMarkSize, f.MatrixRowTitle
+	v.FigureDetail, v.CalloutMark = f.FigureDetail, f.CalloutMark
+	v.QuoteText, v.QuoteMark, v.QuoteSource = f.QuoteText, f.QuoteMark, f.QuoteSource
+	v.fig = figureSizes{
+		OrgChartTextInsetY: f.OrgChartTextInsetY, OrgChartMinBoxH: f.OrgChartMinBoxH, OrgChartMemberGap: f.OrgChartMemberGap, OrgChartMinLevelGap: f.OrgChartMinLevelGap,
+		PhasesTextInsetY: f.PhasesTextInsetY, PhasesItemGap: f.PhasesItemGap, PhasesHeaderGap: f.PhasesHeaderGap, PhasesMinHeaderH: f.PhasesMinHeaderH,
+		MatrixMinRowH: f.MatrixMinRowH, MatrixTextInsetY: f.MatrixTextInsetY, MatrixMarkSize: f.MatrixMarkSize, MatrixCellGap: f.MatrixCellGap,
+	}
 	return v
 }
 
 func fitBaseValues(v TemplateValues) FitValues {
+	g := v.fig
 	return FitValues{Body: v.Body, SubPoint: v.SubPoint, TableText: v.TableText, Small: v.Small,
 		BlockGap: v.BlockGap, ItemGap: v.ItemGap, CardPadding: v.CardPadding,
 		TableCellPadX: v.TableCellPadX, TableCellPadY: v.TableCellPadY,
-		PairsRowGap: v.PairsRowGap, PairMarkSize: v.PairMarkSize, MatrixRowTitle: v.MatrixRowTitle}
+		PairsRowGap: v.PairsRowGap, PairMarkSize: v.PairMarkSize, MatrixRowTitle: v.MatrixRowTitle,
+		FigureDetail: v.FigureDetail, CalloutMark: v.CalloutMark,
+		QuoteText: v.QuoteText, QuoteMark: v.QuoteMark, QuoteSource: v.QuoteSource,
+		OrgChartTextInsetY: g.OrgChartTextInsetY, OrgChartMinBoxH: g.OrgChartMinBoxH, OrgChartMemberGap: g.OrgChartMemberGap, OrgChartMinLevelGap: g.OrgChartMinLevelGap,
+		PhasesTextInsetY: g.PhasesTextInsetY, PhasesItemGap: g.PhasesItemGap, PhasesHeaderGap: g.PhasesHeaderGap, PhasesMinHeaderH: g.PhasesMinHeaderH,
+		MatrixMinRowH: g.MatrixMinRowH, MatrixTextInsetY: g.MatrixTextInsetY, MatrixMarkSize: g.MatrixMarkSize, MatrixCellGap: g.MatrixCellGap}
 }
 
 // fitBaseDense は詰める梯子の土台:dense の組を重ねた values の値(dense の持たない

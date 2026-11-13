@@ -101,7 +101,13 @@
   "fonts": {
     "latin": "Noto Sans CJK JP",
     "eastAsian": "Noto Sans CJK JP",
-    "fallbackFonts": ["BIZ UDPGothic", "BIZ UDGothic", "IPAexGothic", "Liberation Sans", "DejaVu Sans"],
+    "fallbackFonts": [
+      "BIZ UDPGothic",
+      "BIZ UDGothic",
+      "IPAexGothic",
+      "Liberation Sans",
+      "DejaVu Sans"
+    ],
     "widthMargin": 1.05,
     "fixedLineSpacing": true,
     "lineHeight": 1.35
@@ -117,7 +123,24 @@
     "tableCellPaddingY": 4,
     "pairsRowGap": 8,
     "pairMarkSize": 20,
-    "matrixRowTitle": 12
+    "matrixRowTitle": 12,
+    "figureDetail": 12,
+    "calloutMark": 24,
+    "orgchartTextInsetY": 4,
+    "orgchartMinBoxHeight": 32,
+    "orgchartMemberGap": 12,
+    "orgchartMinLevelGap": 24,
+    "phasesTextInsetY": 8,
+    "phasesItemGap": 8,
+    "phasesHeaderGap": 12,
+    "phasesMinHeaderHeight": 36,
+    "matrixMinRowHeight": 28,
+    "matrixTextInsetY": 4,
+    "matrixMarkSize": 14,
+    "matrixCellGap": 4,
+    "quoteText": 16,
+    "quoteMark": 36,
+    "quoteSource": 12
   },
   "fit": {
     "shrink": [
@@ -126,12 +149,38 @@
         "subPoint": 10,
         "tableText": 10,
         "blockGap": 8,
-        "cardPadding": 16
+        "cardPadding": 16,
+        "figureDetail": 10,
+        "calloutMark": 16,
+        "orgchartMinBoxHeight": 24,
+        "orgchartMinLevelGap": 16,
+        "phasesTextInsetY": 4,
+        "phasesItemGap": 4,
+        "phasesMinHeaderHeight": 28,
+        "matrixMinRowHeight": 20,
+        "matrixRowTitle": 10,
+        "tableCellPaddingY": 0,
+        "pairsRowGap": 4,
+        "pairMarkSize": 16,
+        "matrixMarkSize": 10,
+        "orgchartMemberGap": 8,
+        "phasesHeaderGap": 8,
+        "quoteText": 14,
+        "quoteMark": 24,
+        "quoteSource": 10
       },
       {
         "body": 10,
         "blockGap": 4,
-        "cardPadding": 12
+        "cardPadding": 12,
+        "orgchartMinBoxHeight": 20,
+        "orgchartMemberGap": 4,
+        "orgchartMinLevelGap": 12,
+        "phasesHeaderGap": 4,
+        "phasesMinHeaderHeight": 24,
+        "matrixMinRowHeight": 16,
+        "quoteText": 12,
+        "quoteMark": 18
       }
     ],
     "grow": [

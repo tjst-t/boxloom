@@ -6,7 +6,7 @@
 //
 // dense のスライドでは、本文の部品・サブシステムがテンプレートの値の表の dense の組
 // (DenseValues:本文・入れ子の箇条・表・小さい字の大きさとブロック・項目の間、#136 で
-// 表のセルの余白・pairs の対の行の間と印・matrix の行の題の字)を使う。
+// 表のセルの余白・pairs の対の行の間と印・matrix の行の題の字、#139 で図と引用の字・寸法)を使う。
 // 題・リード・出典・フッターは values のまま。切り替えは部品の段の1か所:
 //   - 本文のブロックを組む口(skeletonContext.blocks)が、dense の値を重ねた
 //     テンプレート(densed)で部品を組む。部品が値の表を直接読む所(表の字など)と
@@ -52,7 +52,8 @@ func (r *SubsystemRegistry) withTextSizes(v TemplateValues, point string) *Subsy
 	return c
 }
 
-// setTextSizes は図の字の段(FigureText)と shapes の字の段を v から入れる。
+// setTextSizes は図の字の段(FigureText)と shapes の字の段を v から入れる。orgchart・
+// phases・matrix は dense・fit で詰められる寸法(v.fig、#139)も図の値の写しに当てる。
 // 箇条の印は作ったものが持っていればそのまま。ほかのサブシステムは変えない
 // (Gantt の字は subsystems.gantt の寸法)。
 func setTextSizes(s Subsystem, v TemplateValues, point string) {
@@ -62,12 +63,21 @@ func setTextSizes(s Subsystem, v TemplateValues, point string) {
 		p = &x.Text
 	case *OrgChartSubsystem:
 		p = &x.Text
+		if v.fig.set() {
+			x.V = v.fig.orgchart(*x.vals())
+		}
 	case *MatrixSubsystem:
 		p = &x.Text
+		if v.fig.set() {
+			x.V = v.fig.matrix(*x.vals())
+		}
 	case *FunnelSubsystem:
 		p = &x.Text
 	case *PhasesSubsystem:
 		p = &x.Text
+		if v.fig.set() {
+			x.V = v.fig.phases(*x.vals())
+		}
 	case *ChartSubsystem:
 		p = &x.Text
 	case *CycleSubsystem:

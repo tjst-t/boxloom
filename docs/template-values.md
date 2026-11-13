@@ -280,7 +280,8 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
               "fallbackFonts": ["BIZ UDPGothic", "…"], "widthMargin": 1.05, "fixedLineSpacing": true,
               "lineHeight": 1.35 },
   "dense":  { "body": 14, "subPoint": 12, "tableText": 12, "small": 10, "blockGap": 12, "itemGap": 4,
-              "tableCellPaddingX": 4, "tableCellPaddingY": 4, "pairsRowGap": 8, "pairMarkSize": 20, "matrixRowTitle": 12 },
+              "tableCellPaddingX": 4, "tableCellPaddingY": 4, "pairsRowGap": 8, "pairMarkSize": 20, "matrixRowTitle": 12,
+              "figureDetail": 12, "calloutMark": 24, "...": 0 },
   "fit":    { "shrink": [{ "body": 12, "...": 0 }, { "...": 0 }], "grow": [{ "body": 18, "...": 0 }, { "...": 0 }] },
   "variants": [],
   "subsystems": { "gantt": { "...": "subsystems/gantt.json と同じ形" } }
@@ -554,9 +555,9 @@ dark / light / report は `{n}/{m}`)。目次のスライド(`meta.toc`)の題(`
 
 本文のスライドに `density: dense`(Markdown は `# 題 {density=dense}`。`docs/ir.md` の 9.4)を
 書いたとき、本文の部品・サブシステムが `values` の同じ名前の代わりに使う値の組。題・リード・
-出典・フッターは `values` のまま。11のキーは全部書く(欠け・知らないキーは誤り)。字の大きさは
-段(`typeSizes`)、間隔は余白の刻みに載り、`values` の同じ名前より大きくはできない。0 以下は
-誤りで、表のセルの上下の余白(`tableCellPaddingY`)だけは 0 でもよい。
+出典・フッターは `values` のまま。28のキーは全部書く(欠け・知らないキーは誤り)。字の大きさは
+段(`typeSizes`)、間隔は余白の刻みに載り、`values` の同じ名前(図の寸法は元の図の値。下の2つ目の表)より
+大きくはできない。0 以下は誤りで、表のセルの上下の余白(`tableCellPaddingY`)だけは 0 でもよい。
 
 | キー | 意味 | dark・light | report |
 |---|---|---|---|
@@ -577,6 +578,25 @@ report の値は読む資料のサンプルの密なページ(本文 10〜12pt�
 (表のセルの上下の余白・対の行の間と印・matrix の行の題の字が元の資料より大きい)のために足した。
 report の表のセルの上下の余白は刻み(2pt)の下が 0 しか無いので 0(行の送り 1.2 の分の空きは残る)。
 
+図と引用の字・寸法(#139)。図の箱の題は `body`、2段目は `subPoint` で上の表のとおり詰まるが、
+補足の字・箱の余白と間合い・行の高さの下限は図の値のままだったので、`-fit` で段を下りても
+図の最小の高さ(Min)が止まっていた。そのための17のキーで、元の値は `values` の同じ名前か、
+このテンプレートの `subsystems.<図>`(書かなければ既定の `subsystems/<図>.json`)の寸法。
+同梱の dense はどれも元の値と同じ(dense のスライドの見た目は #139 の前と変わらない)で、
+詰めるのは fit の段(次の節)。
+
+| キー | 元の値 | 意味 |
+|---|---|---|
+| `figureDetail` | `values.figureDetail` | 図の箱の補足(orgchart の3段目・phases の箱の補足)の字 |
+| `calloutMark` | `values.calloutMark` | report の引用の人の印・結論の丸い矢印の大きさ |
+| `quoteText` `quoteMark` `quoteSource` | `values` の同じ名前 | 引用の言葉・頭の印・出どころの字(report の吹き出しの余白は `cardPadding`) |
+| `orgchartTextInsetY` `orgchartMinBoxHeight` `orgchartMemberGap` `orgchartMinLevelGap` | `subsystems.orgchart` の `textInsetY` `minBoxHeight` `memberGap` `minLevelGap` | 組織図の箱の上下の余白・箱の高さの下限・3段目の箱の間・段の間の下限 |
+| `phasesTextInsetY` `phasesItemGap` `phasesHeaderGap` `phasesMinHeaderHeight` | `subsystems.phases` の `textInsetY` `itemGap` `headerGap` `minHeaderHeight` | フェーズの箱の上下の余白・箱の間・山形と箱の間・山形の高さの下限 |
+| `matrixMinRowHeight` `matrixTextInsetY` `matrixMarkSize` `matrixCellGap` | `subsystems.matrix` の `minRowHeight` `textInsetY` `markSize` `cellGap` | matrix の行の高さの下限・セルの上下の余白・mark の丸・セルの間 |
+
+`values` に無い図の寸法は、ほかの名前と同じく `typeSizes`・余白の刻みに載る(`textInsetY`・
+`*Gap` は刻み、`min*Height`・`matrixMarkSize` は刻みを問わない。元の図の値と同じ)。
+
 ### fit(収めの梯子。任意、#126)
 
 自動の収め(親 #125。作る側が `-fit` を明示したときだけ)が使う段の並び。`shrink` は
@@ -590,8 +610,9 @@ dense は `shrink[0]` から)下り、最初に収まった段で組む。`grow`
 各段は dense と同じく本文の値の一部を重ねる組で、書いた名前だけを前の段から替える
 (書かない名前は前の段のまま)。`shrink` の最初の段は `dense` の組に、`grow` の最初の段は
 `values` に重ねる(`cardPadding` は dense に無いので、詰めの最初の段でも `values` が前)。
-同梱の梯子の `shrink` は #136 で足した名前を書かない(どの段も dense の値のまま)。`grow` は
-body と釣り合うように #136 の名前も上げる(#128。下の2つ目の表。matrix の行の題が本文より
+同梱の梯子の `shrink` は本文と釣り合うように図・引用の名前(#136・#139)も下げる(#139。
+下の3つ目の表。#139 の前は本文の字と間合いしか書かず、図が Min で止まると段を下りても
+はみ出しが1pt も減らなかった)。`grow` は body と釣り合うように #136 の名前も上げる(#128。下の2つ目の表。matrix の行の題が本文より
 小さく残らないよう、`matrixRowTitle` と `body` の差は values と同じ)。
 書ける名前:
 
@@ -601,6 +622,7 @@ body と釣り合うように #136 の名前も上げる(#128。下の2つ目の
 | `blockGap` `itemGap` `cardPadding` | ブロックの間・項目の間・カードの内側の余白(余白の刻みに載る) |
 | `tableCellPaddingX` `tableCellPaddingY` `pairsRowGap` `pairMarkSize` | 表のセルの余白・対の行の間・対の印(余白の刻みに載る。`tableCellPaddingY` は 0 でもよい。#136) |
 | `matrixRowTitle` | matrix の行の題の字(字の段に載る。#136) |
+| `figureDetail` `calloutMark` `quoteText` `quoteMark` `quoteSource` と図の寸法の12の名前 | 図と引用の字・寸法(dense の節の2つ目の表。#139) |
 
 誤り:知らないキー、`null`、0 以下(`tableCellPaddingY` は 0 まで)、段階に無い値、`shrink` の段で前の段より大きい値、
 `grow` の段で前の段より小さい値、前の段から何も替えない段(空の組も)。`fit`・`shrink`・
@@ -618,7 +640,7 @@ body と釣り合うように #136 の名前も上げる(#128。下の2つ目の
 | | grow[1] | 18 | 16 | 16 | 10 | **32** | **16** | **28** |
 | report | dense(起点) | 12 | 11 | 10 | 9 | 12 | 4 | 12 |
 | | shrink[0] | **11** | **10** | 10 | 9 | **10** | **2** | **10** |
-| | shrink[1] | **10** | **9** | 10 | 9 | **8** | 2 | **8** |
+| | shrink[1] | 11 | 10 | 10 | 9 | **8** | 2 | **8** |
 | | values(起点) | 14 | 12 | 11 | 10 | 18 | 6 | 12 |
 | | grow[0] | **16** | **14** | **12** | 10 | **20** | **8** | **14** |
 | | grow[1] | 16 | 14 | 12 | 10 | **24** | **10** | **16** |
@@ -634,9 +656,34 @@ body と釣り合うように #136 の名前も上げる(#128。下の2つ目の
 | | grow[0] | **16** | **6** | **4** | **6** | **28** |
 | | grow[1] | 16 | 6 | 4 | **8** | 28 |
 
+詰めの段の図と引用の名前(#139。重ねたあとの値。太字はその段で替えたもの。dense は元の値と同じ):
+
+| テンプレート | 段 | figureDetail | quoteText / quoteMark / quoteSource | calloutMark | matrixRowTitle | pairsRowGap / pairMarkSize | tableCellPaddingY |
+|---|---|---|---|---|---|---|---|
+| dark・light | dense(起点) | 12 | 16 / 36 / 12 | 24 | 12 | 8 / 20 | 4 |
+| | shrink[0] | **10** | **14** / **24** / **10** | **16** | **10** | **4** / **16** | **0** |
+| | shrink[1] | 10 | **12** / **18** / 10 | 16 | 10 | 4 / 16 | 0 |
+| report | dense(起点) | 12 | 16 / 32 / 12 | 24 | 11 | 2 / 20 | 0 |
+| | shrink[0] | **10** | **14** / **24** / **11** | **18** | **10** | 2 / **18** | 0 |
+| | shrink[1] | 10 | **12** / 24 / **10** | **16** | 10 | 2 / **16** | 0 |
+
+| テンプレート | 段 | orgchart の textInsetY / minBoxHeight / memberGap / minLevelGap | phases の textInsetY / itemGap / headerGap / minHeaderHeight | matrix の minRowHeight / textInsetY / markSize / cellGap |
+|---|---|---|---|---|
+| dark・light | dense(起点) | 4 / 32 / 12 / 24 | 8 / 8 / 12 / 36 | 28 / 4 / 14 / 4 |
+| | shrink[0] | 4 / **24** / **8** / **16** | **4** / **4** / **8** / **28** | **20** / 4 / **10** / 4 |
+| | shrink[1] | 4 / **20** / **4** / **12** | 4 / 4 / **4** / **24** | **16** / 4 / 10 / 4 |
+| report | dense(起点) | 4 / 32 / 12 / 24 | 8 / 8 / 12 / 36 | 28 / 4 / 14 / 4 |
+| | shrink[0] | **2** / **24** / **6** / **16** | **4** / **4** / **6** / **28** | **20** / **2** / **10** / **2** |
+| | shrink[1] | 2 / **22** / **4** / **12** | 4 / 4 / **4** / **24** | **18** / 2 / **8** / 2 |
+
+dark・light の余白の刻みは 4pt なので、箱の上下の余白(4)・matrix のセルの間(4)はそれより下げない。
+report の matrix は mark(丸の下に小さい字)で行の高さが丸と字で決まるので、丸(`matrixMarkSize`)も下げる。
+
 詰めは dense から字と間合いを1段ずつ下げた2段、広げは字と間合いを1段上げ、次に間合いだけを
 もう1段上げた2段(同じデッキの中で本文の字がばらつきすぎないよう短くしてある)。report の
-表の字は元の資料の密な表(10〜11pt)に合わせて 10pt を下限にした。
+本文は元の資料の本文の最小に合わせて 11pt、表の字は元の資料の密な表(10〜11pt)に合わせて
+10pt を下限にした(#139。report の shrink[1] は本文の字を下げず、ブロックの間・カードの余白と
+図・引用の寸法だけを下げる)。
 
 ### variants
 

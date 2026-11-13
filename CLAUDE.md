@@ -285,7 +285,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `fit_shrink.go` = `-fit`(`BuildOptions.Fit`・`CheckOptions.Fit`、#127。opt-in の最後の手段)。はみ出す本文の
     スライドだけを値の表の梯子(normal は dense → `fit.shrink[0]` → …、dense は `fit.shrink[0]` から)で組み直して
     同じ measureBody で測り、最初に収まった段で組む(本文の箱の印 `fit`。IR は変えない)。info の `fit-applied`
-    (`CheckResult.Info`・`BuildResult.Info`)と容量の `fit`。最後の段でも入らなければ layout-overflow のまま
+    (`CheckResult.Info`・`BuildResult.Info`)と容量の `fit`。最後の段でも入らなければ layout-overflow のまま。
+    dense・fit の組は図と引用の字・寸法(#139。`figureDetail`・`quote*`・`calloutMark` と、orgchart・phases・matrix の
+    箱の余白・間合い・高さの下限。元の値は `subsystems.<図>`、`values.go` の `figureSizes`)も持ち、`setTextSizes` が
+    図の値の写しに当てる。同梱の dense は元の値のまま、shrink の段が本文と釣り合うように下げる(report の本文は 11pt まで)
   - `fit_grow.go` = `-fit` の広げ(#128)。fill-ratio が `fillRatioMin` を下回る normal の本文のスライドを `fit.grow` で
     1段ずつ上り、はみ出さない最も上の段(目標に届いたらそこ。fill-ratio が上がらない段は選ばない)で組む。印は詰めと
     共通の `fitRef`(`fit.shrink[K]`・`fit.grow[K]`)。fit-applied を出し、fill-ratio の警告は組んだ後の値。同梱の grow の段は

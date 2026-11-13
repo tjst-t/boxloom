@@ -132,7 +132,24 @@
     "tableCellPaddingY": 4,
     "pairsRowGap": 8,
     "pairMarkSize": 20,
-    "matrixRowTitle": 12
+    "matrixRowTitle": 12,
+    "figureDetail": 12,
+    "calloutMark": 24,
+    "orgchartTextInsetY": 4,
+    "orgchartMinBoxHeight": 32,
+    "orgchartMemberGap": 12,
+    "orgchartMinLevelGap": 24,
+    "phasesTextInsetY": 8,
+    "phasesItemGap": 8,
+    "phasesHeaderGap": 12,
+    "phasesMinHeaderHeight": 36,
+    "matrixMinRowHeight": 28,
+    "matrixTextInsetY": 4,
+    "matrixMarkSize": 14,
+    "matrixCellGap": 4,
+    "quoteText": 16,
+    "quoteMark": 36,
+    "quoteSource": 12
   },
   "variants": []
 }

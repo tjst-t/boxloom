@@ -133,6 +133,57 @@ type TemplateValues struct {
 
 	ImageMinHeight float64 `json:"imageMinHeight"`           // 画像を縮めてよい下限の高さ
 	CaptionGap     float64 `json:"captionGap" scale:"space"` // 表・画像と説明の文の間
+
+	// fig は図の寸法のうち dense・fit で詰められるもの(#139)。値の表の values には書かず、
+	// 読み込みでこのテンプレートの subsystems の orgchart・phases・matrix(書かなければ
+	// 既定)から入れる。dense・fit の組が替え、setTextSizes が図に渡す。
+	fig figureSizes
+}
+
+// figureSizes は dense・fit で詰められる図の寸法(#139。orgchart・phases の箱の余白と
+// 間合い、matrix の行の高さの下限・上下の余白・mark の丸・セルの間)。json の名前は dense・fit に書くキー、元の値は
+// subsystems.<図>.<キー>(コメント)。どれも 0 なら(値の表を通らずに作った値)図には
+// 当てない。
+type figureSizes struct {
+	OrgChartTextInsetY  float64 `json:"orgchartTextInsetY" scale:"space" src:"subsystems.orgchart.textInsetY"`
+	OrgChartMinBoxH     float64 `json:"orgchartMinBoxHeight" src:"subsystems.orgchart.minBoxHeight"`
+	OrgChartMemberGap   float64 `json:"orgchartMemberGap" scale:"space" src:"subsystems.orgchart.memberGap"`
+	OrgChartMinLevelGap float64 `json:"orgchartMinLevelGap" scale:"space" src:"subsystems.orgchart.minLevelGap"`
+	PhasesTextInsetY    float64 `json:"phasesTextInsetY" scale:"space" src:"subsystems.phases.textInsetY"`
+	PhasesItemGap       float64 `json:"phasesItemGap" scale:"space" src:"subsystems.phases.itemGap"`
+	PhasesHeaderGap     float64 `json:"phasesHeaderGap" scale:"space" src:"subsystems.phases.headerGap"`
+	PhasesMinHeaderH    float64 `json:"phasesMinHeaderHeight" src:"subsystems.phases.minHeaderHeight"`
+	MatrixMinRowH       float64 `json:"matrixMinRowHeight" src:"subsystems.matrix.minRowHeight"`
+	MatrixTextInsetY    float64 `json:"matrixTextInsetY" scale:"space" src:"subsystems.matrix.textInsetY"`
+	MatrixMarkSize      float64 `json:"matrixMarkSize" src:"subsystems.matrix.markSize"`
+	MatrixCellGap       float64 `json:"matrixCellGap" scale:"space" src:"subsystems.matrix.cellGap"`
+}
+
+// figureSizesFrom は図の値から詰められる寸法を取り出す。
+func figureSizesFrom(o *OrgChartValues, p *PhasesValues, m *MatrixValues) figureSizes {
+	return figureSizes{
+		OrgChartTextInsetY: o.TextInsetY, OrgChartMinBoxH: o.MinBoxH, OrgChartMemberGap: o.MemberGap, OrgChartMinLevelGap: o.MinLevelGap,
+		PhasesTextInsetY: p.TextInsetY, PhasesItemGap: p.ItemGap, PhasesHeaderGap: p.HeaderGap, PhasesMinHeaderH: p.MinHeaderH,
+		MatrixMinRowH: m.MinRowH, MatrixTextInsetY: m.TextInsetY, MatrixMarkSize: m.MarkSize, MatrixCellGap: m.CellGap,
+	}
+}
+
+func (f figureSizes) set() bool { return f != (figureSizes{}) }
+
+// orgchart・phases・matrix は図の値の写しに f を当てたもの。
+func (f figureSizes) orgchart(v OrgChartValues) *OrgChartValues {
+	v.TextInsetY, v.MinBoxH, v.MemberGap, v.MinLevelGap = f.OrgChartTextInsetY, f.OrgChartMinBoxH, f.OrgChartMemberGap, f.OrgChartMinLevelGap
+	return &v
+}
+
+func (f figureSizes) phases(v PhasesValues) *PhasesValues {
+	v.TextInsetY, v.ItemGap, v.HeaderGap, v.MinHeaderH = f.PhasesTextInsetY, f.PhasesItemGap, f.PhasesHeaderGap, f.PhasesMinHeaderH
+	return &v
+}
+
+func (f figureSizes) matrix(v MatrixValues) *MatrixValues {
+	v.MinRowH, v.TextInsetY, v.MarkSize, v.CellGap = f.MatrixMinRowH, f.MatrixTextInsetY, f.MatrixMarkSize, f.MatrixCellGap
+	return &v
 }
 
 // DenseValues は密なスライド(content の density: dense。「このページは参照用に
@@ -153,6 +204,27 @@ type DenseValues struct {
 	PairsRowGap    float64 `json:"pairsRowGap" scale:"space"`
 	PairMarkSize   float64 `json:"pairMarkSize" scale:"space"`
 	MatrixRowTitle float64 `json:"matrixRowTitle" scale:"type"`
+	// 図の字と寸法(#139):orgchart・phases の箱の補足の字(values.figureDetail)、report の
+	// 引用の人の印と結論の矢印(values.calloutMark)、引用の言葉・頭の印・出どころの字
+	// (values.quoteText・quoteMark・quoteSource)、orgchart・phases の箱の余白と間合い・
+	// matrix の行の高さの下限と上下の余白(subsystems.<図> の同じ寸法。figureSizes)。
+	FigureDetail        float64 `json:"figureDetail" scale:"type"`
+	CalloutMark         float64 `json:"calloutMark"`
+	QuoteText           float64 `json:"quoteText" scale:"type"`
+	QuoteMark           float64 `json:"quoteMark" scale:"type"`
+	QuoteSource         float64 `json:"quoteSource" scale:"type"`
+	OrgChartTextInsetY  float64 `json:"orgchartTextInsetY" scale:"space"`
+	OrgChartMinBoxH     float64 `json:"orgchartMinBoxHeight"`
+	OrgChartMemberGap   float64 `json:"orgchartMemberGap" scale:"space"`
+	OrgChartMinLevelGap float64 `json:"orgchartMinLevelGap" scale:"space"`
+	PhasesTextInsetY    float64 `json:"phasesTextInsetY" scale:"space"`
+	PhasesItemGap       float64 `json:"phasesItemGap" scale:"space"`
+	PhasesHeaderGap     float64 `json:"phasesHeaderGap" scale:"space"`
+	PhasesMinHeaderH    float64 `json:"phasesMinHeaderHeight"`
+	MatrixMinRowH       float64 `json:"matrixMinRowHeight"`
+	MatrixTextInsetY    float64 `json:"matrixTextInsetY" scale:"space"`
+	MatrixMarkSize      float64 `json:"matrixMarkSize"`
+	MatrixCellGap       float64 `json:"matrixCellGap" scale:"space"`
 }
 
 // apply は v の本文の値を dense の組に替えたもの。
@@ -161,7 +233,18 @@ func (d DenseValues) apply(v TemplateValues) TemplateValues {
 	v.BlockGap, v.ItemGap = d.BlockGap, d.ItemGap
 	v.TableCellPadX, v.TableCellPadY = d.TableCellPadX, d.TableCellPadY
 	v.PairsRowGap, v.PairMarkSize, v.MatrixRowTitle = d.PairsRowGap, d.PairMarkSize, d.MatrixRowTitle
+	v.FigureDetail, v.CalloutMark = d.FigureDetail, d.CalloutMark
+	v.QuoteText, v.QuoteMark, v.QuoteSource = d.QuoteText, d.QuoteMark, d.QuoteSource
+	v.fig = d.figs()
 	return v
+}
+
+func (d DenseValues) figs() figureSizes {
+	return figureSizes{
+		OrgChartTextInsetY: d.OrgChartTextInsetY, OrgChartMinBoxH: d.OrgChartMinBoxH, OrgChartMemberGap: d.OrgChartMemberGap, OrgChartMinLevelGap: d.OrgChartMinLevelGap,
+		PhasesTextInsetY: d.PhasesTextInsetY, PhasesItemGap: d.PhasesItemGap, PhasesHeaderGap: d.PhasesHeaderGap, PhasesMinHeaderH: d.PhasesMinHeaderH,
+		MatrixMinRowH: d.MatrixMinRowH, MatrixTextInsetY: d.MatrixTextInsetY, MatrixMarkSize: d.MatrixMarkSize, MatrixCellGap: d.MatrixCellGap,
+	}
 }
 
 // checkDense は dense の組が正(zero:"allowed" の名前は 0 も)で段に載り、values の
@@ -182,10 +265,22 @@ func checkDense(d DenseValues, v TemplateValues, sc TemplateScale) error {
 			return fmt.Errorf("dense.%s: values has no %s", name, name) // 組み立ての誤り
 		}
 		if x := dv.Field(i).Float(); x > was+scaleEps {
-			return fmt.Errorf("dense.%s: %v is larger than values.%s (%v); dense packs the body, so it cannot be larger", name, x, name, was)
+			return fmt.Errorf("dense.%s: %v is larger than %s (%v); dense packs the body, so it cannot be larger", name, x, valueSource(name), was)
 		}
 	}
 	return nil
+}
+
+// valueSource は dense・fit の名前の元の値の場所(図の寸法は subsystems.<図>.<キー>、
+// ほかは values.<名前>)。
+func valueSource(name string) string {
+	ft := reflect.TypeOf(figureSizes{})
+	for i := 0; i < ft.NumField(); i++ {
+		if n, _, _ := strings.Cut(ft.Field(i).Tag.Get("json"), ","); n == name {
+			return ft.Field(i).Tag.Get("src")
+		}
+	}
+	return "values." + name
 }
 
 // valuesByJSONName は values の数の値を json の名前で引ける表にしたもの。
@@ -198,6 +293,11 @@ func valuesByJSONName(v TemplateValues) map[string]float64 {
 		}
 		name, _, _ := strings.Cut(rt.Field(i).Tag.Get("json"), ",")
 		out[name] = rv.Field(i).Float()
+	}
+	fv, ft := reflect.ValueOf(v.fig), reflect.TypeOf(v.fig)
+	for i := 0; i < ft.NumField(); i++ {
+		name, _, _ := strings.Cut(ft.Field(i).Tag.Get("json"), ",")
+		out[name] = fv.Field(i).Float()
 	}
 	return out
 }
@@ -557,6 +657,7 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	if err := checkMarks(f.Marks); err != nil {
 		return nil, err
 	}
+	f.Values.fig = templateFigureSizes(f.Subsystems)
 	if err := checkDense(f.Dense, f.Values, f.Scale); err != nil {
 		return nil, err
 	}
@@ -667,6 +768,24 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		return nil, err
 	}
 	return t, nil
+}
+
+// templateFigureSizes は dense・fit で詰められる図の寸法の元(このテンプレートが書いた
+// subsystems の図の値。書かなければ既定)。
+func templateFigureSizes(s *templateSubsystems) figureSizes {
+	o, p, m := defaultOrgChartValues(), defaultPhasesValues(), defaultMatrixValues()
+	if s != nil {
+		if s.OrgChart != nil {
+			o = s.OrgChart
+		}
+		if s.Phases != nil {
+			p = s.Phases
+		}
+		if s.Matrix != nil {
+			m = s.Matrix
+		}
+	}
+	return figureSizesFrom(o, p, m)
 }
 
 // checkPositive は値の表の数が全部 0 より大きいことを見る(打ち間違えた値を
