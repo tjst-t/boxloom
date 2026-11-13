@@ -3188,7 +3188,7 @@
       "number": 141,
       "kind": "task",
       "title": "-allow-overflow で作った PPTX に、はみ出した場所の印を描く",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3200,7 +3200,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T09:24:41.479Z",
-      "updatedAt": "2026-11-13T09:24:41.479Z",
+      "updatedAt": "2026-11-13T09:48:14.354Z",
       "closedAt": null,
       "extra": {}
     },
