@@ -2591,7 +2591,7 @@
       "number": 113,
       "kind": "task",
       "title": "対の並び:#108 の左右の幅の釣り合いが実際の deck(report・側に見出しと複数ブロック)で効いていない",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2603,7 +2603,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T05:34:46.314Z",
-      "updatedAt": "2026-11-13T05:34:46.314Z",
+      "updatedAt": "2026-11-13T05:34:59.026Z",
       "closedAt": null,
       "extra": {}
     },
