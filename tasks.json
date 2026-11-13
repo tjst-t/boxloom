@@ -2801,7 +2801,7 @@
       "number": 123,
       "kind": "task",
       "title": "表の行の群を2列目以降にも:縦に結合する列を名前で指す",
-      "status": "in-progress",
+      "status": "done",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2809,12 +2809,12 @@
       "labels": [],
       "body": "## なぜ\n#82 の比較(20ページ相当)で:元の資料は2列目以降でも同じ値が続くセルを縦に結合する(「支援事業」の列)。いまは `{groups=first}` で先頭の列だけ。\n\n## 記法の案(向きは変えない)\n- 説明の行の属性を `{groups=列名}`(名前で指す。半角 `,` で複数)に広げる。`first` は今までどおり(先頭の列)。\n- 群の列では、空のセルは「上と同じ群」(今の first と同じ読み方)。後ろの群の列は前の群の列の境を越えて結合しない(入れ子)。\n- IR は table の欄(今の groups の形を広げる。後方互換:first はそのまま読める)。\n\n## 組み方\n- 本物の a:tbl の縦結合(rowSpan・vMerge)。report は先頭の群だけ縦書きの帯(#100)、後ろの群は横書きの結合セル。\n- 続きの表(continues)でも使える。\n\n## 確かめ方\n- 試験:Markdown⇔IR・Schema・誤り(知らない列名)/PPTX で2列目の rowSpan/入れ子の境/validate_pptx。first の golden は変わらない。",
       "doneWhen": "列名で指した列の縦結合を試験で確かめる/first の golden が変わらない/docs/content-syntax.md 3.7/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/table-groups-more）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T06:10:07.478Z",
-      "updatedAt": "2026-11-13T06:50:38.301Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T07:18:13.243Z",
+      "closedAt": "2026-11-13T07:18:13.243Z",
       "extra": {}
     }
   ]
