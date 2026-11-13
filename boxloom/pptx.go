@@ -825,8 +825,28 @@ func slideLayoutNum(p *PPTXBuilder) int {
 }
 
 // phSpXML はマスター・レイアウトのプレースホルダー(中身の無い置き場)。
-func phSpXML(id int, name, phAttrs string, box LBox, sz float64, algn string) string {
-	return phParaSpXML(id, name, phAttrs, fmt.Sprintf(`<a:lvl1pPr algn="%s"><a:defRPr sz="%d"/></a:lvl1pPr>`, algn, int(sz*100)), box, `<a:p><a:endParaRPr lang="ja-JP"/></a:p>`)
+// 段落の既定には字体の実名(namedFonts)を書く。
+func phSpXML(namedFonts string, id int, name, phAttrs string, box LBox, sz float64, algn string) string {
+	return phParaSpXML(id, name, phAttrs, fmt.Sprintf(`<a:lvl1pPr algn="%s"><a:defRPr sz="%d">%s</a:defRPr></a:lvl1pPr>`, algn, int(sz*100), namedFonts), box, `<a:p><a:endParaRPr lang="ja-JP"/></a:p>`)
+}
+
+// namedFontRPr は字体の実名の a:latin・a:ea(a:defRPr の中身)。
+func namedFontRPr(fonts *FontSet) string {
+	return fmt.Sprintf(`<a:latin typeface="%s"/><a:ea typeface="%s"/>`,
+		escapeXML(fonts.Latin.Family), escapeXML(fonts.EastAsian.Family))
+}
+
+// defaultTextStyleXML は presentation.xml の文字の既定。プレースホルダーでない図形・表の
+// 文字はここから字体を継ぐ。LibreOffice はテーマの参照(+mn-ea)を和文で解決しないので、
+// 9つの段のすべてに実名を書く。
+func defaultTextStyleXML(namedFonts string) string {
+	var b strings.Builder
+	b.WriteString(`<p:defaultTextStyle>`)
+	for i := 1; i <= 9; i++ {
+		fmt.Fprintf(&b, `<a:lvl%dpPr><a:defRPr lang="ja-JP">%s</a:defRPr></a:lvl%dpPr>`, i, namedFonts, i)
+	}
+	b.WriteString(`</p:defaultTextStyle>`)
+	return b.String()
 }
 
 // phParaSpXML はマスター・レイアウトのプレースホルダーを、段落の既定(lstStyle の中身)と
@@ -836,10 +856,10 @@ func phParaSpXML(id int, name, phAttrs, lstStyle string, box LBox, paras string)
 		id, name, phAttrs, ptToEMU(box.X), ptToEMU(box.Y), ptToEMU(box.Width), ptToEMU(box.Height), lstStyle, paras)
 }
 
-// footerPhStyle はフッター・番号の置き場の段落の既定。字体はテーマの本文の字体を
-// 名指す(LibreOffice はこの置き場に既定の字体を当てるので、書かないと明朝になる)。
-func footerPhStyle(sz float64, algn string) string {
-	return fmt.Sprintf(`<a:lvl1pPr algn="%s"><a:defRPr sz="%d"><a:latin typeface="+mn-lt"/><a:ea typeface="+mn-ea"/></a:defRPr></a:lvl1pPr>`, algn, int(sz*100))
+// footerPhStyle はフッター・番号の置き場の段落の既定。字体は実名で書く(LibreOffice は
+// この置き場に既定の字体を当て、テーマの参照 +mn-ea も和文で解決しない)。
+func footerPhStyle(namedFonts string, sz float64, algn string) string {
+	return fmt.Sprintf(`<a:lvl1pPr algn="%s"><a:defRPr sz="%d">%s</a:defRPr></a:lvl1pPr>`, algn, int(sz*100), namedFonts)
 }
 
 // shapeTextRect は図形の文字の枠(prstGeom の文字の矩形)。楕円は内接する矩形。
@@ -1128,6 +1148,19 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 <Application>boxloom</Application>
 </Properties>`
 
+	// テーマの字体:欧文(a:latin)と和文(a:ea)を分けて書く。a:ea が無いと
+	// PowerPoint は和文を既定の字体で描き、測った字体と食い違う(docs/fonts.md)。
+	fonts := p.Fonts
+	if fonts == nil {
+		fonts = defaultFontSet()
+	}
+	fontRefs := fmt.Sprintf(`<a:latin typeface="%s"/><a:ea typeface="%s"/><a:cs typeface=""/>`,
+		escapeXML(fonts.Latin.Family), escapeXML(fonts.EastAsian.Family))
+	// 実名の字体。LibreOffice は和文でテーマの参照(+mn-ea)を解決せず別の字体で描くので、
+	// 文字の既定(presentation.xml の defaultTextStyle)とプレースホルダーの lstStyle に
+	// 実名を書く(各 run には書かない。docs/fonts.md の8章)。
+	namedFonts := namedFontRPr(fonts)
+
 	notesSz := fmt.Sprintf(`<p:notesSz cx="%d" cy="%d"/>`, ptToEMU(p.HeightPt), ptToEMU(p.WidthPt))
 	presentation := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
@@ -1135,7 +1168,8 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 <p:sldIdLst>%s</p:sldIdLst>
 <p:sldSz cx="%d" cy="%d"/>
 %s
-</p:presentation>`, sldIDs.String(), ptToEMU(p.WidthPt), ptToEMU(p.HeightPt), notesSz)
+%s
+</p:presentation>`, sldIDs.String(), ptToEMU(p.WidthPt), ptToEMU(p.HeightPt), notesSz, defaultTextStyleXML(namedFonts))
 
 	presRels := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -1147,15 +1181,6 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	}
 	presRels += `
 </Relationships>`
-
-	// テーマの字体:欧文(a:latin)と和文(a:ea)を分けて書く。a:ea が無いと
-	// PowerPoint は和文を既定の字体で描き、測った字体と食い違う(docs/fonts.md)。
-	fonts := p.Fonts
-	if fonts == nil {
-		fonts = defaultFontSet()
-	}
-	fontRefs := fmt.Sprintf(`<a:latin typeface="%s"/><a:ea typeface="%s"/><a:cs typeface=""/>`,
-		escapeXML(fonts.Latin.Family), escapeXML(fonts.EastAsian.Family))
 
 	scheme := themeScheme(nil)
 	if len(slides) > 0 {
@@ -1187,14 +1212,14 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	ftrBox := LBox{X: 24, Y: H - 36, Width: W/2 - 24, Height: 16}
 	numBox := LBox{X: W - 144, Y: H - 36, Width: 120, Height: 16}
 	footerPhs := func(id int) string {
-		return phParaSpXML(id, "Footer Placeholder", ftrPhAttrs, footerPhStyle(10, "l"), ftrBox, `<a:p><a:endParaRPr lang="ja-JP"/></a:p>`) +
-			phParaSpXML(id+1, "Slide Number Placeholder", sldNumPhAttrs, footerPhStyle(10, "r"), numBox,
+		return phParaSpXML(id, "Footer Placeholder", ftrPhAttrs, footerPhStyle(namedFonts, 10, "l"), ftrBox, `<a:p><a:endParaRPr lang="ja-JP"/></a:p>`) +
+			phParaSpXML(id+1, "Slide Number Placeholder", sldNumPhAttrs, footerPhStyle(namedFonts, 10, "r"), numBox,
 				`<a:p><a:fld id="`+slideNumFieldID+`" type="slidenum"><a:rPr lang="ja-JP"/><a:t>‹#›</a:t></a:fld><a:endParaRPr lang="ja-JP"/></a:p>`)
 	}
 	master := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
 <p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="` + scheme.bg + `"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>
-<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>` + phSpXML(2, "Title Placeholder 1", `type="title"`, titleBox, 24, "l") + footerPhs(3) + `</p:spTree>
+<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>` + phSpXML(namedFonts, 2, "Title Placeholder 1", `type="title"`, titleBox, 24, "l") + footerPhs(3) + `</p:spTree>
 </p:cSld>
 ` + scheme.masterClrMap() + `
 <p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/><p:sldLayoutId id="2147483650" r:id="rId2"/><p:sldLayoutId id="2147483651" r:id="rId3"/></p:sldLayoutIdLst>
@@ -1217,9 +1242,9 @@ func WriteDeck(w io.Writer, slides []*PPTXBuilder, title string) error {
 	}
 	layouts := []string{
 		layoutXML("blank", "Blank", ""),
-		layoutXML("titleOnly", "Title Only", phSpXML(2, "Title 1", `type="title"`, titleBox, 24, "l")+footerPhs(3)),
-		layoutXML("title", "Title Slide", phSpXML(2, "Title 1", `type="ctrTitle"`, ctrBox, 36, "l")+
-			phSpXML(3, "Subtitle 2", `type="subTitle" idx="1"`, subBox, 16, "l")),
+		layoutXML("titleOnly", "Title Only", phSpXML(namedFonts, 2, "Title 1", `type="title"`, titleBox, 24, "l")+footerPhs(3)),
+		layoutXML("title", "Title Slide", phSpXML(namedFonts, 2, "Title 1", `type="ctrTitle"`, ctrBox, 36, "l")+
+			phSpXML(namedFonts, 3, "Subtitle 2", `type="subTitle" idx="1"`, subBox, 16, "l")),
 	}
 
 	layoutRels := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

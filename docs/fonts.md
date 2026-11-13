@@ -310,3 +310,42 @@ ai-society(1→3)・cover-image(1)・evidence(2)・table-continues(3)・text-pat
 - 行の高さが ascent+descent になるのは LibreOffice・PowerPoint のおおよその
   振る舞いとしての目安。字体によっては行間(lineGap)が足される。
 - 擬似太字(太字のファイルが無い字体)の送り幅。
+
+## 8. PPTX に字体の実名を書く場所(#111)
+
+テーマ(`ppt/theme/theme1.xml`)の `a:majorFont`・`a:minorFont` には、これまでどおり
+値の表の `latin`・`eastAsian` を `a:latin`・`a:ea` で書く。ただし LibreOffice は和文で
+テーマの参照(`+mn-ea`)を解決しない。report(BIZ UDPGothic)の字体を入れた環境でも
+本文の和文は Noto Sans CJK で描かれ、測った字幅と描いた字幅がずれてリードが1行多く
+折れた(#82 の4回目の比較)。dark・light も Noto Sans CJK **SC** に置き換わっていた
+(値の表は JP)。
+
+そこで run の外の既定に実名を書く。選んだのは候補の (1)(既定に書く)で、各 run の
+`a:rPr` には書かない。
+
+| 書く場所 | 効く文字 |
+|---|---|
+| `ppt/presentation.xml` の `p:defaultTextStyle`(`a:lvl1pPr`〜`a:lvl9pPr` の `a:defRPr`) | プレースホルダーでない図形・テキストボックス(本文のほぼすべて) |
+| マスター・レイアウトのプレースホルダーの `a:lstStyle`(題・表紙の題と副題・フッター・番号) | プレースホルダーの文字 |
+| 表のセルの `a:txBody` の `a:lstStyle` | 表の文字(LibreOffice は表のセルに `defaultTextStyle` を当てない) |
+| グラフの run の `a:rPr`(以前から。`chartxml.go`) | グラフの文字 |
+
+理由:
+
+- (1) で解決した。run ごとに書くと全部の run が2要素ずつ長くなり、PowerPoint で
+  テーマの字体を替えても文字が追従しなくなる。既定に書けば run は今のまま(字体を
+  持たない)で、編集でできた新しい図形の文字も同じ字体になる。
+- マスターの `p:txStyles` だけでは足りなかった。LibreOffice はプレースホルダーでない
+  図形に `otherStyle` を当てず、副題の置き場も `bodyStyle` から字体を継がなかった
+  (試した)。だから `p:txStyles` は書かず、`defaultTextStyle` と置き場の `lstStyle` にした。
+- 表のセルだけは `defaultTextStyle` が効かないので、セルごとの `lstStyle` に書く。
+
+確かめたこと(LibreOffice 24.2、`soffice --headless --convert-to pdf` → `pdffonts`):
+`examples/md/` の全部(22の deck)を3つのテンプレートで書き出し、PDF に入った字体は
+report が BIZUDPGothic-Regular・Bold だけ、dark・light が NotoSansCJKjp-Regular・Bold
+だけ(直す前の report は NotoSansCJKsc と Liberation Sans が混ざっていた)。
+試験 `TestTextResolvesToNamedFonts`(`pptx_fonts_test.go`)は、出力の run が継ぐ先
+(run → 表のセル → 置き場か `defaultTextStyle`)をたどって実名に行き着くこと、
+`+mn-`・`+mj-` の参照がテーマの外に無いことを XML で確かめる。
+
+発表者ノート(ノートのマスター)の字体は書いていない(PDF に出ないので確かめていない)。

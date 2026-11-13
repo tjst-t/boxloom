@@ -96,6 +96,13 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 		fmt.Fprintf(&b, `<a:gridCol w="%d"/>`, ptToEMU(cw))
 	}
 	b.WriteString(`</a:tblGrid>`)
+	// セルの段落の既定に字体の実名を書く。LibreOffice は表のセルに presentation.xml の
+	// defaultTextStyle を当てず、テーマの参照(+mn-ea)も和文で解決しない(docs/fonts.md の8章)。
+	fonts := p.Fonts
+	if fonts == nil {
+		fonts = defaultFontSet()
+	}
+	cellLst := `<a:lstStyle><a:lvl1pPr><a:defRPr>` + namedFontRPr(fonts) + `</a:defRPr></a:lvl1pPr></a:lstStyle>`
 	noLine := func(tag string) string { return fmt.Sprintf(`<a:%s w="0"><a:noFill/></a:%s>`, tag, tag) }
 	rule := func(tag string) string {
 		if t.RuleColor == "" {
@@ -159,8 +166,8 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 			if c.Vert {
 				vert = ` vert="eaVert"`
 			}
-			fmt.Fprintf(&b, `<a:tc%s><a:txBody><a:bodyPr/><a:lstStyle/>%s</a:txBody><a:tcPr marL="%d" marR="%d" marT="%d" marB="%d"%s>%s%s%s%s%s</a:tcPr></a:tc>`,
-				span, p.cellParaXML(c, t.FontSize), ptToEMU(t.PadX), ptToEMU(t.PadX), ptToEMU(t.PadY), ptToEMU(t.PadY), vert,
+			fmt.Fprintf(&b, `<a:tc%s><a:txBody><a:bodyPr/>%s%s</a:txBody><a:tcPr marL="%d" marR="%d" marT="%d" marB="%d"%s>%s%s%s%s%s</a:tcPr></a:tc>`,
+				span, cellLst, p.cellParaXML(c, t.FontSize), ptToEMU(t.PadX), ptToEMU(t.PadX), ptToEMU(t.PadY), ptToEMU(t.PadY), vert,
 				noLine("lnL"), noLine("lnR"), lnT, lnB, fillXML)
 		}
 		b.WriteString(`</a:tr>`)
