@@ -2276,7 +2276,7 @@
       "number": 98,
       "kind": "task",
       "title": "表の列の幅:短い列が1文字幅に潰れないよう、見出しの語・折れない語の幅を最小に取る",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2288,7 +2288,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T03:53:47.843Z",
-      "updatedAt": "2026-11-13T03:53:47.843Z",
+      "updatedAt": "2026-11-13T04:08:36.857Z",
       "closedAt": null,
       "extra": {}
     },
