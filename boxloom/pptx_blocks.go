@@ -37,6 +37,8 @@ type TableCell struct {
 	VMerge  bool
 	// Fill はこのセルの面(""なら行の面。行の群の名前のセルを濃い面にするなど)。
 	Fill string
+	// Vert はセルの文を縦書きにする(a:tcPr の vert="eaVert"。字は上から下へ、行は右から左へ)。
+	Vert bool
 }
 
 // TableDraw は表の描き方(テンプレートが決めた見た目)。
@@ -152,8 +154,13 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 			if c.Fill != "" {
 				fillXML = fillOf(c.Fill)
 			}
-			fmt.Fprintf(&b, `<a:tc%s><a:txBody><a:bodyPr/><a:lstStyle/>%s</a:txBody><a:tcPr marL="%d" marR="%d" marT="%d" marB="%d">%s%s%s%s%s</a:tcPr></a:tc>`,
-				span, p.cellParaXML(c, t.FontSize), ptToEMU(t.PadX), ptToEMU(t.PadX), ptToEMU(t.PadY), ptToEMU(t.PadY),
+			// 縦書きは表のセルでは a:tcPr の vert(a:bodyPr の vert は表のセルでは読まれない)。
+			vert := ""
+			if c.Vert {
+				vert = ` vert="eaVert"`
+			}
+			fmt.Fprintf(&b, `<a:tc%s><a:txBody><a:bodyPr/><a:lstStyle/>%s</a:txBody><a:tcPr marL="%d" marR="%d" marT="%d" marB="%d"%s>%s%s%s%s%s</a:tcPr></a:tc>`,
+				span, p.cellParaXML(c, t.FontSize), ptToEMU(t.PadX), ptToEMU(t.PadX), ptToEMU(t.PadY), ptToEMU(t.PadY), vert,
 				noLine("lnL"), noLine("lnR"), lnT, lnB, fillXML)
 		}
 		b.WriteString(`</a:tr>`)

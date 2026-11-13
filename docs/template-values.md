@@ -53,11 +53,12 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 - 白は役割名 `bg`(report の地の色)、測った大きさは段の刻み(`type(54)` など)で書く。
 
 
-- リード文(`:::lead`)を上の見出しに置く:`leadText`(24pt)・基調色(`accent`)・太字。
+- リード文(`:::lead`)を上の見出しに置く:`leadText`(24pt)・基調色(`accent`)・標準の太さ
+  (#100。元の資料も太字でない。太字だと字幅が広がり、1行の文が2行に折れていた)。
   2行までに収める想定(越えたときの警告はまだ無い。越えると本文の領域がその分減る)。
 - 題はその下に `slideTitle`(16pt)・字の色(`text_primary`)で置く。題はこれまでどおり
   レイアウトの title のプレースホルダー(位置だけが下になる)。
-- リードの無いスライドは、題を上の見出しの位置と大きさ(24pt・基調色・太字)で置く。
+- リードの無いスライドは、題を上の見出しの位置と大きさ(24pt・基調色・標準の太さ)で置く。
   題の折り返しの警告(`title-wrap`)は今のまま(その大きさで1行)。
 - 列の見出し(`columns` のまとまりの題、`pairs` の側の見出し)を `columnTitle`(16pt)・
   基調色(`accent`)にする。部品 `columns` を override し、`pairs` は自分の組み方を登録する
@@ -72,8 +73,15 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 - 表(`table`、#88)を `tableStyled` に report の見た目(`reportTableLook`)を渡して組む。
   見出しの行は面を塗らず、字を基調色(`accent`)にし、下に基調色の罫線(`tableHeaderRuleWidth`
   1.5pt)を引く。本体の行も面を塗らず、行の間は灰色(`grid`)の細い罫線(`tableRuleWidth`
-  0.75pt)。行の群の名前のセル(結合の続きも)は濃い基調色(`support` 187955)の面に白い字(`bg`)。
+  0.75pt)。行の群の名前のセル(結合の続きも)は濃い基調色(`support` 187955)の面に白い字(`bg`)の
+  縦書きの細い帯(#100。`a:tcPr` の `vert="eaVert"`。表のセルの縦書きは `a:bodyPr` ではなく
+  `a:tcPr` に書く)。帯の列の幅は縦の1行(`tableText` × 1.35 + 左右の `tableCellPaddingX`)で、
+  表の余りの幅は配らない。見出しの行・合計の行のその列の文は単語を割らない最小の幅で折り返す。
+  名前が結合した行より長ければ、群の最後の行を高くする(`blocks.go` の `vertLength`・`rowHeights`)。
   本物の `a:tbl` のまま、罫線と面はセルの書式(`a:tcPr` の `a:lnB` と塗り)で書く。
+- 図(`image`・`gallery`、#100)の説明の文を、図の上に基調色(`accent`)で置く(`reportImageLook`。
+  標準は図の下に `text_muted`)。高さの測り方は変わらない(説明の文の高さ + `captionGap`)。
+  gallery は段ごとに説明の文の上の端をそろえ、画像はその段のいちばん高い説明の文の下から置く。
 - 結論(`takeaway`、#88)は地の面と左の帯を置かず、左に丸い矢印(基調色の円に白い右向きの
   矢印。直径 `calloutMark` 24pt)、右に基調色の太字の文(`takeawayText`)。上下にカードと同じ
   余白(`cardPadding`)を取り、本文から離す。
@@ -85,7 +93,8 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
   色は描くときに役割名で引く。文に添える印なので、横の余り(`spare-width`)には数えない
   (`spare.go` の `ornament`)。
 - 試験は `TestReportContentHeader`・`TestReportOverrideIsOnlyReport`・`TestReportColumnHeadings`・
-  `TestReportPairsMarks`・`TestReportTableLook`・`TestReportCallouts`。
+  `TestReportPairsMarks`・`TestReportTableLook`・`TestReportCallouts`、#100 の
+  `TestReportLeadNotBold`・`TestReportTableGroupVertical`・`TestReportImageCaptionAbove`。
 
 **色(theme)**:測った色を、コアの役割名に当てた(役割名は増やしていない)。
 
@@ -115,7 +124,7 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 |---|---|---|
 | `pagePadding` / `pagePaddingY` | 40 / 24 | 50 / 42 |
 | `coverPadding` | 64 | 50 |
-| `sectionGap` / `blockGap` | 20 / 20 | 12 / 16 |
+| `sectionGap` / `blockGap` | 20 / 20 | 12 / 18 |
 | `itemGap` / `headerGap` | 8 / 8 | 6 / 8 |
 | `leadText`(上の見出し) | 18 | 24 |
 | `slideTitle`(話題) | 24 | 16 |
@@ -162,6 +171,12 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 report の Gantt は月の格子(年と月の2段の見出し)・山形の帯で描き、本文の領域の高さを
 使い切る(#89。`docs/subsystem.md` の11.1)。`maxRowHeight` は高さを使い切るときの行の
 上限なので、32 から 44 に上げた。
+
+**段落の塊の間(`blockGap`、#100)**:元の資料の段落の塊の間を、本文(14pt)の空き行1つ
+ぶん(行の高さ 14 × 1.35 ≈ 18.9pt)と見た。段(`spacingUnit` 2)の刻みで近い 18 にした(前は 16)。
+ブロックの間の空き全般に効くので、examples の deck が report ではみ出さないことを確かめた。
+この値は本文の行の高さからの見積もりで、元の PDF をこのタスクで測り直してはいない
+(サンプルはリポジトリの外)。
 
 **測った値**:本文の領域は、リードの無いスライドで約 386pt(14pt の本文で約 20 行。行の高さ
 約 18.9pt)、1行のリード文と1行の題で約 357pt(約 18 行)。1行は全角で約 58 字、題は 16pt で

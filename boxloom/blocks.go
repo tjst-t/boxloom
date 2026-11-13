@@ -124,6 +124,8 @@ type tableLeaf struct {
 	// 折れない塊(欧文の語・和文は続いた字の tableCJKChunk 字分)の幅の大きい方。
 	// 合計が表の幅に収まる限り、列はこれより狭くしない(nil なら minimum と同じ)。
 	floor []float64
+	// fixed は余りの幅を配らない列(縦書きの帯の列。幅は縦の1行のまま)。
+	fixed []bool
 }
 
 // tableCJKChunk は表の列の最小の幅で、和文(漢字・仮名)の続いた字を割らない塊の字数。
@@ -161,8 +163,18 @@ func (t *tableLeaf) colWidths(w float64) []float64 {
 	case w <= 0:
 		copy(out, t.natural)
 	case sumN <= w:
+		// 余りは折り返さない幅の比で配る(幅を決めた列 fixed には配らない)。
+		grow := 0.0
 		for i := range out {
-			out[i] = t.natural[i] + (w-sumN)*t.natural[i]/sumN
+			if !t.isFixed(i) {
+				grow += t.natural[i]
+			}
+		}
+		for i := range out {
+			out[i] = t.natural[i]
+			if !t.isFixed(i) && grow > 0 {
+				out[i] += (w - sumN) * t.natural[i] / grow
+			}
 		}
 	case t.floor != nil && sumF <= w:
 		span := sumN - sumF
@@ -180,6 +192,20 @@ func (t *tableLeaf) colWidths(w float64) []float64 {
 		}
 	}
 	return out
+}
+
+func (t *tableLeaf) isFixed(c int) bool { return c < len(t.fixed) && t.fixed[c] }
+
+// vertBandWidth は縦書きのセルの列の幅(縦の1行の幅 + 左右の余白)。
+func vertBandWidth(size, padX float64) float64 { return size*lineHeightMult + 2*padX }
+
+// vertLength は縦書きのセルの文の縦の長さ(折り返さない1行。段落は縦の行を分けずに足す)。
+func (c TableCell) vertLength(size float64) float64 {
+	n := 0.0
+	for _, runs := range c.paras() {
+		n += naturalRunsWidth(runs, size)
+	}
+	return n
 }
 
 // paras はセルの段落(文のセルは1つ、箇条のセルは項目ごと)。
@@ -209,7 +235,7 @@ func (t *tableLeaf) rowHeights(widths []float64) ([]float64, int) {
 	for r, row := range t.cells {
 		lines := 1
 		for c, cell := range row {
-			if cell.VMerge || cell.RowSpan > 1 {
+			if cell.VMerge || cell.RowSpan > 1 || cell.Vert {
 				continue
 			}
 			if n := cell.lines(t.size, widths[c]-2*t.padX); n > lines {
@@ -220,6 +246,25 @@ func (t *tableLeaf) rowHeights(widths []float64) ([]float64, int) {
 	}
 	for r, row := range t.cells {
 		for c, cell := range row {
+			if cell.Vert && !cell.VMerge {
+				// 縦書きのセル:文は縦の1行。結合した行の高さに収まらなければ、足りない分の
+				// 行を群の最後の行に足す。
+				span := cell.RowSpan
+				if span < 1 {
+					span = 1
+				}
+				if r+span > len(t.cells) {
+					continue
+				}
+				have := -2 * t.padY
+				for k := r; k < r+span; k++ {
+					have += float64(rowLines[k])*lineH + 2*t.padY
+				}
+				if short := cell.vertLength(t.size) - have; short > 0 {
+					rowLines[r+span-1] += int(math.Ceil(short/lineH - 1e-9))
+				}
+				continue
+			}
 			if cell.RowSpan < 2 || r+cell.RowSpan > len(t.cells) {
 				continue
 			}
@@ -392,6 +437,9 @@ type tableLook struct {
 	headerRule string
 	// groupFill・groupText は行の群の名前のセルの面と字("" の面は行の面のまま)。
 	groupFill, groupText string
+	// groupVertical は行の群の名前を縦書きの細い帯にする(列の幅は縦の1行。見出しの
+	// 行のその列の文は単語を割らない最小の幅で折り返す)。
+	groupVertical bool
 }
 
 // standardTableLook は標準の表:見出しの行は薄い面、本体はカードの面、行の間は罫線。
@@ -437,6 +485,13 @@ func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 	leaf.natural = make([]float64, len(header))
 	leaf.minimum = make([]float64, len(header))
 	leaf.floor = make([]float64, len(header))
+	band := grouped && look.groupVertical
+	if band {
+		leaf.fixed = make([]bool, len(header))
+		leaf.fixed[0] = true
+		w := vertBandWidth(leaf.size, leaf.padX)
+		leaf.natural[0], leaf.minimum[0], leaf.floor[0] = w, w, w
+	}
 	for _, m := range members {
 		cells := leaf.cells
 		if m != b {
@@ -444,6 +499,19 @@ func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 		}
 		for r, row := range cells {
 			for c, cell := range row {
+				if band && c == 0 {
+					// 帯の列:縦書きのセルは幅を決めず(縦の1行)、横書きのセル(見出しの行・
+					// 合計の行)の文は最小の幅だけを求める(折り返して帯の幅に合わせる)。
+					if !cell.Vert {
+						for _, runs := range cell.paras() {
+							w := minRunsWidth(runs, leaf.size) + 2*leaf.padX
+							leaf.natural[0] = math.Max(leaf.natural[0], w)
+							leaf.minimum[0] = math.Max(leaf.minimum[0], w)
+							leaf.floor[0] = math.Max(leaf.floor[0], w)
+						}
+					}
+					continue
+				}
 				for _, runs := range cell.paras() {
 					natural := maxLineWidth(runs, leaf.size) + 2*leaf.padX
 					minimum := minRunsWidth(runs, leaf.size) + 2*leaf.padX
@@ -542,9 +610,9 @@ func (t *Template) tableCells(b *IRBlock, header []Inline, numeric []bool, look 
 			for k := 0; k < g.Rows; k++ {
 				var lead TableCell
 				if k == 0 {
-					lead = TableCell{Runs: t.leafRuns(g.Label, look.groupText, true), Align: "left", RowSpan: g.Rows, Fill: groupFill}
+					lead = TableCell{Runs: t.leafRuns(g.Label, look.groupText, true), Align: "left", RowSpan: g.Rows, Fill: groupFill, Vert: look.groupVertical}
 				} else {
-					lead = TableCell{Align: "left", VMerge: true, Fill: groupFill}
+					lead = TableCell{Align: "left", VMerge: true, Fill: groupFill, Vert: look.groupVertical}
 				}
 				rest := cellRow(body[ri], false)[1:]
 				rows = append(rows, append([]TableCell{lead}, rest...))
@@ -571,6 +639,8 @@ type imageLeaf struct {
 	capSize float64
 	capGap  float64
 	minH    float64
+	// capAbove は説明の文を画像の上に置く(既定は下。高さの測り方は変わらない)。
+	capAbove bool
 }
 
 func (m *imageLeaf) Name() string { return "image" }
@@ -621,22 +691,43 @@ func (m *imageLeaf) Render(ctx RenderContext, box LBox) {
 	if iw > box.Width {
 		iw, ih = box.Width, box.Width/m.img.aspect()
 	}
-	ctx.Out.AddPicture(LBox{X: box.X, Y: box.Y, Width: iw, Height: ih}, m.img, m.alt)
-	if len(m.caption) > 0 {
-		ch := m.captionHeight(box.Width) - m.capGap
-		ctx.Out.AddRichTextBox(LBox{X: box.X, Y: box.Y + ih + m.capGap, Width: box.Width, Height: ch}, m.caption, m.capSize, "left", "top")
+	if len(m.caption) == 0 {
+		ctx.Out.AddPicture(LBox{X: box.X, Y: box.Y, Width: iw, Height: ih}, m.img, m.alt)
+		return
 	}
+	ch := m.captionHeight(box.Width) - m.capGap
+	if m.capAbove {
+		ctx.Out.AddRichTextBox(LBox{X: box.X, Y: box.Y, Width: box.Width, Height: ch}, m.caption, m.capSize, "left", "top")
+		ctx.Out.AddPicture(LBox{X: box.X, Y: box.Y + ch + m.capGap, Width: iw, Height: ih}, m.img, m.alt)
+		return
+	}
+	ctx.Out.AddPicture(LBox{X: box.X, Y: box.Y, Width: iw, Height: ih}, m.img, m.alt)
+	ctx.Out.AddRichTextBox(LBox{X: box.X, Y: box.Y + ih + m.capGap, Width: box.Width, Height: ch}, m.caption, m.capSize, "left", "top")
 }
 
+// imageLook は画像・画像の並びの説明の文の見た目。標準は standardImageLook(下・薄い字)、
+// テンプレートは自分の組み方で別の見た目を渡せる(report.go)。
+type imageLook struct {
+	captionRole  string // 説明の文の字の色の役割名
+	captionAbove bool   // 説明の文を画像の上に置く
+}
+
+var standardImageLook = imageLook{captionRole: "text_muted"}
+
 func (t *Template) imageLeaf(src, alt string, caption Inline) (*imageLeaf, error) {
+	return t.imageLeafStyled(src, alt, caption, standardImageLook)
+}
+
+// imageLeafStyled は見た目 look で画像の葉を作る。
+func (t *Template) imageLeafStyled(src, alt string, caption Inline, look imageLook) (*imageLeaf, error) {
 	img, err := t.images.get(src)
 	if err != nil {
 		return nil, err
 	}
 	v := t.Values
-	m := &imageLeaf{img: img, alt: alt, capSize: v.CaptionText, capGap: v.CaptionGap, minH: v.ImageMinHeight}
+	m := &imageLeaf{img: img, alt: alt, capSize: v.CaptionText, capGap: v.CaptionGap, minH: v.ImageMinHeight, capAbove: look.captionAbove}
 	if caption != nil {
-		m.caption = t.leafRuns(caption, "text_muted", false)
+		m.caption = t.leafRuns(caption, look.captionRole, false)
 	}
 	return m, nil
 }
@@ -744,6 +835,15 @@ func (g *galleryLeaf) Render(ctx RenderContext, box LBox) {
 			if ih > rh {
 				ih, iw = rh, rh*it.img.aspect()
 			}
+			if it.capAbove {
+				// 説明の文を段の上にそろえて置き、画像は段の説明の文の高さの下から。
+				if len(it.caption) > 0 {
+					ch := it.captionHeight(cw) - it.capGap
+					ctx.Out.AddRichTextBox(LBox{X: x, Y: y, Width: cw, Height: ch}, it.caption, it.capSize, "left", "top")
+				}
+				ctx.Out.AddPicture(LBox{X: x, Y: y + capH[r], Width: iw, Height: ih}, it.img, it.alt)
+				continue
+			}
 			ctx.Out.AddPicture(LBox{X: x, Y: y, Width: iw, Height: ih}, it.img, it.alt)
 			if len(it.caption) > 0 {
 				ch := it.captionHeight(cw) - it.capGap
@@ -754,10 +854,13 @@ func (g *galleryLeaf) Render(ctx RenderContext, box LBox) {
 	}
 }
 
-func (t *Template) gallery(b *IRBlock) (*Spec, error) {
+func (t *Template) gallery(b *IRBlock) (*Spec, error) { return t.galleryStyled(b, standardImageLook) }
+
+// galleryStyled は見た目 look で画像の並びを作る。
+func (t *Template) galleryStyled(b *IRBlock, look imageLook) (*Spec, error) {
 	g := &galleryLeaf{gap: t.Values.ItemGap}
 	for i, im := range b.Images {
-		leaf, err := t.imageLeaf(im.Src, im.Alt, im.Caption)
+		leaf, err := t.imageLeafStyled(im.Src, im.Alt, im.Caption, look)
 		if err != nil {
 			return nil, fmt.Errorf("images[%d]: src: %w", i, err)
 		}

@@ -3,7 +3,7 @@
 // 見た目の違いは値の表(templates/report.json)と、ここで差し替える骨組みの部品で
 // 持つ。コアの標準の部品・骨組みには手を入れない(dark・light の出力は変わらない)。
 //
-//   - contentHeader:リード文を上の見出し(leadText・基調色・太字)に置き、題(話題)を
+//   - contentHeader:リード文を上の見出し(leadText・基調色・標準の太さ)に置き、題(話題)を
 //     その下に slideTitle・字の色で置く。題はこれまでどおり title のプレースホルダー
 //     (位置だけが下になる)。リードの無いスライドは、題を上の見出しの位置と大きさで置く。
 //   - columns・pairs:列の見出し(まとまりの題・対の側の見出し)を基調色(accent)にする。
@@ -33,6 +33,9 @@
 //     三角の地(幅・高さ 48pt、役割 reportMarkerRole)を置き、その中の丸(地の色)に印を
 //     置く。その左に小さい字(small・薄い字)で今の項目の名前(パンくず。直前の区切りの題)。
 //     どちらもページの上の余白の中なので、題・本文の配置は変わらない。
+//   - table の行の群(#100):名前のセルは縦書きの細い帯(a:tcPr の vert="eaVert")。列の幅は
+//     縦の1行で、余りの幅を配らない。
+//   - image・gallery(#100):説明の文を図の上に、基調色(accent)で置く。
 //   - quote(#88):薄い面(card)の吹き出し(角丸の面と、右の人の印へ向かう尾)の中に
 //     引用の文、右に人の印(頭と肩。基調色)とその下に出どころ。
 //
@@ -90,6 +93,16 @@ func registerReportParts(t *Template) error {
 		},
 		"quote": func(ctx componentContext, b *IRBlock) (*Spec, error) {
 			return ctx.t.reportQuote(b.Content, b.Source), nil
+		},
+		"image": func(ctx componentContext, b *IRBlock) (*Spec, error) {
+			leaf, err := ctx.t.imageLeafStyled(b.Src, b.Alt, b.Caption, reportImageLook)
+			if err != nil {
+				return nil, fmt.Errorf("src: %w", err)
+			}
+			return SubsystemNode(leaf, WithGrow(1)), nil
+		},
+		"gallery": func(ctx componentContext, b *IRBlock) (*Spec, error) {
+			return ctx.t.galleryStyled(b, reportImageLook)
 		},
 	} {
 		if err := t.components.override(name, f); err != nil {
@@ -262,9 +275,10 @@ func reportClosing(ctx skeletonContext) (*Spec, error) {
 // 下に題(話題)。リードが無ければ題が上の見出しの位置と大きさを取る。
 func (t *Template) reportContentHeader(s *IRSlide) *Spec {
 	if s.Lead == nil {
-		return t.text(s.Title, "leadText", "accent", true, WithPlaceholder("title"), fromIR("title"))
+		return t.text(s.Title, "leadText", "accent", false, WithPlaceholder("title"), fromIR("title"))
 	}
-	lead := t.prose(s.Lead, "leadText", "accent", true, fromIR("lead"))
+	// リードは標準の太さ(#100。元の資料も太字でない。太字は字幅が広がり折れやすい)。
+	lead := t.prose(s.Lead, "leadText", "accent", false, fromIR("lead"))
 	title := t.text(s.Title, "slideTitle", "text_primary", false, WithPlaceholder("title"), fromIR("title"))
 	return Col([]*Spec{lead, title}, tokGap("headerGap"))
 }
@@ -393,8 +407,12 @@ func (m *pairMark) Render(ctx RenderContext, box LBox) {
 
 // reportTableLook は report の表の見た目:見出しの行は面なし・基調色の字・基調色の
 // 罫線、本体は面なしで灰色の罫線、行の群の名前は濃い基調色の面に白い字。
+// 行の群の名前は縦書きの細い帯(#100。a:tcPr の vert="eaVert")。
 var reportTableLook = tableLook{headerText: "accent", headerRule: "accent", rule: "grid",
-	groupFill: "support", groupText: "bg"}
+	groupFill: "support", groupText: "bg", groupVertical: true}
+
+// reportImageLook は report の図(image・gallery)の説明の文:図の上に、基調色で(#100)。
+var reportImageLook = imageLook{captionRole: "accent", captionAbove: true}
 
 // reportTakeaway は結論:左に丸い矢印、右に基調色の太字の文。地の面は置かないが、
 // 上下にカードと同じ余白(cardPadding)を取り、本文から離して置く。
