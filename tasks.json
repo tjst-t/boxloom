@@ -2360,7 +2360,7 @@
       "number": 102,
       "kind": "task",
       "title": "report の字の密度:行送りと字体の選び方を読む資料に合わせる(値の表だけ)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2372,7 +2372,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T04:39:01.378Z",
-      "updatedAt": "2026-11-13T04:39:01.378Z",
+      "updatedAt": "2026-11-13T04:39:13.624Z",
       "closedAt": null,
       "extra": {}
     },
