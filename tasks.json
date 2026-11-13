@@ -3081,7 +3081,7 @@
       "number": 136,
       "kind": "task",
       "title": "dense の組に表のセルの余白・pairs の対の間・matrix の行の題の字を足す",
-      "status": "in-progress",
+      "status": "done",
       "parent": null,
       "dependsOn": [
         "fit-values"
@@ -3091,12 +3091,12 @@
       "labels": [],
       "body": "再現の第6回で dense にしても 28〜136pt はみ出すページ(元の 5・28・29・35・86・100・102・119)は、字ではなく行ごとの余白(表のセルの上下の余白・pairs の対の上下と帯の高さ・matrix の行の題の字)が原本より大きい。dense の組(と fit の梯子の組、#126)で重ねられる名前に、これらの値の表の名前を足す。report の dense の値を元の資料に合わせて詰める(元の資料:表 10〜11pt でセルの余白が小さい)。dark・light の dense にも値を入れる(段の検査は今の決まりどおり)。docs/template-values.md の dense の節を直す。",
       "doneWhen": "dense の表・pairs・matrix が新しい値で組まれる試験/report の dense でこれらの余白が normal より小さい/normal の出力と golden が変わらない/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/dense-more-values）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:35:32.458Z",
-      "updatedAt": "2026-11-13T08:26:42.329Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T08:53:19.915Z",
+      "closedAt": "2026-11-13T08:53:19.915Z",
       "extra": {}
     },
     {
