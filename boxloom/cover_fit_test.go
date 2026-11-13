@@ -25,10 +25,10 @@ func fitDeck(t *testing.T, tm *Template, title, closing string) []*BuiltSlide {
 	return built
 }
 
-// accentBox は根の下の帯の左の基調色の箱。
+// accentBox は根の縦の中ほどの帯の左の基調色の箱。
 func accentBox(t *testing.T, tm *Template, root *Spec) *Spec {
 	t.Helper()
-	box := root.Children[0].Children[0]
+	box := root.Children[1].Children[0]
 	if box.Background != tm.Theme["accent"] {
 		t.Fatalf("the first box is not the accent box: %q", box.Background)
 	}
@@ -55,25 +55,42 @@ func TestReportCoverFitsLongTitle(t *testing.T) {
 	built := fitDeck(t, tm, long, "closing: ご清聴ありがとうございました。問い合わせは架空の調べの会の窓口まで\n")
 	cover := built[0].Root
 	box := accentBox(t, tm, cover)
-	var title, sub *Spec
-	for _, c := range box.Children {
-		switch c.Placeholder {
-		case "ctrTitle":
+	var title, sub, date, author *Spec
+	var walk func(c *Spec)
+	walk = func(c *Spec) {
+		for _, k := range c.Children {
+			walk(k)
+		}
+		switch {
+		case c.Placeholder == "ctrTitle":
 			title = c
-		case "subTitle":
+		case c.Placeholder == "subTitle":
 			sub = c
+		case c.irPath == "/meta/date":
+			date = c
+		case c.irPath == "/meta/author":
+			author = c
 		}
 	}
-	if title == nil || sub == nil {
-		t.Fatal("no title or subtitle in the accent box")
+	walk(box)
+	if title == nil || sub == nil || date == nil || author == nil {
+		t.Fatal("title, subtitle, author or date is not in the accent box")
 	}
 	if n := len(wrapRuns(title.Runs, title.FontSize, title.Box.Width)); n != 3 {
 		t.Fatalf("the title should wrap to 3 lines (got %d)", n)
 	}
 	fitsIn(t, "title", title, box)
 	fitsIn(t, "subtitle", sub, box)
+	fitsIn(t, "date", date, box)
+	fitsIn(t, "author", author, box)
 	if title.Box.Y+title.Box.Height > sub.Box.Y+0.01 {
 		t.Errorf("title %+v overlaps subtitle %+v", title.Box, sub.Box)
+	}
+	if sub.Box.Y+sub.Box.Height > author.Box.Y+0.01 || author.Box.Y+author.Box.Height > date.Box.Y+0.01 {
+		t.Errorf("subtitle %+v, author %+v and date %+v overlap", sub.Box, author.Box, date.Box)
+	}
+	if date.Color != tm.Theme["bg"] {
+		t.Errorf("the date is not white: %q", date.Color)
 	}
 	if box.Box.Width < W*reportCoverBoxW-0.01 || box.Box.Width > W*reportCoverBoxW+0.01 {
 		t.Errorf("box width %.1f, want %.1f", box.Box.Width, W*reportCoverBoxW)
@@ -81,14 +98,7 @@ func TestReportCoverFitsLongTitle(t *testing.T) {
 	if box.Box.Height <= H*reportCoverBoxH+0.01 {
 		t.Errorf("the box did not grow for the long title: %.1f", box.Box.Height)
 	}
-	// 日付・作者は箱の下で、要る高さを持つ。
-	below := cover.Children[1]
-	if below.Box.Y < box.Box.Y+box.Box.Height-0.01 {
-		t.Errorf("the foot %+v starts inside the box %+v", below.Box, box.Box)
-	}
-	if need := heightForWidth(below, below.Box.Width); below.Box.Height < need-0.01 {
-		t.Errorf("the foot is squeezed: %.1f < %.1f", below.Box.Height, need)
-	}
+	clearOfEdges(t, "cover", box, H)
 
 	// 終わりのスライドの文は箱の中。
 	closing := built[len(built)-1]
@@ -101,6 +111,21 @@ func TestReportCoverFitsLongTitle(t *testing.T) {
 		t.Fatalf("no closing text in the box: %+v", text)
 	}
 	fitsIn(t, "closing text", text, cbox)
+	clearOfEdges(t, "closing", cbox, H)
+}
+
+// clearOfEdges は箱が縦の中ほどにあり、上下の縁から reportCoverMinGap 以上離れているかを
+// 確かめる(#109)。
+func clearOfEdges(t *testing.T, what string, box *Spec, H float64) {
+	t.Helper()
+	gap := H*reportCoverMinGap - 0.01
+	top, bottom := box.Box.Y, H-(box.Box.Y+box.Box.Height)
+	if top < gap || bottom < gap {
+		t.Errorf("%s: the box touches the edge (top %.1f, bottom %.1f)", what, top, bottom)
+	}
+	if d := top - bottom; d > 0.01 || d < -0.01 {
+		t.Errorf("%s: the box is not centred (top %.1f, bottom %.1f)", what, top, bottom)
+	}
 }
 
 // 短い題なら箱は従来の大きさ(幅 0.53・高さ 0.45)のまま。終わりの文が無ければ箱だけ。

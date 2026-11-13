@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -101,8 +102,8 @@ func buildCover(t *testing.T, template, extra string) map[string]string {
 	return zipFiles(t, buf.Bytes())
 }
 
-// report の表紙は写真の上に基調色の箱(左上から幅 0.53・高さ 0.45)、白い字の題と副題、
-// 箱の下に日付。終わりのスライドは同じ写真に同じ箱だけ。
+// report の表紙は写真の上に基調色の箱(左の縦の中ほど、幅 0.53・高さ 0.45 以上)、箱の中に
+// 白い字の題・副題・日付(#109)。終わりのスライドは同じ写真に同じ位置の箱だけ。
 func TestReportCoverAndClosing(t *testing.T) {
 	files := buildCover(t, "report", `, "coverImage": "img/cover.png", "closing": true`)
 	tm, _ := LookupTemplate("report")
@@ -114,7 +115,8 @@ func TestReportCoverAndClosing(t *testing.T) {
 		t.Fatal("unexpected slide4")
 	}
 	accent, bg := hexColor(tm.Theme["accent"]), hexColor(tm.Theme["bg"])
-	box := fmt.Sprintf(`<a:off x="0" y="0"/><a:ext cx="%d" cy="%d"/>`, ptToEMU(W*reportCoverBoxW), ptToEMU(H*reportCoverBoxH))
+	reBox := regexp.MustCompile(fmt.Sprintf(`<a:off x="0" y="(\d+)"/><a:ext cx="%d" cy="(\d+)"/>`, ptToEMU(W*reportCoverBoxW)))
+	boxes := map[int][2]float64{}
 	media := ""
 	for _, n := range []int{1, 3} {
 		x := files[fmt.Sprintf("ppt/slides/slide%d.xml", n)]
@@ -135,8 +137,16 @@ func TestReportCoverAndClosing(t *testing.T) {
 			t.Errorf("slide %d: photo %s, want the same part %s", n, rm[1], media)
 		}
 		media = rm[1]
-		if !strings.Contains(x, box) || !strings.Contains(x, `<a:srgbClr val="`+accent+`"/>`) {
-			t.Errorf("slide %d: no accent box %s", n, box)
+		bm := reBox.FindStringSubmatch(x)
+		if bm == nil || !strings.Contains(x, `<a:srgbClr val="`+accent+`"/>`) {
+			t.Fatalf("slide %d: no accent box", n)
+		}
+		y, _ := strconv.ParseFloat(bm[1], 64)
+		h, _ := strconv.ParseFloat(bm[2], 64)
+		y, h = y/12700, h/12700
+		boxes[n] = [2]float64{y, h}
+		if h < H*reportCoverBoxH-0.1 || y < H*reportCoverMinGap-0.1 || H-(y+h) < H*reportCoverMinGap-0.1 {
+			t.Errorf("slide %d: box y %.1f h %.1f touches the edge or is too small", n, y, h)
 		}
 	}
 	cover := files["ppt/slides/slide1.xml"]
@@ -153,11 +163,12 @@ func TestReportCoverAndClosing(t *testing.T) {
 	if !strings.Contains(cover, `type="ctrTitle"`) || !strings.Contains(cover, `type="subTitle"`) {
 		t.Error("cover: title and subtitle are not placeholders")
 	}
-	// 日付は箱の下。
+	// 日付は箱の中(白い字)。
 	dump := coverLayout(t, "report", `, "coverImage": "img/cover.png", "closing": true`)
 	date := findPath(dump.Slides[0].Root, "/meta/date")
-	if date == nil || date.Box.Y < H*reportCoverBoxH-0.01 {
-		t.Errorf("date is not below the box: %+v", date)
+	b := boxes[1]
+	if date == nil || date.Box.Y < b[0]-0.1 || date.Box.Y+date.Box.Height > b[0]+b[1]+0.1 || date.Box.X+date.Box.Width > W*reportCoverBoxW+0.1 {
+		t.Errorf("date is not in the box %v: %+v", b, date)
 	}
 	if got := dump.Slides[2]; got.Path != "/meta/closing" || got.Type != "closing" {
 		t.Errorf("closing slide in layout = %s %s", got.Path, got.Type)
