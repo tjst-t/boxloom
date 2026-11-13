@@ -2190,7 +2190,7 @@
       "number": 94,
       "kind": "task",
       "title": "matrix の印の見た目:丸にチェック、セルの面を塗らない、行の題に説明の箇条",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -2204,7 +2204,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:31:17.139Z",
-      "updatedAt": "2026-11-13T02:52:12.841Z",
+      "updatedAt": "2026-11-13T03:57:59.533Z",
       "closedAt": null,
       "extra": {}
     },
