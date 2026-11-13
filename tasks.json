@@ -2974,7 +2974,7 @@
       "number": 131,
       "kind": "task",
       "title": "組織図に「補佐」の横の関係(units[].assistant)を足す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -2986,7 +2986,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:35:09.141Z",
-      "updatedAt": "2026-11-13T07:35:09.141Z",
+      "updatedAt": "2026-11-13T07:45:37.287Z",
       "closedAt": null,
       "extra": {}
     },
