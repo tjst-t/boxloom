@@ -2968,6 +2968,27 @@
       "updatedAt": "2026-11-13T07:35:04.497Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "orgchart-assistant",
+      "number": 131,
+      "kind": "task",
+      "title": "組織図に「補佐」の横の関係(units[].assistant)を足す",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "再現の第6回(p33)で、総括の横に副総括を「補佐」として付ける形が書けない。IR:orgchart の単位に任意の `assistant: {title, detail?}`(1つまで)。描き方:親の箱の横に小さい箱を置き、親と破線のコネクタで結ぶ(下の段の並びは変えない)。Measure の幅・高さに含める。Schema(サブシステムの schema)・docs/subsystem.md の orgchart の節・例を足す。",
+      "doneWhen": "assistant を持つ組織図が check・build を通り、補佐の箱と破線のコネクタが出る試験/知らないキーは誤りのまま/golden の既存の値が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:35:09.141Z",
+      "updatedAt": "2026-11-13T07:35:09.141Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
