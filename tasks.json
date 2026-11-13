@@ -3446,7 +3446,7 @@
       "number": 153,
       "kind": "task",
       "title": "組織図:縦に積む前に孫の字を小さくして横に並べるかを試し、fit の段で箱の下限も下げる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3458,7 +3458,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T12:33:56.547Z",
-      "updatedAt": "2026-11-13T12:33:56.547Z",
+      "updatedAt": "2026-11-13T12:34:06.865Z",
       "closedAt": null,
       "extra": {}
     }
