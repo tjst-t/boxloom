@@ -3203,6 +3203,27 @@
       "updatedAt": "2026-11-13T09:24:41.479Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "section-agenda",
+      "number": 142,
+      "kind": "task",
+      "title": "区切りに agenda:親の項目の一覧を出し、今の項目に印を付ける扉",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "再現の第7回(元の p10):元の資料は項目(level 3)の扉に「その節の項目の一覧+今の項目の印」を出す型と、題だけの簡素な型(p30)を使い分けている。#137 で level 3 は簡素な扉だけになった。\n記法:`# i. 対象選定 {type=section level=3 agenda=true}`(IR は section の `agenda?: boolean`、level 2・3 だけ。level 1 なら check の invalid-value)。意味は「この扉で、同じ親の下の区切りの一覧を見せ、今の位置を示す」。一覧の中身は組み立てで数える(IR に書かない)。report は親の節の扉と同じ一覧を描き今の項目を強調、dark・light も一覧+強調を描く(骨組み section の中で)。docs/content-syntax.md・docs/ir.md・Schema。",
+      "doneWhen": "agenda=true の level 3 の扉に同じ親の項目の一覧と今の項目の強調が出る試験(report・dark・light)/level 1 の agenda が誤り/既存の出力と golden が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T09:24:45.899Z",
+      "updatedAt": "2026-11-13T09:24:45.899Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
