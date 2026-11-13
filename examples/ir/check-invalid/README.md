@@ -27,6 +27,7 @@
 | `table-shape.json` | 表の2行目のセルを1つ減らした(見出しは4つ) | `table-shape` |
 | `table-total-shape.json` | `table-shape.json` の2行目を直し、セルが3つの合計の行(`total`)を足した(見出しは4つ) | `table-shape` |
 | `table-groups.json` | `../table-groups.json` の表紙と1枚目の表だけを取り出し、最初の群の行の数(`groups/0/rows`)を3から2にした(群の行の和が本体の行より1つ少ない) | `table-groups` |
+| `table-group-columns.json` | `../table-group-columns.json` の表紙と1枚目の表だけを取り出し、2列目の群(`groupColumns/0/groups`)の「設備の支援」を国の最後の行から県の2行までの1つの群(3行)にした(先頭の列の国と県の境を越える) | `table-groups` |
 | `table-points.json` | `../table-points.json` の表紙と1枚目の表だけを取り出し、2行目の「すぐ打てる手」のセルの箇条の2つ目の項目を空白だけにした | `table-points` |
 | `table-continues.json` | `../table-continues.json` の1枚目と2枚目の表の間に区切りのスライド(`section`)を挟んだ(続きの表 `continues` の前のスライドに表が無い) | `table-continues` |
 | `image-missing.json` | 画像の src を、無いファイルにした | `image-missing` |

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -453,7 +454,7 @@ func (t *Template) table(b *IRBlock) *Spec { return t.tableStyled(b, standardTab
 // tableStyled は見た目 look で表の葉を作る。
 func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 	v, th := t.Values, t.Theme
-	header, grouped := b.tableHeader(), b.tableGrouped()
+	header, grouped, groupCols := b.tableHeader(), b.tableGrouped(), b.tableGroupCols()
 	members := []*IRBlock{b}
 	if b.chain != nil {
 		members = b.chain.Tables
@@ -461,12 +462,12 @@ func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 	// 数の列を決める本体のセル(群の列は空のセルとして数えない)。
 	var body [][]IRTableCell
 	for _, m := range members {
-		body = append(body, tableBodyCells(m, grouped)...)
+		body = append(body, tableBodyCells(m, groupCols)...)
 	}
 	numeric := numericColumns(body, len(header))
-	if grouped {
+	for _, c := range groupCols {
 		// 群の列は数の列として右に揃えない(群の名前の列)。
-		numeric[0] = false
+		numeric[c] = false
 	}
 	leaf := &tableLeaf{size: v.TableText, padX: v.TableCellPadX, padY: v.TableCellPadY,
 		capSize: v.CaptionText, capGap: v.CaptionGap,
@@ -550,12 +551,23 @@ func roleColor(th Theme, role string) string {
 	return th.c(role)
 }
 
-// tableBodyCells は本体と合計の行のセル(群の表では先頭に群の列の空のセルを足す)。
-func tableBodyCells(b *IRBlock, grouped bool) [][]IRTableCell {
+// tableBodyCells は本体と合計の行のセル(群の表では群の列の場所に空のセルを足す。
+// groupCols は群の列の番号で左から)。
+func tableBodyCells(b *IRBlock, groupCols []int) [][]IRTableCell {
 	var body [][]IRTableCell
 	for _, r := range b.Rows {
-		if grouped {
-			r = append([]IRTableCell{{}}, r...)
+		if len(groupCols) > 0 {
+			full := make([]IRTableCell, 0, len(r)+len(groupCols))
+			k := 0
+			for c := 0; k < len(r) || slices.Contains(groupCols, c); c++ {
+				if slices.Contains(groupCols, c) {
+					full = append(full, IRTableCell{})
+					continue
+				}
+				full = append(full, r[k])
+				k++
+			}
+			r = full
 		}
 		body = append(body, r)
 	}
@@ -568,7 +580,6 @@ func tableBodyCells(b *IRBlock, grouped bool) [][]IRTableCell {
 // tableCells は表の見出しの行・本体の行・合計の行のセル。
 func (t *Template) tableCells(b *IRBlock, header []Inline, numeric []bool, look tableLook) [][]TableCell {
 	th := t.Theme
-	grouped := b.Groups != nil
 	cell := func(c int, in IRTableCell, bold bool, role string) TableCell {
 		align := "left"
 		if numeric[c] {
@@ -599,24 +610,35 @@ func (t *Template) tableCells(b *IRBlock, header []Inline, numeric []bool, look 
 		hdr = append(hdr, cell(c, IRTableCell{Text: in}, true, look.headerText))
 	}
 	rows = append(rows, hdr)
-	if grouped {
-		// 群の名前は先頭の列の縦に結合したセル(a:tbl の rowSpan と vMerge)。
-		// 名前は見出しと同じく太字にして、行の中身と見分ける。面は look.groupFill
-		// (縦に結合した続きのセルも同じ面にする。アプリによって続きのセルの面が見えるため)。
-		body := tableBodyCells(b, true)
+	if groupCols := b.tableGroupCols(); len(groupCols) > 0 {
+		// 群の名前は群の列の縦に結合したセル(a:tbl の rowSpan と vMerge)。
+		// 先頭の列の群の名前は見出しと同じく太字にして、行の中身と見分ける。面は
+		// look.groupFill(縦に結合した続きのセルも同じ面にする。アプリによって続きの
+		// セルの面が見えるため)、縦書きは look.groupVertical。2列目以降の群の列は
+		// 横書きの結合セルで、面と字は本体の行と同じ。
+		body := tableBodyCells(b, groupCols)
 		groupFill := roleColor(th, look.groupFill)
-		ri := 0
-		for _, g := range b.Groups {
-			for k := 0; k < g.Rows; k++ {
-				var lead TableCell
-				if k == 0 {
-					lead = TableCell{Runs: t.leafRuns(g.Label, look.groupText, true), Align: "left", RowSpan: g.Rows, Fill: groupFill, Vert: look.groupVertical}
-				} else {
-					lead = TableCell{Align: "left", VMerge: true, Fill: groupFill, Vert: look.groupVertical}
+		groups := b.tableColumnGroups()
+		for ri := range body[:len(b.Rows)] {
+			rows = append(rows, cellRow(body[ri], false))
+		}
+		for _, c := range groupCols {
+			ri := 0
+			for _, g := range groups[c] {
+				for k := 0; k < g.Rows; k++ {
+					row := rows[1+ri]
+					switch {
+					case c == 0 && k == 0:
+						row[c] = TableCell{Runs: t.leafRuns(g.Label, look.groupText, true), Align: "left", RowSpan: g.Rows, Fill: groupFill, Vert: look.groupVertical}
+					case c == 0:
+						row[c] = TableCell{Align: "left", VMerge: true, Fill: groupFill, Vert: look.groupVertical}
+					case k == 0:
+						row[c] = TableCell{Runs: t.leafRuns(g.Label, "text_primary", false), Align: "left", RowSpan: g.Rows}
+					default:
+						row[c] = TableCell{Align: "left", VMerge: true}
+					}
+					ri++
 				}
-				rest := cellRow(body[ri], false)[1:]
-				rows = append(rows, append([]TableCell{lead}, rest...))
-				ri++
 			}
 		}
 	} else {

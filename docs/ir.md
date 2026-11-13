@@ -504,6 +504,21 @@ Schema は `schema/types/people.schema.json`、例は `examples/ir/people.json`
   群があるときの行のセルの数の違いは従来どおり `table-shape`。`rows` が 1 未満は Schema。
 - はみ出しと容量は行ごとに測る(群の境目は行の境目)。群の名前が結合した行の高さに
   収まらなければ、群の最後の行を伸ばす。
+- **2列目以降の群の列は `groupColumns`(#123)。** `[{column, groups}]` で、`column` は
+  `header` の列の番号(0 から。先頭の列は `groups` で書くので 1 以上)、`groups` は先頭の
+  列と同じ `{label, rows}` の並び。列は左から(`column` は増えていく)。`groups` を広げずに
+  欄を分けたのは、既存の `groups`(先頭の列)をそのまま読めるようにするため。
+- 本体の各行のセルは、どの群の列も除いた数(`header` − 群の列の数)。合計の行は `header`
+  と同じ数。
+- **入れ子**:どの群も、左の群の列(`groups` と前の `groupColumns`)の群の境を越えない。
+  左の列で群が始まる行では、右の列でも群が始まる(同じ名前でも別の群)。越える形は
+  `table-groups`(path は `…/groupColumns/K/groups`)。理由:表の結合は矩形で、親の群を
+  またぐ結合は親の境の線を消し、どちらの親の行かが読めなくなる。
+- 描き方:どの群の列も `rowSpan`・`vMerge`。先頭の列の見た目(report の縦書きの帯)は
+  先頭の列だけで、2列目以降は本体の行と同じ字・面の横書きの結合セル。
+- 誤り(`table-groups`):`column` が 1〜列の数−1 でない・左から並ばない(path は
+  `…/groupColumns/K/column`)、名前が空・`rows` の和が違う(path は `…/groupColumns/K/groups…`)、
+  群の列のほかに列が無い(path は `…/groupColumns`)。
 
 ### 13. 表のセルの中の箇条(#80)
 
@@ -545,8 +560,8 @@ Schema は `schema/types/people.schema.json`、例は `examples/ir/people.json`
   スライド(区切りを含む)を挟まない。続きの表はそのスライドの本文の最初の表で、本文の
   ブロック(並列のまとまり `columns` の中ではない)。`continues` は `true` だけを書く
   (続かない表は書かない)。
-- **最初の表に従うもの**:見出しの行・列の数・`groups` の有無。続きの表の本体の行は
-  最初の表の見出しの行で数える(`groups` があれば1つ少ない)。続きの表の `groups` は
+- **最初の表に従うもの**:見出しの行・列の数・`groups` の有無・`groupColumns` の列。続きの表の本体の行は
+  最初の表の見出しの行で数える(群の列の数だけ少ない)。続きの表の `groups` は
   その枚の行の群を書き直す(群が枚をまたぐなら、続きの枚の最初の群にも名前を書く)。
   セルの中の箇条(`points`)はセルの意味なので、IR では表ごとの宣言を持たない
   (13章。Markdown の `{points=列名}` は最初の表から引き継ぐ)。合計の行(`total`)は
@@ -638,11 +653,11 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `matrix-cells` | matrix の各行の `cells` の数が `columns` の数と同じ(path はその行の `cells`) |
 | `matrix-emphasis` | matrix の `emphasis`(推す列)が `columns` の見出しのどれか(文中の記法を除いた文字)と同じ(path は `…/data/emphasis`) |
 | `matrix-column-groups` | matrix の `columnGroups`(列の群)の `span` の合計が `columns` の数と同じ(path は `…/data/columnGroups`) |
-| `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`)。`groups` があると本体の行は見出しより1つ少ない |
+| `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`)。`groups`・`groupColumns` があると本体の行は見出しより群の列の数だけ少ない |
 | `table-points` | 表のセルの中の箇条(`{"points": [...]}`)の項目が2つ以上で(path は `…/rows/R/C/points` か `…/total/C/points`)、空の項目が無い(path は `…/points/I`) |
-| `table-continues` | 続きの表(`continues`)が、すぐ前のスライドの本文の最後の表に続く(前のスライドに表が無い・間にスライドを挟む・そのスライドの2つ目の表・並列のまとまりの中は path `…/continues`)。`header` を書かない(path `…/header`)。`groups` の有無が最初の表と同じ(path `…/groups`)。合計の行はひと続きの最後の表だけ(path は続きのある表の `…/total`)。`continues` は `true` だけ |
+| `table-continues` | 続きの表(`continues`)が、すぐ前のスライドの本文の最後の表に続く(前のスライドに表が無い・間にスライドを挟む・そのスライドの2つ目の表・並列のまとまりの中は path `…/continues`)。`header` を書かない(path `…/header`)。`groups` の有無が最初の表と同じ(path `…/groups`)。`groupColumns` の列が最初の表と同じ(path `…/groupColumns`)。合計の行はひと続きの最後の表だけ(path は続きのある表の `…/total`)。`continues` は `true` だけ |
 | `pairs-label` | `pairs` の対の名前(`label`)が、全ての対にあるか、どれにも無い(path は名前の有無が1つ目の対と違う対:名前があれば `…/pairs/K/label`、無ければ `…/pairs/K`) |
-| `table-groups` | 表の `groups` の名前が空でなく(path は `…/groups/G/label`)、`rows` の和が本体の行の数で、群の列のほかに列がある(path は `…/groups`) |
+| `table-groups` | 表の `groups`・`groupColumns` の名前が空でなく(path は `…/groups/G/label`・`…/groupColumns/K/groups/G/label`)、`rows` の和が本体の行の数で、群の列のほかに列がある(path は `…/groups`・`…/groupColumns`)。`groupColumns` の `column` は 1〜列の数−1 で左から(path は `…/groupColumns/K/column`)、群は左の群の列の境を越えない(path は `…/groupColumns/K/groups`) |
 | `image-path` | 画像の `src` が文書からの相対パス(URL・絶対パス・`..`・`\` は断る) |
 | `image-missing` | 画像のファイルが読める(`CheckOptions.Assets` から。コマンドは文書のフォルダ) |
 | `image-format` | 画像が PNG か JPEG(中身で見る。SVG・GIF などは断る) |
@@ -794,7 +809,7 @@ check でも断られるもの。
   どの枚にも収まるかの案で、`tables`(枚数)・`splitBefore`(2枚目からの表が始まる本体の
   行。IR の `rows` の番号)・`rows`(表ごとの本体の行の数)。最初の枚は表の上端から本文の
   下端まで、続きの枚は本文が表だけで題・出典・フッターは同じと見込み、各枚に説明の文の
-  行(「n/m」の印)と見出しの行を数える。`groups` の表は群の境目で分け、1つの群が1枚に
+  行(「n/m」の印)と見出しの行を数える。`groups`・`groupColumns` の表はいちばん左の群の列の境目で分け、1つの群が1枚に
   入らないときだけ群の中で分ける。合計の行は最後の枚。同じ案を `layout-overflow` の警告の
   `hint` にも書く。分け方は作者が選び、続きの表に `continues: true` を書く(14章)。
 

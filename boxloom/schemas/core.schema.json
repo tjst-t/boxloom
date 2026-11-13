@@ -1313,7 +1313,7 @@
       ]
     },
     "table": {
-      "description": "表。行×列の文字・数。1行目は見出しの行(header)。列の配置・幅は書かない(テンプレートが中身から決める)。本体・合計の行のセルはインラインか、セルの中の箇条({\"points\": [...]}、2項目以上)。 長い表は作者がスライドごとに分け、続きのスライドの表に continues: true を書く(見出しの行は書かない。最初の表の見出しの行・列の数・groups を引き継ぎ、Boxloom が各枚に見出しの行と「n/m」の印を付け、列の幅をそろえる)。",
+      "description": "表。行×列の文字・数。1行目は見出しの行(header)。列の配置・幅は書かない(テンプレートが中身から決める)。本体・合計の行のセルはインラインか、セルの中の箇条({\"points\": [...]}、2項目以上)。 長い表は作者がスライドごとに分け、続きのスライドの表に continues: true を書く(見出しの行は書かない。最初の表の見出しの行・列の数・groups・groupColumns の列を引き継ぎ、Boxloom が各枚に見出しの行と「n/m」の印を付け、列の幅をそろえる)。",
       "type": "object",
       "properties": {
         "type": {
@@ -1344,11 +1344,19 @@
           }
         },
         "groups": {
-          "description": "行の群(任意)。先頭の列を群の列とし、群の名前を縦に結合したセルで描く。群は上から順に rows 個ずつの本体の行をまとめる(rows の和は本体の行の数)。groups があると header の先頭が群の列の見出しで、本体の各行のセルは header より1つ少ない(群の列を除く)。total は header と同じ数。",
+          "description": "行の群(任意)。先頭の列を群の列とし、群の名前を縦に結合したセルで描く。群は上から順に rows 個ずつの本体の行をまとめる(rows の和は本体の行の数)。groups があると header の先頭が群の列の見出しで、本体の各行のセルは群の列を除いた数(header より1つ少ない。groupColumns もあればさらにその数だけ少ない)。total は header と同じ数。",
           "type": "array",
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/tableGroup"
+          }
+        },
+        "groupColumns": {
+          "description": "2列目以降の群の列(任意)。列ごとに、同じ値が続く本体の行を縦に結合したセルで描く。左から順に(column は増えていく)。どの群も、左の群の列(groups と前の groupColumns)の群の境を越えない(入れ子)。本体の各行のセルは群の列を除いた数。続きの表は最初の表と同じ column を持つ。",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/tableGroupColumn"
           }
         },
         "total": {
@@ -1360,7 +1368,7 @@
           }
         },
         "continues": {
-          "description": "前のスライドの表の続き(true だけを書く)。すぐ前のスライドの本文の最後の表に続く。header を書かない。列の数・groups の有無は最初の表と同じ。total はひと続きの最後の表だけ。",
+          "description": "前のスライドの表の続き(true だけを書く)。すぐ前のスライドの本文の最後の表に続く。header を書かない。列の数・groups の有無・groupColumns の列は最初の表と同じ。total はひと続きの最後の表だけ。",
           "const": true
         }
       },
@@ -1426,6 +1434,28 @@
       "required": [
         "label",
         "rows"
+      ],
+      "additionalProperties": false
+    },
+    "tableGroupColumn": {
+      "description": "2列目以降の群の列1つ。column は header の列の番号(0 から。先頭の列は groups で書くので 1 以上)、groups はその列の群(上から。rows の和は本体の行の数)。",
+      "type": "object",
+      "properties": {
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/tableGroup"
+          }
+        }
+      },
+      "required": [
+        "column",
+        "groups"
       ],
       "additionalProperties": false
     },

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -21,7 +22,7 @@ type mdTableBlk struct {
 	rows        []mdTableLine
 	caption     mdText // 表のすぐ次の行の「: 説明」
 	captionLine int
-	attrs       string // その行の末尾の {…}(total=last・groups=first・points=列名)
+	attrs       string // その行の末尾の {…}(total=last・groups=first か列名・points=列名)
 	attrsCol    int
 }
 
@@ -30,9 +31,9 @@ var tableAttributeNames = []string{"total", "groups", "points", "continues"}
 
 // mdTableShape は表の列の名前・群の列・箇条の列(続きの表 {continues} が引き継ぐ)。
 type mdTableShape struct {
-	names   []string
-	grouped bool
-	points  map[int]bool
+	names     []string
+	groupCols []int // 群の列(左から。先頭の列は 0)
+	points    map[int]bool
 }
 
 var reTableDelim = regexp.MustCompile(`^:?-+:?$`)
@@ -171,28 +172,22 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 			total = true
 		}
 	}
-	grouped := false
+	var groupCols []int
 	if v, ok := attrs["groups"]; ok {
-		if v != "first" {
-			p.fail(tb.captionLine, tb.attrsCol, path+"/groups", codeInvalidValue, fmt.Sprintf("groups の値 %q はありません", v), []string{"first"}, "先頭の列が行の群の名前なら {groups=first} と書きます")
-		} else if len(header) < 2 {
-			p.fail(tb.captionLine, tb.attrsCol, path+"/groups", codeMisplaced, "群の列のほかに列がありません", nil, "群の列(先頭の列)の右に、行の中身の列を書いてください")
-		} else {
-			grouped = true
-		}
+		groupCols = p.tableGroupColumns(v, header, tb, path)
 	}
-	pointCols := p.tablePointColumns(attrs, header, grouped, tb, path)
+	pointCols := p.tablePointColumns(attrs, header, groupCols, tb, path)
 	if cont && prev != nil {
 		// groups と points は最初の表に従う(書かなければ引き継ぎ、書くなら同じに)。
-		if _, ok := attrs["groups"]; ok && grouped != prev.grouped {
+		if _, ok := attrs["groups"]; ok && !slices.Equal(groupCols, prev.groupCols) {
 			p.fail(tb.captionLine, tb.attrsCol, path+"/groups", codeTableContinues, "続きの表の groups が前の表と違います", nil, "続きの表の groups は書かずに前の表から引き継ぎます")
 		}
 		if _, ok := attrs["points"]; ok && !maps.Equal(pointCols, prev.points) {
 			p.fail(tb.captionLine, tb.attrsCol, path+"/points", codeTableContinues, "続きの表の points の列が前の表と違います", nil, "続きの表の points は書かずに前の表から引き継ぎます")
 		}
-		grouped, pointCols = prev.grouped, prev.points
+		groupCols, pointCols = prev.groupCols, prev.points
 	}
-	shape := &mdTableShape{grouped: grouped, points: pointCols}
+	shape := &mdTableShape{groupCols: groupCols, points: pointCols}
 	for _, h := range header {
 		shape.names = append(shape.names, string(h.r))
 	}
@@ -205,15 +200,29 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 	}
 	out := []any{}
 	var totalCells []any
-	var groups []any
-	var group *jobj
-	groupRows := 0
-	closeGroup := func() {
-		if group != nil {
-			group.set("rows", groupRows)
-			groups = append(groups, group)
+	// 群の列ごとの群(groupCols と同じ順)。
+	type groupState struct {
+		list []any
+		cur  *jobj
+		rows int
+	}
+	states := make([]groupState, len(groupCols))
+	groupPath := func(k int) string {
+		if groupCols[k] == 0 {
+			return path + "/groups"
+		}
+		if groupCols[0] == 0 {
+			return fmt.Sprintf("%s/groupColumns/%d/groups", path, k-1)
+		}
+		return fmt.Sprintf("%s/groupColumns/%d/groups", path, k)
+	}
+	closeGroup := func(st *groupState) {
+		if st.cur != nil {
+			st.cur.set("rows", st.rows)
+			st.list = append(st.list, st.cur)
 		}
 	}
+	isGroupCol := func(c int) bool { return slices.Contains(groupCols, c) }
 	for r, row := range body {
 		rp := fmt.Sprintf("%s/rows/%d", path, r)
 		isTotal := total && r == len(body)-1
@@ -226,27 +235,42 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 			p.fail(tl.line, tl.col, rp, codeTableShape, fmt.Sprintf("行のセルが %d 個で、見出しの行(%d 個)と合いません", len(row), len(header)), nil, "どの行も見出しと同じ数のセルを書きます。空のセルは | | と書けます")
 			continue
 		}
-		first := 0
-		if grouped && !isTotal {
-			// 先頭のセルが群の名前。空なら上の群の続き。
-			first = 1
-			if len(row[0].r) > 0 {
-				closeGroup()
-				gp := fmt.Sprintf("%s/groups/%d", path, len(groups))
-				p.mark(gp, tl.line)
-				group = obj("label", p.parseInline(row[0], gp+"/label"))
-				groupRows = 0
-			} else if group == nil {
-				p.fail(tl.line, tl.col, path+"/groups/0/label", codeTableGroups, "最初の行の群の名前(先頭のセル)が空です", nil, "{groups=first} の表では、最初の行の先頭のセルに群の名前を書きます。空のセルは上の群の続きです")
+		if len(groupCols) > 0 && !isTotal {
+			// 群の列のセルが群の名前。空なら上の群の続き。左の群の列で群が始まった行では、
+			// 右の群の列も群が始まる(左の群の境を越えて結合しない)。
+			started, bad := false, false
+			for k, c := range groupCols {
+				st := &states[k]
+				gp := groupPath(k)
+				switch {
+				case len(row[c].r) > 0:
+					closeGroup(st)
+					at := fmt.Sprintf("%s/%d", gp, len(st.list))
+					p.mark(at, tl.line)
+					st.cur = obj("label", p.parseInline(row[c], at+"/label"))
+					st.rows = 0
+					started = true
+				case st.cur == nil:
+					p.fail(tl.line, tl.col, gp+"/0/label", codeTableGroups, fmt.Sprintf("最初の行の群の名前(列 %q のセル)が空です", string(header[c].r)), nil, "群の列では、最初の行のセルに群の名前を書きます。空のセルは上の群の続きです")
+					bad = true
+				case started:
+					p.fail(tl.line, tl.col, fmt.Sprintf("%s/%d/label", gp, len(st.list)+1), codeTableGroups, fmt.Sprintf("列 %q のセルが空ですが、左の群の列で新しい群が始まっています", string(header[c].r)), nil, "後ろの群の列は前の群の列の境を越えて結合しません。この行のセルにも群の名前を書きます")
+					bad = true
+				}
+				st.rows++
+			}
+			if bad {
 				continue
 			}
-			groupRows++
 		}
 		cells := []any{}
-		for c, cell := range row[first:] {
-			cp := fmt.Sprintf("%s/%d", rp, c)
-			if pointCols[c+first] {
-				cells = append(cells, p.tablePointsCell(cell, cp, string(header[c+first].r)))
+		for c, cell := range row {
+			if isGroupCol(c) && !isTotal {
+				continue
+			}
+			cp := fmt.Sprintf("%s/%d", rp, len(cells))
+			if pointCols[c] {
+				cells = append(cells, p.tablePointsCell(cell, cp, string(header[c].r)))
 				continue
 			}
 			cells = append(cells, p.parseInline(cell, cp))
@@ -257,7 +281,16 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 		}
 		out = append(out, cells)
 	}
-	closeGroup()
+	var groupColumns []any
+	var groups []any
+	for k := range states {
+		closeGroup(&states[k])
+		if groupCols[k] == 0 {
+			groups = states[k].list
+			continue
+		}
+		groupColumns = append(groupColumns, obj("column", groupCols[k], "groups", states[k].list))
+	}
 	b := obj("type", "table")
 	if cont {
 		b.set("continues", true)
@@ -267,6 +300,9 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 	b.set("rows", out)
 	if groups != nil {
 		b.set("groups", groups)
+	}
+	if groupColumns != nil {
+		b.set("groupColumns", groupColumns)
 	}
 	if totalCells != nil {
 		b.set("total", totalCells)
@@ -278,9 +314,48 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 	return b
 }
 
+// tableGroupColumns は {groups=first|列名,…} の群の列の番号(左から。first と先頭の列の
+// 名前は 0)。知らない列名・同じ列を2度・群の列のほかに列が無いのは誤り(nil を返す)。
+func (p *mdParser) tableGroupColumns(v string, header []mdText, tb *mdTableBlk, path string) []int {
+	var names []string
+	for _, h := range header {
+		names = append(names, string(h.r))
+	}
+	var cols []int
+	ok := true
+	for _, name := range strings.Split(v, ",") {
+		c := -1
+		if name == "first" {
+			c = 0
+		} else {
+			c = slices.Index(names, name)
+		}
+		switch {
+		case c < 0:
+			p.fail(tb.captionLine, tb.attrsCol, path+"/groups", codeInvalidValue, fmt.Sprintf("groups の列 %q は見出しの行にありません", name), append([]string{"first"}, names...),
+				"{groups=first} は先頭の列、{groups=列名} はその列(見出しの行の文と完全に一致させる。複数なら {groups=列名1,列名2})を群の列にします")
+			ok = false
+		case slices.Contains(cols, c):
+			p.fail(tb.captionLine, tb.attrsCol, path+"/groups", codeInvalidValue, fmt.Sprintf("groups の列 %q を2度書いています", name), nil, "群の列は1度ずつ書きます")
+			ok = false
+		default:
+			cols = append(cols, c)
+		}
+	}
+	if !ok {
+		return nil
+	}
+	slices.Sort(cols)
+	if len(header)-len(cols) < 1 {
+		p.fail(tb.captionLine, tb.attrsCol, path+"/groups", codeMisplaced, "群の列のほかに列がありません", nil, "群の列のほかに、行の中身の列を書いてください")
+		return nil
+	}
+	return cols
+}
+
 // tablePointColumns は {points=列名,…} の列(見出しの文と完全に一致する列)。
 // 知らない列名・群の列は誤り(table-points)。
-func (p *mdParser) tablePointColumns(attrs map[string]string, header []mdText, grouped bool, tb *mdTableBlk, path string) map[int]bool {
+func (p *mdParser) tablePointColumns(attrs map[string]string, header []mdText, groupCols []int, tb *mdTableBlk, path string) map[int]bool {
 	v, ok := attrs["points"]
 	if !ok {
 		return nil
@@ -303,8 +378,8 @@ func (p *mdParser) tablePointColumns(attrs map[string]string, header []mdText, g
 			p.fail(tb.captionLine, tb.attrsCol, path+"/points", codeTablePoints, "points の列名が空です", names, "{points=列名} の列名は見出しの行の文と同じに書きます。複数なら {points=列名1,列名2}")
 		case c < 0:
 			p.fail(tb.captionLine, tb.attrsCol, path+"/points", codeTablePoints, fmt.Sprintf("points の列名 %q は見出しの行にありません", name), names, "列名は見出しの行の文と完全に一致させます")
-		case grouped && c == 0:
-			p.fail(tb.captionLine, tb.attrsCol, path+"/points", codeTablePoints, fmt.Sprintf("列 %q は群の列で、箇条にできません", name), nil, "群の列({groups=first})の右の列を指してください")
+		case slices.Contains(groupCols, c):
+			p.fail(tb.captionLine, tb.attrsCol, path+"/points", codeTablePoints, fmt.Sprintf("列 %q は群の列で、箇条にできません", name), nil, "群の列({groups=…})でない列を指してください")
 		default:
 			cols[c] = true
 		}

@@ -35,6 +35,7 @@ import (
 	"io"
 	"io/fs"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -482,17 +483,21 @@ func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
 		}
 		rows, _ := bm["rows"].([]any)
 		groups, grouped := bm["groups"].([]any)
-		want := len(header)
+		groupCols, hasGroupCols := bm["groupColumns"].([]any)
+		ng := len(groupCols)
 		if grouped {
-			want--
-			c.checkTableGroups(groups, len(header), len(rows), bp)
+			ng++
+		}
+		want := len(header) - ng
+		if grouped || hasGroupCols {
+			c.checkTableGroups(groups, grouped, groupCols, len(header), len(rows), bp)
 		}
 		for ri, r := range rows {
 			cells, ok := r.([]any)
 			if ok && len(header) > 0 && len(cells) != want {
 				msg := fmt.Sprintf("row has %d cells but the header has %d (every row has one cell per column)", len(cells), len(header))
-				if grouped {
-					msg = fmt.Sprintf("row has %d cells but the header has %d (with groups, every row has one cell per column except the group column: %d)", len(cells), len(header), want)
+				if ng > 0 {
+					msg = fmt.Sprintf("row has %d cells but %s", len(cells), tableRowWant(len(header), ng))
 				}
 				c.add(fmt.Sprintf("%s/rows/%d", bp, ri), msg, "table-shape")
 			}
@@ -1127,6 +1132,9 @@ func (c *checker) checkTableChains(slides []any) {
 				if _, g := bm["groups"]; g != fg {
 					c.addIssue(Issue{Path: bp + "/groups", Message: msgContinuesGroups(fg), Code: "table-continues", Hint: continuesHint})
 				}
+				if !slices.Equal(groupColumnNumbers(bm), groupColumnNumbers(prev.first)) {
+					c.addIssue(Issue{Path: bp + "/groupColumns", Message: msgContinuesGroupColumns, Code: "table-continues", Hint: continuesHint})
+				}
 			}
 			tables = append(tables, t)
 		}
@@ -1134,29 +1142,93 @@ func (c *checker) checkTableChains(slides []any) {
 	}
 }
 
-// checkTableGroups は表の行の群(groups)の決まりを見る(table-groups): 群の列の
-// ほかに列があること、名前が空でないこと、行の数の和が本体の行の数であること。
-func (c *checker) checkTableGroups(groups []any, cols, rows int, bp string) {
-	if cols > 0 && cols < 2 {
-		c.add(bp+"/groups", "the table has only the group column (groups need at least one more column)", "table-groups")
+// groupColumnNumbers は表の groupColumns の列の番号(読めないものは -1)。
+func groupColumnNumbers(bm map[string]any) []int {
+	gcs, _ := bm["groupColumns"].([]any)
+	var out []int
+	for _, g := range gcs {
+		gm, _ := g.(map[string]any)
+		n, ok := gm["column"].(float64)
+		if !ok {
+			n = -1
+		}
+		out = append(out, int(n))
 	}
-	sum := 0
-	for gi, g := range groups {
+	return out
+}
+
+// checkTableGroups は表の行の群(groups・groupColumns)の決まりを見る(table-groups):
+// 群の列のほかに列があること、名前が空でないこと、行の数の和が本体の行の数であること、
+// 2列目以降の群の列は左から並び、どの群も左の群の列の境を越えないこと
+// (決まりは ir.go の validateTableGroups と同じ)。
+func (c *checker) checkTableGroups(groups []any, grouped bool, groupCols []any, cols, rows int, bp string) {
+	ng := len(groupCols)
+	if grouped {
+		ng++
+	}
+	if cols > 0 && cols-ng < 1 {
+		if groupCols == nil {
+			c.add(bp+"/groups", "the table has only the group column (groups need at least one more column)", "table-groups")
+		} else {
+			c.add(bp+"/groupColumns", "the table has only group columns (groups need at least one more column)", "table-groups")
+		}
+	}
+	// list は1つの群の列の群を見て、群の始まりの行を返す(読めなければ nil)。
+	list := func(gs []any, at string) map[int]bool {
+		starts := map[int]bool{}
+		sum := 0
+		for gi, g := range gs {
+			gm, _ := g.(map[string]any)
+			if gm == nil {
+				return nil
+			}
+			if l, ok := gm["label"]; ok && strings.TrimSpace(inlinePlainAny(l)) == "" {
+				c.add(fmt.Sprintf("%s/%d/label", at, gi), "the group label is empty", "table-groups")
+			}
+			n, ok := gm["rows"].(float64)
+			if !ok {
+				return nil
+			}
+			starts[sum] = true
+			sum += int(n)
+		}
+		if sum != rows {
+			c.add(at, fmt.Sprintf("the groups cover %d rows but the table has %d body rows (the rows of the groups add up to the body rows)", sum, rows), "table-groups")
+			return nil
+		}
+		return starts
+	}
+	var bounds map[int]bool
+	if grouped {
+		bounds = list(groups, bp+"/groups")
+	}
+	prev := 0
+	for k, g := range groupCols {
 		gm, _ := g.(map[string]any)
 		if gm == nil {
 			return
 		}
-		if l, ok := gm["label"]; ok && strings.TrimSpace(inlinePlainAny(l)) == "" {
-			c.add(fmt.Sprintf("%s/groups/%d/label", bp, gi), "the group label is empty", "table-groups")
+		at := fmt.Sprintf("%s/groupColumns/%d", bp, k)
+		if n, ok := gm["column"].(float64); ok {
+			col := int(n)
+			switch {
+			case cols > 0 && (col < 1 || col >= cols):
+				c.add(at+"/column", fmt.Sprintf("column %d is not a column after the first (1 to %d; the first column is written as groups)", col, cols-1), "table-groups")
+			case col <= prev:
+				c.add(at+"/column", fmt.Sprintf("the group columns go from left to right without repeats (%d after %d)", col, prev), "table-groups")
+			}
+			prev = col
 		}
-		n, ok := gm["rows"].(float64)
-		if !ok {
-			return
+		gs, _ := gm["groups"].([]any)
+		starts := list(gs, at+"/groups")
+		if starts == nil {
+			bounds = nil
+			continue
 		}
-		sum += int(n)
-	}
-	if sum != rows {
-		c.add(bp+"/groups", fmt.Sprintf("the groups cover %d rows but the table has %d body rows (the rows of the groups add up to the body rows)", sum, rows), "table-groups")
+		if r, ok := firstCrossing(bounds, starts); ok {
+			c.add(at+"/groups", msgGroupCrosses(r), "table-groups")
+		}
+		bounds = starts
 	}
 }
 

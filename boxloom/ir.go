@@ -116,11 +116,14 @@ type IRBlock struct {
 	// という意味。印の形はテンプレートが決める。
 	Flow bool
 
-	Header  []Inline        // table: 見出しの行
-	Rows    [][]IRTableCell // table: 本体の行(どの行もセルの数は見出しと同じ)
-	Total   []IRTableCell   // table: 合計の行(任意。セルの数は見出しと同じ)
-	Groups  []IRTableGroup  // table: 行の群(任意。先頭の列が群の列。本体の行のセルは見出しより1つ少ない)
-	Caption Inline          // table・image: 説明の文(任意)
+	Header []Inline        // table: 見出しの行
+	Rows   [][]IRTableCell // table: 本体の行(どの行もセルの数は見出しと同じ)
+	Total  []IRTableCell   // table: 合計の行(任意。セルの数は見出しと同じ)
+	Groups []IRTableGroup  // table: 行の群(任意。先頭の列が群の列。本体の行のセルは見出しより1つ少ない)
+	// GroupColumns は2列目以降の群の列(任意。左から。どの群も左の群の列の境を越えない。
+	// 本体の行のセルは群の列を除く)。
+	GroupColumns []IRTableGroupColumn // table
+	Caption      Inline               // table・image: 説明の文(任意)
 	// Continues は前のスライドの表の続き(table。見出しの行を書かず、最初の表の
 	// 見出しの行・列の数・groups を引き継ぐ。tablechain.go)。
 	Continues bool
@@ -607,13 +610,14 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		*k = out
 	case "table":
 		var v struct {
-			Type    string          `json:"type"`
-			Variant string          `json:"variant"`
-			Caption Inline          `json:"caption"`
-			Header  []Inline        `json:"header"`
-			Rows    [][]IRTableCell `json:"rows"`
-			Total   []IRTableCell   `json:"total"`
-			Groups  []IRTableGroup  `json:"groups"`
+			Type         string               `json:"type"`
+			Variant      string               `json:"variant"`
+			Caption      Inline               `json:"caption"`
+			Header       []Inline             `json:"header"`
+			Rows         [][]IRTableCell      `json:"rows"`
+			Total        []IRTableCell        `json:"total"`
+			Groups       []IRTableGroup       `json:"groups"`
+			GroupColumns []IRTableGroupColumn `json:"groupColumns"`
 			// Continues は書かなければ false。false と書くのは誤り(続きでない表は書かない)。
 			Continues *bool `json:"continues"`
 		}
@@ -637,11 +641,11 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("table needs \"header\" and at least one row in \"rows\"")
 		}
 		if !cont {
-			if err := validateTableShape(v.Header, v.Rows, v.Total, v.Groups); err != nil {
+			if err := validateTableShape(v.Header, v.Rows, v.Total, v.Groups, v.GroupColumns); err != nil {
 				return err
 			}
 		}
-		*k = IRBlock{Type: v.Type, Variant: v.Variant, Caption: v.Caption, Header: v.Header, Rows: v.Rows, Total: v.Total, Groups: v.Groups, Continues: cont}
+		*k = IRBlock{Type: v.Type, Variant: v.Variant, Caption: v.Caption, Header: v.Header, Rows: v.Rows, Total: v.Total, Groups: v.Groups, GroupColumns: v.GroupColumns, Continues: cont}
 	case "image":
 		var v struct {
 			Type    string `json:"type"`
@@ -900,47 +904,131 @@ type IRTableGroup struct {
 	Rows  int    `json:"rows"`
 }
 
-// validateTableGroups は groups の形を見る(群の列のほかに列があり、名前が空でなく、
-// 行の数の和が本体の行の数)。
-func validateTableGroups(gs []IRTableGroup, cols, rows int) error {
-	if gs == nil {
-		return nil
-	}
+// IRTableGroupColumn は2列目以降の群の列1つ(IR の table の groupColumns)。
+// Column は見出しの行の列の番号(0 から。先頭の列は groups で書くので 1 以上)。
+type IRTableGroupColumn struct {
+	Column int            `json:"column"`
+	Groups []IRTableGroup `json:"groups"`
+}
+
+// validateGroupList は1つの群の列の群(名前が空でなく、行の数の和が本体の行の数)を見る。
+// at は誤りの文の頭("groups" や "groupColumns[0].groups")。
+func validateGroupList(gs []IRTableGroup, rows int, at string) error {
 	if len(gs) == 0 {
-		return fmt.Errorf("groups: needs at least one group")
-	}
-	if cols < 2 {
-		return fmt.Errorf("groups: the table needs a column besides the group column")
+		return fmt.Errorf("%s: needs at least one group", at)
 	}
 	sum := 0
 	for i, g := range gs {
 		if g.Rows < 1 {
-			return fmt.Errorf("groups[%d]: rows must be at least 1", i)
+			return fmt.Errorf("%s[%d]: rows must be at least 1", at, i)
 		}
 		if strings.TrimSpace(g.Label.Plain()) == "" {
-			return fmt.Errorf("groups[%d]: label is empty", i)
+			return fmt.Errorf("%s[%d]: label is empty", at, i)
 		}
 		sum += g.Rows
 	}
 	if sum != rows {
-		return fmt.Errorf("groups: the groups cover %d rows but the table has %d", sum, rows)
+		return fmt.Errorf("%s: the groups cover %d rows but the table has %d", at, sum, rows)
 	}
 	return nil
 }
 
+// groupStarts は群の始まりの行の番号の集まり。
+func groupStarts(gs []IRTableGroup) map[int]bool {
+	out := map[int]bool{}
+	r := 0
+	for _, g := range gs {
+		out[r] = true
+		r += g.Rows
+	}
+	return out
+}
+
+// validateTableGroups は groups と groupColumns の形を見る(群の列のほかに列があり、
+// 名前が空でなく、行の数の和が本体の行の数、群の列は左から並び、どの群も左の群の列の
+// 境を越えない)。
+func validateTableGroups(gs []IRTableGroup, gcs []IRTableGroupColumn, cols, rows int) error {
+	if gs == nil && gcs == nil {
+		return nil
+	}
+	if gcs != nil && len(gcs) == 0 {
+		return fmt.Errorf("groupColumns: needs at least one column")
+	}
+	n := len(gcs)
+	if gs != nil {
+		n++
+	}
+	if cols-n < 1 {
+		if gcs == nil {
+			return fmt.Errorf("groups: the table needs a column besides the group column")
+		}
+		return fmt.Errorf("groupColumns: the table needs a column besides the group columns")
+	}
+	var bounds map[int]bool
+	if gs != nil {
+		if err := validateGroupList(gs, rows, "groups"); err != nil {
+			return err
+		}
+		bounds = groupStarts(gs)
+	}
+	prev := 0
+	for k, gc := range gcs {
+		at := fmt.Sprintf("groupColumns[%d]", k)
+		if gc.Column < 1 || gc.Column >= cols {
+			return fmt.Errorf("%s.column: %d is not a column after the first (1 to %d; the first column is written as groups)", at, gc.Column, cols-1)
+		}
+		if gc.Column <= prev && k > 0 {
+			return fmt.Errorf("%s.column: the group columns go from left to right without repeats (%d after %d)", at, gc.Column, prev)
+		}
+		prev = gc.Column
+		if err := validateGroupList(gc.Groups, rows, at+".groups"); err != nil {
+			return err
+		}
+		starts := groupStarts(gc.Groups)
+		if r, ok := firstCrossing(bounds, starts); ok {
+			return fmt.Errorf("%s.groups: %s", at, msgGroupCrosses(r))
+		}
+		bounds = starts
+	}
+	return nil
+}
+
+// firstCrossing は左の群の列の境(bounds)のうち、starts に無いいちばん上の行。
+func firstCrossing(bounds, starts map[int]bool) (int, bool) {
+	best := -1
+	for r := range bounds {
+		if !starts[r] && (best < 0 || r < best) {
+			best = r
+		}
+	}
+	return best, best >= 0
+}
+
+// msgGroupCrosses は群が左の群の列の境(本体の行 r から始まる群)を越える誤りの文。
+func msgGroupCrosses(r int) string {
+	return fmt.Sprintf("a group crosses the boundary of a group in a column to its left at body row %d (a group must stay inside one group of every group column to its left; start a new group there)", r)
+}
+
+// tableGroupColumnCount は群の列の数(先頭の列の groups と groupColumns)。
+func tableGroupColumnCount(gs []IRTableGroup, gcs []IRTableGroupColumn) int {
+	n := len(gcs)
+	if gs != nil {
+		n++
+	}
+	return n
+}
+
 // validateTableShape は表の行の群と、本体・合計の行のセルの数を見る(header は
 // 最初の表の見出しの行)。
-func validateTableShape(header []Inline, rows [][]IRTableCell, total []IRTableCell, groups []IRTableGroup) error {
-	if err := validateTableGroups(groups, len(header), len(rows)); err != nil {
+func validateTableShape(header []Inline, rows [][]IRTableCell, total []IRTableCell, groups []IRTableGroup, groupCols []IRTableGroupColumn) error {
+	if err := validateTableGroups(groups, groupCols, len(header), len(rows)); err != nil {
 		return err
 	}
-	want := len(header)
-	if groups != nil {
-		want--
-	}
+	ng := tableGroupColumnCount(groups, groupCols)
+	want := len(header) - ng
 	for i, r := range rows {
 		if len(r) != want {
-			return fmt.Errorf("rows[%d]: row has %d cells but %s", i, len(r), tableRowWant(len(header), groups != nil))
+			return fmt.Errorf("rows[%d]: row has %d cells but %s", i, len(r), tableRowWant(len(header), ng))
 		}
 	}
 	if total != nil && len(total) != len(header) {
@@ -949,10 +1037,13 @@ func validateTableShape(header []Inline, rows [][]IRTableCell, total []IRTableCe
 	return nil
 }
 
-// tableRowWant は本体の行のセルの数の決まりを文で言う。
-func tableRowWant(header int, grouped bool) string {
-	if grouped {
+// tableRowWant は本体の行のセルの数の決まりを文で言う(groupCols は群の列の数)。
+func tableRowWant(header int, groupCols int) string {
+	switch {
+	case groupCols == 1:
 		return fmt.Sprintf("the header has %d (with groups, a row has one cell per column except the group column: %d)", header, header-1)
+	case groupCols > 1:
+		return fmt.Sprintf("the header has %d (with groups, a row has one cell per column except the %d group columns: %d)", header, groupCols, header-groupCols)
 	}
 	return fmt.Sprintf("the header has %d", header)
 }

@@ -19,6 +19,7 @@ package boxloom
 import (
 	"errors"
 	"fmt"
+	"slices"
 )
 
 // tableChainError は続きの表の形の外れ(Markdown の誤りの code と hint に使う)。
@@ -50,12 +51,45 @@ func (b *IRBlock) tableHeader() []Inline {
 	return b.Header
 }
 
-// tableGrouped は表が行の群を持つか(続きの表は最初の表に従う)。
+// tableGrouped は表が先頭の列に行の群を持つか(続きの表は最初の表に従う)。
 func (b *IRBlock) tableGrouped() bool {
 	if b.chain != nil {
 		return b.chain.first().Groups != nil
 	}
 	return b.Groups != nil
+}
+
+// tableGroupCols は群の列の番号(左から。先頭の列の groups は 0。続きの表は最初の表に従う)。
+func (b *IRBlock) tableGroupCols() []int {
+	f := b
+	if b.chain != nil {
+		f = b.chain.first()
+	}
+	return groupColumnsOf(f.Groups, f.GroupColumns)
+}
+
+// groupColumnsOf は groups と groupColumns の群の列の番号(左から)。
+func groupColumnsOf(gs []IRTableGroup, gcs []IRTableGroupColumn) []int {
+	var out []int
+	if gs != nil {
+		out = append(out, 0)
+	}
+	for _, gc := range gcs {
+		out = append(out, gc.Column)
+	}
+	return out
+}
+
+// tableColumnGroups はこの表の群の列ごとの群(列の番号 → 群)。
+func (b *IRBlock) tableColumnGroups() map[int][]IRTableGroup {
+	out := map[int][]IRTableGroup{}
+	if b.Groups != nil {
+		out[0] = b.Groups
+	}
+	for _, gc := range b.GroupColumns {
+		out[gc.Column] = gc.Groups
+	}
+	return out
 }
 
 // bodyTables は本文の表(並列のまとまりの中は数えない)の番号。
@@ -129,7 +163,10 @@ func linkTableChainsRaw(d *IRDeck) error {
 			if (b.Groups != nil) != (first.Groups != nil) {
 				return fmt.Errorf("%s: groups: %s", at, msgContinuesGroups(first.Groups != nil))
 			}
-			if err := validateTableShape(first.Header, b.Rows, b.Total, b.Groups); err != nil {
+			if !slices.Equal(groupColumnsOf(nil, b.GroupColumns), groupColumnsOf(nil, first.GroupColumns)) {
+				return fmt.Errorf("%s: groupColumns: %s", at, msgContinuesGroupColumns)
+			}
+			if err := validateTableShape(first.Header, b.Rows, b.Total, b.Groups, b.GroupColumns); err != nil {
 				return fmt.Errorf("%s: %w: %w", at, err, errTableShape)
 			}
 			b.chain, b.chainPos = prev.chain, len(prev.chain.Tables)
@@ -150,10 +187,11 @@ func indexOf(blocks []IRBlock, b *IRBlock) int {
 
 // 続きの形の外れの文(Go の読み込みと check で同じ文を使う)。
 const (
-	msgContinuesInColumns = "a continuing table must be a block of the slide body, not inside columns"
-	msgContinuesNotFirst  = "a continuing table must be the first table of its slide (it continues the last table of the previous slide)"
-	msgContinuesNoPrev    = "the previous slide has no table to continue (a continuing table follows the last table of the slide right before it, with no other slide between)"
-	msgContinuesTotal     = "only the last table of a continued table can have a total row (the next slide continues this table)"
+	msgContinuesInColumns    = "a continuing table must be a block of the slide body, not inside columns"
+	msgContinuesNotFirst     = "a continuing table must be the first table of its slide (it continues the last table of the previous slide)"
+	msgContinuesNoPrev       = "the previous slide has no table to continue (a continuing table follows the last table of the slide right before it, with no other slide between)"
+	msgContinuesGroupColumns = "a continuing table has the same group columns (groupColumns[].column) as the first table"
+	msgContinuesTotal        = "only the last table of a continued table can have a total row (the next slide continues this table)"
 )
 
 func msgContinuesGroups(firstGrouped bool) string {
@@ -178,6 +216,19 @@ type tableSplit struct {
 	Rows        []int // 表ごとの本体の行の数
 }
 
+// leftmostMergedColumn は縦に結合したセルのある、いちばん左の列(無ければ -1)。
+func (t *tableLeaf) leftmostMergedColumn() int {
+	best := -1
+	for _, row := range t.cells {
+		for c, cell := range row {
+			if cell.VMerge && (best < 0 || c < best) {
+				best = c
+			}
+		}
+	}
+	return best
+}
+
 // split は表を、最初の枚は firstAvail、続きの枚は laterAvail の高さに収まるよう
 // 本体の行で分ける案(width は表の幅)。各枚は説明の文の行(と「n/m」の印)と
 // 見出しの行を持つ。群の表は群の境目で分け、1つの群が1枚に入らないときだけ
@@ -197,10 +248,11 @@ func (t *tableLeaf) split(width, firstAvail, laterAvail float64) *tableSplit {
 	if len(body) < 2 || laterAvail-over <= 0 {
 		return nil
 	}
-	// 分けられる単位(群の表は群、ほかは行)。
+	// 分けられる単位(群の表はいちばん左の群の列の群、ほかは行)。
+	gc := t.leftmostMergedColumn()
 	var units [][2]int // [始めの行, 終わりの行(含まない)]
 	for r := range body {
-		if r > 0 && len(t.cells[r+1]) > 0 && t.cells[r+1][0].VMerge {
+		if r > 0 && gc >= 0 && len(t.cells[r+1]) > gc && t.cells[r+1][gc].VMerge {
 			units[len(units)-1][1] = r + 1
 			continue
 		}
