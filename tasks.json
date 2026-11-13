@@ -3352,6 +3352,52 @@
       "updatedAt": "2026-11-13T11:31:13.401Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "fit-split-slides",
+      "number": 149,
+      "kind": "task",
+      "title": "-fit:段で入らないスライドを続きのスライドに自動で分ける",
+      "status": "ready",
+      "parent": "fit-split",
+      "dependsOn": [
+        "fit-broken-criteria"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "親 #148。-fit で fit.shrink の最後の段でも入らない(#145 の判定)本文のスライドを、分けられる境で続きのスライドに分ける。\n- 分けられる境:ブロックの間、表は行(今の続きの表 continues と同じ仕組み:見出しの行の繰り返し・列の幅をそろえる。行の群の途中では切らない)、pairs は対、points は一番外の項目(入れ子は親ごと)、topics は話題。columns・図(サブシステム)・画像は分けない(1枚に1つで入らなければ #fit-emergency へ)。\n- 分け方:前から詰め、各枚が入る最小の枚数。分けた全ての枚を同じ段(字の大きさ)で組む(今の段から上へ戻して入るなら戻す。少なくとも normal/dense の元の密度で入るならそれで)。\n- 続きの枚:題とリードは同じ(題に「続き」を付けるかはテンプレートの marks)、隣に「n/m」の印(表の続きと同じ見せ方)。source は各枚に、notes は最初の枚だけ。marker は各枚。目次・頁番号は分けた後の枚数で数える。\n- info の Issue `fit-split`(path=/slides/S、何枚にしたか・どこで切ったか)。check -fit の capacity にも出す。\n- -fit なしの出力は変えない。docs/build.md の fit の節・docs/ir.md・SKILL.md(自動で分けたら作者が題を分けた方がよいこと)。",
+      "doneWhen": "長い表・対の多い pairs・長い箇条の例が -fit で続きのスライドに分かれ、どの枚もはみ出さず「n/m」が付く試験/fit-split が出る/目次・頁番号が分けた枚数で数えられる/-fit なしの golden が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T11:32:00.803Z",
+      "updatedAt": "2026-11-13T11:32:00.803Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
+      "id": "fit-emergency",
+      "number": 150,
+      "kind": "task",
+      "title": "-fit:分けられないものは非常用の段(fit.emergency)で詰める",
+      "status": "ready",
+      "parent": "fit-split",
+      "dependsOn": [
+        "fit-split-slides"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "親 #148。値の表に任意の fit.emergency(fit.shrink と同じ組の並び、shrink の最後より大きければ誤り、段の検査は今の決まり)。dark・light・report に入れる(例:本文 10→9pt・表 9→8pt、図の字と余白も)。-fit で分けても入らない枚(分けられない columns・図・画像、または分けた後も入らない一つの境)は emergency を下り、入った段で組んで警告 `fit-emergency`(字が小さいので分ける・削ることを勧める hint)。最後の段でも入らなければ build は誤り(-allow-overflow なら作る)。docs/template-values.md・docs/build.md。",
+      "doneWhen": "分けられない図がはみ出す例で -fit が emergency で収め fit-emergency を出す試験/emergency でも入らない例は誤り/値の表の検査の試験/-fit なしの golden が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T11:32:00.803Z",
+      "updatedAt": "2026-11-13T11:32:00.803Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
