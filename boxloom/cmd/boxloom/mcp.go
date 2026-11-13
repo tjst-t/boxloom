@@ -238,7 +238,7 @@ func mcpTools() []map[string]any {
 			"description": "Check a deck without writing a PPTX: errors and warnings (each with path, line, code, message, hint) and, per slide, the body capacity (bodyArea, need, remaining pt, remainingBodyLines, per-block lines and overflow). Same as `boxloom check -format json`. Give either path or source.",
 			"inputSchema": map[string]any{"type": "object", "properties": with(mcpDeckProps, map[string]any{
 				"strict": map[string]any{"type": "boolean", "description": "Treat warnings as errors (ok becomes false)."},
-				"fit":    map[string]any{"type": "boolean", "description": "Measure as build with fit does: an overflowing body slide is packed down the template's ladder (dense, then fit.shrink); a thin normal body slide (under fill-ratio) is widened up fit.grow without overflowing; adjusted slides are listed in info as fit-applied and get capacity.fit. A last resort: shorten or split first."},
+				"fit":    map[string]any{"type": "boolean", "description": "Measure as build with fit does: an overflowing body slide is packed down the template's ladder (dense, then fit.shrink); a thin normal body slide (under fill-ratio) is widened up fit.grow without overflowing; adjusted slides are listed in info as fit-applied and get capacity.fit; a slide that does not fit even at the last step is split into continued slides (info fit-split, capacity.split per part). A last resort: shorten or split first."},
 			}), "additionalProperties": false},
 		},
 		{
@@ -247,7 +247,7 @@ func mcpTools() []map[string]any {
 			"inputSchema": map[string]any{"type": "object", "properties": with(mcpDeckProps, map[string]any{
 				"output":        map[string]any{"type": "string", "description": "PPTX file to write. Default: out/<deck name>.pptx under the server's working directory."},
 				"allowOverflow": map[string]any{"type": "boolean", "description": "Write the PPTX even if a slide overflows (layout-overflow stays in warnings). Default false: overflow is an error."},
-				"fit":           map[string]any{"type": "boolean", "description": "Pack an overflowing body slide down the template's ladder (dense, then fit.shrink) and build it at the first step that fits; a thin normal body slide (under fill-ratio) is widened up fit.grow to the highest step that still fits; adjusted slides are listed in info. \"Fits\" means no layout-overflow and no broken figure (figure-text-overflow, subsystem-min, column-floor). If the last step still overflows or breaks a figure, the build fails like layout-overflow (unless allowOverflow). A last resort: shorten or split first."},
+				"fit":           map[string]any{"type": "boolean", "description": "Pack an overflowing body slide down the template's ladder (dense, then fit.shrink) and build it at the first step that fits; a thin normal body slide (under fill-ratio) is widened up fit.grow to the highest step that still fits; adjusted slides are listed in info. A slide that does not fit even at the last step is split into continued slides at block, table-row, bullet, pair or topic breaks (info fit-split). \"Fits\" means no layout-overflow and no broken figure (figure-text-overflow, subsystem-min, column-floor). If the last step still overflows or breaks a figure, the build fails like layout-overflow (unless allowOverflow). A last resort: shorten or split first."},
 			}), "additionalProperties": false},
 		},
 	}

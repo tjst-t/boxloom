@@ -178,6 +178,9 @@ type TextRun struct {
 	// AutoNum は番号つきの箇条の印(Mark の塊)の番号の形(PPTX の a:buAutoNum の
 	// type。orderedStyles のどれか)。Text は番号の見本(測るのには使わない)。
 	AutoNum string
+	// AutoNumStart は番号の始まり(a:buAutoNum の startAt。1 か 0 なら書かない。-fit で
+	// 分けた続きの枚の箇条が前の枚の続きの番号から振るため)。
+	AutoNumStart int
 	// Width は塊の幅(pt)。0 でなければ字の幅の代わりにこれで測る(番号つきの箇条の
 	// 番号の分。番号の字の幅は数によって変わるので、決まった幅を取る)。widthTok は
 	// 部品が書いた em の名前で、resolveSpec が塊の字の大きさに掛けて Width に直す。

@@ -282,7 +282,8 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 - 意味の違う役割名が同じ色(`accent` `conditional` `support` `danger` `none`
   `text_muted` の6つは互いに違う色。次の節)。
 - 印の文字が空(数と単位の間の `statUnit` だけは空でよい)。続けた表の印
-  (`marks.tableContinued`)に `{n}` か `{m}` が無い。
+  (`marks.tableContinued`)に `{n}` か `{m}` が無い。分けた続きの枚の題(`marks.continuedTitle`)に
+  `{title}` が無い。
 - 日付の書き方(`marks.date`・`marks.yearMonth`)の印の誤り(次の節の marks)。
 - `variants` に空の名前・同じ名前が2回。
 - `dense` の値が段に無い・`values` の同じ名前より大きい(次の節の dense)。
@@ -542,7 +543,10 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 間(`statUnit`。dark / light は空=「71%」「38社」と詰める。空でもよいのはこれだけ)。
 後ろの空きも含めて書く。続けた表(`continues`)の各枚の印(`tableContinued`。`{n}` を
 何枚目か、`{m}` をひと続きの枚数に置き換える。両方が無ければ読み込みで誤り。
-dark / light / report は `{n}/{m}`)。目次のスライド(`meta.toc`)の題(`toc`。dark / light / report は「目次」)。
+dark / light / report は `{n}/{m}`。`-fit` で分けた本文のスライドの各枚の題の隣にもこの印を置く)。
+`-fit` で分けた続きの枚(2枚目から)の題(`continuedTitle`。`{title}` を元の題に置き換える。
+無ければ読み込みで誤り。dark / light / report は `{title}`(題はそのまま)、例の forest は
+`{title}(続き)`)。目次のスライド(`meta.toc`)の題(`toc`。dark / light / report は「目次」)。
 
 `point`・`subPoint`・`pro`・`con` は、PPTX では本文の文字にせず、段落の箇条の印
 (`a:buChar`。色は印の色、字体は印の文字で選ぶ:U+2000 未満は `latin`、以降は

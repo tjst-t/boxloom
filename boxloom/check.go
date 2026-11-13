@@ -91,7 +91,7 @@ func Check(file string, data []byte, opt CheckOptions) *CheckResult {
 	res := &CheckResult{Errors: []Issue{}, Warnings: []Issue{}, Capacity: []SlideCapacity{}}
 	res.Errors = append(res.Errors, errs...)
 	for _, w := range warns {
-		if w.Code == codeFitApplied {
+		if w.Code == codeFitApplied || w.Code == codeFitSplit {
 			res.Info = append(res.Info, w) // 知らせ(警告ではない。-strict でも OK のまま)
 			continue
 		}

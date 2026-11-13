@@ -108,7 +108,7 @@ func (t *Template) addDenseRemaining(d *IRDeck, caps []SlideCapacity) error {
 		if _, err := fmt.Sscanf(caps[k].Path, "/slides/%d", &si); err != nil || si < 0 || si >= len(d.Slides) {
 			continue
 		}
-		if d.Slides[si].Type != "content" || d.Slides[si].dense() {
+		if d.Slides[si].Type != "content" || d.Slides[si].dense() || caps[k].Split != nil {
 			continue
 		}
 		area, need, ok, err := t.measureDense(d, si)

@@ -230,7 +230,7 @@ func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 	}
 	res := &BuildResult{Template: t.Name, Slides: len(pages)}
 	for _, w := range warnings {
-		if strings.Contains(w, "[FIT-APPLIED INFO]") {
+		if strings.Contains(w, "[FIT-APPLIED INFO]") || strings.Contains(w, "[FIT-SPLIT INFO]") {
 			res.Info = append(res.Info, w)
 			continue
 		}

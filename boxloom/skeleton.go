@@ -264,6 +264,11 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 		}
 		out.Title = placeholderLeaf(root, "title")
 		out.Lead = irLeaf(root, "lead")
+		if sp := s.split; sp != nil && out.Title != nil {
+			// -fit で分けた枚は題の隣に「n/m」の印(続きの表と同じ印。fit_split.go)。
+			out.Title.Runs = append(out.Title.Runs, roleRun(" "+t.Marks.continuedMark(sp.n, sp.m), "text_muted", false))
+			out.Title.Text = runsText(out.Title.Runs)
+		}
 	case "section", "statement", "toc":
 		if len(bodies) != 0 || len(mains) != 1 {
 			return nil, fmt.Errorf("%s: a %s slide needs exactly one main box (markFrame(frameMain)) and no body box; found %d and %d", name, s.Type, len(mains), len(bodies))

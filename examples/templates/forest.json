@@ -109,6 +109,7 @@
     "quoteSource": "— ",
     "statUnit": "",
     "tableContinued": "{n}/{m}",
+    "continuedTitle": "{title}(続き)",
     "toc": "目次"
   },
   "fonts": {

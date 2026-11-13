@@ -114,6 +114,7 @@
     "quoteSource": "— ",
     "statUnit": "",
     "tableContinued": "{n}/{m}",
+    "continuedTitle": "{title}",
     "toc": "目次"
   },
   "fonts": {

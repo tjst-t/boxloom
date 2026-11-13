@@ -162,7 +162,11 @@ func readPairSide(raw json.RawMessage, at string) (irPairSide, error) {
 
 // readPairs は pairs の IR を読んで形を見る(知らないキー・足りない欄・側に置けない
 // 種類は誤り)。誤りの文の頭は IR の場所(pairs[1].subject: …)。
-func readPairs(raw json.RawMessage) (*irPairs, error) {
+func readPairs(raw json.RawMessage) (*irPairs, error) { return readPairsMin(raw, 2) }
+
+// readPairsMin は readPairs の、対の数の下限を min にしたもの(-fit で分けた続きの枚の
+// 切れ端は1対でもよい。fit_split.go)。
+func readPairsMin(raw json.RawMessage, min int) (*irPairs, error) {
 	var v struct {
 		Type     string            `json:"type"`
 		Variant  string            `json:"variant"`
@@ -198,7 +202,7 @@ func readPairs(raw json.RawMessage) (*irPairs, error) {
 			return nil, fmt.Errorf("headings.%s: %w", h.name, err)
 		}
 	}
-	if len(v.Pairs) < 2 {
+	if len(v.Pairs) < min {
 		return nil, fmt.Errorf("pairs needs at least two pairs (got %d)", len(v.Pairs))
 	}
 	var has []bool
@@ -253,7 +257,7 @@ func readPairs(raw json.RawMessage) (*irPairs, error) {
 // まとまりの中のブロックを元の対の側(/pairs/K/subject など。引用の注は …/source)に写す。
 // 対の名前(label)は subject のまとまりの中の強調の段落にする(/pairs/K/label に写す)。
 func pairsFallback(b *IRBlock) ([]*IRBlock, fallbackPaths, error) {
-	p, err := readPairs(b.Raw)
+	p, err := readPairsMin(b.Raw, b.minParts(2))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -456,7 +460,7 @@ func pairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
 // pairsStyled は pairsComponent の見た目を st で差し替えたもの。
 func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error) {
 	t := ctx.t
-	p, err := readPairs(b.Raw)
+	p, err := readPairsMin(b.Raw, b.minParts(2))
 	if err != nil {
 		return nil, err
 	}

@@ -100,6 +100,9 @@ type IRSlide struct {
 	// fit は IR に無い、組み立ての中だけの印(-fit。fit_shrink.go の fitDeckCopy が写しに入れる):
 	// ゼロなら印なし、そうでなければ本文を値の表の fit.shrink か fit.grow の段の組で組む。
 	fit fitRef
+	// split は IR に無い、組み立ての中だけの印(-fit で分けた続きの枚。fit_split.go)。
+	// 分けていないスライドでは nil。
+	split *slideSplit
 }
 
 // IRBlock は本文のブロック。Type で種類を選び、種類ごとに使う欄が違う。
@@ -141,6 +144,11 @@ type IRBlock struct {
 	Src    string    // image: 文書からの相対パス
 	Alt    string    // image: 代わりの文
 	Images []IRImage // gallery: 2〜6枚
+
+	// piece は -fit で分けた切れ端(fit_split.go):pairs・topics の数の下限を問わない。
+	piece bool
+	// itemStart は番号つきの箇条の切れ端が前の枚に置いた項目の数(番号をその次から振る)。
+	itemStart int
 
 	// Raw は標準でない型(型の語彙。typevocab.go)のブロックの JSON そのもの。
 	// 組み方と代わりの組み方(Fallback)がこれを読む。標準の型では nil。

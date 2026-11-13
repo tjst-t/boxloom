@@ -554,7 +554,8 @@ func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 		leaf.caption = t.leafRuns(caption, "text_muted", false)
 	}
 	leaf.markProbe = t.leafRuns(Inline{{Text: t.Marks.continuedMark(99, 99)}}, "text_muted", false)
-	if b.chain != nil {
+	if b.chain != nil && !b.piece {
+		// -fit で分けた表の切れ端は、題の隣の「n/m」(fit_split.go)だけにする。
 		leaf.mark = t.leafRuns(Inline{{Text: t.Marks.continuedMark(b.chainPos+1, len(b.chain.Tables))}}, "text_muted", false)
 	}
 	return SubsystemNode(leaf)

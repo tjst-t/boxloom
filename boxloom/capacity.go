@@ -41,7 +41,11 @@ type SlideCapacity struct {
 	// Fit は -fit(BuildOptions.Fit・CheckOptions.Fit)で本文を詰めたときの段の名前
 	// ("dense"・"fit.shrink[K]"・"fit.grow[K]"。fit_shrink.go・fit_grow.go)。remaining・本文の行の高さはその段の値。
 	// 詰めなかったスライドでは省く。
-	Fit    string          `json:"fit,omitempty"`
+	Fit string `json:"fit,omitempty"`
+	// Split は -fit で本文を続きのスライドに分けたとき(fit_split.go)の、この枚の印(何枚目・
+	// 枚数・各枚の始まり)。分けたスライドは枚ごとに容量を出し、path はどれも元の /slides/S。
+	// 分けなかったスライドでは省く。
+	Split  *SplitCapacity  `json:"split,omitempty"`
 	Blocks []BlockCapacity `json:"blocks"`
 }
 
@@ -186,6 +190,9 @@ func (c SlideCapacity) String() string {
 	}
 	if c.Fit != "" {
 		out += ", fit " + c.Fit
+	}
+	if s := c.Split; s != nil {
+		out += fmt.Sprintf(", split part %d of %d", s.Part, s.Slides)
 	}
 	if c.DenseRemaining != nil {
 		out += fmt.Sprintf(", remaining %.1fpt if dense", *c.DenseRemaining)

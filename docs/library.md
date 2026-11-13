@@ -64,7 +64,7 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 | `Issue` | 誤りと警告の1件(`docs/content-syntax.md` の5章の形。`File`・`Line`・`Column`・`Path`・`Code`・`Message`・`Expected`・`Hint`)。`String()` で1行の文 |
 | `MarkdownErrors` | `[]Issue` の error(Markdown と YAML の deck の誤り。行・列つき)。`errors.As` で取り出す |
 | `CheckOptions` | `Template`(IR の template より優先)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Strict`(警告も誤り扱い)・`Assets`(画像を読む `fs.FS`)・`Fit`(`BuildOptions.Fit` と同じに詰め・広げて測る。詰めたスライドは `Info` の `fit-applied` と容量の `fit`) |
-| `CheckResult` | `OK`・`Errors`・`Warnings`・`Capacity`・`Info`(知らせ。`-fit` の `fit-applied`。警告ではないので `Strict` でも `OK` に効かない。無ければ nil で JSON に出ない)。JSON にすると `boxloom check -format json` と同じ形(`Info` のほかの切れ端は nil にならない) |
+| `CheckResult` | `OK`・`Errors`・`Warnings`・`Capacity`・`Info`(知らせ。`-fit` の `fit-applied`・`fit-split`。警告ではないので `Strict` でも `OK` に効かない。無ければ nil で JSON に出ない)。JSON にすると `boxloom check -format json` と同じ形(`Info` のほかの切れ端は nil にならない) |
 | `SlideCapacity` | 本文を持つスライドごとの容量(`docs/ir.md` の「容量の計測」) |
 | `BuildOptions` | `Template`(空なら IR の template、それも無ければ light)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Assets`(画像を読む `fs.FS`)・`AllowOverflow`(はみ出し `layout-overflow` があっても PPTX を書く。警告は `Warnings` に残る。false なら書かずに `*OverflowError`)・`Fit`(はみ出す本文のスライドを値の表の梯子 dense → `fit.shrink` で詰め、最初に収まった段で組む。最後の段でも収まらなければ `layout-overflow` のまま。fill-ratio が下回る normal の本文のスライドは `fit.grow` を上り、はみ出さない最も上の段で組む(目標に届いたらそこで止める、#128)。IR は変えず、false なら出力は変わらない) |
 | `Template` | 読んだテンプレート。`ParseTemplate` の返り値を `Values` に渡すためのもので、中の欄は安定させない |

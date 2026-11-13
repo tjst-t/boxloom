@@ -462,6 +462,11 @@ returns
   overflowed and was packed with the named template step (`capacity[].fit`), or (message
   starting "the body was underfilled", step `fit.grow[K]`) it was thin and was widened. It is
   not a warning (`-strict` ignores it) but it means the slide is still too full or too thin.
+- With `-fit`, an `info` entry `fit-split` (path `/slides/S`) means the slide did not fit even
+  at the last step, so `-fit` split it into continued slides (same title and lead, an `n/m`
+  mark, a table repeats its header) at the breaks it names (`starts`; `capacity[]` has one
+  entry per part with `split`). The breaks are mechanical: split that slide yourself at a
+  break in the meaning and give each part its own title, then build without relying on it.
 
 Fixes by code:
 
@@ -514,7 +519,9 @@ and `capacity` gives `denseRemaining`. An ordinary page that argues a point is s
 dense would fit. `-fit` is not a way around this either: it shrinks the text of the page,
 so the deck's sizes stop matching. Use it only as the last resort after cutting and splitting
 (each packed slide shows up as an `info` entry `fit-applied` and `capacity[].fit`; read them as
-a list of pages still to shorten).
+a list of pages still to shorten). A slide that does not fit even at the last step is split
+by `-fit` into continued slides (`fit-split`); that is a placeholder, not a split — split the
+slide yourself where the content changes and title each part.
 
 1. In `capacity`, find the slide with `remaining < 0`.
 2. Find the first block with `overflow > 0`. Everything from that block on moves to a

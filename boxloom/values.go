@@ -341,6 +341,9 @@ type TemplateMarks struct {
 	// TableContinued は続けた表(continues)の各枚に付ける印。{n} を何枚目か、{m} を
 	// 全部の枚数に置き換える(例 "{n}/{m}")。
 	TableContinued string `json:"tableContinued"`
+	// ContinuedTitle は -fit で分けた続きの枚(2枚目から)の題。{title} を元の題に置き換える
+	// (例 "{title}"・"{title}(続き)"。fit_split.go)。各枚の題の隣には tableContinued の印。
+	ContinuedTitle string `json:"continuedTitle"`
 	// Toc は目次のスライド(meta.toc)の題。
 	Toc string `json:"toc"`
 }
@@ -932,6 +935,9 @@ func checkMarks(m TemplateMarks) error {
 		if !strings.Contains(m.TableContinued, ph) {
 			return fmt.Errorf("marks.tableContinued: %q needs %s (the page number {n} and the number of pages {m} of a continued table)", m.TableContinued, ph)
 		}
+	}
+	if !strings.Contains(m.ContinuedTitle, "{title}") {
+		return fmt.Errorf("marks.continuedTitle: %q needs {title} (the title of the slide that -fit split)", m.ContinuedTitle)
 	}
 	return nil
 }

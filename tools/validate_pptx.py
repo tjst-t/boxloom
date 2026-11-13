@@ -521,6 +521,14 @@ def build_examples(outdir):
             if r.returncode != 0:
                 sys.exit(f"build failed for {src} ({tpl}):\n{r.stderr}")
             out.append(dst)
+    # -fit で続きのスライドに分けた出力(#149。分けた表の続き・題の n/m)も検査する
+    for src in [ROOT / "examples" / "md" / "warnings" / "table-overflow.bx.md"]:
+        for tpl in ("dark", "light", "report"):
+            dst = outdir / f"fit-{src.name}-{tpl}.pptx"
+            r = subprocess.run([go, "run", "./cmd/boxloom", "build", "-fit", "-allow-overflow", "-template", tpl, "-o", str(dst), str(src)], cwd=gdir, capture_output=True, text=True)
+            if r.returncode != 0:
+                sys.exit(f"build -fit failed for {src} ({tpl}):\n{r.stderr}")
+            out.append(dst)
     demo = outdir / "demo"
     demo.mkdir()
     # 従来のデモは out/ に書くので、作業用の写しの中で流す

@@ -488,6 +488,12 @@ func (t *Template) buildBlockIn(ctx componentContext, b *IRBlock) (*Spec, error)
 // 値の表の orderedStyle、入れ子は orderedNestedStyle)で、番号の分の幅は
 // 箇条の字下げ(pointIndentEm)。
 func (t *Template) points(items []IRPointItem, depth int, ordered bool) *Spec {
+	return t.pointsFrom(items, depth, ordered, 0)
+}
+
+// pointsFrom は points の、番号を start+1 から振るもの(-fit で分けた続きの枚の箇条は
+// 前の枚の続きの番号から。fit_split.go)。
+func (t *Template) pointsFrom(items []IRPointItem, depth int, ordered bool, start int) *Spec {
 	mark := t.Marks.Point
 	size := "body"
 	style := t.Values.OrderedStyle
@@ -499,8 +505,8 @@ func (t *Template) points(items []IRPointItem, depth int, ordered bool) *Spec {
 	for i, it := range items {
 		head := TextRun{Text: mark, role: "accent", Bold: true, Mark: true}
 		if ordered {
-			head = TextRun{Text: orderedLabel(style, i+1), role: "accent", Bold: true, Mark: true,
-				AutoNum: style, widthTok: "pointIndentEm"}
+			head = TextRun{Text: orderedLabel(style, start+i+1), role: "accent", Bold: true, Mark: true,
+				AutoNum: style, AutoNumStart: start + 1, widthTok: "pointIndentEm"}
 		}
 		runs := append([]TextRun{head}, t.runs(it.Content, "text_primary", false)...)
 		kids = append(kids, RichTextNode(runs, tokSize(size), tokLineHeight("listLineHeight")))
@@ -661,6 +667,21 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	var origin []int // 分けたとき:写しのスライドごとの元の IR の番号(fit_split.go)
+	if fit {
+		// 梯子のどの段でも収まらない本文のスライドは続きのスライドに分ける(fit_split.go)。
+		// 分けた deck は写し(IR は変えない)で、警告と容量の場所は元の番号に戻す。
+		dx, o, err := t.fitSplitDeck(d)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if dx != d {
+			d, origin = dx, o
+			if built, err = t.BuildDeck(d); err != nil {
+				return nil, nil, nil, err
+			}
+		}
+	}
 	var pages []*PPTXBuilder
 	var all []string
 	caps := []SlideCapacity{}
@@ -671,12 +692,18 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 		// 警告の頭は "table of contents"、容量は出さない)。
 		i := b.SlideIndex
 		var fitted *fitChoice
-		if _, _, _, gen := generatedSlide(i); fit && !gen && b.Body != nil {
+		var split *slideSplit // -fit で分けた枚(fit_split.go)
+		if _, _, _, gen := generatedSlide(i); !gen {
+			split = d.Slides[i].split
+		}
+		if split != nil {
+			fitted = split.choice
+		} else if _, _, _, gen := generatedSlide(i); fit && !gen && b.Body != nil {
 			if !fitDone[i] {
 				group := fitGroupOf(d, i)
 				fb, c, err := t.fitGroup(d, group)
 				if err != nil {
-					return nil, nil, nil, fmt.Errorf("slides[%d]: %w", i, err)
+					return nil, nil, nil, fmt.Errorf("slides[%d]: %w", irIndex(origin, i), err)
 				}
 				for _, j := range group {
 					fitDone[j] = true
@@ -691,10 +718,16 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 		computeLayout(b.Root, 0, 0, v.PageW, v.PageH)
 
 		warnings := append([]string{}, b.Warnings...)
-		if fitted != nil {
+		if split != nil {
+			if split.n == 1 {
+				warnings = append(warnings, fitSplitWarning(split))
+			}
+		} else if fitted != nil {
 			warnings = append(warnings, fitAppliedWarning(fitted))
 		}
-		if b.Body != nil {
+		if b.Body != nil && split == nil {
+			// 分けた枚は測らない(前から詰めるので最後の枚が薄いのは分けた常。知らせの
+			// fit-split が作者に題で分けることを勧める)。
 			ratio := bodyFillRatio(b.Body)
 			if w := lintFillRatioMin(ratio, v.FillRatioMin); w != "" {
 				warnings = append(warnings, w)
@@ -746,14 +779,17 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 					}
 				}
 				bodySize := v.Body
-				if d.Slides[i].dense() {
+				if d.Slides[i].dense() && split == nil {
 					bodySize = t.densed().Values.Body
 				}
 				if fitted != nil {
 					bodySize = fitted.body
 				}
-				sc := slideCapacity(blocks, area, need, b.Body.Gap, i, kinds, bodySize)
-				if d.Slides[i].dense() {
+				if split != nil {
+					bodySize = split.values.Body
+				}
+				sc := slideCapacity(blocks, area, need, b.Body.Gap, irIndex(origin, i), kinds, bodySize)
+				if d.Slides[i].dense() && (split == nil || split.choice == nil || split.choice.step != fitStepDense) {
 					sc.Density = densityDense
 				}
 				if fitted != nil {
@@ -771,6 +807,9 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 							}
 						}
 					}
+				}
+				if split != nil {
+					split.remapCapacity(&sc)
 				}
 				caps = append(caps, sc)
 			}
@@ -792,7 +831,11 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 				all = append(all, prefix+w)
 				continue
 			}
-			all = append(all, fmt.Sprintf("slide %d: %s", i+1, w))
+			if split != nil {
+				all = append(all, fmt.Sprintf("slide %d: %s", split.from+1, split.remapWarning(w)))
+				continue
+			}
+			all = append(all, fmt.Sprintf("slide %d: %s", irIndex(origin, i)+1, w))
 		}
 	}
 	return pages, all, caps, nil

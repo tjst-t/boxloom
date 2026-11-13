@@ -70,7 +70,11 @@ func checkTopicLabel(l string) error {
 
 // readTopics は topics の IR を読んで形を見る(知らないキー・足りない欄・数・置けない
 // 種類・印の混在は誤り)。誤りの文の頭は IR の場所(topics[1].body[0]: …)。
-func readTopics(raw json.RawMessage) (*irTopics, error) {
+func readTopics(raw json.RawMessage) (*irTopics, error) { return readTopicsMin(raw, topicsMin) }
+
+// readTopicsMin は readTopics の、塊の数の下限を min にしたもの(-fit で分けた続きの枚の
+// 切れ端は1つでもよい。fit_split.go)。
+func readTopicsMin(raw json.RawMessage, min int) (*irTopics, error) {
 	var v struct {
 		Type    string            `json:"type"`
 		Variant string            `json:"variant"`
@@ -79,7 +83,7 @@ func readTopics(raw json.RawMessage) (*irTopics, error) {
 	if err := strictUnmarshal(raw, &v); err != nil {
 		return nil, err
 	}
-	if len(v.Topics) < topicsMin || len(v.Topics) > topicsMax {
+	if len(v.Topics) < min || len(v.Topics) > topicsMax {
 		return nil, fmt.Errorf("topics needs %d to %d topics (got %d)", topicsMin, topicsMax, len(v.Topics))
 	}
 	out := &irTopics{Variant: v.Variant}
@@ -150,7 +154,7 @@ func topicHead(tp irTopic) Inline {
 // 中身を子の項目にする。段落はその文の項目、箇条はその項目(入れ子のまま)、引用は
 // 言葉の項目と出どころの項目。場所の表は、親の項目を塊(/topics/K)、その文を題に写す。
 func topicsFallback(b *IRBlock) ([]*IRBlock, fallbackPaths, error) {
-	p, err := readTopics(b.Raw)
+	p, err := readTopicsMin(b.Raw, b.minParts(topicsMin))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -270,7 +274,7 @@ func topicsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
 // topicsStyled は topicsComponent の見た目を st で差し替えたもの。
 func topicsStyled(ctx componentContext, b *IRBlock, st topicsStyle) (*Spec, error) {
 	t := ctx.t
-	p, err := readTopics(b.Raw)
+	p, err := readTopicsMin(b.Raw, b.minParts(topicsMin))
 	if err != nil {
 		return nil, err
 	}

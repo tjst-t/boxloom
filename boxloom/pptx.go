@@ -795,7 +795,11 @@ func (p *PPTXBuilder) bulletXML(mark []TextRun, fontSize, base float64) (bullet,
 	if mark[0].AutoNum != "" {
 		// 番号はアプリが振る(続けて並ぶ同じ段の段落の何番目か)。印の文字は番号の見本で、
 		// 字体はその見本の文字で選んである(① は和文)。
-		fmt.Fprintf(&b, `<a:buAutoNum type="%s"/>`, escapeXML(mark[0].AutoNum))
+		if st := mark[0].AutoNumStart; st > 1 {
+			fmt.Fprintf(&b, `<a:buAutoNum type="%s" startAt="%d"/>`, escapeXML(mark[0].AutoNum), st)
+		} else {
+			fmt.Fprintf(&b, `<a:buAutoNum type="%s"/>`, escapeXML(mark[0].AutoNum))
+		}
 	} else {
 		fmt.Fprintf(&b, `<a:buChar char="%s"/>`, escapeXML(ch))
 	}

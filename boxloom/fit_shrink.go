@@ -233,6 +233,8 @@ type fitMeasure struct {
 	broken    bool    // 図が崩れるか(fitBrokenCodes の警告が出る。#145)
 	remaining float64 // 本文の残り(pt)
 	ratio     float64 // fill-ratio(組んだ後の警告と同じ bodyFillRatio)
+	area      float64 // 本文の領域の高さ(pt)
+	need      float64 // 本文のブロックを縮めずに積んだ高さ(pt)
 }
 
 // bad は -fit がその段を「収まった」とみなさないか:本文がはみ出すか、図が崩れる(#145)。
@@ -297,7 +299,7 @@ func (t *Template) measureFitStep(d *IRDeck, i int) (fitMeasure, error) {
 	for _, blk := range d.Slides[i].Body {
 		kinds = append(kinds, blk.Type)
 	}
-	return fitMeasure{ok: true, over: len(overflowWarnings(blocks, area, need, kinds)) > 0, broken: broken, remaining: round1(area - need), ratio: ratio}, nil
+	return fitMeasure{ok: true, over: len(overflowWarnings(blocks, area, need, kinds)) > 0, broken: broken, remaining: round1(area - need), ratio: ratio, area: area, need: need}, nil
 }
 
 // fitAppliedWarning は調整したスライドの info の文(warningIssue が fit-applied にする)。

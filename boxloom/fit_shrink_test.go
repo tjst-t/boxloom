@@ -137,11 +137,18 @@ func TestFitShrinkDenseStartsBelowDense(t *testing.T) {
 	}
 }
 
-// 最後の段でも収まらなければ layout-overflow のまま(build は誤り)。fit-applied は出さない。
+// 最後の段でも収まらず分けられもしなければ(1つの段落。分けるのは fit_split.go)、
+// layout-overflow のまま(build は誤り)。fit-applied も fit-split も出さない。
 func TestFitShrinkLastStepStillOverflows(t *testing.T) {
-	file, data := readFitDeck(t, "../examples/md/warnings/table-overflow.bx.md", nil)
+	file, data := "long.bx.md", []byte(splitDeckMD("light", strings.Repeat(splitSentence+"。", 60)))
 	res := Check(file, data, CheckOptions{Fit: true})
-	if len(fitIssues(res.Warnings, codeLayoutOverflow)) == 0 || res.Info != nil || res.Capacity[0].Fit != "" {
+	var body SlideCapacity
+	for _, c := range res.Capacity {
+		if c.Path == "/slides/2" {
+			body = c
+		}
+	}
+	if len(fitIssues(res.Warnings, codeLayoutOverflow)) == 0 || res.Info != nil || body.Path == "" || body.Fit != "" || body.Split != nil {
 		t.Fatalf("check -fit = warnings %+v info %+v", res.Warnings, res.Info)
 	}
 	deck, err := ReadDeck(file, data)
