@@ -2318,7 +2318,7 @@
       "number": 100,
       "kind": "task",
       "title": "report の細かな見た目:リードを太字にしない・表の群のセルを縦書きの帯・図の説明を上に基調色・段落の塊の間の空き",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2330,7 +2330,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T03:53:47.843Z",
-      "updatedAt": "2026-11-13T03:53:47.843Z",
+      "updatedAt": "2026-11-13T04:10:24.576Z",
       "closedAt": null,
       "extra": {}
     },
