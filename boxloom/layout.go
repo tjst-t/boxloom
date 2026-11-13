@@ -51,7 +51,13 @@ type Spec struct {
 	Gap     float64
 	Padding float64
 	// PaddingY は上下の余白(nil なら Padding と同じ)。Padding は左右の余白になる。
-	PaddingY       *float64
+	PaddingY *float64
+	// PaddingBottom は下の余白だけを別にするとき(nil なら上と同じ PaddingY)。
+	// ページの枠の下の外周(値の表の pagePaddingBottom)に使う。
+	PaddingBottom *float64
+	// LineHeight は文字の葉の行送り(字の大きさの倍。0 ならテンプレートの
+	// fonts.lineHeight)。リード文と箇条を本文の段落より詰めるとき(#146)。
+	LineHeight     float64
 	Background     string // 空文字列 = 背景なし
 	Radius         float64
 	HasRadius      bool
@@ -151,12 +157,23 @@ func (s *Spec) padY() float64 {
 	return s.Padding
 }
 
-// padOn は軸(w=横・h=縦)の側の余白。
-func (s *Spec) padOn(axis byte) float64 {
-	if axis == 'h' {
-		return s.padY()
+// padBottom は下の余白(PaddingBottom が無ければ padY と同じ)。
+func (s *Spec) padBottom() float64 {
+	if s.PaddingBottom != nil {
+		return *s.PaddingBottom
 	}
-	return s.padX()
+	return s.padY()
+}
+
+// padYSum は上と下の余白の和。
+func (s *Spec) padYSum() float64 { return s.padY() + s.padBottom() }
+
+// padSumOn は軸(w=横・h=縦)の両側の余白の和。
+func (s *Spec) padSumOn(axis byte) float64 {
+	if axis == 'h' {
+		return s.padYSum()
+	}
+	return 2 * s.padX()
 }
 func WithBackground(v string) SpecOpt      { return func(s *Spec) { s.Background = v } }
 func WithRadius(v float64) SpecOpt         { return func(s *Spec) { s.Radius = v; s.HasRadius = true } }
@@ -256,10 +273,21 @@ func textNaturalWidth(s *Spec) float64 {
 }
 
 func textHeightFor(s *Spec, width float64) float64 {
+	if s.LineHeight > 0 {
+		return float64(textLinesFor(s, width)) * s.FontSize * s.LineHeight
+	}
 	if len(s.Runs) > 0 {
 		return measureRunsHeight(s.Runs, s.FontSize, width)
 	}
 	return measureTextHeight(s.Text, s.FontSize, width, s.Bold)
+}
+
+// lineMultOf は文字の葉の行送りの倍率(葉が持たなければテンプレートの値)。
+func lineMultOf(s *Spec) float64 {
+	if s.LineHeight > 0 {
+		return s.LineHeight
+	}
+	return lineHeightMult()
 }
 
 // heightForWidth は、幅を決めたときの高さ。列(Col)の中に置いた入れ子の箱の
@@ -283,7 +311,7 @@ func heightForWidth(s *Spec, width float64) float64 {
 		return s.Subsystem.Measure(Constraint{Width: width}).Natural.Height
 	}
 	if len(s.Children) == 0 {
-		return 2 * s.padY()
+		return s.padYSum()
 	}
 	inner := max0(width - 2*s.padX())
 	if s.Kind == KindCol {
@@ -297,7 +325,7 @@ func heightForWidth(s *Spec, width float64) float64 {
 			}
 			total += heightForWidth(c, cw)
 		}
-		return total + 2*s.padY()
+		return total + s.padYSum()
 	}
 	// 行: 子の幅を決めるために一度並べてみる(高さは仮)。並べた結果の Box は
 	// あとで本当の computeLayout が上書きする。
@@ -308,7 +336,7 @@ func heightForWidth(s *Spec, width float64) float64 {
 			m = v
 		}
 	}
-	return m + 2*s.padY()
+	return m + s.padYSum()
 }
 
 // SubsystemNode はサブシステムを葉として置く。大きさは Measure の自己申告で
@@ -368,14 +396,14 @@ func naturalSize(s *Spec, axis byte) float64 {
 		if axis == 'w' {
 			return textNaturalWidth(s)
 		}
-		return s.FontSize * lineHeightMult()
+		return s.FontSize * lineMultOf(s)
 	case KindSubsystem:
 		return subsystemNatural(s, axis, Constraint{})
 	}
 
 	// row / col コンテナ
 	if len(s.Children) == 0 {
-		return 2 * s.padOn(axis)
+		return s.padSumOn(axis)
 	}
 	isRow := s.Kind == KindRow
 	mainAxis := byte('h')
@@ -388,7 +416,7 @@ func naturalSize(s *Spec, axis byte) float64 {
 			total += naturalSize(c, axis)
 		}
 		total += s.Gap * float64(max(0, len(s.Children)-1))
-		return total + 2*s.padOn(axis)
+		return total + s.padSumOn(axis)
 	}
 	m := naturalSize(s.Children[0], axis)
 	for _, c := range s.Children[1:] {
@@ -396,7 +424,7 @@ func naturalSize(s *Spec, axis byte) float64 {
 			m = v
 		}
 	}
-	return m + 2*s.padOn(axis)
+	return m + s.padSumOn(axis)
 }
 
 // computeLayout はspec(とその子孫)に確定した絶対座標(spec.Box)を割り当てる。
@@ -422,7 +450,7 @@ func layoutNode(s *Spec, x, y, width, height float64) {
 	isRow := s.Kind == KindRow
 	ix, iy := x+s.padX(), y+s.padY()
 	iw := max0(width - 2*s.padX())
-	ih := max0(height - 2*s.padY())
+	ih := max0(height - s.padYSum())
 	innerMain, innerCross := ih, iw
 	if isRow {
 		innerMain, innerCross = iw, ih

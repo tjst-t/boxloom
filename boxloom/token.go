@@ -32,7 +32,7 @@ import (
 
 // specTokens は箱に書いたトークン(空なら書いていない)。
 type specTokens struct {
-	gap, padX, padY, radius, width, height, fontSize, color, background string
+	gap, padX, padY, padBottom, lineHeight, radius, width, height, fontSize, color, background string
 }
 
 func tokGap(t string) SpecOpt { return func(s *Spec) { s.tok.gap = t } }
@@ -42,6 +42,12 @@ func tokPad(t string) SpecOpt { return func(s *Spec) { s.tok.padX, s.tok.padY = 
 
 // tokPadXY は左右(x)と上下(y)で違う余白。
 func tokPadXY(x, y string) SpecOpt { return func(s *Spec) { s.tok.padX, s.tok.padY = x, y } }
+
+// tokLineHeight は文字の葉の行送り(値の表の unit:"lineHeight" の名前)。
+func tokLineHeight(t string) SpecOpt { return func(s *Spec) { s.tok.lineHeight = t } }
+
+// tokPadBottom は下の余白だけを別の値にする(tokPad・tokPadXY の後に書く)。
+func tokPadBottom(t string) SpecOpt { return func(s *Spec) { s.tok.padBottom = t } }
 
 func tokRadius(t string) SpecOpt     { return func(s *Spec) { s.tok.radius = t } }
 func tokWidth(t string) SpecOpt      { return func(s *Spec) { s.tok.width = t } }
@@ -72,6 +78,7 @@ type tokenTable struct {
 	types   map[string]float64 // scale:"type"
 	lengths map[string]float64 // そのほかの長さ(pt)
 	ems     map[string]float64 // unit:"em"(字の大きさの倍)
+	lines   map[string]float64 // unit:"lineHeight"(行送りの倍率)
 	scale   TemplateScale
 	theme   Theme
 	// tmpl は表を作ったテンプレート、denseTT は dense の値の表(印 dense の箱の下で
@@ -84,7 +91,7 @@ type tokenTable struct {
 
 func newTokenTable(t *Template) *tokenTable {
 	tt := &tokenTable{spaces: map[string]float64{}, types: map[string]float64{}, lengths: map[string]float64{},
-		ems: map[string]float64{}, scale: t.Scale, theme: t.Theme, tmpl: t}
+		ems: map[string]float64{}, lines: map[string]float64{}, scale: t.Scale, theme: t.Theme, tmpl: t}
 	rv := reflect.ValueOf(t.Values)
 	rt := rv.Type()
 	for i := 0; i < rt.NumField(); i++ {
@@ -101,6 +108,8 @@ func newTokenTable(t *Template) *tokenTable {
 			tt.types[name] = x
 		case f.Tag.Get("unit") == "em":
 			tt.ems[name] = x
+		case f.Tag.Get("unit") == "lineHeight":
+			tt.lines[name] = x
 		case f.Tag.Get("unit") == "ratio":
 		default:
 			tt.lengths[name] = x
@@ -174,6 +183,14 @@ func (tt *tokenTable) typeSize(tok string) (float64, error) {
 	return 0, fmt.Errorf("%q is neither a type size name of the value table (scale \"type\") nor type(n)", tok)
 }
 
+// lineHeight は行送りの名前(unit:"lineHeight")の倍率。
+func (tt *tokenTable) lineHeight(tok string) (float64, error) {
+	if x, ok := tt.lines[tok]; ok {
+		return x, nil
+	}
+	return 0, fmt.Errorf("%q is not a line-height name of the value table", tok)
+}
+
 func (tt *tokenTable) color(tok string) (string, error) {
 	if c, ok := tt.theme[tok]; ok {
 		return c, nil
@@ -228,6 +245,10 @@ func (tt *tokenTable) resolve(s *Spec, at string) error {
 		return raw("padding", s.Padding)
 	case k.padY == "" && s.PaddingY != nil:
 		return raw("paddingY", *s.PaddingY)
+	case k.padBottom == "" && s.PaddingBottom != nil:
+		return raw("paddingBottom", *s.PaddingBottom)
+	case k.lineHeight == "" && s.LineHeight != 0:
+		return raw("lineHeight", s.LineHeight)
 	case k.radius == "" && s.HasRadius:
 		return raw("radius", s.Radius)
 	case k.width == "" && s.Width != nil:
@@ -261,6 +282,18 @@ func (tt *tokenTable) resolve(s *Spec, at string) error {
 			return fail("paddingY", err)
 		}
 		s.PaddingY = &y
+	}
+	if k.padBottom != "" {
+		b, err := tt.space(k.padBottom)
+		if err != nil {
+			return fail("paddingBottom", err)
+		}
+		s.PaddingBottom = &b
+	}
+	if k.lineHeight != "" {
+		if s.LineHeight, err = tt.lineHeight(k.lineHeight); err != nil {
+			return fail("lineHeight", err)
+		}
 	}
 	if k.fontSize != "" {
 		if s.FontSize, err = tt.typeSize(k.fontSize); err != nil {

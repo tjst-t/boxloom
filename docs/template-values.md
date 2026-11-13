@@ -135,10 +135,12 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 
 | 値 | light | report |
 |---|---|---|
-| `pagePadding` / `pagePaddingY` | 40 / 24 | 50 / 42 |
+| `pagePadding` / `pagePaddingY` / `pagePaddingBottom` | 40 / 24 / 24 | 50 / 42 / 20 |
 | `coverPadding` | 64 | 50 |
 | `sectionGap` / `blockGap` | 20 / 20 | 12 / 18 |
-| `itemGap` / `headerGap` | 8 / 8 | 6 / 8 |
+| `itemGap` / `headerGap` | 8 / 8 | 2 / 8 |
+| `leadLineHeight` / `listLineHeight` | 1.35 / 1.35 | 1.08 / 1.08 |
+| `footerText` | 10 | 8 |
 | `leadText`(上の見出し) | 18 | 24 |
 | `slideTitle`(話題) | 24 | 16 |
 | `body` | 16 | 14 |
@@ -157,9 +159,9 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 | `tableCellPaddingX` / `tableCellPaddingY` / `tableRuleWidth` | 8 / 4 / 1 | 4 / 2 / 0.75 |
 | `tableHeaderRuleWidth` / `calloutMark`(report の組み方だけが使う) | 1 / 24 | 1.5 / 24 |
 
-頁番号は標準のフッターのまま右下に `small`(10pt)・`text_muted`(7F7F7F)で置く。列の見出しは
+頁番号は標準のフッターのまま右下に `footerText`(8pt、#146)・`text_muted`(7F7F7F)で置く。列の見出しは
 16pt・基調色(上の「組み方」)。`columns` は report が Go で持つ組み方(`report.go`。#84)で、
-列の見出しの下に罫線(役割 `grid`・0.75pt。見出しとの間は `itemGap`)、列の間(`columnGap` の
+列の見出しの下に罫線(役割 `grid`・0.75pt。見出しとの間・罫線と中身の間は `itemGap`)、列の間(`columnGap` の
 隙間)の真ん中に縦の罫線(`grid`・0.75pt)を引き、`flow` のときは縦の罫線の縦の真ん中に
 直径 24pt(隙間より広ければ隙間の幅)の基調色の丸と、地の色(`bg`)の山形(>)を置く。
 罫線の太さと丸の直径はサンプルを測った値で、`report.go` の定数に置く。区切りのスライドの
@@ -184,6 +186,29 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 report の Gantt は月の格子(年と月の2段の見出し)・山形の帯で描き、本文の領域の高さを
 使い切る(#89。`docs/subsystem.md` の11.1)。`maxRowHeight` は高さを使い切るときの行の
 上限なので、32 から 44 に上げた。
+
+**元の資料の詰め方に寄せる(#146)**:元の資料では入るのに Boxloom では入らない頁の高さの
+不足を分解すると(リポジトリの外の測り。4頁で約 697pt)、約6割は値で詰められるもの
+(題と箇条の間・項目の間・下の外周とフッター・dense の字・リードと一覧の行送り)だった。
+report だけを直した(dark・light の出力は変わらない。golden の report の出力はこの値の分だけ変わる)。
+
+| 箇所 | 前 | 今 | 元の資料 |
+|---|---|---|---|
+| まとまりの題(対の側の題・列の題・topic の題)とその下の箇条の間 | 対の側は `blockGap` 18(dense 12)、列・topic は `itemGap` 6 | `itemGap` 2(対の側は report の組み方の `titleGap`。列の題の下の罫線の上と下も 2) | 0(行送りだけ) |
+| 箇条の項目の間・カードの中の行の間(`itemGap`) | 6(dense 4) | 2(dense 2) | 0 |
+| 下の外周(`pagePaddingBottom`) | 42(`pagePaddingY` と同じ) | 20(上は 42 のまま) | 頁番号の線まで本文 |
+| フッターの字(`footerText`) | 10(`small`) | 8 | — |
+| dense の本文 / 入れ子 | 12 / 11 | 11 / 10 | 11(22 頁) |
+| リード文・箇条の行送り(`leadLineHeight`・`listLineHeight`) | 1.2(`fonts.lineHeight`) | 1.08 | 1.08 |
+
+本文の段落の行送りは `fonts.lineHeight` の 1.2 のまま(元の資料の本文も 1.2)。本文の箱の下の端は
+486pt → 498.4pt(本文とフッターの間は `sectionGap` 12 のまま。ページ番号・フッターと本文は
+重ねない)。下の外周を上と別にするため、コアの箱に下だけの余白(`Spec.PaddingBottom`、トークン
+`paddingBottom`)を足した(容量・はみ出しの測りも上と下の和で数える)。行送りは文字の葉の
+`LineHeight`(トークン `lineHeight`。PPTX の段落の `a:lnSpc` も同じ値)。
+`-fit` の広げの段の `itemGap` も 8・10 → 4・6 に下げた(基の 2 から1段ずつ)。
+試験は `report_tighten_test.go`(`TestReportTightenValues`・`TestReportTightenLayout`・
+`TestReportTightenBodyAboveFooter`・`TestReportTightenPPTXLineSpacing`)。
 
 **段落の塊の間(`blockGap`、#100)**:元の資料の段落の塊の間を、本文(14pt)の空き行1つ
 ぶん(行の高さ 14 × 1.35 ≈ 18.9pt)と見た。段(`spacingUnit` 2)の刻みで近い 18 にした(前は 16)。
@@ -302,12 +327,13 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 
 | 種類 | values | subsystems/gantt.json | subsystems/shapes.json |
 |---|---|---|---|
-| 余白 | `pagePadding` `pagePaddingY` `coverPadding` `sectionGap` `blockGap` `itemGap` `headerGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `pairsRowGap` `pairMarkSize` `captionGap` `sectionTrackerPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap`、#70 で移した `legendSwatchGap` `milestonePaddingX` `milestoneAxisGap` `groupBoxGap` `subgroupInsetRight` `rowLabelGap` `annotationFixedPaddingX` `annotationFixedPaddingY` `annotationGap` `annotationShift`、箱の大きさ `milestoneMinWidth` `tickLabelWidth` `tickSubLabelOffset` `tickSubLabelWidth` `tickSubLabelHeight` | `padding` `textInsetX` `textInsetY` |
-| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `leadText` `body` `subPoint` `optionLabel` `optionItem` `small` `figureDetail` `matrixRowTitle` `captionText` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
+| 余白 | `pagePadding` `pagePaddingY` `pagePaddingBottom` `coverPadding` `sectionGap` `blockGap` `itemGap` `headerGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `pairsRowGap` `pairMarkSize` `captionGap` `sectionTrackerPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap`、#70 で移した `legendSwatchGap` `milestonePaddingX` `milestoneAxisGap` `groupBoxGap` `subgroupInsetRight` `rowLabelGap` `annotationFixedPaddingX` `annotationFixedPaddingY` `annotationGap` `annotationShift`、箱の大きさ `milestoneMinWidth` `tickLabelWidth` `tickSubLabelOffset` `tickSubLabelWidth` `tickSubLabelHeight` | `padding` `textInsetX` `textInsetY` |
+| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `leadText` `body` `subPoint` `optionLabel` `optionItem` `small` `footerText` `figureDetail` `matrixRowTitle` `captionText` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
 ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率、図の中の細部の寸法は
 段階に載せない(図の寸法で、刻みに合わせても読みやすさは変わらないため)。0 以下は
-誤り。Gantt のキーの分け方は下の「subsystems/gantt.json の形」の表。
+誤り。行送りの倍率(`leadLineHeight`・`listLineHeight`、#146)も段に載せず、1 から
+`fonts.lineHeight` までに限る(字体の `lineHeight` の 1〜2 と同じく倍率で検査する)。Gantt のキーの分け方は下の「subsystems/gantt.json の形」の表。
 
 - 検査:段階そのもの(刻みが 0 以下、段が空・小さい順でない)と、段から外れた値は誤り。
   誤りの文は近い段の値を添える(例 `values.subPoint: 12.5 is not on the type scale
@@ -455,7 +481,8 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 |---|---|
 | `pageWidth` `pageHeight` | ページの大きさ |
 | `pagePadding` | 本文・主張のスライドの左右の外周 |
-| `pagePaddingY` | 本文・主張のスライドの上下の外周(題の上・フッターの下) |
+| `pagePaddingY` | 本文・主張のスライドの上の外周(題の上)。`pagePaddingBottom` と同じなら下も |
+| `pagePaddingBottom` | 本文・主張のスライドの下の外周(フッターの下、#146)。dark / light は `pagePaddingY` と同じ 24、report は 20 |
 | `coverPadding` | 表紙の外周 |
 | `sectionGap` | 題(とリード文)・本文・出典・フッターの間 |
 | `blockGap` | 本文のブロックの間、比較のカードの間 |
@@ -466,6 +493,8 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `leadText` | リード文(`lead`。題の直下、色は `text_primary`、太字にしない) |
 | `leadMaxLines` | リード文の行の数の上限(整数)。超えると `lead-wrap` の警告。0 は上限なし(dark / light は 0、report は 2) |
 | `body` | 段落・箇条 |
+| `leadLineHeight` `listLineHeight` | リード文と箇条(入れ子も)の行送り(字の大きさに掛ける倍率、#146)。1 から `fonts.lineHeight` まで(越えれば読み込みの誤り)。段落の行送りは `fonts.lineHeight` のまま。dark / light は `fonts.lineHeight` と同じ 1.35、report は 1.08 |
+| `footerText` | フッター(作者・機密区分・頁番号)の字(#146。dark / light は `small` と同じ 10、report は 8) |
 | `subPoint` | 入れ子の箇条 |
 | `optionLabel` `optionItem` | 比較の選択肢の名前、利点・欠点 |
 | `small` | 注記・フッター・図の凡例 |
@@ -561,12 +590,12 @@ dark / light / report は `{n}/{m}`)。目次のスライド(`meta.toc`)の題(`
 
 | キー | 意味 | dark・light | report |
 |---|---|---|---|
-| `body` | 本文の字(段落・箇条・図の箱の題) | 14(normal 16) | 12(normal 14) |
-| `subPoint` | 入れ子の箇条・図の2段目 | 12(14) | 11(12) |
+| `body` | 本文の字(段落・箇条・図の箱の題) | 14(normal 16) | 11(normal 14) |
+| `subPoint` | 入れ子の箇条・図の2段目 | 12(14) | 10(12) |
 | `tableText` | 表のセルの字 | 12(14) | 10(11) |
 | `small` | 注記・図の凡例 | 10(10) | 9(10) |
 | `blockGap` | 本文のブロックの間 | 12(20) | 12(18) |
-| `itemGap` | 箇条の項目の間 | 4(8) | 4(6) |
+| `itemGap` | 箇条の項目の間 | 4(8) | 2(2) |
 | `tableCellPaddingX` | 表のセルの左右の余白 | 4(8) | 2(4) |
 | `tableCellPaddingY` | 表のセルの上下の余白 | 4(4) | 0(2) |
 | `pairsRowGap` | 対の並びの対の行の間(report は行と罫線の間) | 8(20) | 2(4) |
@@ -638,12 +667,12 @@ dense は `shrink[0]` から)下り、最初に収まった段で組む。`grow`
 | | values(起点) | 16 | 14 | 14 | 10 | 20 | 8 | 20 |
 | | grow[0] | **18** | **16** | **16** | 10 | **24** | **12** | **24** |
 | | grow[1] | 18 | 16 | 16 | 10 | **32** | **16** | **28** |
-| report | dense(起点) | 12 | 11 | 10 | 9 | 12 | 4 | 12 |
-| | shrink[0] | **11** | **10** | 10 | 9 | **10** | **2** | **10** |
+| report | dense(起点) | 11 | 10 | 10 | 9 | 12 | 2 | 12 |
+| | shrink[0] | 11 | 10 | 10 | 9 | **10** | 2 | **10** |
 | | shrink[1] | 11 | 10 | 10 | 9 | **8** | 2 | **8** |
-| | values(起点) | 14 | 12 | 11 | 10 | 18 | 6 | 12 |
-| | grow[0] | **16** | **14** | **12** | 10 | **20** | **8** | **14** |
-| | grow[1] | 16 | 14 | 12 | 10 | **24** | **10** | **16** |
+| | values(起点) | 14 | 12 | 11 | 10 | 18 | 2 | 12 |
+| | grow[0] | **16** | **14** | **12** | 10 | **20** | **4** | **14** |
+| | grow[1] | 16 | 14 | 12 | 10 | **24** | **6** | **16** |
 
 広げの段の #136 の名前(重ねたあとの値。太字はその段で替えたもの):
 

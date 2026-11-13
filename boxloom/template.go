@@ -308,7 +308,12 @@ func (t *Template) pageFrame(ctx skeletonContext, kids []*Spec) (*Spec, error) {
 	if foot != nil {
 		kids = append(kids, apply(foot, []SpecOpt{noShrink()}))
 	}
-	return Col(kids, tokGap("sectionGap"), tokPadXY("pagePadding", "pagePaddingY"), tokBackground("bg")), nil
+	opts := []SpecOpt{tokGap("sectionGap"), tokPadXY("pagePadding", "pagePaddingY"), tokBackground("bg")}
+	if t.Values.PagePaddingBottom != t.Values.PagePaddingY {
+		// 下の外周だけを狭く(広く)する(#146)。同じなら書かない(上下が同じ余白)。
+		opts = append(opts, tokPadBottom("pagePaddingBottom"))
+	}
+	return Col(kids, opts...), nil
 }
 
 // contentHeader は本文のスライドの頭(標準の骨組みの contentHeader):題(title の
@@ -323,7 +328,7 @@ func (t *Template) contentHeader(s *IRSlide) *Spec {
 
 // leadText はリード文の葉。
 func (t *Template) leadText(in Inline) *Spec {
-	return t.prose(in, "leadText", "text_primary", false, fromIR("lead"))
+	return t.prose(in, "leadText", "text_primary", false, tokLineHeight("leadLineHeight"), fromIR("lead"))
 }
 
 // footer は本文のスライドの下の行(左に作者と機密区分、右に「何枚目 / 全部」)。
@@ -337,7 +342,7 @@ func (t *Template) footer(d *IRDeck, page, total int) *Spec {
 	if d.Meta != nil && d.Meta.Author != nil {
 		left = d.Meta.Author.Plain()
 	}
-	leftSpec := TextNode(left, tokSize("small"), tokColor("text_muted"))
+	leftSpec := TextNode(left, tokSize("footerText"), tokColor("text_muted"))
 	if left != "" {
 		leftSpec.Placeholder = "ftr"
 	}
@@ -346,7 +351,7 @@ func (t *Template) footer(d *IRDeck, page, total int) *Spec {
 		if left == "" {
 			opts = append(opts, WithPlaceholder("ftr"))
 		}
-		conf := t.text(d.Meta.Confidential, "small", "text_primary", true, opts...)
+		conf := t.text(d.Meta.Confidential, "footerText", "text_primary", true, opts...)
 		if left == "" {
 			leftSpec = conf
 		} else {
@@ -358,7 +363,7 @@ func (t *Template) footer(d *IRDeck, page, total int) *Spec {
 		RichTextNode([]TextRun{
 			{Text: fmt.Sprint(page + 1), role: "text_muted", Field: "slidenum"},
 			{Text: fmt.Sprintf(" / %d", total), role: "text_muted"},
-		}, tokSize("small"), WithAlign("right"), WithPlaceholder("sldNum")),
+		}, tokSize("footerText"), WithAlign("right"), WithPlaceholder("sldNum")),
 	}, WithJustify(JustifySpaceBetween))
 }
 
@@ -498,7 +503,7 @@ func (t *Template) points(items []IRPointItem, depth int, ordered bool) *Spec {
 				AutoNum: style, widthTok: "pointIndentEm"}
 		}
 		runs := append([]TextRun{head}, t.runs(it.Content, "text_primary", false)...)
-		kids = append(kids, RichTextNode(runs, tokSize(size)))
+		kids = append(kids, RichTextNode(runs, tokSize(size), tokLineHeight("listLineHeight")))
 		if len(it.Items) > 0 {
 			// 字下げ: 左に固定幅の空き + 入れ子の箇条(残りの幅をもらう)。空きの幅は
 			// 字の大きさの倍(pointIndentEm は em の名前なので、空きの箱の字の大きさに掛ける)。

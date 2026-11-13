@@ -55,10 +55,12 @@ type LayoutSlide struct {
 	Root            *LayoutNode `json:"root"`
 }
 
-// LayoutPadding は箱の内側の余白(x は左右、y は上下)。
+// LayoutPadding は箱の内側の余白(x は左右、y は上下)。Bottom は下だけが違う
+// ときの下の余白(ページの枠の pagePaddingBottom。同じなら省く)。
 type LayoutPadding struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
+	X      float64  `json:"x"`
+	Y      float64  `json:"y"`
+	Bottom *float64 `json:"bottom,omitempty"`
 }
 
 // LayoutRun は装飾つきの文字の塊。
@@ -131,19 +133,21 @@ type LayoutNode struct {
 	Background     string         `json:"background,omitempty"`
 	Radius         *float64       `json:"radius,omitempty"`
 
-	Text        *string     `json:"text,omitempty"`
-	Runs        []LayoutRun `json:"runs,omitempty"`
-	FontSize    float64     `json:"fontSize,omitempty"`
-	Color       string      `json:"color,omitempty"`
-	Bold        bool        `json:"bold,omitempty"`
-	TextAlign   string      `json:"textAlign,omitempty"` // left 以外のとき
-	Anchor      string      `json:"anchor,omitempty"`    // top 以外のとき
-	Placeholder string      `json:"placeholder,omitempty"`
+	Text     *string     `json:"text,omitempty"`
+	Runs     []LayoutRun `json:"runs,omitempty"`
+	FontSize float64     `json:"fontSize,omitempty"`
+	// LineHeight は行送りの倍率(葉が持つときだけ。無ければ fonts.lineHeight。#146)。
+	LineHeight  float64 `json:"lineHeight,omitempty"`
+	Color       string  `json:"color,omitempty"`
+	Bold        bool    `json:"bold,omitempty"`
+	TextAlign   string  `json:"textAlign,omitempty"` // left 以外のとき
+	Anchor      string  `json:"anchor,omitempty"`    // top 以外のとき
+	Placeholder string  `json:"placeholder,omitempty"`
 
 	Marks     *LayoutMarks     `json:"marks,omitempty"`
 	Subsystem *LayoutSubsystem `json:"subsystem,omitempty"`
 	// Tokens は部品が書いたトークン(値の表の名前・space(n)・type(n)・役割名)。
-	// キーは gap・padding・paddingY・width・height・fontSize・color・background・radius。
+	// キーは gap・padding・paddingY・paddingBottom・width・height・fontSize・lineHeight・color・background・radius。
 	Tokens   map[string]string `json:"tokens,omitempty"`
 	Children []*LayoutNode     `json:"children,omitempty"`
 }
@@ -272,11 +276,16 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 	addTok("gap", k.gap)
 	if s.Padding != 0 || s.padY() != 0 {
 		n.Padding = &LayoutPadding{X: s.padX(), Y: s.padY()}
+		if s.PaddingBottom != nil {
+			b := *s.PaddingBottom
+			n.Padding.Bottom = &b
+		}
 	}
 	addTok("padding", k.padX)
 	if k.padY != k.padX {
 		addTok("paddingY", k.padY)
 	}
+	addTok("paddingBottom", k.padBottom)
 	addTok("width", k.width)
 	addTok("height", k.height)
 	// 字の大きさ(文字の葉。em の名前で幅を決めた空きの箱も持つ)。
@@ -301,6 +310,8 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 		txt := s.Text
 		n.Text = &txt
 		n.FontSize = s.FontSize
+		n.LineHeight = s.LineHeight
+		addTok("lineHeight", k.lineHeight)
 		if len(s.Runs) > 0 {
 			for _, r := range s.Runs {
 				n.Runs = append(n.Runs, LayoutRun{Text: r.Text, Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep, Phrase: r.Phrase, Field: r.Field, Role: r.role, SizeToken: r.sizeTok,

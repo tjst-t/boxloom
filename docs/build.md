@@ -249,7 +249,7 @@ go run ./cmd/boxloom layout -template dark ../examples/ir/demo-deck.json
   テーマの役割名)を書く。組み立ての直後・計測の前に1か所(`resolveSpec`、
   `boxloom/token.go`)で数と色に直す(`docs/layers.md` の 2.1・8.3)。出力には解決した値
   (`gap`・`padding`・`fontSize`・`background` など)と、部品が書いたトークンの両方が出る:
-  `tokens` の `gap`・`padding`・`paddingY`・`width`・`height`・`fontSize`・`color`・
+  `tokens` の `gap`・`padding`・`paddingY`・`paddingBottom`・`width`・`height`・`fontSize`・`lineHeight`・`color`・
   `background`・`radius`、塊の色は `runs[].role`、塊だけの字の大きさは `runs[].sizeToken`。
   `pointIndentEm` のような em の名前は、同じ箱の `fontSize` のトークンに掛けた値になる。
 - `box` は build と同じ配置(PPTX はこれをそのまま `a:off`/`a:ext` に書く)。文字の葉・

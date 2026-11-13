@@ -215,7 +215,7 @@ func collectSubsystems(s *Spec, out *[]*Spec) {
 
 var (
 	layoutKindOf    = map[string]Kind{"row": KindRow, "col": KindCol, "text": KindText, "subsystem": KindSubsystem}
-	layoutTokenKeys = []string{"gap", "padding", "paddingY", "width", "height", "fontSize", "color", "background", "radius"}
+	layoutTokenKeys = []string{"gap", "padding", "paddingY", "paddingBottom", "width", "height", "fontSize", "lineHeight", "color", "background", "radius"}
 )
 
 func layoutSame(a, b float64) bool { return math.Abs(a-b) < 1e-6 }
@@ -298,11 +298,18 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 	} else if s.tok.padX == "" && hasPad && py != 0 {
 		r.add(at+"/padding/y", "layout-raw", fmt.Sprintf("padding y %v is written without a token (write tokens.paddingY)", py))
 	}
+	var pb float64
+	hasBottom := hasPad && n.Padding.Bottom != nil
+	if hasBottom {
+		pb = *n.Padding.Bottom
+	}
+	s.tok.padBottom, _ = check("padding/bottom", "paddingBottom", hasBottom, pb, r.tt.space)
 	var font float64
 	s.tok.fontSize, font = check("fontSize", "fontSize", n.FontSize != 0, n.FontSize, r.tt.typeSize)
 	if kind == KindText && s.tok.fontSize == "" && tok["fontSize"] == "" {
 		r.add(at+"/tokens", "layout-raw", "a text leaf needs a type size token (tokens.fontSize)")
 	}
+	s.tok.lineHeight, _ = check("lineHeight", "lineHeight", n.LineHeight != 0, n.LineHeight, r.tt.lineHeight)
 	hasFont := s.tok.fontSize != ""
 	length := func(name string) (float64, error) { return r.tt.length(name, font, hasFont) }
 	opt := func(p *float64) (bool, float64) {

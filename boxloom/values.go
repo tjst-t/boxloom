@@ -43,11 +43,14 @@ type TemplateValues struct {
 
 	PagePadding  float64 `json:"pagePadding" scale:"space"`  // 本文・主張のスライドの左右の外周
 	PagePaddingY float64 `json:"pagePaddingY" scale:"space"` // 本文・主張のスライドの上下の外周
-	CoverPadding float64 `json:"coverPadding" scale:"space"` // 表紙の外周
-	SectionGap   float64 `json:"sectionGap" scale:"space"`   // 見出し・本文・フッターの間
-	BlockGap     float64 `json:"blockGap" scale:"space"`     // 本文のブロックの間
-	ItemGap      float64 `json:"itemGap" scale:"space"`      // 箇条の項目の間
-	HeaderGap    float64 `json:"headerGap" scale:"space"`    // 題とリード文の間
+	// PagePaddingBottom は本文・主張のスライドの下の外周(フッターの下。#146)。
+	// pagePaddingY と同じなら上下が同じ余白。
+	PagePaddingBottom float64 `json:"pagePaddingBottom" scale:"space"`
+	CoverPadding      float64 `json:"coverPadding" scale:"space"` // 表紙の外周
+	SectionGap        float64 `json:"sectionGap" scale:"space"`   // 見出し・本文・フッターの間
+	BlockGap          float64 `json:"blockGap" scale:"space"`     // 本文のブロックの間
+	ItemGap           float64 `json:"itemGap" scale:"space"`      // 箇条の項目の間
+	HeaderGap         float64 `json:"headerGap" scale:"space"`    // 題とリード文の間
 
 	CoverTitle    float64 `json:"coverTitle" scale:"type"`
 	CoverSubtitle float64 `json:"coverSubtitle" scale:"type"`
@@ -60,7 +63,8 @@ type TemplateValues struct {
 	SubPoint     float64 `json:"subPoint" scale:"type"`     // 入れ子の箇条
 	OptionLabel  float64 `json:"optionLabel" scale:"type"`  // 比較の選択肢の名前
 	OptionItem   float64 `json:"optionItem" scale:"type"`   // 比較の利点・欠点
-	Small        float64 `json:"small" scale:"type"`        // 注記・フッター・図の凡例
+	Small        float64 `json:"small" scale:"type"`        // 注記・出典・図の凡例
+	FooterText   float64 `json:"footerText" scale:"type"`   // フッター(作者・機密区分・頁番号。#146)
 	FigureDetail float64 `json:"figureDetail" scale:"type"` // 図の補足(箱の2段目・段階の下・図の説明)
 	CaptionText  float64 `json:"captionText" scale:"type"`  // 表・画像の説明の文
 
@@ -81,6 +85,11 @@ type TemplateValues struct {
 	QuoteText     float64 `json:"quoteText" scale:"type"`     // 引用(quote)の言葉
 	QuoteMark     float64 `json:"quoteMark" scale:"type"`     // 引用の頭の印
 	QuoteSource   float64 `json:"quoteSource" scale:"type"`   // 引用の出どころ
+
+	// LeadLineHeight・ListLineHeight はリード文と箇条の行送り(字の大きさの倍。#146)。
+	// 1 から fonts.lineHeight まで(本文の段落の行送りより広くはできない)。
+	LeadLineHeight float64 `json:"leadLineHeight" unit:"lineHeight"`
+	ListLineHeight float64 `json:"listLineHeight" unit:"lineHeight"`
 
 	PointIndentEm float64 `json:"pointIndentEm" unit:"em"` // 入れ子の箇条の字下げ(親の字の大きさの倍)。番号つきの箇条の番号の幅も
 	// OrderedStyle は番号つきの箇条(points の ordered)の1段目の番号の形
@@ -678,6 +687,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := checkLineHeights(f.Values, fonts.lineHeight()); err != nil {
+		return nil, err
+	}
 	variants := map[string]bool{}
 	for _, v := range f.Variants {
 		if v == "" || variants[v] {
@@ -786,6 +798,23 @@ func templateFigureSizes(s *templateSubsystems) figureSizes {
 		}
 	}
 	return figureSizesFrom(o, p, m)
+}
+
+// checkLineHeights は行送りの名前(unit:"lineHeight")が 1 から本文の行送り
+// (fonts.lineHeight)までに入ることを見る。行送りを詰めるための名前で、字の高さ
+// (1em)より詰めると行が重なる。
+func checkLineHeights(v TemplateValues, body float64) error {
+	rv, rt := reflect.ValueOf(v), reflect.TypeOf(v)
+	for i := 0; i < rt.NumField(); i++ {
+		if rt.Field(i).Tag.Get("unit") != "lineHeight" {
+			continue
+		}
+		name, _, _ := strings.Cut(rt.Field(i).Tag.Get("json"), ",")
+		if x := rv.Field(i).Float(); x < 1 || x > body+scaleEps {
+			return fmt.Errorf("values.%s: %v must be between 1 and fonts.lineHeight (%v)", name, x, body)
+		}
+	}
+	return nil
 }
 
 // checkPositive は値の表の数が全部 0 より大きいことを見る(打ち間違えた値を

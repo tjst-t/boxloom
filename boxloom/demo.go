@@ -94,6 +94,7 @@ func renderSpec(ctx RenderContext, s *Spec) {
 		if s.Placeholder != "" {
 			p.Shapes[len(p.Shapes)-1].ph = s.Placeholder
 		}
+		p.Shapes[len(p.Shapes)-1].lineMult = s.LineHeight
 		return
 	case KindSubsystem:
 		if s.Subsystem != nil {
@@ -144,7 +145,7 @@ func layoutParas(s *Spec, left, top float64) []listPara {
 				if len(runs) == 0 {
 					runs = []TextRun{{Text: c.Text, Color: c.Color, Bold: c.Bold}}
 				}
-				items = append(items, listPara{Runs: runs, Size: c.FontSize, Level: level,
+				items = append(items, listPara{Runs: runs, Size: c.FontSize, LineHeight: c.LineHeight, Level: level,
 					Indent: c.Box.X - left, SpaceBefore: math.Max(sp, 0)})
 				prevBottom = c.Box.Y + c.Box.Height
 			case c.List:
@@ -161,7 +162,7 @@ func layoutParas(s *Spec, left, top float64) []listPara {
 // --- fill-ratioリンター。本物のcontent_fill_ratio()/lint_fill_ratio()の移植。 ---
 
 func contentFillRatio(root *Spec) float64 {
-	availableH := root.Box.Height - 2*root.padY()
+	availableH := root.Box.Height - root.padYSum()
 
 	var deepestBottom func(s *Spec) float64
 	deepestBottom = func(s *Spec) float64 {

@@ -364,7 +364,7 @@ func (t *Template) reportContentHeader(s *IRSlide) *Spec {
 		return t.text(s.Title, "leadText", "accent", false, WithPlaceholder("title"), fromIR("title"))
 	}
 	// リードは標準の太さ(#100。元の資料も太字でない。太字は字幅が広がり折れやすい)。
-	lead := t.prose(s.Lead, "leadText", "accent", false, fromIR("lead"))
+	lead := t.prose(s.Lead, "leadText", "accent", false, tokLineHeight("leadLineHeight"), fromIR("lead"))
 	title := t.text(s.Title, "slideTitle", "text_primary", false, WithPlaceholder("title"), fromIR("title"))
 	return Col([]*Spec{lead, title}, tokGap("headerGap"))
 }
@@ -436,7 +436,8 @@ var reportPairsStyle = pairsStyle{
 	sideTitle: func(t *Template, title Inline) *Spec {
 		return t.text(title, "body", "accent", true)
 	},
-	rowGap: "pairsRowGap", // 値の表(normal は reportPairRowGap と同じ 4pt。dense で詰める、#136)
+	titleGap: "itemGap",     // 側の見出しと箇条の間を詰める(#146。元の資料は 0)
+	rowGap:   "pairsRowGap", // 値の表(normal は reportPairRowGap と同じ 4pt。dense で詰める、#136)
 	mark: func(t *Template, k int, label string) *Spec {
 		if label == "" {
 			label = pairLetter(k)

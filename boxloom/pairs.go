@@ -438,6 +438,9 @@ type pairsStyle struct {
 	// rowGap は対の行の間(罫線を引くなら罫線の上と下それぞれ)の空きのトークン
 	// ("" なら値の表の pairsRowGap。#136)。
 	rowGap string
+	// titleGap は見出しと複数のブロックの側で、見出し(title)とその下のブロックの
+	// 間のトークン("" なら blockGap。ブロックの間はどちらでも blockGap。#146)。
+	titleGap string
 }
 
 // pairsComponent は pairs の組み方:見出しの行の下に、対ごとに1つの行を置く。
@@ -551,6 +554,12 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 				return grow(kids, tokGap("itemGap")), parts, nil // 名前と1つのブロック
 			}
 			return grow(kids), parts, nil
+		}
+		if st.titleGap != "" && parts.title != nil && len(parts.body) > 0 {
+			// 見出しとブロックの列を titleGap で、ブロックどうしを blockGap で積む。
+			body := Col(parts.body, tokGap("blockGap"), nestedSlack())
+			head := kids[:len(kids)-len(parts.body)]
+			kids = append(append([]*Spec{}, head[:len(head)-1]...), Col([]*Spec{parts.title, body}, tokGap(st.titleGap), nestedSlack()))
 		}
 		return grow(kids, tokGap("blockGap"), nestedSlack()), parts, nil
 	}

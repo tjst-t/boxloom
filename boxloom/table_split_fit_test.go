@@ -107,7 +107,7 @@ func TestFitShrinksWholeTableChain(t *testing.T) {
 	for _, c := range []struct {
 		tm   string
 		rows int
-	}{{"light", 15}, {"report", 21}} {
+	}{{"light", 15}, {"report", 23}} {
 		tm := c.tm
 		data := splitFitDeck(splitFitTable(splitFitRange(0, 4), false, false), splitFitTable(splitFitRange(4, 4+c.rows), true, false))
 		plain := Check("x.bx.md", data, CheckOptions{Template: tm})

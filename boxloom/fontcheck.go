@@ -127,11 +127,12 @@ func measurePages(pages []*PPTXBuilder, alt *FontSet) fontStats {
 					box := LBox{X: tr.X + it.Indent, Y: tr.Y, Width: tr.Width - it.Indent, Height: math.Inf(1)}
 					lines := wrapRuns(it.Runs, it.Size, box.Width)
 					restore()
-					used += it.SpaceBefore + float64(len(lines))*it.Size*lineHeightMult()
+					lm := shapeLineMult(s, it.LineHeight)
+					used += it.SpaceBefore + float64(len(lines))*it.Size*lm
 					before := st.RewrapMore
-					n := measureUnit(&st, alt, p, s, it.Runs, lines, box, it.Size)
+					n := measureUnit(&st, alt, p, s, it.Runs, lines, box, it.Size, lm)
 					if st.RewrapMore > before {
-						added += float64(n-len(lines)) * it.Size * lineHeightMult()
+						added += float64(n-len(lines)) * it.Size * lm
 						grown = append(grown, len(st.Rewraps)-1)
 					}
 				}
@@ -158,15 +159,28 @@ func measurePages(pages []*PPTXBuilder, alt *FontSet) fontStats {
 			default:
 				continue
 			}
-			measureUnit(&st, alt, p, s, s.runs, lines, box, s.fontSize)
+			measureUnit(&st, alt, p, s, s.runs, lines, box, s.fontSize, shapeLineMult(s, 0))
 		}
 	}
 	return st
 }
 
+// shapeLineMult は組んだときの行送りの倍率:段落の値(para)、図形の値、テンプレートの
+// fonts.lineHeight の順(#146)。
+func shapeLineMult(s *shape, para float64) float64 {
+	switch {
+	case para > 0:
+		return para
+	case s.lineMult > 0:
+		return s.lineMult
+	}
+	return lineHeightMult()
+}
+
 // measureUnit は1つの文字の枠(箇条なら1つの段落)を alt の字体で測り直して数える。
 // 返り値は置き換わった字体で折り返し直した行の数(折り返さない文字なら測った行の数)。
-func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []TextRun, lines [][]TextRun, box LBox, size float64) int {
+// lm は組んだときの行送りの倍率(shapeLineMult)。
+func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []TextRun, lines [][]TextRun, box LBox, size, lm float64) int {
 	const eps = 0.01
 	st.Boxes++
 	st.Lines += len(lines)
@@ -202,7 +216,7 @@ func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []T
 		case n > len(lines):
 			st.RewrapChanged++
 			st.RewrapMore++
-			over := float64(n)*size*lineHeightMult() > box.Height+0.5
+			over := float64(n)*size*lm > box.Height+0.5
 			if over {
 				st.RewrapOverflow++
 			}
@@ -217,7 +231,7 @@ func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []T
 		}
 	}
 	// 行の高さ:固定しないなら字体の ascent+descent で送られる(目安)。
-	lh := lineHeightMult()
+	lh := lm
 	if p.Fonts == nil || !p.Fonts.FixedLineSpacing {
 		lh = alt.Latin.LineHeightEm()
 		if hasEastAsian(lines) {
@@ -225,7 +239,7 @@ func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []T
 		}
 	}
 	h := float64(len(lines)) * size * lh
-	assumed := float64(len(lines)) * size * lineHeightMult()
+	assumed := float64(len(lines)) * size * lm
 	// 組むときの見積もり(行の数×字の大きさ×lineHeightMult())では収まって
 	// いた箱だけを数える(エンジンが縮めた箱・固定の大きさの箱は別の話)。
 	if h-box.Height > eps && assumed <= box.Height+eps {

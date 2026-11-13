@@ -22,6 +22,12 @@ func readFitDeck(t *testing.T, path string, edit func(string) string) (string, [
 	return path, data
 }
 
+// reportFitMore は例の deck の最後に箇条を4つ足す。report は箇条の行送りと項目の間を
+// 詰め、本文が下へ広い(#146)ので、例のままでは normal で収まる。
+func reportFitMore(md string) string {
+	return strings.Replace(md, ":::note", "- 追加の論点の1つ目を書く\n- 追加の論点の2つ目を書く\n- 追加の論点の3つ目を書く\n- 追加の論点の4つ目を書く\n\n:::note", 1)
+}
+
 func fitIssues(warns []Issue, code string) []Issue {
 	var out []Issue
 	for _, w := range warns {
@@ -35,8 +41,11 @@ func fitIssues(warns []Issue, code string) []Issue {
 // はみ出すスライドは -fit で梯子を下りて収まり、info の fit-applied と容量の fit が出る。
 // normal のスライドは dense から(report は dense で、light は fit.shrink[0] で収まる)。
 func TestFitShrinkPacksOverflowingSlide(t *testing.T) {
-	file, data := readFitDeck(t, fitOverflowMD, nil)
-	for _, c := range []struct{ tmpl, step string }{{"light", "fit.shrink[0]"}, {"report", fitStepDense}} {
+	for _, c := range []struct {
+		tmpl, step string
+		edit       func(string) string
+	}{{"light", "fit.shrink[0]", nil}, {"report", fitStepDense, reportFitMore}} {
+		file, data := readFitDeck(t, fitOverflowMD, c.edit)
 		plain := Check(file, data, CheckOptions{Template: c.tmpl})
 		if len(fitIssues(plain.Warnings, codeLayoutOverflow)) == 0 || plain.Info != nil {
 			t.Fatalf("%s: without -fit the example should overflow and have no info: %+v", c.tmpl, plain)

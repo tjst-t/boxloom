@@ -57,7 +57,9 @@ type shape struct {
 	align    string
 	anchor   string
 	runs     []TextRun // 空でなければ text・color・bold の代わりに使う
-	wrap     bool      // true: このGo版の自前ロジックで幅に収まるよう折り返す。false: "\n"のみを境界として扱い、幅では折り返さない(本物のwrap=Falseに相当)。
+	// lineMult は行送りの倍率(0 なら fonts.lineHeight。葉の LineHeight、#146)。
+	lineMult float64
+	wrap     bool // true: このGo版の自前ロジックで幅に収まるよう折り返す。false: "\n"のみを境界として扱い、幅では折り返さない(本物のwrap=Falseに相当)。
 
 	x1, y1, x2, y2 float64
 	lineColor      string
@@ -219,6 +221,7 @@ func (p *PPTXBuilder) AddRichTextBox(box LBox, runs []TextRun, fontSize float64,
 type listPara struct {
 	Runs        []TextRun
 	Size        float64
+	LineHeight  float64 // 行送りの倍率(0 なら fonts.lineHeight)
 	Level       int
 	Indent      float64
 	SpaceBefore float64
@@ -571,7 +574,7 @@ func (p *PPTXBuilder) parasXMLSized(s *shape, lines [][]TextRun, fontSize float6
 		}
 		lnSpc := ""
 		if p.Fonts != nil && p.Fonts.FixedLineSpacing {
-			lnSpc = fmt.Sprintf(`<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(fontSize*p.Fonts.lineHeight()*100)))
+			lnSpc = fmt.Sprintf(`<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(fontSize*p.lineMult(s, 0)*100)))
 		}
 		if lnSpc == "" && bullet == "" {
 			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr%s algn="%s"/>`, indent, alignAttr(s.align)))
@@ -608,11 +611,23 @@ func (p *PPTXBuilder) flowXML(s *shape, runs []TextRun, fontSize, width float64)
 	return out.String()
 }
 
+// lineMult は段落の行送りの倍率:段落の値(para)、図形の値、fonts.lineHeight の順。
+func (p *PPTXBuilder) lineMult(s *shape, para float64) float64 {
+	switch {
+	case para > 0:
+		return para
+	case s != nil && s.lineMult > 0:
+		return s.lineMult
+	}
+	return p.Fonts.lineHeight()
+}
+
 // paraOpts は段落の属性のうち、箇条の並びで使うもの。
 type paraOpts struct {
 	level       int
 	indent      float64 // 枠の左端から印までの字下げ(pt)
 	spaceBefore float64 // 段落の前の間(pt)
+	lineMult    float64 // 行送りの倍率(0 なら図形の lineMult か fonts.lineHeight)
 }
 
 // paraXML は1つの段落(折り返した行の並び)を a:p にする。行の間は、意味のある
@@ -635,7 +650,7 @@ func (p *PPTXBuilder) paraXML(s *shape, lines [][]TextRun, fontSize float64, o p
 	}
 	var props strings.Builder
 	if p.Fonts != nil && p.Fonts.FixedLineSpacing {
-		fmt.Fprintf(&props, `<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(fontSize*p.Fonts.lineHeight()*100)))
+		fmt.Fprintf(&props, `<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(fontSize*p.lineMult(s, o.lineMult)*100)))
 	}
 	if o.spaceBefore > 0 {
 		fmt.Fprintf(&props, `<a:spcBef><a:spcPts val="%d"/></a:spcBef>`, int(math.Round(o.spaceBefore*100)))
@@ -728,7 +743,7 @@ func (p *PPTXBuilder) listXML(s *shape) string {
 	var out strings.Builder
 	for _, it := range s.list {
 		lines := wrapRuns(it.Runs, it.Size, math.Max(listRect(s).Width-it.Indent, 0))
-		out.WriteString(p.paraXML(s, lines, it.Size, paraOpts{level: it.Level, indent: it.Indent, spaceBefore: it.SpaceBefore}))
+		out.WriteString(p.paraXML(s, lines, it.Size, paraOpts{level: it.Level, indent: it.Indent, spaceBefore: it.SpaceBefore, lineMult: it.LineHeight}))
 	}
 	return out.String()
 }

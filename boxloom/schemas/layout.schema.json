@@ -116,11 +116,11 @@
         "box": {"$ref": "#/$defs/box"},
         "gap": {"$ref": "#/$defs/pt"},
         "padding": {
-          "description": "内側の余白(x は左右、y は上下)。",
+          "description": "内側の余白(x は左右、y は上下。bottom は下だけが違うときの下の余白)。",
           "type": "object",
           "required": ["x", "y"],
           "additionalProperties": false,
-          "properties": {"x": {"$ref": "#/$defs/pt"}, "y": {"$ref": "#/$defs/pt"}}
+          "properties": {"x": {"$ref": "#/$defs/pt"}, "y": {"$ref": "#/$defs/pt"}, "bottom": {"$ref": "#/$defs/pt"}}
         },
         "grow": {"type": "number"},
         "basis": {"$ref": "#/$defs/pt"},
@@ -133,6 +133,7 @@
         "text": {"description": "文字の葉の文字(runs があればそれをつないだもの)。", "type": "string"},
         "runs": {"type": "array", "items": {"$ref": "#/$defs/run"}},
         "fontSize": {"$ref": "#/$defs/pt"},
+        "lineHeight": {"description": "行送りの倍率(葉が持つときだけ。無ければ fonts.lineHeight)。", "type": "number", "minimum": 1},
         "color": {"description": "装飾の無い文字の葉の色(runs があれば塊ごと)。", "$ref": "#/$defs/color"},
         "bold": {"type": "boolean"},
         "textAlign": {"description": "left 以外のとき。", "enum": ["center", "right"]},
@@ -149,9 +150,11 @@
             "gap": {"$ref": "#/$defs/tokenName"},
             "padding": {"$ref": "#/$defs/tokenName"},
             "paddingY": {"$ref": "#/$defs/tokenName"},
+            "paddingBottom": {"$ref": "#/$defs/tokenName"},
             "width": {"$ref": "#/$defs/tokenName"},
             "height": {"$ref": "#/$defs/tokenName"},
             "fontSize": {"$ref": "#/$defs/tokenName"},
+            "lineHeight": {"$ref": "#/$defs/tokenName"},
             "color": {"$ref": "#/$defs/tokenName"},
             "background": {"$ref": "#/$defs/tokenName"},
             "radius": {"$ref": "#/$defs/tokenName"}

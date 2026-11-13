@@ -119,10 +119,11 @@ func TestDenseSlideUsesDenseValues(t *testing.T) {
 	}
 }
 
-// report の dense の組は本文 12・入れ子 11・表 10(読む資料のサンプルの密なページ)。
+// report の dense の組は本文 11・入れ子 10・表 10・項目の間 2(読む資料のサンプルの
+// 密なページ。#146 で本文を元の資料の 22 頁の 11pt に)。
 func TestReportDenseValues(t *testing.T) {
 	dv := mustTemplate("report").Dense
-	if dv.Body != 12 || dv.SubPoint != 11 || dv.TableText != 10 {
+	if dv.Body != 11 || dv.SubPoint != 10 || dv.TableText != 10 || dv.ItemGap != 2 {
 		t.Fatalf("report dense = %+v", dv)
 	}
 }
