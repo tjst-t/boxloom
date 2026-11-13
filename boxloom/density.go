@@ -91,7 +91,7 @@ func setTextSizes(s Subsystem, v TemplateValues, point string) {
 	ft := figureTextFrom(v)
 	ft.Point = point
 	if *p != nil {
-		ft.Point = (*p).Point
+		ft.Point, ft.Sizes = (*p).Point, (*p).Sizes
 	}
 	*p = &ft
 }

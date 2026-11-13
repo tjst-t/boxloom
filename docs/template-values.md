@@ -624,7 +624,7 @@ report の表のセルの上下の余白は刻み(2pt)の下が 0 しか無い�
 | `figureDetail` | `values.figureDetail` | 図の箱の補足(orgchart の3段目・phases の箱の補足)の字 |
 | `calloutMark` | `values.calloutMark` | report の引用の人の印・結論の丸い矢印の大きさ |
 | `quoteText` `quoteMark` `quoteSource` | `values` の同じ名前 | 引用の言葉・頭の印・出どころの字(report の吹き出しの余白は `cardPadding`) |
-| `orgchartTextInsetY` `orgchartMinBoxHeight` `orgchartMemberGap` `orgchartMinLevelGap` | `subsystems.orgchart` の `textInsetY` `minBoxHeight` `memberGap` `minLevelGap` | 組織図の箱の上下の余白・箱の高さの下限・3段目の箱の間・段の間の下限 |
+| `orgchartTextInsetY` `orgchartTextInsetX` `orgchartMinBoxHeight` `orgchartMemberGap` `orgchartMinLevelGap` | `subsystems.orgchart` の `textInsetY` `textInsetX` `minBoxHeight` `memberGap` `minLevelGap` | 組織図の箱の上下・左右の余白(左右は #153)・箱の高さの下限・3段目の箱の間・段の間の下限 |
 | `phasesTextInsetY` `phasesItemGap` `phasesHeaderGap` `phasesMinHeaderHeight` | `subsystems.phases` の `textInsetY` `itemGap` `headerGap` `minHeaderHeight` | フェーズの箱の上下の余白・箱の間・山形と箱の間・山形の高さの下限 |
 | `matrixMinRowHeight` `matrixTextInsetY` `matrixMarkSize` `matrixCellGap` | `subsystems.matrix` の `minRowHeight` `textInsetY` `markSize` `cellGap` | matrix の行の高さの下限・セルの上下の余白・mark の丸・セルの間 |
 

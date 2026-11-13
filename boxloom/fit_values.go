@@ -46,6 +46,7 @@ type fitStep struct {
 	QuoteMark           *float64 `json:"quoteMark,omitempty" scale:"type"`
 	QuoteSource         *float64 `json:"quoteSource,omitempty" scale:"type"`
 	OrgChartTextInsetY  *float64 `json:"orgchartTextInsetY,omitempty" scale:"space"`
+	OrgChartTextInsetX  *float64 `json:"orgchartTextInsetX,omitempty" scale:"space"`
 	OrgChartMinBoxH     *float64 `json:"orgchartMinBoxHeight,omitempty"`
 	OrgChartMemberGap   *float64 `json:"orgchartMemberGap,omitempty" scale:"space"`
 	OrgChartMinLevelGap *float64 `json:"orgchartMinLevelGap,omitempty" scale:"space"`
@@ -89,6 +90,7 @@ type FitValues struct {
 	QuoteMark           float64 `json:"quoteMark" scale:"type"`
 	QuoteSource         float64 `json:"quoteSource" scale:"type"`
 	OrgChartTextInsetY  float64 `json:"orgchartTextInsetY" scale:"space"`
+	OrgChartTextInsetX  float64 `json:"orgchartTextInsetX" scale:"space"`
 	OrgChartMinBoxH     float64 `json:"orgchartMinBoxHeight"`
 	OrgChartMemberGap   float64 `json:"orgchartMemberGap" scale:"space"`
 	OrgChartMinLevelGap float64 `json:"orgchartMinLevelGap" scale:"space"`
@@ -122,7 +124,7 @@ func (f FitValues) apply(v TemplateValues) TemplateValues {
 	v.FigureDetail, v.CalloutMark = f.FigureDetail, f.CalloutMark
 	v.QuoteText, v.QuoteMark, v.QuoteSource = f.QuoteText, f.QuoteMark, f.QuoteSource
 	v.fig = figureSizes{
-		OrgChartTextInsetY: f.OrgChartTextInsetY, OrgChartMinBoxH: f.OrgChartMinBoxH, OrgChartMemberGap: f.OrgChartMemberGap, OrgChartMinLevelGap: f.OrgChartMinLevelGap,
+		OrgChartTextInsetY: f.OrgChartTextInsetY, OrgChartTextInsetX: f.OrgChartTextInsetX, OrgChartMinBoxH: f.OrgChartMinBoxH, OrgChartMemberGap: f.OrgChartMemberGap, OrgChartMinLevelGap: f.OrgChartMinLevelGap,
 		PhasesTextInsetY: f.PhasesTextInsetY, PhasesItemGap: f.PhasesItemGap, PhasesHeaderGap: f.PhasesHeaderGap, PhasesMinHeaderH: f.PhasesMinHeaderH,
 		MatrixMinRowH: f.MatrixMinRowH, MatrixTextInsetY: f.MatrixTextInsetY, MatrixMarkSize: f.MatrixMarkSize, MatrixCellGap: f.MatrixCellGap,
 	}
@@ -137,7 +139,7 @@ func fitBaseValues(v TemplateValues) FitValues {
 		PairsRowGap: v.PairsRowGap, PairMarkSize: v.PairMarkSize, MatrixRowTitle: v.MatrixRowTitle,
 		FigureDetail: v.FigureDetail, CalloutMark: v.CalloutMark,
 		QuoteText: v.QuoteText, QuoteMark: v.QuoteMark, QuoteSource: v.QuoteSource,
-		OrgChartTextInsetY: g.OrgChartTextInsetY, OrgChartMinBoxH: g.OrgChartMinBoxH, OrgChartMemberGap: g.OrgChartMemberGap, OrgChartMinLevelGap: g.OrgChartMinLevelGap,
+		OrgChartTextInsetY: g.OrgChartTextInsetY, OrgChartTextInsetX: g.OrgChartTextInsetX, OrgChartMinBoxH: g.OrgChartMinBoxH, OrgChartMemberGap: g.OrgChartMemberGap, OrgChartMinLevelGap: g.OrgChartMinLevelGap,
 		PhasesTextInsetY: g.PhasesTextInsetY, PhasesItemGap: g.PhasesItemGap, PhasesHeaderGap: g.PhasesHeaderGap, PhasesMinHeaderH: g.PhasesMinHeaderH,
 		MatrixMinRowH: g.MatrixMinRowH, MatrixTextInsetY: g.MatrixTextInsetY, MatrixMarkSize: g.MatrixMarkSize, MatrixCellGap: g.MatrixCellGap}
 }

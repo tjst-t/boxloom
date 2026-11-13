@@ -155,6 +155,7 @@ type TemplateValues struct {
 // 当てない。
 type figureSizes struct {
 	OrgChartTextInsetY  float64 `json:"orgchartTextInsetY" scale:"space" src:"subsystems.orgchart.textInsetY"`
+	OrgChartTextInsetX  float64 `json:"orgchartTextInsetX" scale:"space" src:"subsystems.orgchart.textInsetX"` // #153
 	OrgChartMinBoxH     float64 `json:"orgchartMinBoxHeight" src:"subsystems.orgchart.minBoxHeight"`
 	OrgChartMemberGap   float64 `json:"orgchartMemberGap" scale:"space" src:"subsystems.orgchart.memberGap"`
 	OrgChartMinLevelGap float64 `json:"orgchartMinLevelGap" scale:"space" src:"subsystems.orgchart.minLevelGap"`
@@ -171,7 +172,7 @@ type figureSizes struct {
 // figureSizesFrom は図の値から詰められる寸法を取り出す。
 func figureSizesFrom(o *OrgChartValues, p *PhasesValues, m *MatrixValues) figureSizes {
 	return figureSizes{
-		OrgChartTextInsetY: o.TextInsetY, OrgChartMinBoxH: o.MinBoxH, OrgChartMemberGap: o.MemberGap, OrgChartMinLevelGap: o.MinLevelGap,
+		OrgChartTextInsetY: o.TextInsetY, OrgChartTextInsetX: o.TextInsetX, OrgChartMinBoxH: o.MinBoxH, OrgChartMemberGap: o.MemberGap, OrgChartMinLevelGap: o.MinLevelGap,
 		PhasesTextInsetY: p.TextInsetY, PhasesItemGap: p.ItemGap, PhasesHeaderGap: p.HeaderGap, PhasesMinHeaderH: p.MinHeaderH,
 		MatrixMinRowH: m.MinRowH, MatrixTextInsetY: m.TextInsetY, MatrixMarkSize: m.MarkSize, MatrixCellGap: m.CellGap,
 	}
@@ -182,6 +183,7 @@ func (f figureSizes) set() bool { return f != (figureSizes{}) }
 // orgchart・phases・matrix は図の値の写しに f を当てたもの。
 func (f figureSizes) orgchart(v OrgChartValues) *OrgChartValues {
 	v.TextInsetY, v.MinBoxH, v.MemberGap, v.MinLevelGap = f.OrgChartTextInsetY, f.OrgChartMinBoxH, f.OrgChartMemberGap, f.OrgChartMinLevelGap
+	v.TextInsetX = f.OrgChartTextInsetX
 	return &v
 }
 
@@ -223,6 +225,7 @@ type DenseValues struct {
 	QuoteMark           float64 `json:"quoteMark" scale:"type"`
 	QuoteSource         float64 `json:"quoteSource" scale:"type"`
 	OrgChartTextInsetY  float64 `json:"orgchartTextInsetY" scale:"space"`
+	OrgChartTextInsetX  float64 `json:"orgchartTextInsetX" scale:"space"`
 	OrgChartMinBoxH     float64 `json:"orgchartMinBoxHeight"`
 	OrgChartMemberGap   float64 `json:"orgchartMemberGap" scale:"space"`
 	OrgChartMinLevelGap float64 `json:"orgchartMinLevelGap" scale:"space"`
@@ -250,7 +253,7 @@ func (d DenseValues) apply(v TemplateValues) TemplateValues {
 
 func (d DenseValues) figs() figureSizes {
 	return figureSizes{
-		OrgChartTextInsetY: d.OrgChartTextInsetY, OrgChartMinBoxH: d.OrgChartMinBoxH, OrgChartMemberGap: d.OrgChartMemberGap, OrgChartMinLevelGap: d.OrgChartMinLevelGap,
+		OrgChartTextInsetY: d.OrgChartTextInsetY, OrgChartTextInsetX: d.OrgChartTextInsetX, OrgChartMinBoxH: d.OrgChartMinBoxH, OrgChartMemberGap: d.OrgChartMemberGap, OrgChartMinLevelGap: d.OrgChartMinLevelGap,
 		PhasesTextInsetY: d.PhasesTextInsetY, PhasesItemGap: d.PhasesItemGap, PhasesHeaderGap: d.PhasesHeaderGap, PhasesMinHeaderH: d.PhasesMinHeaderH,
 		MatrixMinRowH: d.MatrixMinRowH, MatrixTextInsetY: d.MatrixTextInsetY, MatrixMarkSize: d.MatrixMarkSize, MatrixCellGap: d.MatrixCellGap,
 	}

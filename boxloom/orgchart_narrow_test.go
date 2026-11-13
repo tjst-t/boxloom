@@ -23,7 +23,7 @@ func TestOrgChartNarrowStacksMembers(t *testing.T) {
 		restore := useFonts(tm.Fonts)
 		sub := figureFromIR(t, tmpl, "orgchart", data).(*OrgChartSubsystem)
 		const narrow = 420.0
-		rowMin, _, _ := flexTotals(sub.geomRow(narrow).parts)
+		rowMin, _, _ := flexTotals(sub.geomRow(narrow, 0).parts)
 		g := sub.geom(narrow)
 		if !g.stacked {
 			t.Errorf("%s: %.0fpt should stack the members (row min %.1fpt)", tmpl, narrow, rowMin)

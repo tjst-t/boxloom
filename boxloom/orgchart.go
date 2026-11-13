@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 )
 
 // OrgChartValues は orgchart の寸法(pt)。既定は subsystems/orgchart.json。
@@ -146,6 +147,9 @@ type orgGeom struct {
 	legend       figureLegendLayout
 	parts        []flexPart
 	stacked      bool      // 3段目を親の下に字下げして縦に積む形(#134)
+	memSub       float64   // 3段目の箱の題の字(横に並べる形で詰めたときは小さい段、#153)
+	memDetail    float64   // 3段目の箱の補足の字
+	memStep      int       // 3段目の字を値の表の段でいくつ下げたか(0 は下げない)
 	spineX       []float64 // 縦に積む形の左の縦線の x(枠の左端から)
 }
 
@@ -168,18 +172,109 @@ const (
 // geom は幅 width の置き方。3段目を横に並べる形と、親の下に縦に積む形(#134)の
 // うち、最小の高さが低いほうを選ぶ(同じなら横に並べる形)。広い枠では横に並べる形の
 // ほうが低いので、従来の置き方のまま。
+//
+// 縦に積む形のほうが低い(幅が足りない)ときは、縦に積む前に、3段目の字を値の表の段で
+// 1〜2段小さくして横に並べる形も試し(#153。どの語も箱の幅に入るものだけ)、最小の高さが
+// 一番低い形を選ぶ(差が 0.5pt 以内なら、字を下げない側・横に並べる形を先に)。Measure と
+// 描画はどちらもこの geom を使うので、選んだ形で一致する。
 func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
-	g := s.geomRow(width)
+	g := s.geomRow(width, 0)
 	if !s.hasMembers() {
 		return g
 	}
 	st := s.geomStacked(width)
-	gmin, _, _ := flexTotals(g.parts)
-	smin, _, _ := flexTotals(st.parts)
-	if smin < gmin-0.5 {
-		return st
+	gmin, smin := orgMinHeight(g), orgMinHeight(st)
+	if !(smin < gmin-0.5) {
+		return g
 	}
-	return g
+	cands := []*orgGeom{}
+	for k := 1; k <= orgCompactSteps; k++ {
+		c := s.geomRow(width, k)
+		if c == nil {
+			break // 値の表の段にこれ以上小さい字が無い
+		}
+		if s.membersFitWidth(c) {
+			cands = append(cands, c)
+		}
+	}
+	cands = append(cands, st)
+	best := smin
+	for _, c := range cands {
+		best = math.Min(best, orgMinHeight(c))
+	}
+	for _, c := range cands {
+		if orgMinHeight(c) <= best+0.5 {
+			return c
+		}
+	}
+	return st
+}
+
+// orgCompactSteps は横に並べるために3段目の字を下げてよい段の数(#153)。
+const orgCompactSteps = 2
+
+func orgMinHeight(g *orgGeom) float64 {
+	m, _, _ := flexTotals(g.parts)
+	return m
+}
+
+// orgCompactMaxLines は字を下げて横に並べる形で、3段目の箱の題・補足の段落が折り返して
+// よい行の数(#153。日本語はどの字の間でも折れるので、語が入るだけでは1行に数字ずつの
+// 細い箱を選んでしまう)。
+const orgCompactMaxLines = 2
+
+// membersFitWidth は横に並べる形で、3段目のどの箱も一番長い語が箱の幅に入り、題と補足の
+// どの段落も orgCompactMaxLines 行までに収まるか。
+func (s *OrgChartSubsystem) membersFitWidth(g *orgGeom) bool {
+	fv := s.boxValues("roundRect")
+	lines := func(in Inline, size, inner float64) int {
+		n := 0
+		for _, p := range strings.Split(in.Plain(), "\n") {
+			if p == "" {
+				continue
+			}
+			n = max(n, len(wrapText(p, size, math.Max(inner, 0), false)))
+		}
+		return n
+	}
+	for i, u := range s.Data.Units {
+		inner := g.memberWs[i] - 2*fv.insetX
+		for j := range u.Members {
+			m := &u.Members[j]
+			if nodeMinWidth(m, g.memSub, g.memDetail, fv) > g.memberWs[i]+0.01 {
+				return false
+			}
+			if lines(m.Title, g.memSub, inner) > orgCompactMaxLines || lines(m.Detail, g.memDetail, inner) > orgCompactMaxLines {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// memberText は3段目の字(題・補足)を値の表の段で k 段下げたもの。どちらも下げられなければ
+// ok は false(k が 0 ならそのまま)。
+func (s *OrgChartSubsystem) memberText(k int) (sub, detail float64, ok bool) {
+	tx := s.text()
+	if k == 0 {
+		return tx.Sub, tx.Detail, true
+	}
+	sub, detail = typeStepDown(tx.Sizes, tx.Sub, k), typeStepDown(tx.Sizes, tx.Detail, k)
+	p1, p2 := typeStepDown(tx.Sizes, tx.Sub, k-1), typeStepDown(tx.Sizes, tx.Detail, k-1)
+	return sub, detail, sub < p1 || detail < p2
+}
+
+// typeStepDown は字の大きさ x を段 sizes(小さい順)で k 段下げたもの。x が段に無ければ
+// x より小さい一番大きい段を1段目と数える。下げきれなければ一番小さい段(それも x 以上なら x)。
+func typeStepDown(sizes []float64, x float64, k int) float64 {
+	out := x
+	for i := len(sizes) - 1; i >= 0 && k > 0; i-- {
+		if sizes[i] < out-scaleEps {
+			out = sizes[i]
+			k--
+		}
+	}
+	return out
 }
 
 // geomStacked は3段目を縦に積む形:各 unit の列は同じ幅で、2段目の箱の下に3段目の箱を
@@ -188,7 +283,7 @@ func (s *OrgChartSubsystem) geomStacked(width float64) *orgGeom {
 	v, tx := s.vals(), s.text()
 	inner := math.Max(0, width-2*v.Padding)
 	x0 := v.Padding
-	g := &orgGeom{stacked: true}
+	g := &orgGeom{stacked: true, memSub: tx.Sub, memDetail: tx.Detail}
 	U := len(s.Data.Units)
 	colW := math.Max(0, (inner-float64(U-1)*v.UnitGap)/float64(U))
 	g.unitX, g.unitW, g.memberX = make([]float64, U), make([]float64, U), make([][]float64, U)
@@ -237,7 +332,7 @@ func (s *OrgChartSubsystem) measureNeeds(g *orgGeom) {
 			g.needUnit = math.Max(g.needUnit, g.needAsst[i])
 		}
 		for j := range u.Members {
-			_, h := nodeTextSize(&u.Members[j], tx.Sub, tx.Detail, g.memberWs[i], s.boxValues("roundRect"))
+			_, h := nodeTextSize(&u.Members[j], g.memSub, g.memDetail, g.memberWs[i], s.boxValues("roundRect"))
 			g.needMember = math.Max(g.needMember, h)
 		}
 	}
@@ -258,12 +353,17 @@ func (s *OrgChartSubsystem) finishParts(g *orgGeom, inner float64) {
 	g.parts = append(g.parts, fixedPart(v.Padding))
 }
 
-// geomRow は3段目を横に並べる形。
-func (s *OrgChartSubsystem) geomRow(width float64) *orgGeom {
+// geomRow は3段目を横に並べる形。step は3段目の字を値の表の段でいくつ下げるか(#153)。
+// 下げられないときは nil。
+func (s *OrgChartSubsystem) geomRow(width float64, step int) *orgGeom {
 	v, tx := s.vals(), s.text()
 	inner := math.Max(0, width-2*v.Padding)
 	x0 := v.Padding // 枠の左端からの位置(描くときに枠の X を足す)
-	g := &orgGeom{}
+	ms, md, ok := s.memberText(step)
+	if !ok {
+		return nil
+	}
+	g := &orgGeom{memSub: ms, memDetail: md, memStep: step}
 	U := len(s.Data.Units)
 	weights, total, inGaps := make([]float64, U), 0.0, 0.0
 	for i, u := range s.Data.Units {
@@ -299,7 +399,7 @@ func (s *OrgChartSubsystem) geomRow(width float64) *orgGeom {
 		if k := float64(len(u.Members)); k > 0 {
 			limit := g.memberW + 2*margin/k
 			for j := range u.Members {
-				mw = math.Max(mw, nodeComfortWidth(&u.Members[j], tx.Sub, tx.Detail, g.memberW, limit, s.boxValues("roundRect")))
+				mw = math.Max(mw, nodeComfortWidth(&u.Members[j], g.memSub, g.memDetail, g.memberW, limit, s.boxValues("roundRect")))
 			}
 			span := k*mw + (k-1)*v.MemberGap
 			start := x + (colW[i]-span)/2
@@ -444,7 +544,7 @@ func (s *OrgChartSubsystem) Render(ctx RenderContext, box LBox) {
 			p.Shapes[len(p.Shapes)-1].dash = "dash"
 		}
 		for j := range u.Members {
-			memberIDs[i] = append(memberIDs[i], drawFigureNode(ctx, pl.members[i][j], &u.Members[j], tx.Sub, tx.Detail, s.boxValues("roundRect")))
+			memberIDs[i] = append(memberIDs[i], drawFigureNode(ctx, pl.members[i][j], &u.Members[j], pl.g.memSub, pl.g.memDetail, s.boxValues("roundRect")))
 		}
 	}
 	drawFigureLegend(ctx, pl.legend.X, pl.legend.Y, pl.g.legend, tx.Small, v.legendValues(v.CornerRadius/2))
@@ -494,7 +594,7 @@ func (s *OrgChartSubsystem) Lint(box LBox) []string {
 			check(fmt.Sprintf("units[%d].assistant", i), u.Assistant, pl.assts[i], tx.Sub, tx.Detail, s.boxValues("roundRect"))
 		}
 		for j := range u.Members {
-			check(fmt.Sprintf("units[%d].members[%d]", i, j), &u.Members[j], pl.members[i][j], tx.Sub, tx.Detail, s.boxValues("roundRect"))
+			check(fmt.Sprintf("units[%d].members[%d]", i, j), &u.Members[j], pl.members[i][j], pl.g.memSub, pl.g.memDetail, s.boxValues("roundRect"))
 		}
 	}
 	_, missing := s.legend()

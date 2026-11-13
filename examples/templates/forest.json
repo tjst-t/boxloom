@@ -141,6 +141,7 @@
     "figureDetail": 12,
     "calloutMark": 24,
     "orgchartTextInsetY": 4,
+    "orgchartTextInsetX": 8,
     "orgchartMinBoxHeight": 32,
     "orgchartMemberGap": 12,
     "orgchartMinLevelGap": 24,

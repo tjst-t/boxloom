@@ -36,6 +36,9 @@ type FigureText struct {
 	// RowTitle は matrix の行の題(values.matrixRowTitle。dense で詰められる。#136)。
 	RowTitle float64
 	Point    string // 箇条の印(marks.point。phases の箱の箇条)
+	// Sizes は値の表の字の段(scale.typeSizes。小さい順)。図が字を段で下げるときに使う
+	// (orgchart の3段目、#153)。
+	Sizes []float64
 }
 
 func figureTextFrom(v TemplateValues) FigureText {
@@ -47,6 +50,7 @@ func defaultFigureText() FigureText {
 	t := mustTemplate("light")
 	ft := figureTextFrom(t.Values)
 	ft.Point = t.Marks.Point
+	ft.Sizes = t.Scale.TypeSizes
 	return ft
 }
 
@@ -447,6 +451,7 @@ var figureKinds = []string{"process", "orgchart", "matrix", "funnel", "phases", 
 func templateFigures(t *Template, f *templateFile) error {
 	text := figureTextFrom(f.Values)
 	text.Point = f.Marks.Point
+	text.Sizes = f.Scale.TypeSizes
 	var pv *ProcessValues
 	var ov *OrgChartValues
 	var mv *MatrixValues
