@@ -1,0 +1,165 @@
+{
+  "boxloom": "0.1",
+  "template": "report",
+  "meta": {
+    "title": "人物の紹介の例",
+    "subtitle": "写真・名前・役職・経歴を並べる(人物と写真はすべて架空)",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "調査の体制",
+      "lead": "3人の研究員が、聞き取り・分析・報告をそれぞれ受け持つ",
+      "body": [
+        {
+          "type": "people",
+          "people": [
+            {
+              "name": "森川 あおい",
+              "role": "主任研究員",
+              "image": "images/person-a.png",
+              "alt": "森川 あおいの似顔絵(作った絵)",
+              "body": {
+                "type": "points",
+                "items": [
+                  "地域の交通の調査を 12 年",
+                  "聞き取りの設計と全体のとりまとめ"
+                ]
+              }
+            },
+            {
+              "name": "早瀬 透",
+              "role": "研究員",
+              "image": "images/person-b.png",
+              "alt": "早瀬 透の似顔絵(作った絵)",
+              "body": {
+                "type": "points",
+                "items": [
+                  "統計の分析を担当",
+                  "前職は市の企画課で交通の計画"
+                ]
+              }
+            },
+            {
+              "name": "野々村 千尋",
+              "role": "研究員",
+              "image": "images/person-c.png",
+              "alt": "野々村 千尋の似顔絵(作った絵)",
+              "body": {
+                "type": "paragraph",
+                "content": "報告書の構成と図の作成を受け持つ。県の審議会の事務局を4年務めた"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "title": "助言をいただく方々",
+      "body": [
+        {
+          "type": "people",
+          "people": [
+            {
+              "name": "北条 一馬",
+              "role": "大学 教授(交通工学)",
+              "image": "images/person-d.png",
+              "alt": "北条 一馬の似顔絵(作った絵)",
+              "body": {
+                "type": "paragraph",
+                "content": "需要の予測の方法に助言をいただく"
+              }
+            },
+            {
+              "name": "高木 美里",
+              "role": "商店会 会長",
+              "body": {
+                "type": "paragraph",
+                "content": "商店街の聞き取りの段取りに協力いただく"
+              }
+            },
+            {
+              "name": "森川 あおい",
+              "role": "主任研究員",
+              "image": "images/person-a.png",
+              "alt": "森川 あおいの似顔絵(作った絵)",
+              "body": {
+                "type": "paragraph",
+                "content": "助言の会の進行役"
+              }
+            },
+            {
+              "name": "早瀬 透",
+              "role": "研究員",
+              "image": "images/person-b.png",
+              "alt": "早瀬 透の似顔絵(作った絵)",
+              "body": {
+                "type": "paragraph",
+                "content": "助言の記録と分析への反映"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "title": "窓口の担当",
+      "body": [
+        {
+          "type": "columns",
+          "columns": [
+            {
+              "title": "問い合わせの窓口",
+              "body": [
+                {
+                  "type": "people",
+                  "people": [
+                    {
+                      "name": "森川 あおい",
+                      "role": "主任研究員",
+                      "image": "images/person-a.png",
+                      "alt": "森川 あおいの似顔絵(作った絵)",
+                      "body": {
+                        "type": "paragraph",
+                        "content": "調査の全体について"
+                      }
+                    },
+                    {
+                      "name": "早瀬 透",
+                      "role": "研究員",
+                      "image": "images/person-b.png",
+                      "alt": "早瀬 透の似顔絵(作った絵)",
+                      "body": {
+                        "type": "paragraph",
+                        "content": "データの提供について"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "受け付ける時間",
+              "body": [
+                {
+                  "type": "points",
+                  "items": [
+                    "平日の 9 時から 17 時",
+                    "返事は3営業日のうちに",
+                    "急ぎの用は電話で"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -64,13 +64,14 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc?, cov
          { type: "content",   variant?, title, lead?, marker?, density?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead、marker は隅の印(2字まで)、density は本文の密度(normal・dense)
          { type: "section",   variant?, title, level?, notes? }  章の区切り(本文なし。level は 1 章・2 節・3 項目、既定 1)
          { type: "statement", variant?, content, source?, notes? }        言うことが1文だけ(本文なし)
-ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem | pairs | topics   (どれも type で選ぶ。pairs・topics は標準でない型)
+ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem | pairs | topics | people   (どれも type で選ぶ。pairs・topics・people は標準でない型)
          takeaway { content }                                     本文の中の結論の1文
          stat     { items: [{ value: "3 → 12", unit?: "機種", label }] }   1〜4個
          quote    { content, source }                             出どころは必須
 並列     { type: "columns", flow?: true, columns: [{ title?, role?: "main", body: [paragraph|points|note|table|image] }] }  (2〜3個)
 対の並び  { type: "pairs", headings: { subject, response }, pairs: [{ label?, subject: 側, response: 側 }] }  (2組以上。側は paragraph|points|quote か { title?, body: [paragraph|points|quote|image|table 1〜4個] })
 印つきの塊 { type: "topics", topics: [{ title, label?, body: [paragraph|points|quote 1〜3個] }] }  (2〜6個。label は2字までで、全てに付けるか全てに付けない)
+人物の紹介  { type: "people", people: [{ name, role?, image?, alt?, body? }] }  (1〜4人。image を書いたら alt も。body は paragraph|points。まとまりの中は1〜2人)
 表       { type: "table", header: [セル], rows: [[セル]], total?: [セル], caption? }   (セルはインライン。どの行も見出しと同じ数。total は合計の行)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 箇条     { type: "points", ordered?: true, items: [インライン | { content, items?, ordered? }] }  (ordered は番号つき。入れ子の項目の ordered はその items に効く)
@@ -409,6 +410,43 @@ A・B・C)。左右の対応(`pairs`)でも横の並び(`columns`)でもない�
   `component-fallback` を1件出す。塊の題(印があれば頭に)が親の項目、中身が子の項目
   (段落はその文、箇条はその項目、引用は言葉と出どころの2項目)。
 - **はみ出しは塊ごとに測る**(下の「はみ出しの測り方」と容量の `topics`)。
+### 10.3 人物の紹介(people。標準でない型、#120)
+
+調査の体制・助言をいただく方々のように、人の写真・名前・役職・経歴を並べる。画像と箇条を
+別々に置くと画像の最小の高さではみ出すので、1人を1つのまとまりとして型にした。
+Schema は `schema/types/people.schema.json`、例は `examples/ir/people.json`
+(`examples/md/people.bx.md` と同じ IR。人物と写真は架空で、写真は作った絵)。
+
+```json
+{ "type": "people",
+  "people": [
+    { "name": "森川 あおい", "role": "主任研究員",
+      "image": "images/person-a.png", "alt": "森川 あおいの似顔絵",
+      "body": { "type": "points", "items": ["地域の交通の調査を 12 年"] } },
+    { "name": "高木 美里", "role": "商店会 会長",
+      "body": { "type": "paragraph", "content": "聞き取りの段取りに協力いただく" } } ] }
+```
+
+- 1〜4人。`name` は必須、`role`・`image`・`body` は任意。`image` を書いたら `alt` も必須
+  (`alt` だけも誤り)。写真の読み方と誤り(`image-path`・`image-missing`・`image-format`・
+  `image-alt`)は `image` ブロックと同じで、path は `…/people/K/image`・`…/people/K/alt`。
+- `body` は経歴の段落か箇条の1つ。写真の大きさ・形・並べ方は書けない(`size` などは知らない
+  キー。`examples/ir/invalid/people-photo-size.json`)。
+- 並列のまとまり(`columns` の `column`)の中にも置ける。そのときは1〜2人
+  (`examples/ir/invalid/people-three-in-column.json`)。
+- **組み方**(dark・light・report が持つ。`people.go`):写真は値の表の `personPhoto` の正方形
+  (形は `personPhotoShape`。`circle` は円で切り抜く。縦横比が違う写真は端を切る、`a:srcRect`)を
+  左に置き、右に名前(太字。report は基調色)・役職(`small`・`text_muted`)・経歴を積む。
+  本文の幅を人数で割った1人の幅が `personMinWidth` 以上なら全員を横に1列、足りなければ
+  2人ずつの段(4人は 2×2)。まとまりの中は縦に積む。写真は文に添える決まった大きさの絵なので、
+  横の余り(`spare-width`)には数えない。
+- **組み方を持たないテンプレート**は代わりの組み方で組み、`component-fallback` を出す。
+  2〜3人は各人が1つのまとまりの `columns`(名前がまとまりの題、中は役職の注・画像・経歴)、
+  1人は名前(強調の段落)・役職・画像・経歴のブロックを積み、4人は2人ずつの `columns` を2つ。
+  まとまりの中(`columns` を入れ子にできない)は1人ずつブロックを積む(型の語彙の
+  `FallbackInColumn`)。
+- check の意味の検査:名前・役職・段落の経歴に見える文字が要る(`empty-text`)。本文でも
+  まとまりの中でも、組み方を持つテンプレートでも代わりの組み方でも、path は IR の場所。
 
 ### 11. 根拠の置き場所:出典・日付・機密区分・免責・合計の行(#47)
 

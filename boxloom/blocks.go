@@ -934,7 +934,9 @@ func (t *Template) columnsStyled(ctx componentContext, b *IRBlock, style columns
 		c := &b.Columns[ci]
 		var blocks []*Spec
 		for bi := range c.Body {
-			s, err := t.buildBlockIn(ctx.within(fmt.Sprintf("columns[%d]: body[%d]", ci, bi)), &c.Body[bi])
+			cctx := ctx.within(fmt.Sprintf("columns[%d]: body[%d]", ci, bi))
+			cctx.inColumn = true
+			s, err := t.buildBlockIn(cctx, &c.Body[bi])
 			if err != nil {
 				return nil, fmt.Errorf("columns[%d]: body[%d]: %w", ci, bi, err)
 			}

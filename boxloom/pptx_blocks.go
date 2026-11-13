@@ -24,6 +24,13 @@ func (p *PPTXBuilder) AddPicture(box LBox, img *imageAsset, alt string) {
 	p.Shapes = append(p.Shapes, shape{id: p.allocID(), kind: skPicture, box: box, image: img, text: alt})
 }
 
+// AddPictureFilled は画像を box いっぱいに置く:縦横比が box と違えば長い方の両端を
+// 同じだけ切り(a:srcRect。引き伸ばさない)、形 prst("rect" | "ellipse")で切り抜く
+// (人物の紹介の写真。people.go)。
+func (p *PPTXBuilder) AddPictureFilled(box LBox, img *imageAsset, alt, prst string) {
+	p.Shapes = append(p.Shapes, shape{id: p.allocID(), kind: skPicture, box: box, image: img, text: alt, prst: prst, picFill: true})
+}
+
 // TableCell は表の1つのセル。
 type TableCell struct {
 	Runs  []TextRun
@@ -68,12 +75,19 @@ func (p *PPTXBuilder) AddTable(box LBox, t TableDraw) {
 
 // pictureXML は p:pic。rid は画像の関係の Id。
 func pictureXML(s *shape) string {
+	prst, crop := "rect", ""
+	if s.picFill {
+		crop = coverCropXML(s.image, s.box.Width, s.box.Height)
+		if s.prst != "" {
+			prst = s.prst
+		}
+	}
 	return fmt.Sprintf(`<p:pic>
 <p:nvPicPr><p:cNvPr id="%d" name="Picture %d" descr="%s"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr>
-<p:blipFill><a:blip r:embed="%s"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>
-<p:spPr><a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>
+<p:blipFill><a:blip r:embed="%s"/>%s<a:stretch><a:fillRect/></a:stretch></p:blipFill>
+<p:spPr><a:xfrm><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm><a:prstGeom prst="%s"><a:avLst/></a:prstGeom></p:spPr>
 </p:pic>
-`, s.id, s.id, escapeXML(s.text), s.rid, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height))
+`, s.id, s.id, escapeXML(s.text), s.rid, crop, ptToEMU(s.box.X), ptToEMU(s.box.Y), ptToEMU(s.box.Width), ptToEMU(s.box.Height), prst)
 }
 
 // tableXML は p:graphicFrame の中の a:tbl。

@@ -1,6 +1,6 @@
 # 断られるべき IR の例
 
-どれも `../demo-deck.json`(`shapes-*.json` は `../shapes.json`、`stat-*.json`・`statement-*.json`・`section-*.json`・`quote-*.json` は `../text-patterns.json`、`figure-*.json`・`funnel-*.json` は `../figures.json`、`chart-*.json` は `../charts.json`)を1か所だけ変えたもの。
+どれも `../demo-deck.json`(`shapes-*.json` は `../shapes.json`、`stat-*.json`・`statement-*.json`・`section-*.json`・`quote-*.json` は `../text-patterns.json`、`figure-*.json`・`funnel-*.json` は `../figures.json`、`chart-*.json` は `../charts.json`、`people-*.json` は `../people.json` の表紙とスライド1枚)を1か所だけ変えたもの。
 表・画像・並列のまとまりの例(`table-*`・`image-*`・`column*`)は、`../blocks.json` の
 表紙とスライド1枚だけを取り出して1か所変えたもの。`tools/validate_ir.py --self-test` は、これらが全部断られることを確かめる。
 
@@ -39,3 +39,7 @@
 | `pairs-label-long.json` | `../pairs-label.json` の表紙と1枚目だけを取り出し、1つ目の対の名前(`label`)を13字にした(12字まで) |
 | `topics-one.json` | `../topics.json` の印つきの塊を1つにした(2〜6個) |
 | `topics-table.json` | `../topics.json` の塊の中身に表を置いた(段落・箇条・引用だけ) |
+| `people-image-without-alt.json` | 人物の紹介(people)の写真(`image`)に代わりの文(`alt`)を書かなかった |
+| `people-five.json` | 人物の紹介に5人を書いた(1〜4人) |
+| `people-photo-size.json` | 人物の紹介の人に写真の大きさ(`size`)を足した(大きさはテンプレートが決める) |
+| `people-three-in-column.json` | 並列のまとまりの中の人物の紹介に3人を書いた(まとまりの中は1〜2人) |

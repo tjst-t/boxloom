@@ -30,6 +30,10 @@ type typeDecl struct {
 	// 書き換えたブロックの中の場所を元の IR の場所に写す表(fallbackPaths)も返す
 	// (check が警告と容量の path を IR にある場所へ写すため。nil ならブロックに丸める)。
 	Fallback func(b *IRBlock) ([]*IRBlock, fallbackPaths, error)
+	// FallbackInColumn は並列のまとまり(column)の中に置いたときの代わりの組み方
+	// (任意。まとまりの中には columns を入れ子にできないので、Fallback が columns を
+	// 返す型は、まとまりの中で使える標準の型だけに書き換えるものを持つ)。
+	FallbackInColumn func(b *IRBlock) ([]*IRBlock, fallbackPaths, error)
 	// Validate は標準でない型の形を IR を読むときに見る(任意)。Schema と同じ決まりを
 	// Go でも見て、check と build が Schema の検査なしでも誤りを場所つきで返すため。
 	Validate func(b *IRBlock) error
@@ -47,11 +51,14 @@ type typeDecl struct {
 // innerPart は型の中の1か所。Path はブロックからの相対の IR の場所("/pairs/0/subject")、
 // Map はその場所のオブジェクト。Block なら Map を本文のブロックと同じ検査に通す。
 // Texts は Map の中で見える文字が要る欄(empty-text)。
+// Image なら Map の image・alt は写真のファイルと代わりの文(画像のブロックの src・alt と
+// 同じ検査。場所は …/image・…/alt)。
 type innerPart struct {
 	Path  string
 	Map   map[string]any
 	Block bool
 	Texts []string
+	Image bool
 }
 
 // typeVocabulary は「IR の type → 型の宣言」の表。
@@ -178,6 +185,7 @@ var blockTypes = defaultTypes()
 func init() {
 	must(registerType(pairsType, pairsTypeDecl()))
 	must(registerType(topicsType, topicsTypeDecl()))
+	must(registerType(peopleType, peopleTypeDecl()))
 }
 
 // fences は語彙のすべての型の囲み(名前の順)。テンプレートは型を隠さないので、

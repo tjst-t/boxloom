@@ -288,8 +288,12 @@
         "closing": {
           "description": "最後に終わりのスライドを置くか(既定 false)。文を書けば終わりのスライドを置き、その文をテンプレートが終わりのスライドに置く(例「ご清聴ありがとうございました」・問い合わせ先)。終わりのスライドは IR に書かず、組み立てで作る(coverImage があればその写真を敷く)。",
           "oneOf": [
-            {"type": "boolean"},
-            {"$ref": "#/$defs/inline"}
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/inline"
+            }
           ]
         }
       },
@@ -520,7 +524,7 @@
       "type": "string"
     },
     "block": {
-      "description": "スライドの本文に並べるブロック。type で種類を選ぶ。subsystem は差し込み口。標準でない型(pairs・topics)は schema/types/ の型ごとの Schema で検査する。",
+      "description": "スライドの本文に並べるブロック。type で種類を選ぶ。subsystem は差し込み口。標準でない型(pairs・topics・people)は schema/types/ の型ごとの Schema で検査する。",
       "type": "object",
       "properties": {
         "type": {
@@ -538,7 +542,8 @@
             "image",
             "gallery",
             "pairs",
-            "topics"
+            "topics",
+            "people"
           ]
         }
       },
@@ -754,6 +759,21 @@
           },
           "then": {
             "$ref": "types/topics.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "people"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "types/people.schema.json"
           }
         }
       ]
@@ -1111,7 +1131,7 @@
       "additionalProperties": false
     },
     "columnBlock": {
-      "description": "まとまりの中に置けるブロック。columns・compare は置けない。対の並び(pairs)と画像の並び(gallery)は置ける。サブシステムはまとまりの幅で測れる図だけ:グラフ(chart)・循環の図(cycle)・フェーズの図(phases)・評価の格子(matrix)・組織図(orgchart)(図の横に読み取り・段ごとの説明を置く形)。",
+      "description": "まとまりの中に置けるブロック。columns・compare は置けない。対の並び(pairs)と画像の並び(gallery)は置ける。人物の紹介(people)は1〜2人まで。サブシステムはまとまりの幅で測れる図だけ:グラフ(chart)・循環の図(cycle)・フェーズの図(phases)・評価の格子(matrix)・組織図(orgchart)(図の横に読み取り・段ごとの説明を置く形)。",
       "type": "object",
       "properties": {
         "type": {
@@ -1123,7 +1143,8 @@
             "image",
             "gallery",
             "pairs",
-            "subsystem"
+            "subsystem",
+            "people"
           ]
         }
       },
@@ -1260,6 +1281,32 @@
                 ]
               }
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "people"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "allOf": [
+              {
+                "$ref": "types/people.schema.json"
+              },
+              {
+                "properties": {
+                  "people": {
+                    "maxItems": 2
+                  }
+                }
+              }
+            ]
           }
         }
       ]

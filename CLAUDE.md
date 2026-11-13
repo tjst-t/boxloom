@@ -223,7 +223,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `cycle.go` = 輪に並んだ段(cycle、#91)。段(3〜6)を上から時計回りに本物の `blockArc` の扇で
     並べ、基調色の濃淡で塗る。番号の丸は輪の外の縁、題は扇の中(扇に収まる枠を測って探す。
     入らなければ題を輪の外に置き輪を小さくする、#110)、detail は輪の外。縦横比を保つ(FixedAspect、余りは spare-width)。columns の中に置ける
-    サブシステムは chart・cycle・phases・matrix・orgchart(`ir.go` の `columnSubsystems`。ほかに pairs・gallery も置ける、#117)。詳細は `docs/subsystem.md` の11節
+    サブシステムは chart・cycle・phases・matrix・orgchart(`ir.go` の `columnSubsystems`。ほかに pairs・gallery も置ける、#117。people は1〜2人、#120)。詳細は `docs/subsystem.md` の11節
   - `phases.go` = フェーズの図(phases)。段の山形(左端は homePlate、続きは chevron。先の深さは
     `ShapeOpts.Depth`)・段をまたぐ群の帯・段ごとに縦に積む番号つきの箱(題と補足。補足の列は
     段落の箇条)。群の帯の見た目は値の表 `bandStyle`(report は塗り)。番号は段をまたいで通しで、形は値の表 `subsystems.phases.numberStyle`(report は
@@ -249,6 +249,12 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     中身は段落・箇条・引用の1〜3個。label は2字までで全てに付けるか全てに付けない)。dark・light は
     題を太字にして印を題の頭に、report は左に丸い印・基調色の題・塊の間の罫線。代わりの組み方は
     箇条(題を親、中身を子)。はみ出しは塊ごと(印 `measureTopicRows`)
+  - `people.go` = 人物の紹介(`people`、#120)。3つ目の標準でない型(Schema は
+    `schema/types/people.schema.json`、Markdown は `::::people` の中に `:::person 名前 {role=… image=… alt=…}`、
+    中は経歴の段落か箇条を1つ)。1〜4人、並列のまとまりの中は1〜2人(縦に積む)。写真は値の表の
+    `personPhoto` の正方形(形 `personPhotoShape`、端を切る `a:srcRect`)を左に、右に名前(太字。report は基調色)・
+    役職・経歴。1人の幅が `personMinWidth` に足りなければ2人ずつの段。組み方は dark・light・report、
+    代わりの組み方は `columns`(まとまりの中は `FallbackInColumn` でブロックを積む)。`docs/ir.md` の10.3
   - `skeleton.go` = 骨組みの部品の表(`cover`・`contentHeader`・`contentFrame`・`section`・
     `statement`・`footer`・`source`・`toc`・`closing`。標準は `defaultSkeleton`、テンプレートは写しを名前ごとに
     override)。コアは本文の箱の印(`frameBody`)で容量・はみ出しを、`title` のプレースホルダーの

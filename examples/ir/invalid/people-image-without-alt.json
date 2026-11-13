@@ -1,0 +1,28 @@
+{
+  "boxloom": "0.1",
+  "meta": {
+    "title": "人物の紹介",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "調査の体制",
+      "body": [
+        {
+          "type": "people",
+          "people": [
+            {
+              "name": "森川 あおい",
+              "role": "主任研究員",
+              "image": "images/person-a.png"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

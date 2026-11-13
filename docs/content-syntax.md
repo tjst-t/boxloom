@@ -253,6 +253,8 @@ closing: true
 | `columns` | `column` だけ(2つか3つ) | 並列のまとまり(段組みの指定ではなく「並列」という意味)。属性 `flow=true`(左が右につながる)。3.9 | `columns`(`flow`) |
 | `column 題` | 段落・箇条・表・画像・画像の並び・`note`・`pairs`・```` ```chart ````・```` ```cycle ````・```` ```phases ````・```` ```matrix ````・```` ```orgchart ```` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
 | `pairs 見出し \| 見出し` | `subject`・`response` を交互に(2組以上) | 対の並び(標準でない型)。2つの側の見出しを1回だけ書く。3.10 | `pairs`(`headings`・`pairs`) |
+| `people` | `person` を1〜4個(まとまりの中は1〜2個) | 人物の紹介(標準でない型)。3.11 | `people`(`people`) |
+| `person 名前 {role=… image=… alt=…}` | 経歴の段落か箇条を1つ(無くてもよい) | 1人の紹介。名前は必須、写真には `alt` も | `people.people[]` |
 | `subject 見出し` / `response 見出し` | 段落・箇条・`quote` のどれか1つ、または見出しの文と段落・箇条・`quote`・画像・表の1〜4個 | 対の何についての側 / それに応える側(見出しの文は任意) | `pairs.pairs[].subject` / `.response`(1つのブロックか `{title, body}`) |
 | `topics` | `topic` を2〜6個 | 印つきの塊の並び(標準でない型)。3.11 | `topics` |
 | `topic 題` | 段落・箇条・`quote` の1〜3個。属性 `label`(2字まで。全てに付けるか全てに付けない) | 塊の1つ。3.11 | `topics.topics[]`(`title`・`label`・`body`) |
@@ -867,6 +869,47 @@ GFM の表で書く。1行目が見出しの行、2行目が区切りの行、3�
 - はみ出しは塊ごとに測る。`layout-overflow` は、はみ出した塊を `/slides/S/body/N/topics/K`
   で指す。容量(`check -format json`)の `topics` に塊ごとの高さが出る。
 
+
+### 3.12 人物の紹介(people)
+
+写真・名前・役職・経歴を並べる(標準でない型。IR は `docs/ir.md` の10.3)。例は
+`examples/md/people.bx.md`(人物と写真は架空)。
+
+```markdown
+::::people
+:::person 森川 あおい {role=主任研究員 image=images/person-a.png alt="森川 あおいの似顔絵"}
+- 地域の交通の調査を 12 年
+- 聞き取りの設計と全体のとりまとめ
+:::
+:::person 高木 美里 {role="商店会 会長"}
+商店街の聞き取りの段取りに協力いただく
+:::
+::::
+```
+
+- `:::person` の後ろが名前(必須。無ければ `missing-key`)。属性は `role`・`image`・`alt` だけ。
+  空白を含む値は `"…"`(か `'…'`)で囲む(どの囲みの属性でも同じ)。
+- `image` を書いたら `alt` も要る(`missing-key`)。`alt` だけは誤り(`misplaced-content`)。
+- 中は経歴の段落か箇条を1つ。2つ以上・囲み・表は `misplaced-content`。`::::people` の中には
+  `:::person` だけ、人は1〜4人。
+- 並列のまとまりの中にも置ける(1〜2人、縦に積む)。`columns`・`column` は入れ子の段に数えないが、
+  コロンは外側ほど多くする:
+
+```markdown
+::::::columns
+:::::column 問い合わせの窓口
+::::people
+:::person 森川 あおい {role=主任研究員}
+調査の全体について
+:::
+::::
+:::::
+:::::column 受け付ける時間
+- 平日の 9 時から 17 時
+:::::
+::::::
+```
+
 ## 4. 例(比較文書の3枚)
 
 ````markdown
@@ -1001,8 +1044,8 @@ annotations:
   画像は `image`(1枚)と `gallery`(2〜6枚)。理由と決まりは `docs/patterns.md` の
   2.1・2.2、書き方は 3.7・3.8。
 - 1つの文書を複数ファイルに分ける方法(取り込み)。
-- 囲みの属性の値の型(文字列だけか、数や真偽値も許すか)。いまは空白を含まない1語の
-  文字列だけ(`unit` もこれ。空白を含む単位はまだ書けない)。
+- 囲みの属性の値の型(文字列だけか、数や真偽値も許すか)。いまは文字列だけ。空白を含む値は
+  `"…"` か `'…'` で囲む(#120。`{role="商店会 会長"}`)。
 
 ## 8. パーサー(Go 版)
 

@@ -423,16 +423,41 @@ func (c *checker) checkBodyBlock(bm map[string]any, bp string, tm *Template, ids
 			}
 		}
 	}
-	if name, ok := bm["type"].(string); ok && !blockTypes.isStandard(name) {
-		if d, ok := blockTypes.decl(name); ok && d.Inner != nil {
-			for _, part := range d.Inner(bm) {
-				p := bp + part.Path
-				if part.Block {
-					c.checkBodyBlock(part.Map, p, tm, ids)
-				}
-				c.checkNotEmpty(part.Map, p, part.Texts...)
-			}
+	c.checkInner(bm, bp, tm, ids)
+}
+
+// checkInner は標準でない型のブロックの中(型の語彙の Inner が返す中のブロックと欄)を、
+// IR の場所つきで本文のブロックと同じ検査に通す。標準の型では何もしない。
+func (c *checker) checkInner(bm map[string]any, bp string, tm *Template, ids map[string]string) {
+	name, ok := bm["type"].(string)
+	if !ok || blockTypes.isStandard(name) {
+		return
+	}
+	d, ok := blockTypes.decl(name)
+	if !ok || d.Inner == nil {
+		return
+	}
+	for _, part := range d.Inner(bm) {
+		p := bp + part.Path
+		if part.Block {
+			c.checkBodyBlock(part.Map, p, tm, ids)
 		}
+		if part.Image {
+			c.checkImageFields(part.Map, p, "image")
+		}
+		c.checkNotEmpty(part.Map, p, part.Texts...)
+	}
+}
+
+// checkImageFields は画像の欄(ファイルの srcKey と代わりの文 alt)を見る:代わりの文が
+// 空(image-alt)、ファイルの置き場所・有無・形式(image-path・image-missing・image-format)。
+func (c *checker) checkImageFields(m map[string]any, p, srcKey string) {
+	if alt, ok := m["alt"].(string); ok && strings.TrimSpace(alt) == "" {
+		c.addIssue(Issue{Path: p + "/alt", Code: "image-alt", Message: "the image has no alternative text (alt)",
+			Hint: "画像が何を示すかを1文で書いてください(読み上げと、画像が無いときに使います)"})
+	}
+	if src, ok := m[srcKey].(string); ok {
+		c.checkImageFile(src, p+"/"+srcKey)
 	}
 }
 
@@ -440,15 +465,7 @@ func (c *checker) checkBodyBlock(bm map[string]any, bp string, tm *Template, ids
 // 表の行のセルの数(table-shape)、画像のファイル(image-path・image-missing・
 // image-format)。まとまりの中のブロックは checkBodyBlock が本文と同じ検査に通す。
 func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
-	img := func(m map[string]any, p string) {
-		if alt, ok := m["alt"].(string); ok && strings.TrimSpace(alt) == "" {
-			c.addIssue(Issue{Path: p + "/alt", Code: "image-alt", Message: "the image has no alternative text (alt)",
-				Hint: "画像が何を示すかを1文で書いてください(読み上げと、画像が無いときに使います)"})
-		}
-		if src, ok := m["src"].(string); ok {
-			c.checkImageFile(src, p+"/src")
-		}
-	}
+	img := func(m map[string]any, p string) { c.checkImageFields(m, p, "src") }
 	switch bm["type"] {
 	case "subsystem":
 		// グラフは本文にも並列のまとまりの中にも置ける。

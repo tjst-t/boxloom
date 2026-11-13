@@ -84,6 +84,12 @@ func registerReportParts(t *Template) error {
 	})); err != nil {
 		return err
 	}
+	// people も標準でない型。名前を基調色にする。
+	if err := t.components.register(peopleType, componentFunc(func(ctx componentContext, b *IRBlock) (*Spec, error) {
+		return peopleStyled(ctx, b, peopleStyle{nameRole: "accent"})
+	})); err != nil {
+		return err
+	}
 	if err := t.skeleton.override(skelSection, skeletonFunc(reportSection)); err != nil {
 		return err
 	}

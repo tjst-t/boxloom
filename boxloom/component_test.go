@@ -22,8 +22,8 @@ func TestStandardComponents(t *testing.T) {
 	if !reflect.DeepEqual(std, want) {
 		t.Fatalf("standard types = %v, want %v", std, want)
 	}
-	// 標準でない型はコアの pairs と topics(docs/layers.md の8.1)。
-	if got := blockTypes.extensions(); !reflect.DeepEqual(got, []string{"pairs", "topics"}) {
+	// 標準でない型はコアの pairs・people・topics(docs/layers.md の8.1)。
+	if got := blockTypes.extensions(); !reflect.DeepEqual(got, []string{"pairs", "people", "topics"}) {
 		t.Fatalf("non-standard types = %v", got)
 	}
 	if got := defaultComponents().names(); !reflect.DeepEqual(got, want) {
@@ -45,7 +45,7 @@ func TestStandardComponents(t *testing.T) {
 		t.Errorf("fences of the standard types differ from defaultBlocks")
 	}
 	// 誤りの文の順は前と同じ。
-	if got := strings.Join(blockTypes.known(), ", "); got != "paragraph, points, compare, note, takeaway, stat, quote, columns, table, image, gallery, subsystem, pairs, topics" {
+	if got := strings.Join(blockTypes.known(), ", "); got != "paragraph, points, compare, note, takeaway, stat, quote, columns, table, image, gallery, subsystem, pairs, topics, people" {
 		t.Errorf("known = %s", got)
 	}
 }
@@ -300,12 +300,12 @@ func TestSchemaTypes(t *testing.T) {
 	}
 	for i, wantBuild := range []string{"fallback", "template"} {
 		ts := out.Templates[i]
-		if len(ts.Types) != 15 {
+		if len(ts.Types) != 16 {
 			t.Fatalf("types = %+v", ts.Types)
 		}
 		for _, ty := range ts.Types {
 			switch {
-			case ty.Name == pairsType || ty.Name == topicsType:
+			case ty.Name == pairsType || ty.Name == topicsType || ty.Name == peopleType:
 				if ty.Build != "template" || ty.Standard || ty.Schema != "/irSchema/$defs/type:"+ty.Name {
 					t.Errorf("template %d: %+v", i, ty)
 				}

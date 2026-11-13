@@ -343,6 +343,11 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
 - 代わりの組み方は `columns`(5章の例)。
 - 組み方は dark・light が持つ。左右の行をそろえる(対ごとに左右の高い方に合わせる)。
 
+`people`(人物の紹介、#120)も同じ形で足した3つ目の標準でない型。代わりの組み方は
+`columns`(各人が1つのまとまり)だが、並列のまとまりの中には `columns` を入れ子にできないので、
+まとまりの中では型の語彙の `FallbackInColumn`(人ごとに標準のブロックを積む)を使う。
+組み方は dark・light・report が持つ(report は名前を基調色にする)。`docs/ir.md` の10.3。
+
 ### 8.2 IR の Schema はテンプレートで変えない(決めた)
 
 IR の Schema はテンプレートに依らず1つ。型の語彙(名前・意味の形・囲み・

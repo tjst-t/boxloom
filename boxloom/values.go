@@ -106,6 +106,12 @@ type TemplateValues struct {
 	// 0〜0.5)。どちらの側もこれより狭くしない(上限は 1 − これ)。側の幅はこの範囲で
 	// 中身から決める(pairs.go の pairSideShare)。
 	PairsSideMin float64 `json:"pairsSideMin" unit:"ratio"`
+	// PersonPhoto は人物の紹介(people)の写真の一辺(pt)。PersonPhotoShape はその形
+	// (personPhotoShapes のどれか)。PersonMinWidth は人を横に並べるときの1人の幅の下限
+	// (これを下回るなら2人ずつの段に積む。people.go)。
+	PersonPhoto      float64 `json:"personPhoto" scale:"space"`
+	PersonPhotoShape string  `json:"personPhotoShape"`
+	PersonMinWidth   float64 `json:"personMinWidth" scale:"space"`
 
 	TableText      float64 `json:"tableText" scale:"type"`          // 表のセルの字
 	TableCellPadX  float64 `json:"tableCellPaddingX" scale:"space"` // セルの左右の余白
@@ -520,6 +526,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	}
 	if v := f.Values.PairsSideMin; v >= 0.5 {
 		return nil, fmt.Errorf("values.pairsSideMin: %v must be below 0.5 (each of the two sides gets at least this share)", v)
+	}
+	if _, ok := personPhotoShapes[f.Values.PersonPhotoShape]; !ok {
+		return nil, fmt.Errorf("values.personPhotoShape: %q is not a photo shape (known: %v)", f.Values.PersonPhotoShape, sortedKeys(personPhotoShapes))
 	}
 	if _, ok := orderedStyles[f.Values.OrderedStyle]; !ok {
 		return nil, fmt.Errorf("values.orderedStyle: %q is not a numbering style (known: %v)", f.Values.OrderedStyle, sortedKeys(orderedStyles))

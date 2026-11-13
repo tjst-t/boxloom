@@ -484,6 +484,9 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `columnGap` | 並列のまとまりの間(32) |
 | `columnMainWeight` | 主のまとまり(`role: main`)の幅の比。ほかのまとまりは 1(2。倍率なので段階に載せない) |
 | `pairsSideMin` | 対の並び(pairs)の側の幅の下限(2つの側の幅の合計に対する割合、0.5 未満。0.2 → 各側 20〜80%)。この範囲で中身から割る(`docs/layers.md` の8.1) |
+| `personPhoto` | 人物の紹介(people)の写真の一辺(64。正方形。縦横比の違う写真は端を切る) |
+| `personPhotoShape` | 写真の形(`circle` は円で切り抜く・`square` は四角。dark・report は circle、light は square) |
+| `personMinWidth` | 人を横に1列に並べるときの1人の幅の下限(240)。本文の幅を人数で割ってこれに足りなければ2人ずつの段に積む(`docs/ir.md` の10.3) |
 | `tableText` | 表のセルの字(12。見出しの行は太字) |
 | `tableCellPaddingX` `tableCellPaddingY` | セルの左右・上下の余白(8・4) |
 | `tableRuleWidth` | 表の行の間の線の太さ(1。線の色は役割名 `grid`、見出しの行の塗りは `card_alt`、本体は `card`) |

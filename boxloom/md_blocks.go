@@ -519,7 +519,7 @@ func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
 		}
 		var allowed []*mdItem
 		for _, sub := range c.items {
-			ok := sub.kind == mdPara || sub.kind == mdList || sub.kind == mdTable || (sub.kind == mdFence && (sub.fence.name == "note" || sub.fence.name == pairsType)) ||
+			ok := sub.kind == mdPara || sub.kind == mdList || sub.kind == mdTable || (sub.kind == mdFence && (sub.fence.name == "note" || sub.fence.name == pairsType || sub.fence.name == peopleType)) ||
 				(sub.kind == mdCode && contains(columnSubsystems, codeLang(sub.info)))
 			if !ok {
 				what := "コードブロック"
@@ -534,6 +534,18 @@ func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
 			allowed = append(allowed, sub)
 		}
 		body := p.blocks(allowed, cp+"/body")
+		for k, b := range body {
+			if o, ok := b.(*jobj); ok && len(o.vals) > 0 && o.vals[0] == peopleType {
+				for i, key := range o.keys {
+					if people, _ := o.vals[i].([]any); key == "people" && len(people) > columnPeopleMax {
+						bp := fmt.Sprintf("%s/body/%d", cp, k)
+						p.fail(p.lines[bp], 1, bp+"/people", codeMisplaced,
+							fmt.Sprintf(":::column の中の ::::people には :::person を%d個まで書けます(いま %d 個)", columnPeopleMax, len(people)), nil,
+							"3人以上なら、::::people を本文に置いてください")
+					}
+				}
+			}
+		}
 		if len(body) == 0 {
 			p.fail(c.line, 1, cp, codeMisplaced, ":::column の中が空です", nil, "")
 		}

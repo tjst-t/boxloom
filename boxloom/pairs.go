@@ -877,6 +877,9 @@ func registerBundledComponents(r *componentRegistry) {
 		must(r.register(pairsType, componentFunc(pairsComponent)))
 	}
 	registerTopicsComponent(r)
+	if !r.has(peopleType) {
+		must(r.register(peopleType, componentFunc(peopleComponent)))
+	}
 }
 
 // --- はみ出しと容量 ---

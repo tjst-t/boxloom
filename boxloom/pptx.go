@@ -63,7 +63,8 @@ type shape struct {
 	dash           string // "" | "dash"
 
 	// skShape
-	prst      string // rect | roundRect | ellipse | chevron | homePlate | rtTriangle
+	prst      string // rect | roundRect | ellipse | chevron | homePlate | rtTriangle(skPicture では切り抜く形)
+	picFill   bool   // skPicture:箱いっぱいに置き、縦横比の違いは端を切る(AddPictureFilled)
 	adj       []ShapeGuide
 	depth     float64 // chevron・homePlate の先の深さ(0 なら既定)
 	fillAlpha float64 // 0 か 1 なら不透明。0〜1 の間なら塗りをその不透明度で書く(a:alpha)

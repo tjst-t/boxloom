@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/types/people.schema.json",
+  "title": "Boxloom IR: people block (0.1)",
+  "description": "人物の紹介(標準でない型。docs/ir.md の10.3)。1〜4人の写真・名前・役職・経歴を並べる。写真の形・大きさ・横に並べるか縦に積むかはテンプレートが決め、書けない。組み方を持たないテンプレートは columns(各人が1つのまとまり)で組む(component-fallback)。並列のまとまり(column)の中には1〜2人まで置ける。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "people"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "people": {
+      "description": "人物(1〜4人)。書いた順に並べる。",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/person"
+      }
+    }
+  },
+  "required": [
+    "type",
+    "people"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "person": {
+      "description": "1人の紹介。名前は必須。写真(image)を書いたら代わりの文(alt)も書く。",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "名前(文中の記法を読む)。",
+          "$ref": "../core.schema.json#/$defs/inline"
+        },
+        "role": {
+          "description": "役職・所属(任意。短い文)。",
+          "$ref": "../core.schema.json#/$defs/inline"
+        },
+        "image": {
+          "description": "写真のファイル(任意。文書のファイルからの相対パス。読み方と誤りは image ブロックと同じ)。",
+          "$ref": "../core.schema.json#/$defs/imageSrc"
+        },
+        "alt": {
+          "description": "写真の代わりの文(image を書いたら必須)。",
+          "$ref": "../core.schema.json#/$defs/imageAlt"
+        },
+        "body": {
+          "description": "経歴・紹介(任意。段落か箇条の1つ)。",
+          "oneOf": [
+            {
+              "$ref": "../core.schema.json#/$defs/paragraph"
+            },
+            {
+              "$ref": "../core.schema.json#/$defs/points"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "dependentRequired": {
+        "image": [
+          "alt"
+        ],
+        "alt": [
+          "image"
+        ]
+      },
+      "additionalProperties": false
+    }
+  }
+}

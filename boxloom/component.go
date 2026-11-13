@@ -24,6 +24,10 @@ type componentContext struct {
 	// warn は組むときの警告("[名前 WARNING] 文" の形)を受け取る。nil なら捨てる。
 	// 入れ子のブロックを組む側(columns)は、場所(columns[C]: body[K]:)を足して渡す。
 	warn func(string)
+	// inColumn は並列のまとまり(column)の中のブロックを組んでいるか。中では
+	// columns を入れ子にできないので、代わりの組み方は FallbackInColumn を使い、
+	// 組み方も狭い幅の形(人物の紹介なら縦に積む)を選べる。
+	inColumn bool
 }
 
 func (ctx componentContext) warnf(format string, args ...any) {
@@ -116,7 +120,11 @@ func (r *componentRegistry) build(ctx componentContext, b *IRBlock) (*Spec, erro
 	if d.Fallback == nil {
 		return nil, fmt.Errorf("template has no component for block type %q", b.Type)
 	}
-	alts, _, err := d.Fallback(b)
+	fallback := d.Fallback
+	if ctx.inColumn && d.FallbackInColumn != nil {
+		fallback = d.FallbackInColumn
+	}
+	alts, _, err := fallback(b)
 	if err != nil {
 		return nil, fmt.Errorf("%s: fallback: %w", b.Type, err)
 	}
@@ -239,30 +247,45 @@ type fallbackPath struct {
 // ブロックを1つだけ返したときの、そのブロックからの場所)→ 元の IR の場所。
 type fallbackPaths map[string]fallbackPath
 
-// fallbackBlocks は deck の本文のブロックのうち、tm が組み方を持たず代わりの組み方で
-// 組んだもの(場所 /slides/S/body/N → 場所の表)。標準でない型は本文にだけ置ける
-// (まとまりの中には置けない)ので、本文だけを見る。表が無いもの・ブロックを2つ以上に
-// 書き換えたものは nil(ブロックに丸める)。
+// fallbackBlocks は deck の本文のブロック(並列のまとまりの中のブロックも)のうち、
+// tm が組み方を持たず代わりの組み方で組んだもの(場所 /slides/S/body/N、まとまりの
+// 中は …/columns/C/body/K → 場所の表)。表が無いもの・ブロックを2つ以上に書き換えた
+// ものは nil(ブロックに丸める)。
 func fallbackBlocks(deck *IRDeck, tm *Template) map[string]fallbackPaths {
 	out := map[string]fallbackPaths{}
 	if deck == nil || tm == nil || tm.components == nil {
 		return out
 	}
+	add := func(b *IRBlock, at string, inColumn bool) {
+		if tm.components.has(b.Type) {
+			return
+		}
+		d, ok := tm.components.vocab.decl(b.Type)
+		if !ok || d.Fallback == nil {
+			return
+		}
+		fallback := d.Fallback
+		if inColumn && d.FallbackInColumn != nil {
+			fallback = d.FallbackInColumn
+		}
+		alts, paths, err := fallback(b)
+		if err != nil || len(alts) != 1 {
+			paths = nil
+		}
+		out[at] = paths
+	}
 	for si := range deck.Slides {
 		for bi := range deck.Slides[si].Body {
 			b := &deck.Slides[si].Body[bi]
-			if tm.components.has(b.Type) {
-				continue
+			bp := fmt.Sprintf("/slides/%d/body/%d", si, bi)
+			add(b, bp, false)
+			if b.Type == "columns" {
+				for ci := range b.Columns {
+					for k := range b.Columns[ci].Body {
+						add(&b.Columns[ci].Body[k], fmt.Sprintf("%s/columns/%d/body/%d", bp, ci, k), true)
+					}
+				}
 			}
-			d, ok := tm.components.vocab.decl(b.Type)
-			if !ok || d.Fallback == nil {
-				continue
-			}
-			alts, paths, err := d.Fallback(b)
-			if err != nil || len(alts) != 1 {
-				paths = nil
-			}
-			out[fmt.Sprintf("/slides/%d/body/%d", si, bi)] = paths
 		}
 	}
 	return out

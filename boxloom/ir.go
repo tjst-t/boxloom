@@ -697,8 +697,9 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 // columnBlockTypes はまとまり(column)の中に置けるブロックの種類。サブシステムは
 // columnSubsystems のものだけ(グラフの横に読み取り、図の横に段ごとの説明を置く形)。
 // 対の並び(pairs)と画像の並び(gallery)も置ける(#117。対の横に抽出した一覧、写真の
-// 並びの横に説明)。columns・compare は置けない。
-var columnBlockTypes = []string{"paragraph", "points", "note", "table", "image", "gallery", "pairs", "subsystem"}
+// 並びの横に説明)。人物の紹介(people)は columnPeopleMax 人まで(縦に積む。#120)。
+// columns・compare は置けない。
+var columnBlockTypes = []string{"paragraph", "points", "note", "table", "image", "gallery", "pairs", "subsystem", peopleType}
 
 // columnSubsystems はまとまりの中に置けるサブシステム。どれもまとまりの幅で
 // 測れる(幅→高さ)図で、gantt・process・funnel・shapes のように本文の幅を
@@ -731,6 +732,11 @@ func (c *IRColumn) UnmarshalJSON(b []byte) error {
 		}
 		if blk.Type == "subsystem" && !contains(columnSubsystems, blk.Subsystem) {
 			return fmt.Errorf("body[%d]: a column cannot hold the %s subsystem (allowed: %s)", i, blk.Subsystem, strings.Join(columnSubsystems, ", "))
+		}
+		if blk.Type == peopleType {
+			if p, err := readPeople(blk.Raw); err == nil && len(p.People) > columnPeopleMax {
+				return fmt.Errorf("body[%d]: people inside a column can have at most %d people (got %d; put more people in a people block of the slide body)", i, columnPeopleMax, len(p.People))
+			}
 		}
 		out.Body = append(out.Body, blk)
 	}
