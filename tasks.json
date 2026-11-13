@@ -3274,7 +3274,7 @@
       "number": 145,
       "kind": "bug",
       "title": "-fit が「収まった」とみなす条件に図の崩れ(figure-text-overflow・subsystem-min・column-floor)を入れる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3286,7 +3286,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T11:05:25.560Z",
-      "updatedAt": "2026-11-13T11:05:25.560Z",
+      "updatedAt": "2026-11-13T11:05:30.355Z",
       "closedAt": null,
       "extra": {}
     }
