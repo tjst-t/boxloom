@@ -85,6 +85,10 @@ type IRSlide struct {
 	// Marker は content だけ: スライドの隅の印(空白を含まない2字までの短い文。1・2・A・B)。
 	// いまどのパターン・どの要因の話かを示す意味。描くかどうか・形はテンプレートが決める。
 	Marker string
+	// Density は content だけ: 本文の密度(""(normal と同じ)か "dense")。dense は
+	// 「このページは参照用に詰めて読ませる」という意味で、本文の字の大きさ・間隔を
+	// テンプレートの値の表の dense の組にする(題・リード・フッターは変えない)。
+	Density string
 	// Level は section だけ: 区切りの階層(1 章・2 節・3 節の中の項目)。書かなければ 0
 	// (1 と同じ。sectionLevel で読む)。
 	Level int
@@ -406,6 +410,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 			Title   Inline            `json:"title"`
 			Lead    Inline            `json:"lead"`
 			Marker  *string           `json:"marker"`
+			Density *string           `json:"density"`
 			Body    []json.RawMessage `json:"body"`
 			Source  Inline            `json:"source"`
 			Notes   string            `json:"notes"`
@@ -425,6 +430,14 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 				return fmt.Errorf("marker: %w", err)
 			}
 			out.Marker = *v.Marker
+		}
+		if v.Density != nil {
+			if !isDensity(*v.Density) {
+				return fmt.Errorf("density: %q is not a density (known: %v)", *v.Density, densityNames)
+			}
+			if *v.Density == densityDense {
+				out.Density = densityDense
+			}
 		}
 		for i, r := range v.Body {
 			var blk IRBlock
@@ -975,6 +988,20 @@ func (c IRTableCell) Plain() string {
 	}
 	return strings.Join(parts, "\n")
 }
+
+// 本文の密度(content の density)。
+const (
+	densityNormal = "normal"
+	densityDense  = "dense"
+)
+
+// densityNames は density に書ける値(省けば normal)。
+var densityNames = []string{densityNormal, densityDense}
+
+func isDensity(v string) bool { return v == densityNormal || v == densityDense }
+
+// dense は本文を値の表の dense の組で組むスライドか。
+func (s *IRSlide) dense() bool { return s.Density == densityDense }
 
 // markerMaxRunes はスライドの隅の印(marker)の字の数の上限。
 const markerMaxRunes = 2

@@ -74,11 +74,15 @@ type tokenTable struct {
 	ems     map[string]float64 // unit:"em"(字の大きさの倍)
 	scale   TemplateScale
 	theme   Theme
+	// tmpl は表を作ったテンプレート、denseTT は dense の値の表(印 dense の箱の下で
+	// 使う。density.go。初めて要るときに作る)。dense の表の denseTT は自分。
+	tmpl    *Template
+	denseTT *tokenTable
 }
 
 func newTokenTable(t *Template) *tokenTable {
 	tt := &tokenTable{spaces: map[string]float64{}, types: map[string]float64{}, lengths: map[string]float64{},
-		ems: map[string]float64{}, scale: t.Scale, theme: t.Theme}
+		ems: map[string]float64{}, scale: t.Scale, theme: t.Theme, tmpl: t}
 	rv := reflect.ValueOf(t.Values)
 	rt := rv.Type()
 	for i := 0; i < rt.NumField(); i++ {
@@ -196,6 +200,14 @@ func resolveSpec(t *Template, root *Spec) error {
 }
 
 func (tt *tokenTable) resolve(s *Spec, at string) error {
+	if s.dense && tt.denseTT != tt {
+		// 密なスライドの本文の箱:この下は dense の値の表で引く(density.go)。
+		if tt.denseTT == nil {
+			tt.denseTT = newTokenTable(tt.tmpl.densed())
+			tt.denseTT.denseTT = tt.denseTT
+		}
+		return tt.denseTT.resolve(s, at)
+	}
 	fail := func(field string, err error) error { return fmt.Errorf("layout token at %s: %s: %w", at, field, err) }
 	raw := func(field string, v any) error {
 		return fmt.Errorf("layout token at %s: %s: %v is written without a token (write a value-table name or a scale step)", at, field, v)

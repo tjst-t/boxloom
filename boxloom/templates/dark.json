@@ -100,5 +100,13 @@
     "fixedLineSpacing": true,
     "lineHeight": 1.35
   },
+  "dense": {
+    "body": 14,
+    "subPoint": 12,
+    "tableText": 12,
+    "small": 10,
+    "blockGap": 12,
+    "itemGap": 4
+  },
   "variants": []
 }

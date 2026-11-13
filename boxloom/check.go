@@ -226,6 +226,11 @@ func checkIRCapacity(file string, b []byte, templateOverride string, values *Tem
 		}
 		remapFallbackCapacity(caps, fb)
 	}
+	// normal の本文のスライドは dense にしたときの残りも測る(hint の「dense で収まるか」)。
+	if err := tm.addDenseRemaining(deck, caps); err != nil {
+		c.add(locationToPointer(err.Error()), err.Error(), "build")
+		return c.errs, nil, nil
+	}
 	addLayoutHints(warns, caps)
 	for i := range caps {
 		caps[i].File = file

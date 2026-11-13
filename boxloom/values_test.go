@@ -165,6 +165,7 @@ func TestTemplateOverridesShapesValues(t *testing.T) {
 		sv["defaultAspect"] = 1.2
 		m["subsystems"] = map[string]any{"shapes": sv}
 		m["values"].(map[string]any)["small"] = 8
+		m["dense"].(map[string]any)["small"] = 8
 	})
 	tp, err := parseTemplateFile("light", data)
 	if err != nil {

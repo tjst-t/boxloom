@@ -60,7 +60,7 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 文書   { boxloom: "0.1", template?, meta?, slides: [スライド] }
 meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc?, coverImage?, closing? }   日付・機密区分・免責は文書に1回。toc: true で表紙の直後に目次、closing: true で最後に終わりのスライド(どちらも組み立てで作る)。coverImage は表紙(と終わりのスライド)に敷く写真
 スライド  { type: "cover",     variant?, title?, subtitle?, author?, notes? }
-         { type: "content",   variant?, title, lead?, marker?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead、marker は隅の印(2字まで)
+         { type: "content",   variant?, title, lead?, marker?, density?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead、marker は隅の印(2字まで)、density は本文の密度(normal・dense)
          { type: "section",   variant?, title, level?, notes? }  章の区切り(本文なし。level は 1 章・2 節・3 項目、既定 1)
          { type: "statement", variant?, content, source?, notes? }        言うことが1文だけ(本文なし)
 ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem | pairs   (どれも type で選ぶ。pairs は標準でない型)
@@ -257,6 +257,27 @@ Schema では書けないので `boxloom check` が見る。
   report は右上の隅に三角の地(幅・高さ 48pt、役割 `support`)と、その中の丸(地の色 `bg`)に
   印を、左にパンくず(`small`・`text_muted`)を、ページの上の余白の中に描く。パンくずは印の
   あるスライドにだけ描き、前に区切りが無ければ印だけ。
+
+### 9.4 本文の密度(density。#116)
+
+- **`density`** は本文のスライドだけの欄で、`normal`(省いたときと同じ)か `dense`。
+  `dense` は「このページは参照用に詰めて読ませる」(表・一覧の密なページ)という意味。
+  読む資料はページごとに密度を変える(本文 14pt のページと 10〜12pt の密なページが混ざる)ので、
+  作者がページごとに選ぶ。ほかの値・区切り・主張・表紙に書けば誤り(Schema の `enum` と読み込み)。
+- `variant`(テンプレートが名乗る見た目の名前)とは別の欄:密度はどのテンプレートにもある
+  意味で、値はテンプレートの値の表の `dense` の組(`docs/template-values.md`)が決める。
+- dense のスライドでは、本文の部品・サブシステム(図の字の段・shapes の字の段)が dense の組を
+  使い、測りも描きも同じ値を読む。題・リード・出典・フッターは変えない。Gantt の字は
+  `subsystems.gantt` の寸法のまま。切り替えは部品の段の1か所(`density.go`):本文の
+  ブロックを dense の値を重ねたテンプレートで組み、本文の箱に印 `dense` を付けて、その下の
+  トークンを dense の値の表で引く(配置の段の木 `layout` にも印 `dense` が出る)。
+- **Boxloom は自分では dense にしない。** はみ出しは今までどおり `layout-overflow` の警告で、
+  その hint に密度の案を添える。normal のスライドは dense で組み直して実際に測り、収まれば
+  「{density=dense} で収まります(dense の残り N pt)」、収まらなければ「dense にしても N pt
+  足りません。スライドを分けるか、文を短くしてください」。dense のスライドがはみ出したら
+  「このスライドは dense です。まだ N pt 足りません」。容量(capacity)にも、normal の本文の
+  スライドには `denseRemaining`(dense にしたときの remaining)、dense のスライドには
+  `density: "dense"` が出る(下の「容量の計測」)。
 
 ### 9.3 表紙の写真と終わりのスライド(#92)
 
@@ -658,6 +679,8 @@ check でも断られるもの。
   "blockGap": 20,         // ブロックの間の gap。新しいブロックを足すなら先にこれが要る
   "bodyLineHeight": 21.6, // 本文の字の大きさの1行の高さ
   "remainingBodyLines": 10, // 残りに本文の行がいくつ入るか(既にあるブロックに足す場合)
+  "denseRemaining": 160.2,  // normal のスライドを dense にしたときの remaining(9.4。dense のスライドでは省く)
+  // dense のスライドには "density": "dense"(remaining・本文の行の高さは dense の値)
   "blocks": [{
     "path": "/slides/1/body/0", "line": 40, "type": "points",
     "need": 68.7,         // そのブロックが縮めずに要る高さ

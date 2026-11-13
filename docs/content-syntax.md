@@ -136,13 +136,13 @@ closing: true
 - `# 題` が1枚の始まり。次の `#` か文書の終わりまでがそのスライド。
 - `#` の行の末尾に属性を `{…}` で付けられる: `# 論点 {variant=dense}`。
   使える属性は `type`(スライドの種類)と `variant`(テンプレートが名乗る名前)と、
-  区切りだけの `level`・本文のスライドだけの `marker`(下)。
+  区切りだけの `level`・本文のスライドだけの `marker` と `density`(下)。
   スライドの `id` は予定(IR 第一版に無い)。
 - **スライドの種類は `type` で選ぶ**(省けば `content`)。`#` の行の文の意味は種類で決まる:
 
   | `type` | `#` の行の文 | 後ろに書けるもの | IR |
   |---|---|---|---|
-  | `content`(既定) | 題(短い見出し。1行) | 本文・`:::lead`・`:::notes`・`:::source` | `{type: "content", title, lead?, marker?, body}` |
+  | `content`(既定) | 題(短い見出し。1行) | 本文・`:::lead`・`:::notes`・`:::source` | `{type: "content", title, lead?, marker?, density?, body}` |
   | `section` | 章・節・項目の題 | `:::notes` だけ | `{type: "section", title, level?}` |
   | `statement` | 言いたいことの1文 | `:::notes`・`:::source` だけ | `{type: "statement", content}` |
 
@@ -174,6 +174,17 @@ closing: true
     パンくず(10pt・`text_muted`)を描く(ページの上の余白の中なので、題・本文の配置は
     変わらない)。dark・light は描かない(区切りの `level` と同じく、意味は IR に残り、
     描かないことは check の誤りにも警告にもしない。テンプレートを report に替えれば出る)。
+  - **本文の密度**は `density`(本文のスライドだけ。`normal` か `dense`、省けば normal):
+    `# 移す仕組みの一覧 {density=dense}`。意味は「このページは参照用に詰めて読ませる」(表・
+    一覧の密なページ)。テンプレートが名乗る見た目の名前 `variant` とは別の欄で、どの
+    テンプレートでも書ける。dense のスライドは、本文の部品・サブシステムの字の大きさと間隔を
+    テンプレートの値の表の `dense` の組(本文・入れ子の箇条・表・小さい字、ブロック・項目の
+    間)にする。題・リード・出典・フッターは変えない。IR はスライドの欄 `density`。
+    知らない値は `invalid-value`(場所 `/slides/N/density`、`expected` に normal・dense)、
+    本文のスライドでないところに書けば `misplaced-content`。Boxloom は自分では dense に
+    しない(はみ出しを自動で直さない)。はみ出した normal のスライドには、`layout-overflow` の
+    hint が dense で組み直して測った結果(「{density=dense} で収まります」か「dense にしても
+    N pt 足りません」)を言う(`docs/ir.md` の 9.4)。
   - `type=cover` は誤り(表紙は文書の頭から作る。3.1)。知らない種類は `invalid-value`
     で、選べる名前を `expected` に入れる。
   - 理由:種類を `#` の行の属性にしたのは、どの種類も「1枚の始まり」と「1つの文」を

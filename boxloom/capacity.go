@@ -30,8 +30,15 @@ type SlideCapacity struct {
 	// RemainingBodyLines は、残りに本文の大きさの行がいくつ入るか(既にある
 	// ブロックに行を足す場合。新しいブロックなら blockGap を引いてから数える)。
 	// 残りが負なら 0。
-	RemainingBodyLines int             `json:"remainingBodyLines"`
-	Blocks             []BlockCapacity `json:"blocks"`
+	RemainingBodyLines int `json:"remainingBodyLines"`
+	// Density は密なスライド(density: dense)のとき "dense"(本文の値は値の表の dense の組)。
+	// normal のスライドでは省く。
+	Density string `json:"density,omitempty"`
+	// DenseRemaining は normal の本文のスライドを dense にしたときの remaining(実際に
+	// dense の値で組み直して測る。density.go)。負なら dense でもはみ出す。
+	// dense のスライドでは省く(remaining がそれ)。
+	DenseRemaining *float64        `json:"denseRemaining,omitempty"`
+	Blocks         []BlockCapacity `json:"blocks"`
 }
 
 // BlockCapacity は本文の1つのブロックの測り値。
@@ -164,6 +171,12 @@ func (c SlideCapacity) String() string {
 	}
 	out := fmt.Sprintf("capacity: %s %s: body area %.1fpt, need %.1fpt, remaining %.1fpt (%d body lines)",
 		loc, c.Path, c.BodyArea, c.Need, c.Remaining, c.RemainingBodyLines)
+	if c.Density != "" {
+		out += ", " + c.Density
+	}
+	if c.DenseRemaining != nil {
+		out += fmt.Sprintf(", remaining %.1fpt if dense", *c.DenseRemaining)
+	}
 	for _, b := range c.Blocks {
 		out += fmt.Sprintf("\n  %s %s: %d lines, %.1fpt", b.Path, b.Type, b.Lines, b.Need)
 		if b.Overflow > 0 {

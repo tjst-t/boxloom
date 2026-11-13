@@ -122,6 +122,48 @@ type TemplateValues struct {
 	CaptionGap     float64 `json:"captionGap" scale:"space"` // 表・画像と説明の文の間
 }
 
+// DenseValues は密なスライド(content の density: dense。「このページは参照用に
+// 詰めて読ませる」)の本文の値の組。本文の部品・サブシステムは、dense のスライドで
+// values の同じ名前の代わりにこれを使う(題・リード・出典・フッターは values のまま)。
+// どの値も values の同じ名前より大きくはできない(読み込みで誤り)。
+type DenseValues struct {
+	Body      float64 `json:"body" scale:"type"`      // 本文の字
+	SubPoint  float64 `json:"subPoint" scale:"type"`  // 入れ子の箇条・図の2段目
+	TableText float64 `json:"tableText" scale:"type"` // 表のセルの字
+	Small     float64 `json:"small" scale:"type"`     // 注記・図の凡例
+	BlockGap  float64 `json:"blockGap" scale:"space"` // 本文のブロックの間
+	ItemGap   float64 `json:"itemGap" scale:"space"`  // 箇条の項目の間
+}
+
+// apply は v の本文の値を dense の組に替えたもの。
+func (d DenseValues) apply(v TemplateValues) TemplateValues {
+	v.Body, v.SubPoint, v.TableText, v.Small = d.Body, d.SubPoint, d.TableText, d.Small
+	v.BlockGap, v.ItemGap = d.BlockGap, d.ItemGap
+	return v
+}
+
+// checkDense は dense の組が正で段に載り、values の同じ名前より大きくないことを見る。
+func checkDense(d DenseValues, v TemplateValues, sc TemplateScale) error {
+	if err := checkPositive("dense", d); err != nil {
+		return err
+	}
+	if err := checkOnScale("dense", d, sc); err != nil {
+		return err
+	}
+	for _, c := range []struct {
+		name      string
+		dense, at float64
+	}{
+		{"body", d.Body, v.Body}, {"subPoint", d.SubPoint, v.SubPoint}, {"tableText", d.TableText, v.TableText},
+		{"small", d.Small, v.Small}, {"blockGap", d.BlockGap, v.BlockGap}, {"itemGap", d.ItemGap, v.ItemGap},
+	} {
+		if c.dense > c.at+scaleEps {
+			return fmt.Errorf("dense.%s: %v is larger than values.%s (%v); dense packs the body, so it cannot be larger", c.name, c.dense, c.name, c.at)
+		}
+	}
+	return nil
+}
+
 // TemplateScale は値の表の段階(見た目のトークンの刻み)。
 //
 //   - SpacingUnit:余白・間隔(json タグに scale:"space" の付いた値)はこの倍数だけ
@@ -317,6 +359,8 @@ type templateFile struct {
 	Marks    TemplateMarks     `json:"marks"`
 	Fonts    TemplateFonts     `json:"fonts"`
 	Variants []string          `json:"variants"`
+	// Dense は密なスライド(content の density: dense)の本文の値の組(必須)。
+	Dense DenseValues `json:"dense"`
 	// Subsystems はサブシステムの値の差し替え(任意)。書くなら全部の値を書く。
 	Subsystems *templateSubsystems `json:"subsystems,omitempty"`
 }
@@ -471,6 +515,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	if err := checkMarks(f.Marks); err != nil {
 		return nil, err
 	}
+	if err := checkDense(f.Dense, f.Values, f.Scale); err != nil {
+		return nil, err
+	}
 	if v := f.Values.PairsSideMin; v >= 0.5 {
 		return nil, fmt.Errorf("values.pairsSideMin: %v must be below 0.5 (each of the two sides gets at least this share)", v)
 	}
@@ -493,6 +540,7 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		Theme:      Theme(f.Theme),
 		Scale:      f.Scale,
 		Values:     f.Values,
+		Dense:      f.Dense,
 		Marks:      f.Marks,
 		Fonts:      fonts,
 		Subsystems: DefaultSubsystems().Clone(),

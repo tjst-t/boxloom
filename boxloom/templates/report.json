@@ -117,6 +117,14 @@
     "fixedLineSpacing": true,
     "lineHeight": 1.2
   },
+  "dense": {
+    "body": 12,
+    "subPoint": 11,
+    "tableText": 10,
+    "small": 9,
+    "blockGap": 12,
+    "itemGap": 4
+  },
   "variants": [],
   "subsystems": {
     "gantt": {

@@ -93,6 +93,7 @@ type LayoutMarks struct {
 	NoShrink     bool   `json:"noShrink,omitempty"`
 	List         bool   `json:"list,omitempty"`
 	Card         bool   `json:"card,omitempty"`
+	Dense        bool   `json:"dense,omitempty"` // 密なスライドの本文の箱(この下のトークンは dense の組)
 }
 
 // LayoutSubsystem はサブシステムの葉の、名前と申告した大きさ(中身は出さない)。
@@ -313,7 +314,7 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 		}
 		n.Placeholder = s.Placeholder
 	}
-	m := LayoutMarks{IRType: s.irType, CardRow: s.cards, KeepLine: s.keepLine, NestedSlack: s.nestedSlack, NoShrink: s.noShrink, List: s.List, Card: s.card}
+	m := LayoutMarks{IRType: s.irType, CardRow: s.cards, KeepLine: s.keepLine, NestedSlack: s.nestedSlack, NoShrink: s.noShrink, List: s.List, Card: s.card, Dense: s.dense}
 	if s.columns != nil {
 		m.ColumnGroups = len(s.columns.cols)
 	}

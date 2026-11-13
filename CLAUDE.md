@@ -258,6 +258,12 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     敷いて `p:bg` の写真に書く。縦横比が違えば端を切る)と終わりのスライド(`meta.closing`。IR に
     書かず組み立てで最後に足す。骨組みの `closing`)。report は表紙を写真+基調色の箱(幅 0.53・
     高さ 0.45)に白い字、終わりは同じ写真と箱だけ。`docs/ir.md` の9.3
+  - `density.go` = 本文の密度(content の `density`: normal・dense、Markdown は `# 題 {density=dense}`、#116)。
+    dense のスライドは本文の部品・サブシステムが値の表の `dense` の組(本文・入れ子・表・小さい字・
+    blockGap・itemGap)を使う(題・リード・フッターはそのまま)。切り替えは本文のブロックを組む口と
+    本文の箱の印 `dense`(resolveSpec)の1か所。自動で dense にはしない。check は normal のスライドを
+    dense で組み直して測り、layout-overflow の hint(「{density=dense} で収まる」か「dense でも N pt
+    足りない」)と容量の `denseRemaining` を出す(`docs/ir.md` の 9.4)
   - `token.go` = 配置の段のトークン。部品と骨組みは Spec に数・色を書かず、値の表の名前・
     段の刻み(`space(n)`・`type(n)`)・役割名を書き、`BuildSlide` の中の `resolveSpec`(組み立ての
     直後・計測の前の1か所)で数と色に直す。トークンの無い数・色・段に無い刻み・知らない名前は

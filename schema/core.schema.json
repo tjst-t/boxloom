@@ -429,6 +429,13 @@
           "maxLength": 2,
           "pattern": "^\\S{1,2}$"
         },
+        "density": {
+          "description": "本文の密度。dense は「このページは参照用に詰めて読ませる」(表・一覧の密なページ)という意味で、本文の部品・サブシステムの字の大きさ・間隔をテンプレートの値の表の dense の組にする。題・リード・出典・フッターは変えない。省けば normal。テンプレートが名乗る見た目の名前 variant とは別の欄。",
+          "enum": [
+            "normal",
+            "dense"
+          ]
+        },
         "body": {
           "type": "array",
           "items": {

@@ -23,10 +23,12 @@ import (
 
 // Template は名前のついた方針の一式。
 type Template struct {
-	Name       string
-	Theme      Theme
-	Scale      TemplateScale // 値の表の段階(余白の刻み・字の大きさの段)
-	Values     TemplateValues
+	Name   string
+	Theme  Theme
+	Scale  TemplateScale // 値の表の段階(余白の刻み・字の大きさの段)
+	Values TemplateValues
+	// Dense は密なスライド(density: dense)の本文の値の組(densed が Values に重ねる)。
+	Dense      DenseValues
 	Marks      TemplateMarks
 	Fonts      *FontSet // 字体と幅の余裕(値の表の fonts)
 	Subsystems *SubsystemRegistry
@@ -690,7 +692,14 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 			// 警告と容量は同じ測り値から作る(数字が食い違わないように)。
 			if blocks, area, need, ok := measureBody(b.Root, b.Body); ok {
 				warnings = append(warnings, overflowWarnings(blocks, area, need, kinds)...)
-				sc := slideCapacity(blocks, area, need, b.Body.Gap, i, kinds, v.Body)
+				bodySize := v.Body
+				if d.Slides[i].dense() {
+					bodySize = t.densed().Values.Body
+				}
+				sc := slideCapacity(blocks, area, need, b.Body.Gap, i, kinds, bodySize)
+				if d.Slides[i].dense() {
+					sc.Density = densityDense
+				}
 				for j := range sc.Blocks {
 					if w, ok := spare[j]; ok {
 						sc.Blocks[j].RemainingWidth = round1(w)

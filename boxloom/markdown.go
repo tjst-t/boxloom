@@ -1095,6 +1095,7 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 		}
 		level, hasLevel := p.sectionLevel(attrs, s, path, typ)
 		marker, hasMarker := p.slideMarker(attrs, s, path, typ)
+		density, hasDensity := p.slideDensity(attrs, s, path, typ)
 		body, notes := splitNotes(s.items)
 		body, sources := splitSource(body)
 		body, leads := splitLead(body)
@@ -1106,6 +1107,9 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 			}
 			if hasMarker {
 				sl.set("marker", marker)
+			}
+			if hasDensity {
+				sl.set("density", density)
 			}
 			sl.set("body", p.blocks(body, path+"/body"))
 		case "section":
@@ -1150,7 +1154,7 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 }
 
 // slideAttributeNames は「# 題 {…}」に書ける属性。
-var slideAttributeNames = []string{"type", "variant", "level", "marker"}
+var slideAttributeNames = []string{"type", "variant", "level", "marker", "density"}
 
 // slideType は「# 題 {type=…}」のスライドの種類(省けば content)。表紙は文書の頭から
 // 作るので type=cover は誤り。
@@ -1186,6 +1190,25 @@ func (p *mdParser) slideMarker(attrs map[string]string, s *mdSlide, path, typ st
 	}
 	if err := checkMarker(v); err != nil {
 		p.fail(s.line, s.attrsCol, path+"/marker", codeInvalidValue, fmt.Sprintf("隅の印 %q は書けません(空白を含まない2字まで)", v), nil, "{marker=A} や {marker=1} のように短く書きます")
+		return "", false
+	}
+	return v, true
+}
+
+// slideDensity は「# 題 {density=dense}」の本文の密度(normal・dense)。本文の
+// スライドのほかに書いたら誤り。variant(テンプレートが名乗る見た目の名前)とは別の欄で、
+// 意味は「このページは参照用に詰めて読ませる」。
+func (p *mdParser) slideDensity(attrs map[string]string, s *mdSlide, path, typ string) (string, bool) {
+	v, ok := attrs["density"]
+	if !ok {
+		return "", false
+	}
+	if typ != "content" {
+		p.fail(s.line, s.attrsCol, path, codeMisplaced, fmt.Sprintf("density は本文のスライド(type=content)にだけ書けます(このスライドは type=%s)", typ), nil, "密度は本文の字の大きさ・間隔を選ぶものです")
+		return "", false
+	}
+	if !isDensity(v) {
+		p.fail(s.line, s.attrsCol, path+"/density", codeInvalidValue, fmt.Sprintf("密度 %q はありません", v), densityNames, "参照用に詰めて読ませるページ(表・一覧)は {density=dense}。省けば normal です")
 		return "", false
 	}
 	return v, true

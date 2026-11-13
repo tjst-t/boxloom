@@ -85,10 +85,15 @@ func (ctx skeletonContext) blocks() ([]*Spec, error) {
 	if ctx.st.built {
 		return ctx.st.blocks, nil
 	}
-	cc := componentContext{t: ctx.t, warn: func(w string) { ctx.st.warns = append(ctx.st.warns, w) }}
+	// 密なスライドの本文は dense の値の表で組む(density.go)。
+	bt := ctx.t
+	if ctx.slide.dense() {
+		bt = ctx.t.densed()
+	}
+	cc := componentContext{t: bt, warn: func(w string) { ctx.st.warns = append(ctx.st.warns, w) }}
 	var out []*Spec
 	for bi := range ctx.slide.Body {
-		b, err := ctx.t.buildBlockIn(cc.within(fmt.Sprintf("body[%d]", bi)), &ctx.slide.Body[bi])
+		b, err := bt.buildBlockIn(cc.within(fmt.Sprintf("body[%d]", bi)), &ctx.slide.Body[bi])
 		if err != nil {
 			return nil, fmt.Errorf("body[%d]: %w", bi, err)
 		}
@@ -241,6 +246,10 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 			return nil, fmt.Errorf("%s: a content slide needs exactly one body box (markFrame(frameBody)) and no main box; found %d and %d", name, len(bodies), len(mains))
 		}
 		out.Body = bodies[0]
+		if s.dense() {
+			// 本文の箱の下(ブロックの間・部品のトークン)は dense の値の表で引く。
+			apply(out.Body, []SpecOpt{markDense()})
+		}
 		out.Title = placeholderLeaf(root, "title")
 		out.Lead = irLeaf(root, "lead")
 	case "section", "statement", "toc":

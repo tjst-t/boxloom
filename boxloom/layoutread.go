@@ -232,6 +232,12 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 	if kind == KindText {
 		s.Align, s.Anchor = "left", "top"
 	}
+	if n.Marks != nil && n.Marks.Dense && r.tt.tmpl != nil {
+		// 密なスライドの本文の箱:この下のトークンは dense の値の表で引く(density.go)。
+		saved := r.tt
+		r.tt = newTokenTable(saved.tmpl.densed())
+		defer func() { r.tt = saved }()
+	}
 	tok := n.Tokens
 	for k := range tok {
 		if !containsString(layoutTokenKeys, k) {
@@ -364,6 +370,9 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 		}
 		if m.Card {
 			opts = append(opts, asCard())
+		}
+		if m.Dense {
+			opts = append(opts, markDense())
 		}
 		apply(s, opts)
 	}

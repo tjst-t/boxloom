@@ -160,6 +160,7 @@ Available now (check `boxloom schema` — more may have been added):
 |---|---|---|
 | A chapter break | `# Part 2: How we migrate {type=section}` | Heading text is the chapter title; nothing but `:::notes` may follow. Not a table of contents — when the deck has two or more sections, the template draws the chapter list with the current one highlighted on every section slide by itself |
 | A detail page about one pattern or factor (A, B, 1, 2) in a long reading document | `# Night returns by hour {marker=A}` | `marker` only on content slides, 1–2 characters without spaces. Do not write the breadcrumb: the template uses the title of the nearest section before the slide. report draws a corner mark and the breadcrumb; dark and light draw nothing |
+| A reference page read closely: a dense table or long list the reader consults, not a page that argues | `# Systems to migrate {density=dense}` | `density` only on content slides: `normal` (default) or `dense`. dense packs the body with the template's dense sizes (smaller text, tighter gaps); title, lead, source and footer stay the same. Not a cure for overflow on an ordinary page: split or cut first (see "Splitting an overflowing slide"). Unknown values are `invalid-value` |
 | A section inside a chapter, or an item inside a section (long reading documents) | `# Return flow {type=section level=2}`, `# Night returns {type=section level=3}` | `level` 1 = chapter (default), 2 = section, 3 = item. A level needs its parent before it (a 2 after a 1, a 3 after a 2 of the same chapter) or check fails with `section-level`. The template decides the look |
 | A table of contents with page numbers | front matter `toc: true` | Never write the contents slide yourself: the build adds it right after the cover, listing level 1 and 2 sections with their page numbers after the build. check paths (`/slides/N`) stay the deck's own numbering |
 | A photo on the cover, and a closing slide | front matter `coverImage: images/cover.jpg` and `closing: true` (or a one-line text, `closing: Thank you`) | Decorative only (no alt). Same path rules as images (PNG/JPEG next to the deck). Never write the closing slide yourself: the build adds it at the end (with the same photo when there is one) and puts the closing text on it. `yes`/`no`/`on`/`off` are rejected as misspelled booleans |
@@ -431,7 +432,7 @@ returns
  "warnings": [{"file": "deck.bx.md", "line": 38, "path": "/slides/2/body/2",
                "code": "layout-overflow", "message": "block (points) overflows the body area by 131.5pt …"}],
  "capacity": [{"path": "/slides/2", "bodyArea": 406.1, "need": 571.1, "remaining": -165.0,
-               "blockGap": 20, "bodyLineHeight": 21.6, "remainingBodyLines": 0,
+               "blockGap": 20, "bodyLineHeight": 21.6, "remainingBodyLines": 0, "denseRemaining": -52.6,
                "blocks": [{"path": "/slides/2/body/2", "line": 38, "type": "points",
                            "need": 199.2, "lines": 7, "overflow": 131.5}]}]}
 ```
@@ -485,6 +486,12 @@ Fixes by code:
 | `chart-labels` (warning) | `chart` category names are too long for the space the app gives them (they would be tilted or skipped): shorten the names, use fewer categories, or use `item` (horizontal bars have room for names) |
 
 ### Splitting an overflowing slide
+
+First split or cut — do not reach for smaller text. Only a reference page (a dense table or
+list the reader consults) may be made `{density=dense}`; the `layout-overflow` hint says
+whether dense would fit ("{density=dense} で収まります") or not ("dense にしても N pt 足りません"),
+and `capacity` gives `denseRemaining`. An ordinary page that argues a point is split even if
+dense would fit.
 
 1. In `capacity`, find the slide with `remaining < 0`.
 2. Find the first block with `overflow > 0`. Everything from that block on moves to a

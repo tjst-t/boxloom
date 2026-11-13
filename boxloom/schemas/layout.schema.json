@@ -83,7 +83,8 @@
         "nestedSlack": {"description": "列の中で足りないとき、中の図を文字より先に縮める。", "const": true},
         "noShrink": {"description": "親の主軸が足りないとき縮めない(骨組みの頭・出典・フッター)。足りない分は印の無い兄弟が受け持つ。", "const": true},
         "list": {"description": "箇条(PPTX では1つの文字の枠の段落)。", "const": true},
-        "card": {"description": "カード(PPTX では地と中の文字を持つ1つの図形)。", "const": true}
+        "card": {"description": "カード(PPTX では地と中の文字を持つ1つの図形)。", "const": true},
+        "dense": {"description": "密なスライド(density: dense)の本文の箱。この下のトークンは値の表の dense の組で引く。", "const": true}
       }
     },
     "subsystem": {

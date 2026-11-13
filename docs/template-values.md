@@ -257,6 +257,7 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
   (`marks.tableContinued`)に `{n}` か `{m}` が無い。
 - 日付の書き方(`marks.date`・`marks.yearMonth`)の印の誤り(次の節の marks)。
 - `variants` に空の名前・同じ名前が2回。
+- `dense` の値が段に無い・`values` の同じ名前より大きい(次の節の dense)。
 
 同梱のファイルが壊れていれば試験(`values_test.go`)が落ちる。
 
@@ -273,6 +274,7 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
   "fonts":  { "latin": "Noto Sans CJK JP", "eastAsian": "Noto Sans CJK JP",
               "fallbackFonts": ["BIZ UDPGothic", "…"], "widthMargin": 1.05, "fixedLineSpacing": true,
               "lineHeight": 1.35 },
+  "dense":  { "body": 14, "subPoint": 12, "tableText": 12, "small": 10, "blockGap": 12, "itemGap": 4 },
   "variants": [],
   "subsystems": { "gantt": { "...": "subsystems/gantt.json と同じ形" } }
 }
@@ -534,6 +536,24 @@ dark / light / report は `{n}/{m}`)。目次のスライド(`meta.toc`)の題(`
 (`boxloom/fonts/*.json`)を持つものだけ選べ、無ければ誤り。和文の字体は仮名と漢字を
 持つ字体に限る。`widthMargin` は 1〜1.5、`lineHeight` は 1〜2(dark / light は 1.35、report は 1.2)。
 意味・測った数字・推奨する値は `docs/fonts.md`。
+
+### dense(密なスライドの本文の値。必須、#116)
+
+本文のスライドに `density: dense`(Markdown は `# 題 {density=dense}`。`docs/ir.md` の 9.4)を
+書いたとき、本文の部品・サブシステムが `values` の同じ名前の代わりに使う値の組。題・リード・
+出典・フッターは `values` のまま。6つのキーは全部書く(欠け・知らないキーは誤り)。字の大きさは
+段(`typeSizes`)、間隔は余白の刻みに載り、`values` の同じ名前より大きくはできない。
+
+| キー | 意味 | dark・light | report |
+|---|---|---|---|
+| `body` | 本文の字(段落・箇条・図の箱の題) | 14(normal 16) | 12(normal 14) |
+| `subPoint` | 入れ子の箇条・図の2段目 | 12(14) | 11(12) |
+| `tableText` | 表のセルの字 | 12(14) | 10(11) |
+| `small` | 注記・図の凡例 | 10(10) | 9(10) |
+| `blockGap` | 本文のブロックの間 | 12(20) | 12(18) |
+| `itemGap` | 箇条の項目の間 | 4(8) | 4(6) |
+
+report の値は読む資料のサンプルの密なページ(本文 10〜12pt、表 10〜11pt)から決めた。
 
 ### variants
 

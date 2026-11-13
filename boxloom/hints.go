@@ -11,6 +11,7 @@ package boxloom
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -59,7 +60,7 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 		switch w.Code {
 		case "layout-overflow":
 			if w.Hint == "" {
-				w.Hint = tableSplitHint(w.Path, capOf)
+				w.Hint = joinHints(densityHint(w.Path, capOf), tableSplitHint(w.Path, capOf))
 			}
 		case "stat-value":
 			if w.Hint == "" {
@@ -92,6 +93,43 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 			}
 		}
 	}
+}
+
+// densityHint は、はみ出した本文のスライドを dense にすれば収まるかの案(容量の
+// denseRemaining。実際に dense の値で組み直して測ったもの)。dense のスライドなら、
+// これ以上は詰めないので分ける・短くする。本文のスライドでなければ空。
+func densityHint(path string, capOf map[string]SlideCapacity) string {
+	var s int
+	if _, err := fmt.Sscanf(path, "/slides/%d/body/", &s); err != nil {
+		return ""
+	}
+	c, ok := capOf[fmt.Sprintf("/slides/%d", s)]
+	if !ok {
+		return ""
+	}
+	if c.Density == densityDense {
+		return fmt.Sprintf("このスライドは dense です。まだ %.1fpt 足りません。スライドを分けるか、文を短くしてください", math.Max(0, -c.Remaining))
+	}
+	r := c.DenseRemaining
+	if r == nil {
+		return ""
+	}
+	if *r >= -overflowEps {
+		return fmt.Sprintf("{density=dense} で収まります(IR は density: \"dense\"。dense の残り %.1fpt)。dense は参照用に詰めて読ませるページ(表・一覧)のためのもので、"+
+			"そうでなければスライドを分けるか、文を短くしてください", math.Max(0, *r))
+	}
+	return fmt.Sprintf("dense にしても %.1fpt 足りません。スライドを分けるか、文を短くしてください", -*r)
+}
+
+// joinHints は空でない hint を1つの文にする。
+func joinHints(hs ...string) string {
+	var out []string
+	for _, h := range hs {
+		if h != "" {
+			out = append(out, h)
+		}
+	}
+	return strings.Join(out, "。")
 }
 
 // tableSplitHint は、はみ出した本文の表の分け方の案(容量の split)を1文にする。
