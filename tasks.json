@@ -2612,7 +2612,7 @@
       "number": 114,
       "kind": "task",
       "title": "段階の図:枠が最小より小さいとき凡例が枠の外に描かれ、下の注に重なる",
-      "status": "in-progress",
+      "status": "done",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2620,12 +2620,12 @@
       "labels": [],
       "body": "## なぜ\n#82 の4回目の比較(5ページ相当)で、phases の枠が最小(418pt)より小さい(363pt)とき、凡例が枠の外に描かれ、下の注と重なった。\n\n## やること\n- 枠が足りないとき、凡例は枠の中に残す(箱より先に置き場を取るか、箱の列の横に移すなど)。#107 の「箱を潰さない」と両立させ、どうしてもはみ出すなら layout-overflow で知らせる。注や下のブロックの上に描かない。\n\n## 確かめ方\n- 試験(架空の文):枠が Min より小さい phases で、凡例の矩形が図の矩形の中。",
       "doneWhen": "枠が足りないときも凡例が図の中にあることを試験で確かめる/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/phases-legend-in-frame）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T05:34:46.314Z",
-      "updatedAt": "2026-11-13T05:44:28.558Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T05:51:35.356Z",
+      "closedAt": "2026-11-13T05:51:35.356Z",
       "extra": {}
     }
   ]
