@@ -1938,7 +1938,7 @@
       "number": 83,
       "kind": "task",
       "title": "report を読む資料の見た目に直す(元の資料の値・リードを上の見出しに。骨組みの差し替えを report が持つ)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "sample-fidelity",
       "dependsOn": [
         "skeleton-components"
@@ -1948,12 +1948,12 @@
       "labels": [],
       "body": "## なぜ\n#82 の原因1・2。読む資料のサンプル(リポジトリの外。中身は書かない)を測ると、#78 で report を作ったときの見立て(本文 8〜10pt)は誤りだった。人の決定で、新しいテンプレートは作らず、**report をこの値に直して1つにまとめる**(名前は report のまま)。\n\n見た目の違いは report が自分の組み方で持つ(#95 の骨組みの部品と、標準の部品の override)。コアの標準の部品・骨組みに条件分岐を足さない。dark・light の出力は、作りの上で変わらない。\n\n## 値(templates/report.json を書き換える。960×540pt)\n- **色**:\n  - 地 FFFFFF、字 575757、薄い字 7F7F7F、罫線 9A9A9A、薄い面 F1F2F1。\n  - 基調 29BA74、濃い基調 187955、さらに濃い 03522C、副の色 30C1D7、隅の印の地 295E7E。\n  - 状態の色(support・conditional・none・danger)は基調の系統から選ぶ。\n- **余白**:左右 50、上 42。頁番号は右下で 10pt・7F7F7F。\n- **字**:\n  - リード(上の見出し)24・基調色・2行まで。\n  - 題(話題)16・字の色。\n  - 本文 14、入れ子の箇条 12、表 11、小さい字 10、列の見出し 16・基調色。\n- **段**:spacingUnit 2。typeSizes は 8・9・10・11・12・14・16・18・20・24・28・32・54(値の表の段の検査に通ること)。\n- fillRatioMin などの決まりは今のまま。\n\n## 組み方(report が持つ。Go で登録する)\n- **contentHeader の差し替え**:\n  - リードを上に、24pt・基調色・2行までで置く。題はその下に 16pt で置く。\n  - 題はこれまでどおりレイアウトの title のプレースホルダーに書く(位置だけが下になる)。\n  - リードの無いスライドでは、題を上の見出しの位置と大きさで置く。title-wrap の警告は今のまま。\n- IR と Markdown は変えない。\n\n## 確かめ方\n- 試験で次を確かめる:report の本文のスライドで、リードが上(24pt・基調色)・題が下(16pt)にある。題が title のプレースホルダーにある。\n- report_test.go と report の golden は新しい値に合わせて直す(人の決定による変更)。\n- dark・light の golden は変わらない。\n- examples の全 deck が -template report で build できる。\n- docs/template-values.md の report の節を書き直す。誤った見立てだったことと、測った値に直したことを書く。\n- SKILL.md の report の説明を直す。",
       "doneWhen": "templates/report.json が測った値(本文 14・リード 24・余白 50 ほか)になり段の検査に通る/report が contentHeader を差し替え、リードが上・題が下で題は title のプレースホルダーにあることを試験で確かめる/dark・light の golden が変わらない/examples の全 deck が -template report で build できる/docs/template-values.md・SKILL.md が直っている/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/green-template）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:28:26.162Z",
-      "updatedAt": "2026-11-13T02:59:54.637Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T03:14:29.698Z",
+      "closedAt": "2026-11-13T03:14:29.698Z",
       "extra": {}
     },
     {
