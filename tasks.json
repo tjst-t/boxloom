@@ -2486,7 +2486,7 @@
       "number": 108,
       "kind": "task",
       "title": "対の並び:側の幅を自然な幅でなく、要る面積(要る高さの釣り合い)で割る",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2498,7 +2498,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T05:08:29.681Z",
-      "updatedAt": "2026-11-13T05:08:29.681Z",
+      "updatedAt": "2026-11-13T05:08:40.822Z",
       "closedAt": null,
       "extra": {}
     },
