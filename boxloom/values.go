@@ -659,6 +659,12 @@ func loadTemplate(name string) (*Template, error) {
 	}
 	// 同梱のテンプレートは、コアの標準でない型の組み方も持つ(pairs.go)。
 	registerBundledComponents(t.components)
+	// 自分の組み方(骨組みの部品の差し替え)を持つテンプレート(report.go)。
+	if reg, ok := bundledTemplateParts[name]; ok {
+		if err := reg(t); err != nil {
+			return nil, fmt.Errorf("%s: %w", file, err)
+		}
+	}
 	return t, nil
 }
 

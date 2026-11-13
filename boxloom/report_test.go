@@ -1,33 +1,33 @@
 package boxloom
 
 import (
-	"encoding/json"
+	"archive/zip"
+	"bytes"
 	"fmt"
-	"reflect"
+	"io"
 	"strings"
 	"testing"
 )
 
-// reportPairsDeck は架空の対の1枚:左に2行ほどの「分かったこと」5つ、右にそれぞれ
-// 3項目の打ち手(Backlog #78 の試しと同じ量)。
-func reportPairsDeck() []byte {
+// reportPairsDeck は架空の対の1枚:左に2行ほどの「分かったこと」n、右にそれぞれ
+// 3項目の打ち手。
+func reportPairsDeck(n int) []byte {
 	var b strings.Builder
 	b.WriteString("---\ntitle: 読む資料の試し\n---\n\n# 窓口の待ち時間を見直す\n\n")
 	b.WriteString(":::lead\n聞き取りと記録から分かったことごとに、打ち手を3つずつ決めた\n:::\n\n")
 	b.WriteString(":::::pairs 分かったこと | 打ち手\n")
-	for i := 1; i <= 5; i++ {
-		fmt.Fprintf(&b, ":::subject\n分かったこと %d:月曜と金曜の午前に来る人が全体の半分を占め、そのうち三割は書類の不足で二度来ている。待ちの長さは昼前に最も長くなる\n:::\n", i)
+	for i := 1; i <= n; i++ {
+		fmt.Fprintf(&b, ":::subject\n分かったこと %d:月曜と金曜の午前に来る人が全体の半分を占め、そのうち三割は書類の不足で二度来ている\n:::\n", i)
 		fmt.Fprintf(&b, ":::response\n- 打ち手 %d-1:予約の枠を午後に広げる\n- 打ち手 %d-2:要る書類の一覧を前もって送る\n- 打ち手 %d-3:混む時間を案内に載せる\n:::\n", i, i, i)
 	}
 	b.WriteString(":::::\n")
 	return []byte(b.String())
 }
 
-// report は読む資料向けの密なテンプレートで、light ではみ出す量の対の1枚が収まり、
-// pairs を自分の組み方で組む(layout-overflow も component-fallback も出ない)。
-func TestReportFitsDensePairs(t *testing.T) {
-	data := reportPairsDeck()
-	res := Check("pairs.bx.md", data, CheckOptions{Template: "report"})
+// report は pairs を自分の組み方で組む(component-fallback は出ない)。14pt の本文で
+// 3つの対が1枚に収まる。
+func TestReportPairs(t *testing.T) {
+	res := Check("pairs.bx.md", reportPairsDeck(3), CheckOptions{Template: "report"})
 	if len(res.Errors) > 0 {
 		t.Fatalf("errors %+v", res.Errors)
 	}
@@ -37,39 +37,169 @@ func TestReportFitsDensePairs(t *testing.T) {
 			t.Errorf("report: %+v", w)
 		}
 	}
-	// 同じ量は light では収まらない(試しの前提)。
-	overflow := false
-	for _, w := range Check("pairs.bx.md", data, CheckOptions{Template: "light"}).Warnings {
-		overflow = overflow || w.Code == "layout-overflow"
-	}
-	if !overflow {
-		t.Error("light: expected layout-overflow for the dense pairs slide")
-	}
 }
 
-// report の字の段は本文 12pt・注 8pt を下限とする(8pt より小さい段を使わない。
-// Gantt の寸法の差し替えも同じ)。
-func TestReportTypeFloor(t *testing.T) {
-	data, err := valueFiles.ReadFile("templates/report.json")
+// report の値は読む資料のサンプルを測った値(Backlog #83。人の決定)。
+func TestReportMeasuredValues(t *testing.T) {
+	tm, err := LookupTemplate("report")
 	if err != nil {
 		t.Fatal(err)
 	}
-	var f templateFile
-	if err := json.Unmarshal(data, &f); err != nil {
-		t.Fatal(err)
-	}
-	for _, v := range []any{f.Values, *f.Subsystems.Gantt} {
-		rv := reflect.ValueOf(v)
-		for i := 0; i < rv.NumField(); i++ {
-			if rv.Type().Field(i).Tag.Get("scale") == "type" && rv.Field(i).Float() < 8 {
-				t.Errorf("%s = %v (< 8pt)", rv.Type().Field(i).Name, rv.Field(i).Float())
-			}
+	v := tm.Values
+	for name, c := range map[string][2]float64{
+		"pageWidth": {v.PageW, 960}, "pageHeight": {v.PageH, 540},
+		"pagePadding": {v.PagePadding, 50}, "pagePaddingY": {v.PagePaddingY, 42},
+		"leadText": {v.LeadText, 24}, "slideTitle": {v.SlideTitle, 16},
+		"body": {v.Body, 14}, "subPoint": {v.SubPoint, 12}, "tableText": {v.TableText, 11},
+		"small": {v.Small, 10}, "columnTitle": {v.ColumnTitle, 16},
+		"fillRatioMin": {v.FillRatioMin, 0.65}, "spacingUnit": {tm.Scale.SpacingUnit, 2},
+	} {
+		if c[0] != c[1] {
+			t.Errorf("%s = %v, want %v", name, c[0], c[1])
 		}
 	}
-	v := f.Values
-	for name, x := range map[string]float64{"body": v.Body, "takeawayText": v.TakeawayText, "quoteText": v.QuoteText, "optionLabel": v.OptionLabel, "columnTitle": v.ColumnTitle} {
-		if x < 12 {
-			t.Errorf("%s = %v (< 12pt)", name, x)
+	for role, want := range map[string]string{
+		"bg": "FFFFFF", "text_primary": "575757", "text_muted": "7F7F7F", "grid": "9A9A9A",
+		"card": "F1F2F1", "accent": "29BA74", "support": "187955", "danger": "03522C", "conditional": "30C1D7",
+	} {
+		if got := tm.Theme[role]; got != want {
+			t.Errorf("theme.%s = %s, want %s", role, got, want)
+		}
+	}
+	if want := []float64{8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 54}; fmt.Sprint(tm.Scale.TypeSizes) != fmt.Sprint(want) {
+		t.Errorf("typeSizes = %v, want %v", tm.Scale.TypeSizes, want)
+	}
+}
+
+// reportHeaderDeck は本文のスライド2枚:1枚目はリードあり、2枚目はリードなし。
+const reportHeaderDeck = `---
+title: 頭の試し
+---
+
+# 窓口の待ち時間
+
+:::lead
+午前の混雑は予約の枠を午後に広げれば半分にできる
+:::
+
+- 月曜と金曜の午前に来る人が全体の半分を占める
+
+# 次の打ち手
+
+- 要る書類の一覧を前もって送る
+`
+
+// runColor は文字の葉の色(塊があれば最初の塊の色)。
+func runColor(s *Spec) string {
+	if len(s.Runs) > 0 {
+		return s.Runs[0].Color
+	}
+	return s.Color
+}
+
+func leafWithPlain(s *Spec, text string) *Spec {
+	if s.Kind == KindText && strings.Contains(s.Text+runsText(s.Runs), text) {
+		return s
+	}
+	for _, c := range s.Children {
+		if r := leafWithPlain(c, text); r != nil {
+			return r
+		}
+	}
+	return nil
+}
+
+// report の本文のスライドの頭:リードが上(24pt・基調色)、題が下(16pt・字の色)で、
+// 題は title のプレースホルダー。リードの無いスライドは題が上の見出しの大きさ。
+func TestReportContentHeader(t *testing.T) {
+	deck, _, err := ParseMarkdown("h.bx.md", []byte(reportHeaderDeck))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tm, err := LookupTemplate("report")
+	if err != nil {
+		t.Fatal(err)
+	}
+	built, err := tm.BuildDeck(deck)
+	if err != nil {
+		t.Fatal(err)
+	}
+	accent, text := tm.Theme["accent"], tm.Theme["text_primary"]
+	var b *BuiltSlide
+	for _, s := range built {
+		computeLayout(s.Root, 0, 0, tm.Values.PageW, tm.Values.PageH)
+	}
+	b = built[1] // 1枚目は表紙
+	lead := leafWithPlain(b.Root, "午前の混雑")
+	if lead == nil || b.Title == nil {
+		t.Fatalf("lead %v title %v", lead, b.Title)
+	}
+	if b.Title.Placeholder != "title" || !strings.Contains(b.Title.Text, "窓口の待ち時間") {
+		t.Errorf("title leaf = %q (placeholder %q)", b.Title.Text, b.Title.Placeholder)
+	}
+	if lead.FontSize != 24 || runColor(lead) != accent {
+		t.Errorf("lead: %vpt %s, want 24pt %s", lead.FontSize, runColor(lead), accent)
+	}
+	if b.Title.FontSize != 16 || runColor(b.Title) != text {
+		t.Errorf("title: %vpt %s, want 16pt %s", b.Title.FontSize, runColor(b.Title), text)
+	}
+	if !(lead.Box.Y+lead.Box.Height <= b.Title.Box.Y) {
+		t.Errorf("lead (y %.1f h %.1f) must be above the title (y %.1f)", lead.Box.Y, lead.Box.Height, b.Title.Box.Y)
+	}
+	if lead.Box.Y != tm.Values.PagePaddingY {
+		t.Errorf("lead y = %.1f, want the top padding %.1f", lead.Box.Y, tm.Values.PagePaddingY)
+	}
+	// リードの無いスライドは題が上の見出しの位置と大きさ。
+	nb := built[2]
+	if nb.Title == nil || nb.Title.FontSize != 24 || runColor(nb.Title) != accent || nb.Title.Box.Y != tm.Values.PagePaddingY {
+		t.Errorf("no-lead title = %+v", nb.Title)
+	}
+
+	// PPTX でも題は title のプレースホルダーで、リードの下にある。
+	var buf bytes.Buffer
+	if _, err := Build(&buf, deck, BuildOptions{Template: "report"}); err != nil {
+		t.Fatal(err)
+	}
+	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var slide string
+	for _, f := range zr.File {
+		if f.Name == "ppt/slides/slide2.xml" {
+			r, _ := f.Open()
+			data, _ := io.ReadAll(r)
+			r.Close()
+			slide = string(data)
+		}
+	}
+	ph := strings.Index(slide, `<p:ph type="title"/>`)
+	if ph < 0 || strings.Count(slide, `<p:ph type="title"/>`) != 1 {
+		t.Fatal("content slide must have exactly one title placeholder")
+	}
+	end := strings.Index(slide[ph:], "</p:sp>")
+	if !strings.Contains(slide[ph:ph+end], "窓口の待ち時間") || strings.Contains(slide[ph:ph+end], "午前の混雑") {
+		t.Error("the title placeholder must hold the title, not the lead")
+	}
+}
+
+// dark・light の頭は標準のまま(題が上・リードが下)。
+func TestReportOverrideIsOnlyReport(t *testing.T) {
+	deck, _, err := ParseMarkdown("h.bx.md", []byte(reportHeaderDeck))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"dark", "light"} {
+		tm, _ := LookupTemplate(name)
+		built, err := tm.BuildDeck(deck)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := built[1]
+		computeLayout(b.Root, 0, 0, tm.Values.PageW, tm.Values.PageH)
+		lead := leafWithPlain(b.Root, "午前の混雑")
+		if lead == nil || b.Title == nil || !(b.Title.Box.Y < lead.Box.Y) || b.Title.FontSize != tm.Values.SlideTitle {
+			t.Errorf("%s: the standard header must keep the title above the lead", name)
 		}
 	}
 }

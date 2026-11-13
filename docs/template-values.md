@@ -18,41 +18,84 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 どちらも `go:embed` でバイナリに同梱する。テンプレートの一覧はこのフォルダの
 ファイルから作るので、`templates/` にファイルを1つ足せば `-template <名前>` で選べる。
 
-## report(読む資料向けの密なテンプレート、Backlog #78)
+## report(読む資料のテンプレート、Backlog #78・#83)
 
 dark / light は**発表**のためのテンプレート(本文 16pt。遠くから読める大きさ)。
-report は**読む資料**(手元や画面で読む報告書。本文が 8〜10pt ほどの資料の量を
-1枚に入れる)のためのテンプレート。コアの字の大きさ・仕組みは変えず、値の表だけで
-密度を上げた。色(theme)・段階(scale)・字体(fonts)・印(marks)・`fillRatioMin`(0.65)は
-light と同じ。pairs の組み方も dark / light と同じく持つ(`component-fallback` は出ない)。
+report は**読む資料**(手元や画面で読む報告書)のためのテンプレート。
 
-字の大きさの下限は、本文 12pt・注 8pt。8pt より小さい段は使わない(`TestReportTypeFloor`)。
+**見立ての誤りと直し(#83)**:#78 で report を作ったときは「読む資料の本文は 8〜10pt」と
+見立て、light の色のまま字と余白だけを詰めた(本文 12pt・注 8pt)。読む資料のサンプル
+(リポジトリの外。中身は書かない)の PDF を測ると、この見立ては誤りだった:本文は 14pt で、
+密な表だけが 10〜11pt、題の場所には結論の文(24pt・基調色・2行まで)、その下に話題の副題
+(16pt)を置く。人の決定で、新しいテンプレートは作らず、report を測った値に直して1つにした
+(名前は report のまま)。
+
+見た目の違いは report が自分の値の表と組み方で持つ。コアの標準の部品・骨組みには条件分岐を
+足していない(dark・light の出力は変わらない)。
+
+**組み方(`report.go`)**:骨組みの部品 `contentHeader` を差し替える(`docs/layers.md` の8.4)。
+
+- リード文(`:::lead`)を上の見出しに置く:`leadText`(24pt)・基調色(`accent`)・太字。
+  2行までに収める想定(越えたときの警告はまだ無い。越えると本文の領域がその分減る)。
+- 題はその下に `slideTitle`(16pt)・字の色(`text_primary`)で置く。題はこれまでどおり
+  レイアウトの title のプレースホルダー(位置だけが下になる)。
+- リードの無いスライドは、題を上の見出しの位置と大きさ(24pt・基調色・太字)で置く。
+  題の折り返しの警告(`title-wrap`)は今のまま(その大きさで1行)。
+- 試験は `TestReportContentHeader`・`TestReportOverrideIsOnlyReport`。
+
+**色(theme)**:測った色を、コアの役割名に当てた(役割名は増やしていない)。
+
+| 役割名 | 値 | 元の資料での役 |
+|---|---|---|
+| `bg` | FFFFFF | 地 |
+| `text_primary` | 575757 | 字 |
+| `text_muted` | 7F7F7F | 薄い字(頁番号も) |
+| `grid` | 9A9A9A | 罫線 |
+| `card`・`card_alt` | F1F2F1 | 薄い面 |
+| `accent` | 29BA74 | 基調 |
+| `support` | 187955 | 濃い基調 |
+| `danger` | 03522C | さらに濃い基調 |
+| `conditional` | 30C1D7 | 副の色 |
+| `none` | 9A9A9A | 罫線と同じ灰 |
+| `risk` | D4F1E3 | 基調の薄い色(Gantt の risk 帯) |
+| `on_conditional` | FFFFFF | 状態の色の上の字 |
+
+状態の色(support・conditional・none・danger)は基調の系統から選んだ。隅の印の地(295E7E)は、
+隅の印が語彙に入るとき(親のストーリーの波2)に使う。いまは当てる役割名が無い。
+
+**段(scale)**:`spacingUnit` 2、`typeSizes` 8・9・10・11・12・14・16・18・20・24・28・32・54。
+
+**大きさ(values)**:960×540pt。`fillRatioMin`(0.65)・印(marks)・字体(fonts)は前のまま。
 
 | 値 | light | report |
 |---|---|---|
-| `pagePadding` / `pagePaddingY` | 40 / 24 | 32 / 20 |
-| `coverPadding` | 64 | 48 |
-| `sectionGap`・`blockGap` | 20 | 12 |
-| `itemGap`・`headerGap` | 8 | 4 |
-| `slideTitle` | 24 | 18 |
-| `leadText` | 18 | 14 |
-| `body`・`takeawayText`・`quoteText`・`optionLabel`・`columnTitle` | 16 | 12 |
-| `subPoint`・`tableText` | 14 | 10 |
-| `optionItem`・`figureDetail`・`captionText`・`statLabel`・`quoteSource` | 12 | 10 |
-| `sectionTrackerText` | 14 | 10 |
-| `small` | 10 | 8 |
-| `coverTitle`・`sectionTitle`・`statementText`・`statValue`・`quoteMark` | 36 | 24 |
-| `coverSubtitle` / `coverAuthor` / `statUnit` | 16 / 12 / 16 | 14 / 10 / 12 |
-| `cardPadding` | 20 | 12 |
-| `cardRadius` / `subsystemRadius` | 10 / 12 | 6 / 8 |
-| `statementInset` | 24 | 16 |
-| `columnGap` | 32 | 20 |
-| `tableCellPaddingX` / `tableCellPaddingY` | 8 / 4 | 4 / 4 |
-| `imageMinHeight` | 96 | 64 |
+| `pagePadding` / `pagePaddingY` | 40 / 24 | 50 / 42 |
+| `coverPadding` | 64 | 50 |
+| `sectionGap` / `blockGap` | 20 / 20 | 12 / 16 |
+| `itemGap` / `headerGap` | 8 / 8 | 6 / 8 |
+| `leadText`(上の見出し) | 18 | 24 |
+| `slideTitle`(話題) | 24 | 16 |
+| `body` | 16 | 14 |
+| `subPoint`(入れ子の箇条) | 14 | 12 |
+| `tableText` | 14 | 11 |
+| `small`(注・フッター・頁番号) | 10 | 10 |
+| `columnTitle`(列の見出し。基調色は次の波) | 16 | 16 |
+| `optionLabel` / `optionItem` | 16 / 12 | 16 / 12 |
+| `figureDetail` / `captionText` | 12 / 12 | 12 / 11 |
+| `takeawayText` / `quoteText` | 16 / 16 | 16 / 16 |
+| `statLabel` / `quoteSource` / `sectionTrackerText` | 12 / 12 / 14 | 12 / 12 / 12 |
+| `coverTitle` / `coverSubtitle` / `coverAuthor` | 36 / 16 / 12 | 32 / 18 / 14 |
+| `sectionTitle` / `statementText` | 36 / 36 | 32 / 28 |
+| `statValue` / `statUnit` / `quoteMark` | 36 / 16 / 36 | 32 / 14 / 32 |
+| `cardPadding` / `columnGap` | 20 / 32 | 12 / 24 |
+| `tableCellPaddingX` / `tableCellPaddingY` / `tableRuleWidth` | 8 / 4 / 1 | 6 / 4 / 0.75 |
 
-**Gantt(`subsystems.gantt`)**:既定の Gantt の字(`labelText`・`annotationText` 10、
-`smallText` 8)は、もともと report の注と従の段(8・10)に合っているので変えない
-(8pt より下げない)。余白と行だけを詰める。ほかのキーは `subsystems/gantt.json` と同じ。
+頁番号は標準のフッターのまま右下に `small`(10pt)・`text_muted`(7F7F7F)で置く。列の見出しの
+基調色と罫線・列の間の流れの矢印・区切りのスライドの見た目(全面の基調色・54pt の白い字)は、
+親のストーリーの次のタスクで足す(段の 54 はそのため)。
+
+**Gantt(`subsystems.gantt`)**:#78 のまま(字は `labelText`・`annotationText` 10、
+`smallText` 8。余白と行を詰めた寸法)。
 
 | キー | 既定 | report |
 |---|---|---|
@@ -62,19 +105,13 @@ light と同じ。pairs の組み方も dark / light と同じく持つ(`compone
 | `naturalRowHeight` | 26 | 22 |
 | `maxRowHeight` | 40 | 32 |
 
-行の下限 `minRowHeight`(17。文字とバーが重ならない高さ)・注釈の箱・目盛りの寸法は
-字が同じなので変えない。ほかの図(process・orgchart・matrix・funnel・chart・shapes)の
-字は values の段から引くので、report の段で小さくなる(寸法の表は既定のまま)。
+**測った値**:本文の領域は、リードの無いスライドで約 386pt(14pt の本文で約 20 行。行の高さ
+約 18.9pt)、1行のリード文と1行の題で約 357pt(約 18 行)。1行は全角で約 58 字、題は 16pt で
+約 50 字、リードの無いときの題(24pt)は約 34 字。試験 `TestReportPairs`:架空の対(2行ほどの
+「分かったこと」と3項目の打ち手)は 3 つまで1枚に収まる(#78 の 12pt では5つ収まった)。
 
-**測った値**(試験 `TestReportFitsDensePairs`):架空の対の1枚(左に2行ほどの「分かったこと」
-5つ、右にそれぞれ3項目の打ち手)は、light では要る高さ 514pt に対し本文の領域 374pt で
-はみ出し、report では要る高さ 351pt に対し本文の領域 418pt で 67pt 余る。report の本文の
-領域は、リード文なしで約 441pt(12pt の本文で約 27 行)、1行のリード文で約 418pt、
-さらに出典1行で約 395pt。
-
-examples の deck を report で組むと、はみ出し(`layout-overflow`)も題の折り返し
-(`title-wrap`)も出ない。量が発表向けのままなので `fill-ratio` の警告は増える
-(内容が少なければ dark / light を選ぶ、の合図)。
+examples の deck は全部 `-template report` で組め、はみ出し(`layout-overflow`)も題の折り返し
+(`title-wrap`)も出ない(`gantt-full` が収まるよう `sectionGap` を 12 にした)。
 
 ## 外の値の表を使う(Backlog #31)
 
@@ -402,7 +439,7 @@ dark / light / report は `{n}/{m}`)。
 
 書くと、このテンプレートで作る Gantt だけがその寸法で測られ、描かれる
 (登録簿の `Override` で差し替える。既定の表は変わらない)。形は次の節と同じで、
-全部のキーが要る。dark / light は書いていない(既定を使う)。report は書いている(下の「report」の節)。
+全部のキーが要る。dark / light は書いていない(既定を使う)。report は書いている(上の「report」の節)。
 
 ### subsystems.shapes(任意)
 

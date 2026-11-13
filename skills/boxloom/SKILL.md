@@ -42,10 +42,15 @@ truth; if this file and the schema disagree, **the schema wins**.
 - Templates are chosen by name (`template: light` in the front matter, or
   `-template dark`). `dark` and `light` are for **presenting** (16 pt body). For a
   document people **read** (a report handed out or read on screen, with much more
-  text per slide) use `template: report`: same colors as light, 12 pt body, 10 pt
-  sub-points and tables, 8 pt notes, tighter gaps — about 27 body lines per slide
-  (~418 pt body area under a one-line lead, ~70 CJK characters per line, a one-line
-  title holds ~48 CJK characters). The limits in section 4 are for dark / light;
+  text per slide) use `template: report`: white page with a green accent, 14 pt body,
+  12 pt sub-points, 11 pt tables, 10 pt notes. On report the **lead is the heading**: the
+  `:::lead` sentence (the conclusion) goes at the top in 24 pt accent color, at most two
+  lines, and the `#` title (the topic) sits under it in 16 pt — so give every report
+  content slide a lead that states the conclusion and keep the title a short topic. A
+  slide without a lead shows its title at the top in 24 pt. About 18 body lines per slide
+  (~357 pt body area under a one-line lead and title, ~58 CJK characters per line; the
+  title holds ~50 CJK characters, ~34 when there is no lead). The limits in section 4 are
+  for dark / light;
   run `check -format json` with `-template report` for report's capacity. A custom template is a value table file passed by path:
   `-template ./my.json` (works for `schema`, `check`, `build`, `fonts`; example
   `examples/templates/forest.json`). When the deck will be built with a custom
