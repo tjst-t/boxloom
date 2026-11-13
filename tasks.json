@@ -3381,7 +3381,7 @@
       "number": 150,
       "kind": "task",
       "title": "-fit:分けられないものは非常用の段(fit.emergency)で詰める",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "fit-split",
       "dependsOn": [
         "fit-split-slides"
@@ -3395,7 +3395,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T11:32:00.803Z",
-      "updatedAt": "2026-11-13T11:32:00.803Z",
+      "updatedAt": "2026-11-13T12:05:54.386Z",
       "closedAt": null,
       "extra": {}
     }
