@@ -48,6 +48,18 @@ const (
 	frameMain           // 本文を持たないスライドでページに収まるべき箱
 )
 
+// frameNames は配置の段の木(layout)に書く枠の印の名前。
+var frameNames = map[frameMark]string{frameBody: "body", frameMain: "main"}
+
+func frameByName(name string) (frameMark, bool) {
+	for m, n := range frameNames {
+		if n == name {
+			return m, true
+		}
+	}
+	return frameNone, false
+}
+
 // skeletonContext は骨組みの部品に渡すもの:テンプレート・文書・スライドの番号と
 // スライド、ほかの骨組みの部品を組む口(part)、本文のブロックを組む口(blocks)。
 // 目次のスライド(toc.go)・終わりのスライド(closing.go)は IR に無いので index は

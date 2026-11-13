@@ -85,7 +85,8 @@
         "noShrink": {"description": "親の主軸が足りないとき縮めない(骨組みの頭・出典・フッター)。足りない分は印の無い兄弟が受け持つ。", "const": true},
         "list": {"description": "箇条(PPTX では1つの文字の枠の段落)。", "const": true},
         "card": {"description": "カード(PPTX では地と中の文字を持つ1つの図形)。", "const": true},
-        "dense": {"description": "密なスライド(density: dense)の本文の箱。この下のトークンは値の表の dense の組で引く。", "const": true}
+        "dense": {"description": "密なスライド(density: dense)の本文の箱。この下のトークンは値の表の dense の組で引く。", "const": true},
+        "frame": {"description": "骨組みの枠(body = 本文の箱、main = 本文を持たないスライドの箱)。足りないとき枠は下限を持たずに縮み、中のブロックは縮めずに要る高さを割らず枠の外へ押し出される(layout-overflow の測りと同じ)。", "enum": ["body", "main"]}
       }
     },
     "subsystem": {

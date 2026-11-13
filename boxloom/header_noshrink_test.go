@@ -114,11 +114,12 @@ func sameLBox(a, b LBox) bool {
 }
 
 // noShrink の印の無い木は従来どおり比で縮める。印の付いた子は basis のまま。
+// (頭は縮めずに要る高さの無い basis だけの箱。本文の箱は骨組みの枠で、下限を持たない)
 func TestNoShrinkLayout(t *testing.T) {
-	head := func() *Spec { return Col(nil, WithHeight(20)) }
+	head := func() *Spec { return Col(nil, WithBasis(20)) }
 	mk := func(opts ...SpecOpt) (*Spec, *Spec, *Spec) {
 		h := apply(head(), opts)
-		body := Col([]*Spec{Col(nil, WithHeight(200))})
+		body := Col([]*Spec{Col(nil, WithHeight(200))}, markFrame(frameBody))
 		root := Col([]*Spec{h, body}, WithPadding(0))
 		computeLayout(root, 0, 0, 100, 110)
 		return root, h, body

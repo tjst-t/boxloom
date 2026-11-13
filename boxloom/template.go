@@ -575,6 +575,8 @@ func (t *Template) quote(content, source Inline) *Spec {
 
 // bodyFillRatio は本文の箱のうち、ブロックが使った高さの割合。本文の箱は
 // フッターを下に置くために伸びるので、ページ全体ではなく本文の箱で測る。
+// ブロックは Min を割らずに本文の箱の外へ押し出される(#133)が、越えた分は
+// layout-overflow が知らせるので、割合は 1 で止める(埋まり具合の警告を重ねない)。
 func bodyFillRatio(body *Spec) float64 {
 	if body == nil || body.Box.Height <= 0 {
 		return 1
@@ -585,7 +587,10 @@ func bodyFillRatio(body *Spec) float64 {
 			bottom = b
 		}
 	}
-	return (bottom - body.Box.Y) / body.Box.Height
+	if r := (bottom - body.Box.Y) / body.Box.Height; r < 1 {
+		return r
+	}
+	return 1
 }
 
 // lintBlockSubsystems はサブシステムの検査(lintSubsystems)を本文のブロックごとに

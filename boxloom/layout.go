@@ -591,23 +591,11 @@ func layoutNode(s *Spec, x, y, width, height float64) {
 	case free < 0 && basisTotal > 0:
 		// 縮めない印(noShrink)の子は basis のまま、足りない分は印の無い子が
 		// basis の比で受け持つ。印の無い木では従来と同じ(shrinkTotal == basisTotal)。
-		shrinkTotal := 0.0
-		for i, c := range children {
-			if !c.noShrink {
-				shrinkTotal += basisSizes[i]
-			}
+		var floors []float64
+		if !isRow {
+			floors = shrinkFloors(children, basisSizes, crossSizes)
 		}
-		for i, b := range basisSizes {
-			if children[i].noShrink || shrinkTotal <= 0 {
-				mainSizes[i] = b
-				continue
-			}
-			v := b + free*(b/shrinkTotal)
-			if v < 0 {
-				v = 0
-			}
-			mainSizes[i] = v
-		}
+		shrinkMain(children, basisSizes, floors, innerMain-gapTotal, mainSizes)
 	default:
 		copy(mainSizes, basisSizes)
 	}
@@ -660,6 +648,82 @@ func layoutNode(s *Spec, x, y, width, height float64) {
 		}
 		cursor += mainSizes[i] + s.Gap + gapExtra
 	}
+}
+
+// shrinkMain は足りないときの縮め方。縮めない印(noShrink)の子は basis のまま、
+// 足りない分は印の無い子が basis の比で受け持つ。floors があれば、子は floors[i]
+// を下回らない(下回る子をそこで止め、残りの子で分け直す)。全ての子が止まれば
+// 子の和は avail を越え、越えた分は箱の外(次の子を下へ押し出す)に出る。
+// 下回る子が無ければ1回の比例配分で、従来と同じ値になる。
+func shrinkMain(children []*Spec, basis, floors []float64, avail float64, out []float64) {
+	n := len(children)
+	fixed := make([]bool, n)
+	for i, c := range children {
+		if c.noShrink {
+			fixed[i] = true
+			out[i] = basis[i]
+		}
+	}
+	for {
+		shrinkTotal, fixedTotal := 0.0, 0.0
+		for i := range children {
+			if fixed[i] {
+				fixedTotal += out[i]
+			} else {
+				shrinkTotal += basis[i]
+			}
+		}
+		if shrinkTotal <= 0 {
+			for i := range children {
+				if !fixed[i] {
+					out[i] = basis[i]
+				}
+			}
+			return
+		}
+		rest := avail - fixedTotal - shrinkTotal
+		froze := false
+		for i := range children {
+			if fixed[i] {
+				continue
+			}
+			b := basis[i]
+			v := b + rest*(b/shrinkTotal)
+			if v < 0 {
+				v = 0
+			}
+			if floors != nil && v < floors[i]-overflowEps {
+				out[i] = floors[i]
+				fixed[i] = true
+				froze = true
+				continue
+			}
+			out[i] = v
+		}
+		if !froze {
+			return
+		}
+	}
+}
+
+// shrinkFloors は列(Col)の子が縮んでよい下限: 幅を決めたときに縮めずに要る高さ
+// (requiredHeight。文字は折り返した高さ、サブシステムは Min)。これを割ると描いた
+// 図形が枠を越えて次の子に重なる(#133)。下限は basis を越えない。骨組みの枠
+// (本文の箱など)は下限を持たず、残りを受け持つ(中のブロックが本文の箱の外へ
+// 押し出され、その高さは layout-overflow の measureBody の測りと一致する)。
+func shrinkFloors(children []*Spec, basis, cross []float64) []float64 {
+	floors := make([]float64, len(children))
+	for i, c := range children {
+		if c.frame != frameNone {
+			continue
+		}
+		f := requiredHeight(c, cross[i])
+		if f > basis[i] {
+			f = basis[i]
+		}
+		floors[i] = f
+	}
+	return floors
 }
 
 // hasSubsystem は s の下にサブシステムの葉があるか。

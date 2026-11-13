@@ -379,6 +379,13 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 		if m.Dense {
 			opts = append(opts, markDense())
 		}
+		if m.Frame != "" {
+			f, ok := frameByName(m.Frame)
+			if !ok {
+				r.add(at+"/marks/frame", "layout-node", fmt.Sprintf("unknown frame %q", m.Frame), "body", "main")
+			}
+			opts = append(opts, markFrame(f))
+		}
 		apply(s, opts)
 	}
 

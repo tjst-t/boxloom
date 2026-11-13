@@ -95,6 +95,9 @@ type LayoutMarks struct {
 	List         bool   `json:"list,omitempty"`
 	Card         bool   `json:"card,omitempty"`
 	Dense        bool   `json:"dense,omitempty"` // 密なスライドの本文の箱(この下のトークンは dense の組)
+	// Frame は骨組みの枠の印("body" = 本文の箱、"main" = 本文を持たないスライドの箱)。
+	// 枠は縮むときの下限を持たず、中のブロックが枠の外へ押し出される(#133)。
+	Frame string `json:"frame,omitempty"`
 }
 
 // LayoutSubsystem はサブシステムの葉の、名前と申告した大きさ(中身は出さない)。
@@ -316,6 +319,7 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 		n.Placeholder = s.Placeholder
 	}
 	m := LayoutMarks{IRType: s.irType, CardRow: s.cards, KeepLine: s.keepLine, NestedSlack: s.nestedSlack, NoShrink: s.noShrink, List: s.List, Card: s.card, Dense: s.dense}
+	m.Frame = frameNames[s.frame]
 	if s.columns != nil {
 		m.ColumnGroups = len(s.columns.cols)
 	}

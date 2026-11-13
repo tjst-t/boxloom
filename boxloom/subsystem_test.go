@@ -51,17 +51,32 @@ func TestSubsystemShrinksToMinBeforeText(t *testing.T) {
 	}
 }
 
-// 最小の大きさでも足りなければ、従来どおり全員が比例して縮み、警告が出る。
-func TestSubsystemBelowMinWarns(t *testing.T) {
+// 最小の大きさでも足りなければ、列の中では Min を割らずに箱の外へ押し出す
+// (割ると描いた図が次のブロックに重なる。#133)。はみ出しは layout-overflow が知らせる。
+func TestSubsystemBelowMinKeepsMin(t *testing.T) {
 	title := TextNode("title", WithHeight(30))
 	sub := SubsystemNode(fixedSub{nat: Size{100, 200}, min: Size{50, 100}})
 	root := Col([]*Spec{title, sub}, WithGap(10))
 	computeLayout(root, 0, 0, 400, 100)
-	if sub.Box.Height >= 100 {
-		t.Fatalf("sub height = %v, want < 100", sub.Box.Height)
+	if !near(title.Box.Height, 30) || !near(sub.Box.Height, 100) || !near(sub.Box.Y, 40) {
+		t.Fatalf("title %+v, sub %+v; want 30 and 100 at y=40", title.Box, sub.Box)
+	}
+	if w := lintSubsystemMin(root); len(w) != 0 {
+		t.Fatalf("warnings = %v", w)
+	}
+}
+
+// 行(横)の中では従来どおり比例して縮み、Min を割れば警告が出る。
+func TestSubsystemBelowMinWarnsInRow(t *testing.T) {
+	label := TextNode("label", WithWidth(30))
+	sub := SubsystemNode(fixedSub{nat: Size{200, 100}, min: Size{100, 50}})
+	root := Row([]*Spec{label, sub}, WithGap(10))
+	computeLayout(root, 0, 0, 100, 400)
+	if sub.Box.Width >= 100 {
+		t.Fatalf("sub width = %v, want < 100", sub.Box.Width)
 	}
 	w := lintSubsystemMin(root)
-	if len(w) != 1 || !strings.Contains(w[0], "fixed: needs at least 100.0pt height") {
+	if len(w) != 1 || !strings.Contains(w[0], "fixed: needs at least 100.0pt width") {
 		t.Fatalf("warnings = %v", w)
 	}
 }

@@ -19,7 +19,8 @@ func (a aspectBox) Measure(c Constraint) Measurement {
 	case c.Height > 0:
 		m.Natural = Size{Width: c.Height * a.w / a.h, Height: c.Height}
 	}
-	m.Min, m.Max = m.Natural, m.Natural
+	// 画像と同じく、縦横比を保ったまま小さくできる(Min は Natural の半分)。
+	m.Min, m.Max = Size{Width: m.Natural.Width / 2, Height: m.Natural.Height / 2}, m.Natural
 	return m
 }
 func (a aspectBox) Render(RenderContext, LBox) {}
