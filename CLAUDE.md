@@ -205,7 +205,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     値の表の `fonts`、`fonts.go`)
   - `fontcheck.go` = `go run ./cmd/boxloom fonts`:字体が置き換わったときのはみ出しを測る
   - `gantt.go` = inner canvas sub-engineの移植(render_gantt()相当)。
-    `GanttSubsystem` として `Subsystem` interface を満たす
+    `GanttSubsystem` として `Subsystem` interface を満たす。値の表の `axisStyle`(`monthGrid` で
+    年と月の2段の見出しと月の列)・`barShape`(`chevron` で山形の帯)・`fillHeight`(本文の高さを
+    使い切る)で描き方を選ぶ(既定は従来。report は3つとも使う。`docs/subsystem.md` の11.1)
   - `shapes.go` / `md_shapes.go` = shapes サブシステム(生の図形への逃げ道)。
     図形・文字・線・矢印・コネクタ(PPTX では `a:stCxn`/`a:endCxn` で図形に繋がった
     本物のコネクタ)。check の誤り `shape-bounds`・`role-exists`・`target-exists`・

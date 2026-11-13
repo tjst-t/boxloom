@@ -63,9 +63,10 @@ type shape struct {
 	dash           string // "" | "dash"
 
 	// skShape
-	prst   string  // rect | roundRect | ellipse
-	insetX float64 // 文字の枠の内側の余白
-	insetY float64
+	prst      string  // rect | roundRect | ellipse
+	fillAlpha float64 // 0 か 1 なら不透明。0〜1 の間なら塗りをその不透明度で書く(a:alpha)
+	insetX    float64 // 文字の枠の内側の余白
+	insetY    float64
 
 	// skShape の2つ目以降の段落(題の下の補足など)と、その字の大きさ
 	paras     [][]TextRun
@@ -258,6 +259,7 @@ func (p *PPTXBuilder) AddLine(x1, y1, x2, y2, widthPt float64, color, dash strin
 type ShapeOpts struct {
 	Prst           string // rect | roundRect | ellipse
 	Fill           string
+	FillAlpha      float64 // 0 か 1 なら不透明。0〜1 の間なら塗りの不透明度
 	Outline        string
 	OutlineDash    string // "" | "dash"
 	OutlineWidthPt float64
@@ -288,7 +290,7 @@ func (p *PPTXBuilder) AddShape(box LBox, o ShapeOpts) int {
 		text += "\n" + runsText(r)
 	}
 	p.Shapes = append(p.Shapes, shape{
-		id: id, kind: skShape, box: box, prst: o.Prst, fill: o.Fill, radius: o.Radius,
+		id: id, kind: skShape, box: box, prst: o.Prst, fill: o.Fill, fillAlpha: o.FillAlpha, radius: o.Radius,
 		hasOutline: o.Outline != "", outlineColor: o.Outline, outlineDash: o.OutlineDash, outlineWidthPt: o.OutlineWidthPt,
 		runs: o.Runs, text: text, fontSize: o.FontSize, insetX: o.InsetX, insetY: o.InsetY,
 		align: align, anchor: anchor, paras: o.Paras, paraSizes: o.ParaSizes,
@@ -849,6 +851,10 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 	fillXML := "<a:noFill/>"
 	if s.fill != "" {
 		fillXML = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, hexColor(s.fill))
+		if s.fillAlpha > 0 && s.fillAlpha < 1 {
+			fillXML = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"><a:alpha val="%d"/></a:srgbClr></a:solidFill>`,
+				hexColor(s.fill), int(math.Round(s.fillAlpha*100000)))
+		}
 	}
 	lnXML := "<a:ln><a:noFill/></a:ln>"
 	if s.hasOutline {

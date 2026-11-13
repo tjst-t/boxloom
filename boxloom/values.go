@@ -243,6 +243,48 @@ type GanttValues struct {
 	// DateFormat は目盛りと節目の日付の書き方(IR から作った Gantt)。YYYY・YY・
 	// M・MM を年と月に置き換え、ほかの文字はそのまま(例 "YYYY/M" → 2026/12)。
 	DateFormat string `json:"dateFormat"`
+
+	// 軸と帯の描き方・高さの使い方(#89。既定は従来の描き方)。
+	//   - AxisStyle:"ticks"(書いた目盛りだけ)か "monthGrid"(span の月ごとの列と、
+	//     年と月の2段の見出し。書いた目盛り・節目は印として重ねる)。
+	//   - BarShape:"rect"(角の丸い矩形)か "chevron"(右に尖った山形。面は状態の色を
+	//     ChevronFillOpacity で薄くし、文は字の色)。
+	//   - FillHeight:true なら Measure の Max を上限なし(0)にし、余った高さを注記の行を
+	//     除く行に等しく配る(行の高さは MaxRowH まで)。
+	AxisStyle          string  `json:"axisStyle"`
+	BarShape           string  `json:"barShape"`
+	FillHeight         bool    `json:"fillHeight"`
+	GridRowH           float64 `json:"gridRowHeight"`      // 月の格子の年の行・月の行の高さ
+	GridYearFormat     string  `json:"gridYearFormat"`     // 年の行の文字(YYYY・YY を置き換える)
+	GridMonthFormat    string  `json:"gridMonthFormat"`    // 月の行の文字(MM・M を置き換える)
+	ChevronFillOpacity float64 `json:"chevronFillOpacity"` // 山形の帯の面の不透明度(0〜1)
+}
+
+// monthGrid は月の格子で描くか。
+func (gv *GanttValues) monthGrid() bool { return gv.AxisStyle == "monthGrid" }
+
+// chevron は帯を山形で描くか。
+func (gv *GanttValues) chevron() bool { return gv.BarShape == "chevron" }
+
+// checkGanttStyle は軸と帯の描き方の値を見る(知らない名前・範囲の外・書き方の誤り)。
+func checkGanttStyle(at string, gv GanttValues) error {
+	if gv.AxisStyle != "ticks" && gv.AxisStyle != "monthGrid" {
+		return fmt.Errorf("%s.axisStyle: %q is not ticks or monthGrid", at, gv.AxisStyle)
+	}
+	if gv.BarShape != "rect" && gv.BarShape != "chevron" {
+		return fmt.Errorf("%s.barShape: %q is not rect or chevron", at, gv.BarShape)
+	}
+	if gv.ChevronFillOpacity > 1 {
+		return fmt.Errorf("%s.chevronFillOpacity: must be at most 1 (got %v)", at, gv.ChevronFillOpacity)
+	}
+	if !strings.Contains(gv.GridYearFormat, "YY") || strings.Contains(gv.GridYearFormat, "M") ||
+		strings.Contains(strings.ReplaceAll(strings.ReplaceAll(gv.GridYearFormat, "YYYY", ""), "YY", ""), "Y") {
+		return fmt.Errorf("%s.gridYearFormat: write the year as YYYY or YY and no month, got %q", at, gv.GridYearFormat)
+	}
+	if !strings.Contains(gv.GridMonthFormat, "M") || strings.Contains(gv.GridMonthFormat, "Y") {
+		return fmt.Errorf("%s.gridMonthFormat: write the month as M or MM and no year, got %q", at, gv.GridMonthFormat)
+	}
+	return nil
 }
 
 // ShapesValues は shapes サブシステムの寸法(pt。DefaultAspect は幅÷高さ)。
@@ -464,6 +506,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 			return nil, err
 		}
 		if err := checkDateFormat("subsystems.gantt", gv.DateFormat); err != nil {
+			return nil, err
+		}
+		if err := checkGanttStyle("subsystems.gantt", gv); err != nil {
 			return nil, err
 		}
 		if err := checkOnScale("subsystems.gantt", gv, f.Scale); err != nil {
@@ -705,7 +750,10 @@ func parseGanttValues(data []byte) (GanttValues, error) {
 	if err := checkPositive("gantt", gv); err != nil {
 		return gv, err
 	}
-	return gv, checkDateFormat("gantt", gv.DateFormat)
+	if err := checkDateFormat("gantt", gv.DateFormat); err != nil {
+		return gv, err
+	}
+	return gv, checkGanttStyle("gantt", gv)
 }
 
 // defaultGanttValues は subsystems/gantt.json(Gantt の既定の寸法)の写し。

@@ -231,8 +231,31 @@ func NewGanttSubsystem(data any) (Subsystem, error) {
 
 func (g *GanttSubsystem) Name() string { return "gantt" }
 
+// chart は幅 boxWidth で描く Gantt。月の格子(monthGrid)では、日付の軸を月ごとに
+// 等しい幅にした写しを返す(列の幅をそろえる。月の中は日の数に比べる)。ただし
+// 等しい幅では月の文字が列に収まらない長い span は、書いたとおりの軸(目盛りで
+// 区切って長い区間を縮めたもの)のまま、年の行だけを描く。ほかは Chart のまま。
+func (g *GanttSubsystem) chart(boxWidth float64) *GanttChart {
+	gv := g.vals()
+	if !gv.monthGrid() {
+		return g.Chart
+	}
+	c := *g.Chart
+	bounds := ganttMonthBounds(g.Chart)
+	n := float64(len(bounds) - 1)
+	pts := make([]ctrlPoint, len(bounds))
+	for i, b := range bounds {
+		pts[i] = ctrlPoint{b, float64(i) / n}
+	}
+	c.Scale = TimeScale{Points: pts}
+	if !gridShowMonths(gv, &c, ganttChartW(gv, boxWidth)) {
+		return g.Chart
+	}
+	return &c
+}
+
 func (g *GanttSubsystem) Render(ctx RenderContext, box LBox) {
-	renderGantt(ctx.Out, box, g.Chart, ctx.Roles, g.vals())
+	renderGantt(ctx.Out, box, g.chart(box.Width), ctx.Roles, g.vals())
 }
 
 // Measure は Gantt の自然な大きさと最小の大きさを申告する。
@@ -242,12 +265,12 @@ func (g *GanttSubsystem) Render(ctx RenderContext, box LBox) {
 // 収まるだけの行の高さも下限に入れる。幅が分かっていれば幅はそのまま返す。
 func (g *GanttSubsystem) Measure(c Constraint) Measurement {
 	gv := g.vals()
-	chart := g.Chart
 	gutterW := gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW
 	natW := 2*gv.Padding + gutterW + gv.NaturalChartW
 	if c.Width > 0 {
 		natW = c.Width
 	}
+	chart := g.chart(natW)
 	m := ganttMetricsFor(gv, chart, natW)
 	totalRows, nGroups := 0, len(chart.Groups)
 	labelRowH := 0.0 // グループ名を収めるのに要る、1行あたりの高さ
@@ -280,10 +303,16 @@ func (g *GanttSubsystem) Measure(c Constraint) Measurement {
 		natW = lw
 	}
 	minW := 2*gv.Padding + gutterW + gv.MinChartW
+	maxH := m.chromeH + bodyFor(gv.MaxRowH)
+	if gv.FillHeight {
+		// 高さを使い切る:上限なし。余った高さは行に配る(ganttRowLayout。行は
+		// maxRowHeight まで)。
+		maxH = 0
+	}
 	return Measurement{
 		Natural: Size{Width: natW, Height: m.chromeH + bodyFor(gv.NaturalRowH)},
 		Min:     Size{Width: minW, Height: m.chromeH + bodyFor(gv.MinRowH)},
-		Max:     Size{Height: m.chromeH + bodyFor(gv.MaxRowH)},
+		Max:     Size{Height: maxH},
 	}
 }
 
@@ -299,10 +328,17 @@ type ganttNoteNeed struct {
 type ganttRows struct {
 	base float64
 	need [][]float64 // [グループ][行]。0 は「base でよい」
+	// fixed は高さを need に留める行(fillHeight で余りを配らない注記の行)。nil なら無し。
+	fixed [][]bool
 }
 
 // h は行の高さ。
-func (r ganttRows) h(g, i int) float64 { return math.Max(r.base, r.need[g][i]) }
+func (r ganttRows) h(g, i int) float64 {
+	if r.fixed != nil && r.fixed[g][i] {
+		return r.need[g][i]
+	}
+	return math.Max(r.base, r.need[g][i])
+}
 
 // extra は base を越えた分(行 i より前の行の合計)。全部 base なら 0。
 func (r ganttRows) extraBefore(g, i int) float64 {
@@ -338,7 +374,37 @@ func ganttRowLayout(gv *GanttValues, chart *GanttChart, boxWidth, bodyH float64)
 	if anyNeedAbove(rows.need, rowH) {
 		rows = rowsFor(rows.need, avail, gv.MinRowH)
 	}
+	if gv.FillHeight && rows.base > gv.NaturalRowH {
+		return fillRows(gv, chart, rows.need, avail)
+	}
 	return rows
+}
+
+// fillRows は fillHeight のときの行の高さ:自然な高さより余った分を、注記の行を除く
+// 行に等しく配る(注記の行は自然な高さのまま)。行は maxRowHeight を越えない
+// (越える分は本体の下に残る)。
+func fillRows(gv *GanttValues, chart *GanttChart, need [][]float64, avail float64) ganttRows {
+	r := ganttRows{need: make([][]float64, len(need)), fixed: make([][]bool, len(need))}
+	var others []float64
+	for gi := range need {
+		r.need[gi] = append([]float64(nil), need[gi]...)
+		r.fixed[gi] = make([]bool, len(need[gi]))
+		for ri, v := range need[gi] {
+			if chart.Groups[gi].Rows[ri].HasNote {
+				r.fixed[gi][ri] = true
+				r.need[gi][ri] = math.Max(v, gv.NaturalRowH)
+				avail -= r.need[gi][ri]
+				continue
+			}
+			others = append(others, v)
+		}
+	}
+	r.base = gv.NaturalRowH
+	if len(others) > 0 {
+		r.base = rowsFor([][]float64{others}, avail, gv.NaturalRowH).base
+	}
+	r.base = math.Min(r.base, gv.MaxRowH)
+	return r
 }
 
 // anyNeedAbove は base より高くする行があるか。
@@ -547,11 +613,167 @@ func ganttMetricsFor(gv *GanttValues, chart *GanttChart, boxWidth float64) gantt
 		m.milestoneH = float64(m.milestones.rows)*gv.MilestoneH + gv.MilestoneAxisGap
 	}
 	// renderGantt の縦の並び: 余白 / 凡例 / 上の注釈 / 節目 / 軸の文字 / 軸 / 本体 / 下の注釈 / 余白
-	m.chromeH = 2*gv.Padding + gv.LegendH + gv.LegendGap + m.annTopH + m.milestoneH + gv.AxisLabelH + gv.AxisGap + gv.AxisGap + m.annBottomH
+	m.chromeH = 2*gv.Padding + gv.LegendH + gv.LegendGap + m.annTopH + m.milestoneH + ganttAxisH(gv, chart, boxWidth) + m.annBottomH
 	for _, li := range chart.Legend {
 		m.legendW += gv.LegendSwatchW + gv.LegendSwatchGap + gv.LegendLabelGap + runWidthPt(li.Label, gv.LabelText, false) + gv.Padding
 	}
 	return m
+}
+
+// ganttAxisH は節目と本体の間の軸の高さ。ticks は目盛りの文字の行と軸の線の前後の
+// 隙間、monthGrid は目盛りの文字の行(文字のある目盛りがあるときだけ)と年・月の2段
+// (月の文字が列に収まらないほど列が狭いときは年の1段)。boxWidth はサブシステムの幅。
+func ganttAxisH(gv *GanttValues, chart *GanttChart, boxWidth float64) float64 {
+	if gv.monthGrid() {
+		return gridTickRowH(gv, chart) + float64(gridRows(gv, chart, ganttChartW(gv, boxWidth)))*gv.GridRowH
+	}
+	return gv.AxisLabelH + gv.AxisGap + gv.AxisGap
+}
+
+// gridTickText は月の格子の上に重ねる目盛りの文字。IR から作った目盛りの日付は
+// 格子が示すので、書いた名前だけを出す(名前の無い目盛りは描かない)。
+func gridTickText(t Tick) string {
+	if t.AutoDate {
+		return t.SubLabel
+	}
+	if t.SubLabel != "" {
+		return t.MainLabel + " " + t.SubLabel
+	}
+	return t.MainLabel
+}
+
+// gridTickRowH は月の格子の上の目盛りの文字の行の高さ(文字のある目盛りが無ければ 0)。
+func gridTickRowH(gv *GanttValues, chart *GanttChart) float64 {
+	for _, t := range chart.Ticks {
+		if gridTickText(t) != "" {
+			return gv.TickLabelH + gv.AxisGap
+		}
+	}
+	return 0
+}
+
+// ganttMonthBounds は月の格子の列の境目(span の初めの月の1日から、span の終わりを
+// 含む月の次の月の1日まで)。列の数は len − 1。
+func ganttMonthBounds(chart *GanttChart) []time.Time {
+	pts := chart.Scale.Points
+	from, to := pts[0].Date, pts[len(pts)-1].Date
+	b := time.Date(from.Year(), from.Month(), 1, 0, 0, 0, 0, time.UTC)
+	out := []time.Time{b}
+	for b.Before(to) {
+		b = b.AddDate(0, 1, 0)
+		out = append(out, b)
+	}
+	return out
+}
+
+// ganttChartW は幅 boxWidth のサブシステムの日付軸の部分の幅。
+func ganttChartW(gv *GanttValues, boxWidth float64) float64 {
+	return boxWidth - 2*gv.Padding - (gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW)
+}
+
+// gridShowMonths は月の文字がどの列にも収まるか(日付軸の幅 chartW のとき)。収まらない
+// ほど列が狭いときは、月の行・月の罫線を描かず、年の行だけにする(細い列に罫線と
+// 字を詰めない)。
+func gridShowMonths(gv *GanttValues, chart *GanttChart, chartW float64) bool {
+	bounds := ganttMonthBounds(chart)
+	for i := 0; i+1 < len(bounds); i++ {
+		w := chart.Scale.X(bounds[i+1], 0, chartW) - chart.Scale.X(bounds[i], 0, chartW)
+		if runWidthPt(formatGanttDate(bounds[i], gv.GridMonthFormat), gv.LabelText, false)+noWrapSlack > w {
+			return false
+		}
+	}
+	return true
+}
+
+// gridRows は月の格子の見出しの段の数(年と月の2段か、年の1段)。
+func gridRows(gv *GanttValues, chart *GanttChart, chartW float64) int {
+	if gridShowMonths(gv, chart, chartW) {
+		return 2
+	}
+	return 1
+}
+
+// gridLabel は月の格子の見出しの文字1つ(年・月・目盛り)。
+type gridLabel struct {
+	box   LBox
+	text  string
+	size  float64
+	bold  bool
+	role  string
+	align string
+}
+
+// gridLine は月の格子の縦の罫線(列の境目)。
+type gridLine struct{ x, y1, y2 float64 }
+
+// ganttGridPlan は月の格子の見出しの文字と縦の罫線(描画と引き出し線の検査が同じ
+// ものを使う)。月の行を描かないとき(gridShowMonths)は年の境目だけを描く。
+func ganttGridPlan(gv *GanttValues, chart *GanttChart, f ganttFrame) (labels []gridLabel, lines []gridLine) {
+	sx := f.sx(chart)
+	for _, t := range chart.Ticks {
+		if txt := gridTickText(t); txt != "" {
+			// 名前は節目と同じ小さい字(目盛りが詰まっても隣と重なりにくい)。
+			tw := runWidthPt(txt, gv.SmallText, true) + noWrapSlack
+			labels = append(labels, gridLabel{LBox{X: sx(t.Date) - tw/2, Y: f.axisLabelY, Width: tw, Height: gv.TickLabelH}, txt, gv.SmallText, true, t.Role, "center"})
+		}
+	}
+	bounds := ganttMonthBounds(chart)
+	monthY := f.gridY + gv.GridRowH
+	showMonths := gridShowMonths(gv, chart, f.chartW)
+	yearStart := 0
+	for i := 0; i+1 < len(bounds); i++ {
+		x1, x2 := sx(bounds[i]), sx(bounds[i+1])
+		if showMonths {
+			labels = append(labels, gridLabel{LBox{X: x1, Y: monthY, Width: x2 - x1, Height: gv.GridRowH}, formatGanttDate(bounds[i], gv.GridMonthFormat), gv.LabelText, false, "text_primary", "center"})
+		}
+		newYear := i > 0 && bounds[i].Year() != bounds[i-1].Year()
+		if i > 0 && (newYear || showMonths) {
+			top := monthY
+			if newYear {
+				top = f.gridY
+			}
+			lines = append(lines, gridLine{x1, top, f.rowsEnd})
+		}
+		if last := i+2 == len(bounds); last || bounds[i+1].Year() != bounds[i].Year() {
+			ys, ye := sx(bounds[yearStart]), x2
+			txt := formatGanttYear(bounds[i], gv.GridYearFormat)
+			tw := runWidthPt(txt, gv.LabelText, true) + noWrapSlack
+			if tw+gv.SegLabelInsetL <= ye-ys {
+				labels = append(labels, gridLabel{LBox{X: ys + gv.SegLabelInsetL, Y: f.gridY, Width: tw, Height: gv.GridRowH}, txt, gv.LabelText, true, "text_primary", "left"})
+			}
+			yearStart = i + 1
+		}
+	}
+	return labels, lines
+}
+
+// formatGanttYear は年の行の文字(YYYY・YY を置き換える)。
+func formatGanttYear(t time.Time, format string) string {
+	return strings.NewReplacer("YYYY", fmt.Sprintf("%04d", t.Year()), "YY", fmt.Sprintf("%02d", t.Year()%100)).Replace(format)
+}
+
+// renderGanttGrid は月の格子(年と月の2段の見出し・列の罫線・目盛りの印)を描く。
+func renderGanttGrid(p *PPTXBuilder, chart *GanttChart, c func(string) string, gv *GanttValues, f ganttFrame) {
+	labels, lines := ganttGridPlan(gv, chart, f)
+	for _, l := range lines {
+		p.AddLine(l.x, l.y1, l.x, l.y2, gv.ThinLineW, c("grid"), "")
+	}
+	for _, l := range labels {
+		p.AddTextBoxNoWrap(l.box, l.text, l.size, c(l.role), l.bold, l.align, "middle")
+	}
+	sx := f.sx(chart)
+	for _, t := range chart.Ticks {
+		if gridTickText(t) == "" {
+			continue
+		}
+		tx := sx(t.Date)
+		p.AddDot(tx, f.axisY, gv.TickDotRadius, c(t.Role))
+		p.AddLine(tx, f.bodyTop, tx, f.rowsEnd, gv.ThinLineW, c(t.Role), "dash")
+	}
+	if gridShowMonths(gv, chart, f.chartW) {
+		p.AddLine(f.chartX0, f.gridY+gv.GridRowH, f.x0+f.w, f.gridY+gv.GridRowH, gv.ThinLineW, c("grid"), "")
+	}
+	p.AddLine(f.chartX0, f.axisY, f.x0+f.w, f.axisY, gv.LineW, c("text_muted"), "")
 }
 
 // renderGantt はbox(確定済みの絶対座標)の中にGanttチャート全体を描画する。
@@ -564,7 +786,13 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 	// --- 凡例(実測した文字幅でカーソルを前進させる。本物と同じ) ---
 	lx := x0
 	for _, li := range chart.Legend {
-		p.AddRectFull(LBox{X: lx, Y: y0 + gv.LegendSwatchTop, Width: gv.LegendSwatchW, Height: gv.LegendSwatchH}, c(li.Role), gv.LegendRadius, c("text_muted"), "", gv.LegendOutlineW)
+		sw := LBox{X: lx, Y: y0 + gv.LegendSwatchTop, Width: gv.LegendSwatchW, Height: gv.LegendSwatchH}
+		if gv.chevron() && li.Role != "risk" {
+			// 山形の帯と同じ形・同じ薄さの色見本。
+			p.AddShape(sw, ShapeOpts{Prst: "homePlate", Fill: c(li.Role), FillAlpha: gv.ChevronFillOpacity})
+		} else {
+			p.AddRectFull(sw, c(li.Role), gv.LegendRadius, c("text_muted"), "", gv.LegendOutlineW)
+		}
 		labelW := runWidthPt(li.Label, gv.LabelText, false)
 		p.AddTextBoxNoWrap(LBox{X: lx + (gv.LegendSwatchW + gv.LegendSwatchGap), Y: y0 - gv.LegendLabelUp, Width: labelW + noWrapSlack, Height: gv.LegendH}, li.Label, gv.LabelText, c("text_muted"), false, "left", "top")
 		lx += gv.LegendSwatchW + gv.LegendSwatchGap + gv.LegendLabelGap + labelW + gv.Padding
@@ -586,7 +814,13 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 	}
 
 	// --- 軸目盛り ---
+	if gv.monthGrid() {
+		renderGanttGrid(p, chart, c, gv, f)
+	}
 	for _, t := range chart.Ticks {
+		if gv.monthGrid() {
+			break
+		}
 		tx := sx(t.Date)
 		p.AddTextBoxNoWrap(LBox{X: tx - gv.TickLabelW/2, Y: axisLabelY, Width: gv.TickLabelW, Height: gv.TickLabelH}, t.mainText(gv), gv.LabelText, c(t.Role), true, "center", "top")
 		if t.SubLabel != "" {
@@ -595,7 +829,9 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 		p.AddDot(tx, axisY, gv.TickDotRadius, c(t.Role))
 		p.AddLine(tx, bodyTop, tx, bodyTop+bodyH, gv.ThinLineW, c("grid"), "dash")
 	}
-	p.AddLine(chartX0, axisY, x0+w, axisY, gv.LineW, c("text_muted"), "")
+	if !gv.monthGrid() {
+		p.AddLine(chartX0, axisY, x0+w, axisY, gv.LineW, c("text_muted"), "")
+	}
 
 	// --- 区間圧縮のbreakマーク("//") ---
 	if chart.HasBreak {
@@ -690,14 +926,19 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 					ww = ganttMinDrawW
 				}
 				segColor := c(seg.Role)
-				if seg.Tentative {
+				switch {
+				case gv.chevron() && seg.Tentative:
+					p.AddShape(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, ShapeOpts{Prst: "homePlate", Outline: segColor, OutlineDash: "dash", OutlineWidthPt: gv.LineW})
+				case gv.chevron():
+					p.AddShape(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, ShapeOpts{Prst: "homePlate", Fill: segColor, FillAlpha: gv.ChevronFillOpacity})
+				case seg.Tentative:
 					p.AddRectFull(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, "", gv.BarRadius, segColor, "dash", gv.LineW)
-				} else {
+				default:
 					p.AddRect(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, segColor, gv.BarRadius)
 				}
 				if lp := planSegmentLabel(gv, chart, chartW, seg); lp.mode == segLabelFit || lp.mode == segLabelWrap {
 					labelColor := c("text_primary")
-					if seg.Role == "conditional" && !seg.Tentative {
+					if seg.Role == "conditional" && !seg.Tentative && !gv.chevron() {
 						labelColor = c("on_conditional")
 					}
 					if seg.Tentative {
@@ -768,10 +1009,12 @@ type ganttFrame struct {
 	x0, y0, w, h                       float64
 	gm                                 ganttMetrics
 	upY, milestoneY, axisLabelY, axisY float64
+	gridY                              float64 // 月の格子の年の行の上端(monthGrid)
 	chartX0, chartW                    float64
 	bodyTop, bodyH, downY              float64
 	rows                               ganttRows
 	groupTops                          []float64
+	rowsEnd                            float64 // 最後の行の下端(fillHeight で行が上限に達すると bodyTop+bodyH より上)
 }
 
 func ganttFrameFor(gv *GanttValues, chart *GanttChart, box LBox) ganttFrame {
@@ -788,6 +1031,12 @@ func ganttFrameFor(gv *GanttValues, chart *GanttChart, box LBox) ganttFrame {
 	f.chartX0 = f.x0 + gutterW
 	f.chartW = f.w - gutterW
 	f.bodyTop = f.axisY + gv.AxisGap
+	if gv.monthGrid() {
+		// 目盛りの文字の行 / 年の行 / 月の行 / 本体(月の行の下端が軸の線)。
+		f.gridY = f.axisLabelY + gridTickRowH(gv, chart)
+		f.axisY = f.gridY + float64(gridRows(gv, chart, f.chartW))*gv.GridRowH
+		f.bodyTop = f.axisY
+	}
 	f.bodyH = (f.y0 + f.h) - f.gm.annBottomH - f.bodyTop
 	f.downY = f.bodyTop + f.bodyH + gv.AnnLaneGap
 	f.rows = ganttRowLayout(gv, chart, box.Width, f.bodyH)
@@ -800,6 +1049,7 @@ func ganttFrameFor(gv *GanttValues, chart *GanttChart, box LBox) ganttFrame {
 			yCursor += gv.GroupGap
 		}
 	}
+	f.rowsEnd = yCursor
 	return f
 }
 
@@ -830,6 +1080,17 @@ func ganttLabelRects(gv *GanttValues, chart *GanttChart, f ganttFrame) []placedB
 	var out []placedBox
 	for i, m := range chart.Milestones {
 		out = append(out, ink(sx(m.Date), f.gm.milestones.rowY(f.milestoneY, gv, i), gv.MilestoneH, "★ "+m.text(gv), gv.SmallText, true, true))
+	}
+	if gv.monthGrid() {
+		labels, _ := ganttGridPlan(gv, chart, f)
+		for _, l := range labels {
+			cx := l.box.X + l.box.Width/2
+			if l.align == "left" {
+				cx = l.box.X + runWidthPt(l.text, l.size, l.bold)/2
+			}
+			out = append(out, ink(cx, l.box.Y, l.box.Height, l.text, l.size, l.bold, true))
+		}
+		return out
 	}
 	for _, t := range chart.Ticks {
 		tx := sx(t.Date)
@@ -1118,32 +1379,33 @@ func planMilestones(gv *GanttValues, chart *GanttChart, chartW float64) mileston
 // 計画し、重ねて置くしかなかった注釈を警告にする。
 func (g *GanttSubsystem) Lint(box LBox) []string {
 	gv := g.vals()
+	chart := g.chart(box.Width)
 	var out []string
-	if len(g.Chart.Milestones) > 0 {
+	if len(chart.Milestones) > 0 {
 		chartW0 := box.Width - 2*gv.Padding - (gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW)
-		for _, ov := range planMilestones(gv, g.Chart, chartW0).overlap {
+		for _, ov := range planMilestones(gv, chart, chartW0).overlap {
 			out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] gantt: milestones[%d] (%q) overlaps milestones[%d] (%q): the dates are too close to fit the labels in %d rows",
-				ov[0], g.Chart.Milestones[ov[0]].text(gv), ov[1], g.Chart.Milestones[ov[1]].text(gv), ganttMilestoneMaxRows))
+				ov[0], chart.Milestones[ov[0]].text(gv), ov[1], chart.Milestones[ov[1]].text(gv), ganttMilestoneMaxRows))
 		}
 	}
-	plan := planAnnotations(gv, g.Chart, box.X+gv.Padding, box.Width-2*gv.Padding)
+	plan := planAnnotations(gv, chart, box.X+gv.Padding, box.Width-2*gv.Padding)
 	for i, pl := range plan {
 		if !pl.overlap {
 			continue
 		}
-		first := strings.SplitN(g.Chart.Annotations[i].Text, "\n", 2)[0]
+		first := strings.SplitN(chart.Annotations[i].Text, "\n", 2)[0]
 		out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] gantt: annotation %d (%q) has no free place and overlaps another annotation", i, first))
 	}
 	// 帯が狭すぎて区間の文を置けない(描かない)ものを警告にする。黙って消さない。
 	chartW := box.Width - 2*gv.Padding - (gv.GutterGroupW + gv.GutterSubW + gv.GutterLabelW)
-	for gi := range g.Chart.Groups {
-		for ri := range g.Chart.Groups[gi].Rows {
-			row := &g.Chart.Groups[gi].Rows[ri]
+	for gi := range chart.Groups {
+		for ri := range chart.Groups[gi].Rows {
+			row := &chart.Groups[gi].Rows[ri]
 			if row.HasNote {
 				continue
 			}
 			for si, seg := range row.Segments {
-				lp := planSegmentLabel(gv, g.Chart, chartW, seg)
+				lp := planSegmentLabel(gv, chart, chartW, seg)
 				if lp.mode != segLabelHidden {
 					continue
 				}

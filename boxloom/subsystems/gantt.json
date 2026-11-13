@@ -73,5 +73,12 @@
   "emphasisLineWidth": 2,
   "legendSwatchOutlineWidth": 0.5,
   "legendSwatchRadius": 2,
-  "dateFormat": "YYYY/M"
+  "dateFormat": "YYYY/M",
+  "axisStyle": "ticks",
+  "barShape": "rect",
+  "fillHeight": false,
+  "gridRowHeight": 16,
+  "gridYearFormat": "YYYY",
+  "gridMonthFormat": "M",
+  "chevronFillOpacity": 0.3
 }

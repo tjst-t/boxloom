@@ -131,7 +131,7 @@
       "groupGap": 4,
       "minRowHeight": 17,
       "naturalRowHeight": 22,
-      "maxRowHeight": 32,
+      "maxRowHeight": 44,
       "naturalChartWidth": 560,
       "minChartWidth": 240,
       "annotationFixedWidth": 176,
@@ -194,7 +194,14 @@
       "emphasisLineWidth": 2,
       "legendSwatchOutlineWidth": 0.5,
       "legendSwatchRadius": 2,
-      "dateFormat": "YYYY/M"
+      "dateFormat": "YYYY/M",
+      "axisStyle": "monthGrid",
+      "barShape": "chevron",
+      "fillHeight": true,
+      "gridRowHeight": 16,
+      "gridYearFormat": "YYYY年",
+      "gridMonthFormat": "M月",
+      "chevronFillOpacity": 0.3
     }
   }
 }

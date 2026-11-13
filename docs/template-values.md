@@ -143,7 +143,16 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 | `groupGap` | 8 | 4 |
 | `annotationLaneGap` | 8 | 4 |
 | `naturalRowHeight` | 26 | 22 |
-| `maxRowHeight` | 40 | 32 |
+| `maxRowHeight` | 40 | 44 |
+| `axisStyle` | `ticks` | `monthGrid` |
+| `barShape` | `rect` | `chevron` |
+| `fillHeight` | `false` | `true` |
+| `gridYearFormat` | `YYYY` | `YYYY年` |
+| `gridMonthFormat` | `M` | `M月` |
+
+report の Gantt は月の格子(年と月の2段の見出し)・山形の帯で描き、本文の領域の高さを
+使い切る(#89。`docs/subsystem.md` の11.1)。`maxRowHeight` は高さを使い切るときの行の
+上限なので、32 から 44 に上げた。
 
 **測った値**:本文の領域は、リードの無いスライドで約 386pt(14pt の本文で約 20 行。行の高さ
 約 18.9pt)、1行のリード文と1行の題で約 357pt(約 18 行)。1行は全角で約 58 字、題は 16pt で
@@ -546,6 +555,12 @@ process・orgchart・funnel の状態の凡例(`docs/subsystem.md` の11節)の�
 | `annotationLaneGap` | 注釈のレーンとチャートの間 |
 | `annotationText` | 注釈の字の大きさ |
 | `labelText` `smallText` | 凡例・行の名前・目盛りの字、グループ名・区間の文字・節目の字 |
+| `axisStyle` | 軸の描き方(文字列)。`ticks`(書いた目盛りだけ)か `monthGrid`(月ごとの列と年・月の2段の見出し)。ほかは誤り |
+| `barShape` | 帯の形(文字列)。`rect`(角の丸い矩形)か `chevron`(右に尖った山形)。ほかは誤り |
+| `fillHeight` | 真偽。true なら Measure の Max を上限なしにし、余った高さを注記の行を除く行に配る(行は `maxRowHeight` まで) |
+| `gridRowHeight` | 月の格子の年の行・月の行の高さ |
+| `gridYearFormat` `gridMonthFormat` | 月の格子の年の文字(`YYYY`・`YY` を置き換え、月は書けない)と月の文字(`MM`・`M` を置き換え、年は書けない) |
+| `chevronFillOpacity` | 山形の帯と色見本の面の不透明度(0 より大きく 1 以下) |
 | `dateFormat` | IR から作った Gantt の目盛りと節目の日付の書き方(文字列)。`YYYY`・`YY`・`MM`・`M` を年と月に置き換え、ほかの文字はそのまま。既定 `YYYY/M`(`2026/12`)。月(`M` か `MM`)を含まない・年を `YYYY`/`YY` 以外で書いたものは誤り。Go で組んだ従来のデモの目盛りは手で書いた文字のまま |
 
 ## subsystems/shapes.json の形
@@ -607,7 +622,8 @@ subsystems/gantt.json のキーの分け方:
 | 字(`scale:"type"`) | `typeSizes` のどれか | `annotationText` `labelText` `smallText` |
 | 図の中の細部の寸法(段の外) | 0 より大きい | `legendSwatchWidth` `legendSwatchHeight` `legendSwatchTop` `legendLabelRaise` `legendLabelGap` `milestoneLabelGap` `tickLabelHeight` `axisGap` `groupInsetX` `subgroupInsetLeft` `barInset` `segmentLabelInsetLeft` `segmentLabelInsetRight` `noteInsetX` `extNoteLabelHeight` `extNoteLabelGap` `leaderGap` `breakMarkWidth` `breakMarkHeight` `breakMarkSpacing` `openEndDotOffset` `openEndDotStep` |
 | 線の太さ・角・点の大きさ(段の外) | 0 より大きい | `thinLineWidth` `lineWidth` `leaderLineWidth` `emphasisLineWidth` `breakMarkHaloWidth` `legendSwatchOutlineWidth` `legendSwatchRadius` `groupRadius` `barRadius` `annotationRadius` `tickDotRadius` `anchorDotRadius` `openEndDotRadius` |
-| 図の大きさ・行の高さ・欄の幅(段の外。以前から) | 0 より大きい | `legendHeight` `gutterGroupWidth` `gutterSubgroupWidth` `gutterLabelWidth` `milestoneHeight` `axisLabelHeight` `minRowHeight` `naturalRowHeight` `maxRowHeight` `naturalChartWidth` `minChartWidth` `annotationFixedWidth` `annotationFixedHeight` `annotationMinWidth` `annotationMaxWidth` |
+| 図の大きさ・行の高さ・欄の幅(段の外。以前から) | 0 より大きい | `legendHeight` `gutterGroupWidth` `gutterSubgroupWidth` `gutterLabelWidth` `milestoneHeight` `axisLabelHeight` `minRowHeight` `naturalRowHeight` `maxRowHeight` `naturalChartWidth` `minChartWidth` `annotationFixedWidth` `annotationFixedHeight` `annotationMinWidth` `annotationMaxWidth` `gridRowHeight` |
+| 描き方の選び方(#89) | 知っている名前・範囲 | `axisStyle` `barShape` `fillHeight` `gridYearFormat` `gridMonthFormat` `chevronFillOpacity`(0〜1) |
 
 行の数・段の数・比などの決まりの数は値の表に置かず、名前つきの定数としてコードに
 残した(`docs/subsystem.md` の13節)。
