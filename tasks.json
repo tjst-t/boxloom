@@ -1961,7 +1961,7 @@
       "number": 84,
       "kind": "task",
       "title": "列:流れの意味({flow=true})と、report の列の組み方(見出しの罫線・仕切り・流れの印)",
-      "status": "in-progress",
+      "status": "done",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -1971,12 +1971,12 @@
       "labels": [],
       "body": "## なぜ\n#82 の原因1・4。読む資料では、2〜3列の多くで次の見た目を使う。\n- 列の見出しの下に罫線を引く。\n- 列の間に縦の罫線を引く。\n- 左が右につながるとき(背景→ゴール、発見→対応)は、仕切りの縦の中ほどに丸い矢印を置く。\n\n## 決め事\n- **意味(コアの IR)**:`columns` に任意の欄 `flow`(真偽、既定 false)を足す。左のまとまりが右のまとまりにつながる(前提→結論、発見→対応)ことを示す。\n  - Markdown は `:::::columns {flow=true}`。\n  - Schema(schema/ と boxloom/schemas/ の写し)・schema コマンド・docs/ir.md・docs/content-syntax.md 3.9・docs/patterns.md を直す。\n- **標準の columns の組み方**:flow のときだけ、列の間の隙間の縦の真ん中に小さい矢印(基調色)を置く。flow を書かない文書の dark・light の出力は変わらないこと。\n- **report の columns の組み方(override。report が Go で持つ)**:\n  - 列の見出し:16pt・基調色の字の下に、罫線(役割 grid・0.75pt)を引く。\n  - 列の間:真ん中に縦の罫線(grid)を引く。\n  - flow のとき:仕切りの縦の真ん中に、直径 24pt の基調色の丸と白い山形(>)を置く。\n  - 印は列の間の隙間に収まる大きさにする。\n- コアの標準の部品に、report のための条件分岐を足さない。\n\n## 確かめ方\n架空の例を examples/md に足し、試験で report の PPTX の図形(罫線・丸・山形)の位置を見る。",
       "doneWhen": "columns の flow が IR・Markdown・Schema で読める/report で見出しの罫線・列の間の縦線・flow の丸い矢印が描かれることを試験で確かめる/flow を書かない文書の dark・light の golden が変わらない/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/column-rules-flow）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:28:26.162Z",
-      "updatedAt": "2026-11-13T03:14:42.370Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T03:25:26.397Z",
+      "closedAt": "2026-11-13T03:25:26.397Z",
       "extra": {}
     },
     {
