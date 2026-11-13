@@ -2570,7 +2570,7 @@
       "number": 112,
       "kind": "task",
       "title": "循環の図:列の中(横に主の列)だと題を輪の外に置く処理が働かず、題が扇からあふれる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2582,7 +2582,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T05:34:46.314Z",
-      "updatedAt": "2026-11-13T05:34:46.314Z",
+      "updatedAt": "2026-11-13T05:34:57.757Z",
       "closedAt": null,
       "extra": {}
     },
