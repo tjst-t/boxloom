@@ -2423,7 +2423,7 @@
       "number": 105,
       "kind": "task",
       "title": "リードがテンプレートの上限の行数を超えたら警告する(lead-wrap)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2435,7 +2435,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T04:39:01.378Z",
-      "updatedAt": "2026-11-13T04:39:01.378Z",
+      "updatedAt": "2026-11-13T04:44:24.568Z",
       "closedAt": null,
       "extra": {}
     },
