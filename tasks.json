@@ -2028,7 +2028,7 @@
       "number": 87,
       "kind": "task",
       "title": "対の並び:側に見出しと複数のブロック(型の語彙)、report の pairs の組み方(A・B・C の印・側の間の矢印・罫線)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -2042,7 +2042,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:28:26.162Z",
-      "updatedAt": "2026-11-13T02:51:02.752Z",
+      "updatedAt": "2026-11-13T03:14:44.756Z",
       "closedAt": null,
       "extra": {}
     },
