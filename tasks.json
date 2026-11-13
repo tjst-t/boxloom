@@ -1961,7 +1961,7 @@
       "number": 84,
       "kind": "task",
       "title": "列:流れの意味({flow=true})と、report の列の組み方(見出しの罫線・仕切り・流れの印)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -1975,7 +1975,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:28:26.162Z",
-      "updatedAt": "2026-11-13T02:50:53.941Z",
+      "updatedAt": "2026-11-13T03:14:42.370Z",
       "closedAt": null,
       "extra": {}
     },
