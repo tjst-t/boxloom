@@ -3381,7 +3381,7 @@
       "number": 150,
       "kind": "task",
       "title": "-fit:分けられないものは非常用の段(fit.emergency)で詰める",
-      "status": "in-progress",
+      "status": "done",
       "parent": "fit-split",
       "dependsOn": [
         "fit-split-slides"
@@ -3391,12 +3391,12 @@
       "labels": [],
       "body": "親 #148。値の表に任意の fit.emergency(fit.shrink と同じ組の並び、shrink の最後より大きければ誤り、段の検査は今の決まり)。dark・light・report に入れる(例:本文 10→9pt・表 9→8pt、図の字と余白も)。-fit で分けても入らない枚(分けられない columns・図・画像、または分けた後も入らない一つの境)は emergency を下り、入った段で組んで警告 `fit-emergency`(字が小さいので分ける・削ることを勧める hint)。最後の段でも入らなければ build は誤り(-allow-overflow なら作る)。docs/template-values.md・docs/build.md。",
       "doneWhen": "分けられない図がはみ出す例で -fit が emergency で収め fit-emergency を出す試験/emergency でも入らない例は誤り/値の表の検査の試験/-fit なしの golden が変わらない/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/fit-emergency）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T11:32:00.803Z",
-      "updatedAt": "2026-11-13T12:05:54.386Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T12:25:44.494Z",
+      "closedAt": "2026-11-13T12:25:44.494Z",
       "extra": {}
     }
   ]
