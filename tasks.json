@@ -3146,7 +3146,7 @@
       "number": 139,
       "kind": "task",
       "title": "fit の段に図の字・余白の名前を足し、report の詰めの最下段を本文 11pt にする",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3158,7 +3158,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T09:24:32.425Z",
-      "updatedAt": "2026-11-13T09:24:32.425Z",
+      "updatedAt": "2026-11-13T09:25:00.271Z",
       "closedAt": null,
       "extra": {}
     },
