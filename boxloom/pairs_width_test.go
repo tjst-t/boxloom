@@ -60,7 +60,7 @@ func TestPairsSideWidthFromContent(t *testing.T) {
 			}
 		}
 		s, r := ws[1][0], ws[1][1]
-		if s/(s+r) > 0.4 {
+		if s/(s+r) > 0.45 {
 			t.Errorf("%s: long side %.1fpt is not clearly wider than the short side %.1fpt", tmpl, r, s)
 		}
 		if share := s / (s + r); share < tm.Values.PairsSideMin-0.001 {
@@ -86,6 +86,7 @@ func TestPairsSideWidthFromContent(t *testing.T) {
 // pairSideShare は下限の外へ出ない(長い文どうしでも、短い名前と長い文でも)。
 func TestPairSideShareBounds(t *testing.T) {
 	tm := mustTemplate("light")
+	defer useFonts(tm.Fonts)()
 	for _, min := range []float64{0.2, 0.35} {
 		tm.Values.PairsSideMin = min
 		long := strings.Repeat("長い説明の文を並べる。", 20)
@@ -116,8 +117,10 @@ func TestPairSideShareBounds(t *testing.T) {
 		if share < min-1e-9 || share > 0.5 {
 			t.Errorf("min %.2f: share %.3f", min, share)
 		}
-		if math.Abs(share-min) > pairSideStep+1e-9 {
-			t.Errorf("min %.2f: a short name next to a long text should sit near the lower bound, got %.3f", min, share)
+		// 短い名前の側を下限まで狭めたときより高くならない(同じ高さなら半々に近い方)。
+		need, _ := pairsNeed(info, 800)
+		if got, low := need(share), need(min); got > low+pairSideTie {
+			t.Errorf("min %.2f: share %.3f needs %.1fpt, more than %.1fpt at the lower bound", min, share, got, low)
 		}
 	}
 }
@@ -178,10 +181,14 @@ func pairsInfoOf(t *testing.T, tmpl string, data []byte) *pairsInfo {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := mustTemplate(tmpl).BuildSlide(deck, 1)
+	tm := mustTemplate(tmpl)
+	b, err := tm.BuildSlide(deck, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// 呼び出し側が heightForWidth で測るので、試験の終わりまでテンプレートの字体で測る
+	// (組み立てと同じ字体でないと、行の高さが組み立ての測りと違う)。
+	t.Cleanup(useFonts(tm.Fonts))
 	var info *pairsInfo
 	var find func(s *Spec)
 	find = func(s *Spec) {

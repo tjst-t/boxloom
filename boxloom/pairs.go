@@ -315,6 +315,8 @@ type pairsInfo struct {
 	rows                      []pairRow
 	// sideMin は側の幅の下限の割合(値の表の pairsSideMin)。
 	sideMin float64
+	// step は側の幅を探す刻み(pt。値の表の spacingUnit)。
+	step float64
 	// split・splitWidth は側の幅の比を決めた箱の幅(同じ幅なら決め直さない)。
 	split      bool
 	splitWidth float64
@@ -403,7 +405,7 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 		}
 		return m, bt
 	}
-	info := &pairsInfo{sideMin: t.Values.PairsSideMin}
+	info := &pairsInfo{sideMin: t.Values.PairsSideMin, step: t.Scale.SpacingUnit}
 	info.headSubject = grow([]*Spec{t.text(p.Subject, "columnTitle", headRole, true)})
 	info.headResponse = grow([]*Spec{t.text(p.Response, "columnTitle", headRole, true)})
 	hm, hb := marks(0)
@@ -478,11 +480,12 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 	return Col([]*Spec{info.head, info.list}, tokGap("itemGap"), measurePairRows(info), nestedSlack()), nil
 }
 
-// pairSideStep は側の幅の割合の候補の刻み(pairsSideMin から 1 − pairsSideMin まで)。
-const pairSideStep = 0.05
+// pairSideStep は値の表に spacingUnit が無いときの側の幅を探す刻み(pt)。
+const pairSideStep = 2.0
 
-// pairSideTie は高さの差がこれ以下の候補を同じ高さと見なす(pt)。同じなら半々に近い方。
-const pairSideTie = 1.0
+// pairSideTie は高さの差がこれ以下の候補を同じ高さと見なす(pt。計算の誤差だけを
+// 吸収する)。同じなら半々に近い方。
+const pairSideTie = 0.01
 
 // splitPairs は対の並びの箱(印 measurePairRows)の2つの側の幅の比(grow)を、箱の幅
 // width から決めて全ての行(見出しの行も)に書く。同じ比にそろえるので側の列は縦に
@@ -669,11 +672,61 @@ func heightSlack(s *Spec) float64 {
 }
 
 // pairSideShare は subject の側の幅の割合(2つの側の幅の合計に対する。0〜1)。中身を
-// 縮めずに積んだ高さ(heightForWidth)の、全ての行の合計が一番小さくなる割合を
-// pairsSideMin〜1 − pairsSideMin の中から選ぶ(同じなら半々に近い方)。短い側(論点・
-// 名前)は自分が折り返さない幅まで狭くなり、長い側が広くなる。両側が同じくらいなら
-// 半々のまま。width は対の箱の中の幅。
+// 縮めずに積んだ高さ(heightForWidth)の、全ての行の高い方の側の合計が一番小さくなる
+// 割合を pairsSideMin〜1 − pairsSideMin の中から選ぶ(同じなら半々に近い方)。短い側
+// (論点・名前)は自分が折り返さない幅まで狭くなり、長い側が広くなる。両側が同じくらい
+// なら半々のまま。width は対の箱の中の幅。
+//
+// 候補(#115):最初の行の側の幅の合計を spacingUnit(pt)の刻みで割った全ての幅と、
+// 下限・上限・半々・5% 刻みの割合。740pt を report(spacingUnit 2pt・下限 0.2)で割ると約 220 の
+// 候補(と 5% 刻みの十数個)で、1つの候補は行ごとに2回 heightForWidth を測る(見出しの行を含めて n 行なら約 460n 回)。
+// 探し直すのは箱の幅が変わったときだけ(splitPairs)。
 func pairSideShare(info *pairsInfo, width float64) float64 {
+	if info.sideMin <= 0 || info.sideMin >= 0.5 {
+		return 0.5
+	}
+	total, base := pairsNeed(info, width)
+	if total == nil {
+		return 0.5
+	}
+	lo, hi := info.sideMin, 1-info.sideMin
+	shares := []float64{0.5, lo, hi}
+	// 5% 刻みの割合(前の候補)も残す。pt の刻みの間に落ちても、前より高くならない。
+	for k := 1; k < 20; k++ {
+		if sh := float64(k) / 20; sh > lo && sh < hi {
+			shares = append(shares, sh)
+		}
+	}
+	if base > 0 {
+		step := info.step
+		if !(step > 0) {
+			step = pairSideStep
+		}
+		d := step / base
+		for sh := lo + d; sh < hi-1e-9; sh += d {
+			shares = append(shares, sh)
+		}
+	}
+	hs := make([]float64, len(shares))
+	bestH := math.Inf(1)
+	for i, sh := range shares {
+		hs[i] = total(sh)
+		bestH = math.Min(bestH, hs[i])
+	}
+	// 一番低い高さから pairSideTie 以内の候補のうち、半々に一番近いもの。
+	best, bestD := 0.5, math.Inf(1)
+	for i, sh := range shares {
+		if d := math.Abs(sh - 0.5); hs[i] <= bestH+pairSideTie && d < bestD {
+			best, bestD = sh, d
+		}
+	}
+	return best
+}
+
+// pairsNeed は、subject の側の幅の割合 share で割ったときの対の並びの要る高さ(全ての行
+// (見出しの行も)の、高い方の側を縮めずに積んだ高さの合計)を返す関数と、最初の行の側の
+// 幅の合計(pt)。width は対の箱の中の幅。行が無ければ nil。
+func pairsNeed(info *pairsInfo, width float64) (func(share float64) float64, float64) {
 	type pair struct{ subject, response, row *Spec }
 	var ps []pair
 	if info.head != nil {
@@ -682,8 +735,8 @@ func pairSideShare(info *pairsInfo, width float64) float64 {
 	for _, r := range info.rows {
 		ps = append(ps, pair{r.subject, r.response, r.row})
 	}
-	if len(ps) == 0 || info.sideMin <= 0 || info.sideMin >= 0.5 {
-		return 0.5
+	if len(ps) == 0 {
+		return nil, 0
 	}
 	// 側の幅の合計:行の幅から、側でない子(印)と隙間を引いたもの。
 	sides := func(row *Spec) float64 {
@@ -695,43 +748,20 @@ func pairSideShare(info *pairsInfo, width float64) float64 {
 		}
 		return max0(w)
 	}
+	avails := make([]float64, len(ps))
+	for i, p := range ps {
+		avails[i] = sides(p.row)
+	}
 	total := func(share float64) float64 {
 		h := 0.0
-		for _, p := range ps {
-			avail := sides(p.row)
-			a := heightForWidth(p.subject, avail*share)
-			b := heightForWidth(p.response, avail*(1-share))
+		for i, p := range ps {
+			a := heightForWidth(p.subject, avails[i]*share)
+			b := heightForWidth(p.response, avails[i]*(1-share))
 			h += math.Max(a, b)
 		}
 		return h
 	}
-	best, bestH := 0.5, total(0.5)
-	type cand struct{ share, h float64 }
-	var cs []cand
-	for k := 0; ; k++ {
-		sh := info.sideMin + float64(k)*pairSideStep
-		if sh > 1-info.sideMin+1e-9 {
-			break
-		}
-		h := total(sh)
-		cs = append(cs, cand{sh, h})
-		if h < bestH {
-			bestH = h
-		}
-	}
-	// 一番低い高さから pairSideTie 以内の候補のうち、半々に一番近いもの。
-	if total(0.5) <= bestH+pairSideTie {
-		return 0.5
-	}
-	bestD := math.Inf(1)
-	for _, c := range cs {
-		if c.h <= bestH+pairSideTie {
-			if d := math.Abs(c.share - 0.5); d < bestD {
-				best, bestD = c.share, d
-			}
-		}
-	}
-	return best
+	return total, avails[0]
 }
 
 // registerBundledComponents は同梱のテンプレート(templates/*.json。いまは dark・light・report)が
