@@ -2381,7 +2381,7 @@
       "number": 103,
       "kind": "task",
       "title": "report の対の並びと表の余白を元の資料に合わせる(対ごとの空き・側の見出しの帯・セルの内側の余白)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2393,7 +2393,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T04:39:01.378Z",
-      "updatedAt": "2026-11-13T04:39:01.378Z",
+      "updatedAt": "2026-11-13T04:39:14.878Z",
       "closedAt": null,
       "extra": {}
     },
