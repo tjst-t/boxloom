@@ -275,6 +275,24 @@ func (s *MatrixSubsystem) detailNeed(r *MatrixRow, w float64) (needW, needH floa
 	return needW, needH
 }
 
+// detailHeight は幅 w に行の説明が収まる高さ(余白を除く。detailNeed の高さだけ)。
+func (s *MatrixSubsystem) detailHeight(r *MatrixRow, w float64) (needH float64) {
+	tx := s.text()
+	_, detail := s.rowHeadParas(r, "", "", nil)
+	markW := 0.0
+	if len(r.Points) > 0 {
+		markW = runWidthPt(tx.Point+" ", tx.Detail, true)
+	}
+	for _, p := range detail {
+		if markW > 0 {
+			p = p[1:]
+		}
+		_, h := runsBox(p, tx.Detail, w-markW)
+		needH += h
+	}
+	return needH
+}
+
 // groupRuns は列の群の名前(太字)。
 func groupRuns(g MatrixColumnGroup, color string, roles Roles) []TextRun {
 	runs := itemRuns(g.Title, color, roles)
@@ -411,44 +429,180 @@ func (s *MatrixSubsystem) colWidths(inner float64) (headW, detW, colW float64) {
 	return
 }
 
-// detailColWidths は説明の列があるときの幅(#143)。評価の列は印と短い文の幅に留め、
-// 幅は文の列(行の題・説明)が取る。幅が減るにつれて次の順に譲る(段の境で幅はつながる):
-//  1. 文の列が floor を保って評価の列が自然の幅(と noWrapSlack)で入れば、評価の列は自然の幅、残りは文の列へ
-//     (評価の列の短い文・見出しは折り返さない)。
-//  2. 文の列は floor のまま、評価の列を min まで縮める。
-//  3. 最小が入らなければ最小の比で配る(figure-text-overflow)。
+// detailColWidths は説明の列があるときの幅(#143・#144)。評価の列は中身の自然な幅
+// (印・短い文・列の見出しの折り返し後)の最小に留め、残りの幅を題の列と説明の列に配る。
+//  1. 文の列の floor と評価の列の min(印と一番長い語。列の見出しは折り返す)が入れば、
+//     評価の列の幅(min〜自然の幅)と題の列の幅(floor〜自然の幅)を matrixDetailStep の刻みで
+//     探し、行の高さ(見出しの行・列の群・各行の最小)の合計が一番小さい組を選ぶ(pairs の #115
+//     と同じ考え)。高さが matrixDetailTie 以内で同じなら、評価の列が狭い方、次に題と説明の
+//     幅の比が文の量(自然の幅)の比に近い方。評価の列を広げても行が低くならなければ広げない
+//     ので、評価の列は中身が要る幅に留まる(#143 は自然の幅を取り、文の列が潰れた)。
+//  2. 入らなければ最小の比で配る(figure-text-overflow)。
 //
-// 文の列の幅は、題と説明に分ける(両方が自然の幅で入れば題は自然の幅、余りは説明へ。
-// floor が入れば floor を先に取り残りを自然の幅と floor の差の比で、入らなければ floor の比)。
-// 題は内側の幅の maxRowHeaderFraction まで(越えた分は説明へ)。
+// 題は内側の幅の maxRowHeaderFraction まで(越えた分は説明へ)。Measure・place・Lint は
+// どれもこの幅で測るので、Natural・Min の高さは描く形と一致する。
 func (s *MatrixSubsystem) detailColWidths(inner float64) (headW, detW, colW float64) {
 	v := s.vals()
 	m := s.widths()
 	C := float64(len(s.Data.Columns))
 	avail := inner - C*v.CellGap - m.detGap
-	// 自然の幅ちょうどだと、アプリの字の幅のわずかな違いで見出し・題が折れるので、
-	// 評価の列と題の列には noWrapSlack を足しておく。
-	colNat, headNat := m.colNat+noWrapSlack, m.headNat+noWrapSlack
-	textNat, textFloor := headNat+m.detNat, m.headFloor+m.detFloor
-	switch {
-	case textFloor+C*colNat <= avail:
-		colW = colNat
-	case textFloor+C*m.colMin <= avail:
-		colW = (avail - textFloor) / C
-	default:
-		colW = math.Max(0, avail) * m.colMin / (textFloor + C*m.colMin)
+	textFloor := m.headFloor + m.detFloor
+	if textFloor+C*m.colMin <= avail {
+		return s.searchDetailWidths(inner, avail, m)
 	}
+	colW = math.Max(0, avail) * m.colMin / (textFloor + C*m.colMin)
 	text := math.Max(0, avail-C*colW)
-	switch {
-	case text >= textNat:
-		headW = headNat
-	case text >= textFloor && textNat > textFloor:
-		headW = m.headFloor + (text-textFloor)*(headNat-m.headFloor)/(textNat-textFloor)
-	case textFloor > 0:
-		headW = text * m.headFloor / textFloor
+	if textFloor > 0 {
+		headW = math.Min(text, textFloor) * m.headFloor / textFloor
 	}
 	headW = math.Min(headW, inner*v.RowHeaderFrac)
 	return headW, text - headW, colW
+}
+
+// matrixDetailStep は説明の列があるときに幅を探す刻み(pt。同梱のテンプレートの spacingUnit)。
+const matrixDetailStep = 2.0
+
+// monotoneTable は f(0)…f(n-1) の表。f は x とともに増えるか減る(どちらか一方)とし、
+// 区間の両端の値が同じなら間も同じ値で埋める(二分で、変わり目の近くだけ f を呼ぶ)。
+func monotoneTable(n int, f func(int) float64) []float64 {
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	var fill func(lo, hi int)
+	fill = func(lo, hi int) {
+		if hi-lo <= 1 {
+			return
+		}
+		if out[lo] == out[hi] {
+			for x := lo + 1; x < hi; x++ {
+				out[x] = out[lo]
+			}
+			return
+		}
+		mid := (lo + hi) / 2
+		out[mid] = f(mid)
+		fill(lo, mid)
+		fill(mid, hi)
+	}
+	out[0], out[n-1] = f(0), f(n-1)
+	fill(0, n-1)
+	return out
+}
+
+// matrixDetailTie は高さが同じとみなす差(pt)。
+const matrixDetailTie = 0.5
+
+// searchDetailWidths は detailColWidths の段 1:評価の列・題の列の幅を刻みで探す。評価の列は
+// min(印と一番長い語。列の見出しは折り返す)から自然の幅まで、題の列は floor から自然の幅まで。
+// 評価の列・題の列とも matrixDetailStep の刻みにとるので、説明の列の幅も同じ刻みの格子に乗り
+// (評価の列を1刻み広げると C 刻み狭くなる)、題・説明の行ごとの高さは幅ごとに一度だけ測る。
+func (s *MatrixSubsystem) searchDetailWidths(inner, avail float64, m matrixWidths) (headW, detW, colW float64) {
+	v, tx := s.vals(), s.text()
+	C0 := len(s.Data.Columns)
+	C := float64(C0)
+	n := len(s.Data.Rows)
+	step := matrixDetailStep
+	headLo := math.Min(m.headFloor, inner*v.RowHeaderFrac)
+	base := avail - C*m.colMin - headLo // 評価の列が min、題が下限のときの説明の列の幅
+	colHi := math.Min(m.colNat+noWrapSlack, (avail-headLo-m.detFloor)/C)
+	headHi := math.Min(m.headNat+noWrapSlack, inner*v.RowHeaderFrac)
+	share := (m.headNat + noWrapSlack) / (m.headNat + noWrapSlack + m.detNat) // 題の文の量の割合
+	K := int(math.Floor((colHi-m.colMin)/step + 1e-9))
+	J := int(math.Floor((headHi-headLo)/step + 1e-9))
+	if J < 0 {
+		J = 0
+	}
+	// 題の高さ(j ごと)と説明の高さ(C*k+j ごと)の表。文の高さは幅が広いほど低いか同じなので、
+	// 両端で同じ高さなら間も同じとみなして二分で埋める(測るのは高さの変わり目の近くだけ)。
+	// 説明が自然の幅で入る幅より広くても高さは同じなので、そこで止める。
+	kjMin := min(max(0, int(math.Floor((base-m.detNat)/step))), C0*K+J)
+	headTab := make([][]float64, n)
+	detTab := make([][]float64, n+1) // 末尾は説明の列の見出し
+	detHead := s.detailHeaderRuns("", nil)
+	for i := range s.Data.Rows {
+		r := &s.Data.Rows[i]
+		headTab[i] = monotoneTable(J+1, func(j int) float64 {
+			_, h := s.rowHeadNeed(r, headLo+float64(j)*step-2*v.TextInsetX)
+			return h
+		})
+		detTab[i] = monotoneTable(C0*K+J+1-kjMin, func(x int) float64 {
+			return s.detailHeight(r, math.Max(0, base-float64(kjMin+x)*step-2*v.TextInsetX))
+		})
+	}
+	detTab[n] = monotoneTable(C0*K+J+1-kjMin, func(x int) float64 {
+		_, h := runsBox(detHead, tx.Title, math.Max(0, base-float64(kjMin+x)*step-2*v.TextInsetX))
+		return h
+	})
+	det := func(i, kj int) float64 { return detTab[i][max(kj, kjMin)-kjMin] }
+	// 評価の列の幅(k ごと)で決まる高さ:列の見出し・列の群・セル。
+	colAt := func(k int) float64 { return m.colMin + float64(k)*step }
+	topTab := monotoneTable(K+1, func(k int) float64 {
+		top := 0.0
+		for j := range s.Data.Columns {
+			_, h := runsBox(s.headerRuns(j, "", nil), tx.Title, colAt(k)-2*v.TextInsetX)
+			top = math.Max(top, h+2*v.TextInsetY)
+		}
+		return top
+	})
+	groupTab := monotoneTable(K+1, func(k int) float64 {
+		group := 0.0
+		for _, gr := range s.Data.ColumnGroups {
+			_, h := runsBox(groupRuns(gr, "", nil), tx.Title, s.groupWidth(colAt(k), gr.Span)-2*v.TextInsetX)
+			group = math.Max(group, h+2*v.TextInsetY+v.GroupRuleW)
+		}
+		return group
+	})
+	cellTab := make([][]float64, n)
+	for i := range s.Data.Rows {
+		r := &s.Data.Rows[i]
+		cellTab[i] = monotoneTable(K+1, func(k int) float64 {
+			need := 0.0
+			for _, c := range r.Cells {
+				need = math.Max(need, s.cellNeed(c, colAt(k)))
+			}
+			return need
+		})
+	}
+	type cand struct{ h, cw, hw, dw, d float64 }
+	var cands []cand
+	bestH := math.Inf(1)
+	for k := 0; k <= K; k++ {
+		cw := colAt(k)
+		top, group := topTab[k], groupTab[k]
+		cells := make([]float64, n)
+		for i := range cells {
+			cells[i] = cellTab[i][k]
+		}
+		text := avail - C*cw
+		for j := 0; j <= J; j++ {
+			hw := headLo + float64(j)*step
+			dw := text - hw
+			if dw < m.detFloor-1e-9 && j > 0 {
+				break
+			}
+			kj := C0*k + j
+			total := group + math.Max(top, det(n, kj)+2*v.TextInsetY)
+			for i := 0; i < n; i++ {
+				need := math.Max(math.Max(headTab[i][j], det(i, kj)), cells[i]) + 2*v.TextInsetY
+				total += math.Max(need, v.MinRowH)
+			}
+			cands = append(cands, cand{total, cw, hw, dw, math.Abs(hw - text*share)})
+			bestH = math.Min(bestH, total)
+		}
+	}
+	// 一番低い高さから matrixDetailTie 以内のうち、評価の列が狭く、次に文の量の比に近いもの。
+	var best *cand
+	for k := range cands {
+		c := &cands[k]
+		if c.h > bestH+matrixDetailTie {
+			continue
+		}
+		if best == nil || c.cw < best.cw-1e-9 || (math.Abs(c.cw-best.cw) <= 1e-9 && c.d < best.d) {
+			best = c
+		}
+	}
+	return best.hw, best.dw, best.cw
 }
 
 // rowHeadWidth は内側の幅 inner のときの行の見出しの列の幅。幅が減るにつれて次の
@@ -974,7 +1128,7 @@ func matrixDecl() SubsystemDecl {
 		"各行の cells の数は columns の数と同じ(違えば boxloom check が matrix-cells の誤りにする)",
 		"凡例は使った状態から自動で作る。文を変えるときは legend: {support: 良い, …}",
 		"行の題の下の説明は detail(1つの文か、文の列。列は箇条になる)",
-		"detailColumn: <見出しの文> を書くと、各行の detail を題の下でなく題の右の見出しつきの列に置く(行が低くなる。評価の列は印と短い文の幅になり、幅は題と説明の列が取る)",
+		"detailColumn: <見出しの文> を書くと、各行の detail を題の下でなく題の右の見出しつきの列に置く(行が低くなる。評価の列は印・短い文・折り返した見出しが入る一番狭い幅になり、残りを題と説明の列が行の高さが一番低くなるように分ける)",
 		"列の見出しの上の群の名前は columnGroups: [{title, span: またぐ列の数}](左から。span の合計は列の数。違えば check の matrix-column-groups の誤り)",
 		"推す列(おすすめの選択肢)は emphasis: <列の見出しの文>。見出しと列がアクセントの色で目立つ。見出しに無い名前は check の matrix-emphasis の誤り",
 	)
