@@ -1011,8 +1011,12 @@ func connectorXML(s *shape) string {
 		cxn += fmt.Sprintf(`<a:endCxn id="%d" idx="%d"/>`, s.endID, s.endIdx)
 	}
 	tail := ""
+	if s.dash == "dash" {
+		// 破線(組織図の補佐の線、#131)。a:ln の中で a:prstDash は塗りの後・端の前。
+		tail = `<a:prstDash val="dash"/>`
+	}
 	if s.arrowEnd {
-		tail = `<a:tailEnd type="triangle" w="med" len="med"/>`
+		tail += `<a:tailEnd type="triangle" w="med" len="med"/>`
 	}
 	return fmt.Sprintf(`<p:cxnSp>
 <p:nvCxnSpPr><p:cNvPr id="%d" name="Connector %d"/><p:cNvCxnSpPr>%s</p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr>

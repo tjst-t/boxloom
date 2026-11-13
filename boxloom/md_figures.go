@@ -29,7 +29,8 @@ func init() {
 		{"status", status, false}, {"emphasis", gBool, false},
 	}
 	orgUnitFields = append(append([]gField{}, figureNodeFields...),
-		gField{"members", gSeq(gObject(figureNodeFields), 0), false})
+		gField{"members", gSeq(gObject(figureNodeFields), 0), false},
+		gField{"assistant", gObject([]gField{{"title", gInline, true}, {"detail", gInline, false}}), false})
 	matrixCellFields = []gField{{"status", status, true}, {"text", gInline, false}}
 	matrixRowFields = []gField{
 		{"label", gInline, true},

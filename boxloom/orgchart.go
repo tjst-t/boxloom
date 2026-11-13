@@ -42,6 +42,9 @@ type OrgChartValues struct {
 	LegendSwatchW float64 `json:"legendSwatchWidth"` // 凡例の見本の箱
 	LegendSwatchH float64 `json:"legendSwatchHeight"`
 	LegendSwatchG float64 `json:"legendSwatchGap" scale:"space"` // 見本と文の間
+	AssistantGap  float64 `json:"assistantGap" scale:"space"`    // 2段目の箱と補佐の箱の間(#131)
+	MinAssistantW float64 `json:"minAssistantWidth"`
+	MaxAssistantW float64 `json:"maxAssistantWidth"`
 }
 
 func (v *OrgChartValues) legendValues(radius float64) figureLegendValues {
@@ -49,10 +52,11 @@ func (v *OrgChartValues) legendValues(radius float64) figureLegendValues {
 		swatchGap: v.LegendSwatchG, outlineW: v.OutlineWidth, radius: radius}
 }
 
-// OrgUnit は2段目の箱と、その下の3段目。
+// OrgUnit は2段目の箱と、その下の3段目。Assistant は箱の横の補佐(任意、#131)。
 type OrgUnit struct {
 	FigureNode
-	Members []FigureNode
+	Members   []FigureNode
+	Assistant *FigureNode
 }
 
 // OrgChartData は IR の data を読んだもの。
@@ -133,6 +137,8 @@ type orgGeom struct {
 	memberX      [][]float64
 	memberW      float64   // 3段目の箱のもとの幅(全部の列で同じ)
 	memberWs     []float64 // 列ごとの3段目の箱の幅(泣き別れを避けて広げた後)
+	asstX, asstW []float64 // 補佐の箱(無い列は幅 0)
+	needAsst     []float64
 	needRoot     float64
 	needUnit     float64
 	needMember   float64
@@ -173,6 +179,7 @@ func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
 	x := x0
 	g.unitX, g.unitW, g.memberX = make([]float64, U), make([]float64, U), make([][]float64, U)
 	g.memberWs = make([]float64, U)
+	g.asstX, g.asstW, g.needAsst = make([]float64, U), make([]float64, U), make([]float64, U)
 	for i, u := range s.Data.Units {
 		x += margin
 		g.unitW[i] = math.Min(colW[i], v.MaxUnitW)
@@ -196,6 +203,7 @@ func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
 			}
 		}
 		g.memberWs[i] = mw
+		s.placeAssistant(g, i, x, colW[i], margin)
 		x += colW[i] + margin + v.UnitGap
 	}
 	g.rootW = math.Min(inner, v.MaxRootW)
@@ -208,6 +216,10 @@ func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
 		u := &s.Data.Units[i]
 		_, h := nodeTextSize(&u.FigureNode, tx.Title, tx.Sub, g.unitW[i], s.boxValues("rect"))
 		g.needUnit = math.Max(g.needUnit, h)
+		if u.Assistant != nil {
+			_, g.needAsst[i] = nodeTextSize(u.Assistant, tx.Sub, tx.Detail, g.asstW[i], s.boxValues("roundRect"))
+			g.needUnit = math.Max(g.needUnit, g.needAsst[i])
+		}
 		for j := range u.Members {
 			_, h := nodeTextSize(&u.Members[j], tx.Sub, tx.Detail, g.memberWs[i], s.boxValues("roundRect"))
 			g.needMember = math.Max(g.needMember, h)
@@ -228,18 +240,57 @@ func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
 	return g
 }
 
+// placeAssistant は列 i の補佐の箱を、2段目の箱の右に置く(#131)。2段目の箱は列の
+// 真ん中のまま(下の段への線と3段目の並びは変えない)。列の真ん中から右の、列の半分と
+// 余りの中に「箱の半分+間+補佐」が収まるよう、補佐は maxAssistantWidth の幅のまま、
+// 足りなければ2段目の箱を、それでも足りなければ両方を狭める(Measure の Min の幅は
+// 補佐を minAssistantWidth と見て足す)。
+func (s *OrgChartSubsystem) placeAssistant(g *orgGeom, i int, x, colW, margin float64) {
+	if s.Data.Units[i].Assistant == nil {
+		return
+	}
+	v := s.vals()
+	// 文の幅に合わせると、字体が置き換わったときに折り返すので、幅は maxAssistantWidth に揃える。
+	aw := v.MaxAssistantW
+	room := math.Max(0, colW/2+margin-v.AssistantGap) // 箱の半分と補佐の幅に使える分
+	uw := g.unitW[i]
+	if uw/2+aw > room {
+		if 2*(room-aw) >= aw {
+			uw = 2 * (room - aw)
+		} else {
+			w := room / 1.5
+			uw, aw = math.Min(uw, w), math.Min(aw, w)
+		}
+	}
+	g.unitW[i] = uw
+	g.unitX[i] = x + (colW-uw)/2
+	g.asstW[i] = aw
+	g.asstX[i] = g.unitX[i] + uw + v.AssistantGap
+}
+
+// assistantExtra は補佐のために足す横の幅(補佐1つにつき、列の真ん中の両側に「間+幅」)。
+func (s *OrgChartSubsystem) assistantExtra(w float64) float64 {
+	extra := 0.0
+	for _, u := range s.Data.Units {
+		if u.Assistant != nil {
+			extra += 2 * (s.vals().AssistantGap + w)
+		}
+	}
+	return extra
+}
+
 // Measure: 高さは3つの段の箱(文が収まる高さ以上)と段の間の、最小・自然・上限の和。
 // 箱の幅は枠の幅で決まるので、狭い枠では文を折り返して箱が高くなる。
 func (s *OrgChartSubsystem) Measure(c Constraint) Measurement {
 	v := s.vals()
-	w := v.NaturalWidth
+	w := v.NaturalWidth + s.assistantExtra(v.MaxAssistantW)
 	if c.Width > 0 {
 		w = c.Width
 	}
 	min, nat, max := flexTotals(s.geom(w).parts)
 	return Measurement{
 		Natural: Size{Width: w, Height: nat},
-		Min:     Size{Width: v.MinWidth, Height: min},
+		Min:     Size{Width: v.MinWidth + s.assistantExtra(v.MinAssistantW), Height: min},
 		Max:     Size{Height: max},
 	}
 }
@@ -248,6 +299,7 @@ type orgPlaced struct {
 	root    LBox
 	units   []LBox
 	members [][]LBox
+	assts   []LBox // 補佐の箱(無い列は幅 0)
 	g       *orgGeom
 	legend  LBox // 凡例の左上
 }
@@ -268,6 +320,13 @@ func (s *OrgChartSubsystem) place(box LBox) *orgPlaced {
 	}
 	for i, u := range s.Data.Units {
 		pl.units = append(pl.units, LBox{X: box.X + g.unitX[i], Y: y[orgPartUnit], Width: g.unitW[i], Height: sizes[orgPartUnit]})
+		var ab LBox
+		if u.Assistant != nil {
+			// 補佐は小さい箱:文の高さ(最小 minBoxHeight)で、2段目の箱の高さの真ん中に置く。
+			h := math.Min(math.Max(g.needAsst[i], s.vals().MinBoxH), sizes[orgPartUnit])
+			ab = LBox{X: box.X + g.asstX[i], Y: y[orgPartUnit] + (sizes[orgPartUnit]-h)/2, Width: g.asstW[i], Height: h}
+		}
+		pl.assts = append(pl.assts, ab)
 		var ms []LBox
 		for j := range u.Members {
 			ms = append(ms, LBox{X: box.X + g.memberX[i][j], Y: y[orgPartMem], Width: g.memberWs[i], Height: sizes[orgPartMem]})
@@ -287,6 +346,15 @@ func (s *OrgChartSubsystem) Render(ctx RenderContext, box LBox) {
 	for i := range s.Data.Units {
 		u := &s.Data.Units[i]
 		unitIDs[i] = drawFigureNode(ctx, pl.units[i], &u.FigureNode, tx.Title, tx.Sub, s.boxValues("rect"))
+		if u.Assistant != nil {
+			// 補佐:2段目の箱の右の辺から補佐の左の辺へ、破線の真っすぐなコネクタ。
+			id := drawFigureNode(ctx, pl.assts[i], u.Assistant, tx.Sub, tx.Detail, s.boxValues("roundRect"))
+			ub, ab := pl.units[i], pl.assts[i]
+			yc := ab.Y + ab.Height/2
+			p.AddConnector(ub.X+ub.Width, yc, ab.X, yc, v.LineWidth, ctx.Roles.Color("text_muted"), false,
+				ConnectorEnd{unitIDs[i], 3}, ConnectorEnd{id, 1})
+			p.Shapes[len(p.Shapes)-1].dash = "dash"
+		}
 		for j := range u.Members {
 			memberIDs[i] = append(memberIDs[i], drawFigureNode(ctx, pl.members[i][j], &u.Members[j], tx.Sub, tx.Detail, s.boxValues("roundRect")))
 		}
@@ -322,6 +390,9 @@ func (s *OrgChartSubsystem) Lint(box LBox) []string {
 	for i := range s.Data.Units {
 		u := &s.Data.Units[i]
 		check(fmt.Sprintf("units[%d]", i), &u.FigureNode, pl.units[i], tx.Title, tx.Sub, s.boxValues("rect"))
+		if u.Assistant != nil {
+			check(fmt.Sprintf("units[%d].assistant", i), u.Assistant, pl.assts[i], tx.Sub, tx.Detail, s.boxValues("roundRect"))
+		}
 		for j := range u.Members {
 			check(fmt.Sprintf("units[%d].members[%d]", i, j), &u.Members[j], pl.members[i][j], tx.Sub, tx.Detail, s.boxValues("roundRect"))
 		}
@@ -334,7 +405,14 @@ func (s *OrgChartSubsystem) Lint(box LBox) []string {
 
 type orgUnitIR struct {
 	figureNodeIR
-	Members []figureNodeIR `json:"members"`
+	Members   []figureNodeIR  `json:"members"`
+	Assistant *orgAssistantIR `json:"assistant"`
+}
+
+// orgAssistantIR は補佐の箱(題と補足だけ。状態・強調は持たない)。
+type orgAssistantIR struct {
+	Title  Inline `json:"title"`
+	Detail Inline `json:"detail"`
 }
 
 type orgChartIR struct {
@@ -363,6 +441,13 @@ func orgChartFromIR(raw json.RawMessage) (*OrgChartData, error) {
 			return nil, fmt.Errorf("orgchart: %w", err)
 		}
 		ou := OrgUnit{FigureNode: n}
+		if a := u.Assistant; a != nil {
+			an, err := figureNodeIR{Title: a.Title, Detail: a.Detail}.node(at + ".assistant")
+			if err != nil {
+				return nil, fmt.Errorf("orgchart: %w", err)
+			}
+			ou.Assistant = &an
+		}
 		for j, m := range u.Members {
 			mn, err := m.node(fmt.Sprintf("%s.members[%d]", at, j))
 			if err != nil {
@@ -382,6 +467,7 @@ func orgChartDecl() SubsystemDecl {
 	return figureDecl("subsystems/orgchart.schema.json",
 		"上下の関係(親1つ・子 2〜8)。root の下に units、各 unit の下に members(3段まで)",
 		"箱の文は title(1行目)と detail(その下。人の名前・人数など)",
+		"unit の横の補佐(副総括など)は assistant: {title, detail}(1つまで。破線で繋がる小さい箱)",
 		"status を使ったら legend: {conditional: 意味, …} で枠線の色の意味を書く(凡例が図の下に出る。無ければ figure-legend の警告)",
 	)
 }

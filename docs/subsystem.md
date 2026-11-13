@@ -560,6 +560,7 @@ units:
       - {title: 基盤, detail: 4名}
       - {title: 画面, detail: 3名, status: conditional}
   - title: 営業                        # members は任意
+    assistant: {title: 副部長, detail: 架空 次郎}   # 任意。横の補佐(1つまで)
 legend: {conditional: 2名を増やす}
 ```
 
@@ -580,6 +581,17 @@ legend: {conditional: 2名を増やす}
   `unitGap`、3段目の箱の間は `memberGap` のまま。広げても直らない(余りが足りない)
   ときは元の幅のままで、警告は出さない(文は収まっている)。泣き別れが無い図は
   前と同じ置き方。`TestOrgChartUnitAvoidsOrphanLine`・`TestNodeComfortWidth` で確かめる。
+- **補佐(Backlog #131)**:unit の任意の `assistant: {title, detail}`(1つまで。状態・
+  強調は持たない)は、2段目の箱の右に `assistantGap` を空けて小さい箱(幅
+  `maxAssistantWidth`、高さは文の高さ・最小 `minBoxHeight`、2段目の箱の高さの真ん中)を
+  置き、2段目の箱の右の辺から補佐の左の辺へ破線の本物のコネクタ(`a:prstDash`)で繋ぐ。
+  2段目の箱は列の真ん中のままなので、root からの線と3段目の並びは変わらない。補佐が
+  列の右半分と余りに入りきらなければ、まず2段目の箱を、それでも足りなければ両方を狭める
+  (隣の列との間は `unitGap` のまま)。補佐の文の高さは2段目の段の高さに含め、Measure の
+  幅は補佐1つにつき列の両側に「`assistantGap`+幅」を足す(自然は `maxAssistantWidth`、
+  Min は `minAssistantWidth`)。補佐の文が収まらなければ `units[i].assistant` の
+  `figure-text-overflow`。例は `examples/md/orgchart-assistant.bx.md`、試験は
+  `TestOrgChartAssistant`。
 - **狭い枠**:箱が狭くなると文を折り返して箱が高くなる(縦に積む・横にずらす、と
   いった組み替えはしない)。全幅と右の 60% の列で、箱が枠に収まり重ならず警告も
   出ないことを `TestOrgChartFitsFullAndNarrowColumns` で確かめ、PPTX を描いて目で見た

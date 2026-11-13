@@ -22,5 +22,8 @@
   "legendItemGap": 20,
   "legendSwatchWidth": 16,
   "legendSwatchHeight": 10,
-  "legendSwatchGap": 8
+  "legendSwatchGap": 8,
+  "assistantGap": 16,
+  "minAssistantWidth": 64,
+  "maxAssistantWidth": 96
 }
