@@ -188,6 +188,27 @@
         "quoteMark": 18
       }
     ],
+    "emergency": [
+      {
+        "body": 8,
+        "subPoint": 8,
+        "tableText": 8,
+        "small": 8,
+        "cardPadding": 8,
+        "figureDetail": 8,
+        "matrixRowTitle": 8,
+        "calloutMark": 12,
+        "orgchartMinBoxHeight": 16,
+        "orgchartMinLevelGap": 8,
+        "phasesMinHeaderHeight": 20,
+        "matrixMinRowHeight": 12,
+        "pairMarkSize": 12,
+        "matrixMarkSize": 8,
+        "quoteText": 10,
+        "quoteMark": 16,
+        "quoteSource": 8
+      }
+    ],
     "grow": [
       {
         "body": 18,

@@ -11,6 +11,10 @@
 //     values)より小さくならない。前の段と同じだけの組(何も替えない段)も誤り
 //
 // shrink は -fit の詰め(fit_shrink.go、#127)、grow は -fit の広げ(fit_grow.go、#128)が使う。
+//
+// 任意の "emergency": [組…](#150)は非常用の段:shrink と同じ組の並びで、shrink の最後の段
+// (shrink が無ければ dense)から続けて1段ずつ詰める(前の段より大きければ誤り。段の検査は
+// shrink と同じ)。-fit で梯子でも分けても収まらない枚だけが下りる(fit_emergency.go)。
 
 package boxloom
 
@@ -59,6 +63,8 @@ type fitStep struct {
 type templateFit struct {
 	Shrink []fitStep `json:"shrink,omitempty"`
 	Grow   []fitStep `json:"grow,omitempty"`
+	// Emergency は非常用の段(#150。shrink の最後の段の続き)。
+	Emergency []fitStep `json:"emergency,omitempty"`
 }
 
 // FitValues は梯子の1段を重ねたあとの本文の値の組(全部の名前がそろったもの)。
@@ -102,6 +108,9 @@ type FitValues struct {
 type TemplateFit struct {
 	Shrink []FitValues
 	Grow   []FitValues
+	// Emergency は非常用の段(#150):Shrink の最後の段から続けて詰める。梯子でも分けても
+	// 収まらない枚だけが使う(fit_emergency.go)。
+	Emergency []FitValues
 }
 
 // apply は v の本文の値を f に替えたもの。
@@ -149,6 +158,13 @@ func resolveFit(f *templateFit, v TemplateValues, d DenseValues, sc TemplateScal
 	if out.Shrink, err = resolveLadder("fit.shrink", f.Shrink, fitBaseDense(d, v), "dense", -1, sc); err != nil {
 		return out, err
 	}
+	base, baseName := fitBaseDense(d, v), "dense"
+	if n := len(out.Shrink); n > 0 {
+		base, baseName = out.Shrink[n-1], fmt.Sprintf("fit.shrink[%d]", n-1)
+	}
+	if out.Emergency, err = resolveLadder("fit.emergency", f.Emergency, base, baseName, -1, sc); err != nil {
+		return out, err
+	}
 	if out.Grow, err = resolveLadder("fit.grow", f.Grow, fitBaseValues(v), "values", +1, sc); err != nil {
 		return out, err
 	}
@@ -180,7 +196,7 @@ func resolveLadder(at string, steps []fitStep, base FitValues, baseName string, 
 				return nil, fmt.Errorf("%s.%s: must be greater than 0 (got %v)", here, name, x)
 			}
 			if dir < 0 && x > was+scaleEps {
-				return nil, fmt.Errorf("%s.%s: %v is larger than %s.%s (%v); the shrink ladder only packs, so each step cannot be larger than the one before", here, name, x, from, name, was)
+				return nil, fmt.Errorf("%s.%s: %v is larger than %s.%s (%v); the %s ladder only packs, so each step cannot be larger than the one before", here, name, x, from, name, was, at)
 			}
 			if dir > 0 && x < was-scaleEps {
 				return nil, fmt.Errorf("%s.%s: %v is smaller than %s.%s (%v); the grow ladder only widens, so each step cannot be smaller than the one before", here, name, x, from, name, was)

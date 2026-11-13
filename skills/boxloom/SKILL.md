@@ -467,6 +467,10 @@ returns
   mark, a table repeats its header) at the breaks it names (`starts`; `capacity[]` has one
   entry per part with `split`). The breaks are mechanical: split that slide yourself at a
   break in the meaning and give each part its own title, then build without relying on it.
+- With `-fit`, a **warning** `fit-emergency` (path `/slides/S`) means the slide did not fit
+  even after packing and splitting (a `columns`, figure or image cannot be split), so `-fit`
+  built it with the template's emergency step (`fit.emergency[K]`, very small text). Follow its
+  `hint`: split the slide by content, move the figure or a column to its own slide, or cut text.
 
 Fixes by code:
 

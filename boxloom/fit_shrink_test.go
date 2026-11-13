@@ -140,7 +140,7 @@ func TestFitShrinkDenseStartsBelowDense(t *testing.T) {
 // 最後の段でも収まらず分けられもしなければ(1つの段落。分けるのは fit_split.go)、
 // layout-overflow のまま(build は誤り)。fit-applied も fit-split も出さない。
 func TestFitShrinkLastStepStillOverflows(t *testing.T) {
-	file, data := "long.bx.md", []byte(splitDeckMD("light", strings.Repeat(splitSentence+"。", 60)))
+	file, data := "long.bx.md", []byte(splitDeckMD("light", strings.Repeat(splitSentence+"。", 120)))
 	res := Check(file, data, CheckOptions{Fit: true})
 	var body SlideCapacity
 	for _, c := range res.Capacity {

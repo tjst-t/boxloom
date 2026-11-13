@@ -294,7 +294,7 @@ func TestFitSplitTableGroupCuts(t *testing.T) {
 
 // 分けられない(1つの単位でも最後の段で1枚に入らない)スライドは分けず、はみ出しが残る。
 func TestFitSplitUnsplittable(t *testing.T) {
-	long := strings.Repeat(splitSentence+"。", 60)
+	long := strings.Repeat(splitSentence+"。", 120)
 	md := splitDeckMD("light", long)
 	res := Check("split.bx.md", []byte(md), CheckOptions{Fit: true})
 	if len(fitIssues(res.Info, codeFitSplit)) != 0 || len(fitIssues(res.Warnings, codeLayoutOverflow)) == 0 {

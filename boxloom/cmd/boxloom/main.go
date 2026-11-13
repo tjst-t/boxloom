@@ -215,7 +215,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	strict := fs.Bool("strict", false, "警告も誤りとして扱う(終了コード 1)")
 	format := fs.String("format", "text", "出し方: text か json")
 	showCap := fs.Bool("capacity", false, "text の出し方でも容量(本文の残り)を出す(json では常に出る)")
-	fit := fs.Bool("fit", false, "build -fit と同じく、はみ出す本文のスライドを梯子で詰め、薄いものは広げて測る(調整したスライドは info の fit-applied、続きのスライドに分けたものは fit-split)")
+	fit := fs.Bool("fit", false, "build -fit と同じく、はみ出す本文のスライドを梯子で詰め、薄いものは広げて測る(調整したスライドは info の fit-applied、続きのスライドに分けたものは fit-split、非常用の段で組んだものは警告の fit-emergency)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}

@@ -288,7 +288,7 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 - `variants` に空の名前・同じ名前が2回。
 - `dense` の値が段に無い・`values` の同じ名前より大きい(次の節の dense)。
 - `fit` の段の値が段階に無い・0 以下・順が逆(詰めが前の段より大きい、広げが前の段より
-  小さい)・知らないキー・何も替えない段(次の節の fit)。
+  小さい、非常用の段が `shrink` の最後の段・前の段より大きい)・知らないキー・何も替えない段(次の節の fit)。
 
 同梱のファイルが壊れていれば試験(`values_test.go`)が落ちる。
 
@@ -308,7 +308,8 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
   "dense":  { "body": 14, "subPoint": 12, "tableText": 12, "small": 10, "blockGap": 12, "itemGap": 4,
               "tableCellPaddingX": 4, "tableCellPaddingY": 4, "pairsRowGap": 8, "pairMarkSize": 20, "matrixRowTitle": 12,
               "figureDetail": 12, "calloutMark": 24, "...": 0 },
-  "fit":    { "shrink": [{ "body": 12, "...": 0 }, { "...": 0 }], "grow": [{ "body": 18, "...": 0 }, { "...": 0 }] },
+  "fit":    { "shrink": [{ "body": 12, "...": 0 }, { "...": 0 }], "emergency": [{ "body": 8, "...": 0 }],
+              "grow": [{ "body": 18, "...": 0 }, { "...": 0 }] },
   "variants": [],
   "subsystems": { "gantt": { "...": "subsystems/gantt.json と同じ形" } }
 }
@@ -659,7 +660,7 @@ dense は `shrink[0]` から)下り、最初に収まった段で組む。`grow`
 
 誤り:知らないキー、`null`、0 以下(`tableCellPaddingY` は 0 まで)、段階に無い値、`shrink` の段で前の段より大きい値、
 `grow` の段で前の段より小さい値、前の段から何も替えない段(空の組も)。`fit`・`shrink`・
-`grow` はどれも書かなくてよい(書かなければその向きには収めない)。
+`grow`・`emergency` はどれも書かなくてよい(書かなければその向きには収めない)。
 
 同梱のテンプレートの梯子(括弧は重ねたあとの値。太字はその段で替えたもの):
 
@@ -717,6 +718,29 @@ report の matrix は mark(丸の下に小さい字)で行の高さが丸と字�
 本文は元の資料の本文の最小に合わせて 11pt、表の字は元の資料の密な表(10〜11pt)に合わせて
 10pt を下限にした(#139。report の shrink[1] は本文の字を下げず、ブロックの間・カードの余白と
 図・引用の寸法だけを下げる)。
+
+#### fit.emergency(非常用の段。任意、#150)
+
+`-fit` で梯子(`shrink`)でも続きのスライドに分けても収まらない本文のスライド(分けられない
+columns・図・画像、または分けた後も1枚に入らない1つの単位)だけが下りる段(`docs/build.md` の
+「`-fit` の非常用の段」)。形は `shrink` と同じ組の並びで、`shrink` の最後の段(`shrink` が無ければ
+`dense`)から続けて1段ずつ重ねる。段の検査も `shrink` と同じ(段階に載る・前の段より大きくならない・
+何も替えない段は誤り)。字が値の表の決まりより小さくなるので、この段で組んだスライドには警告の
+`fit-emergency` が出る。書かなければ非常用の段は無い(梯子と分けで入らなければ誤り)。
+
+同梱の非常用の段(重ねたあとの値。太字はその段で替えたもの):
+
+| テンプレート | 段 | body | subPoint | tableText | small | blockGap | cardPadding | figureDetail | matrixRowTitle | quoteText / quoteMark / quoteSource | calloutMark | pairMarkSize |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| dark・light | shrink[1](起点) | 10 | 10 | 10 | 10 | 4 | 12 | 10 | 10 | 12 / 18 / 10 | 16 | 16 |
+| | emergency[0] | **8** | **8** | **8** | **8** | 4 | **8** | **8** | **8** | **10** / **16** / **8** | **12** | **12** |
+| report | shrink[1](起点) | 11 | 10 | 10 | 9 | 8 | 8 | 10 | 10 | 12 / 24 / 10 | 16 | 16 |
+| | emergency[0] | **10** | **9** | **9** | 9 | **6** | **6** | **9** | **9** | **11** / 24 / **9** | 16 | 16 |
+| | emergency[1] | **9** | **8** | **8** | **8** | **4** | **4** | **8** | **8** | **10** / 24 / **8** | **14** | **14** |
+
+図の寸法(orgchart の minBoxHeight / minLevelGap、phases の minHeaderHeight、matrix の minRowHeight / markSize):
+dark・light の emergency[0] は **16** / **8**、**20**、**12** / **8**。report の emergency[0] は **20** / 12、24、**16** / 8、
+emergency[1] は **18** / 12、**20**、**14** / 8。dark・light は字の段に 9pt が無いので1段(8pt)、report は 10pt → 9pt の2段。
 
 ### variants
 

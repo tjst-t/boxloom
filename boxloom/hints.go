@@ -62,6 +62,10 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 			if w.Hint == "" {
 				w.Hint = joinHints(densityHint(w.Path, capOf), tableSplitHint(w.Path, capOf))
 			}
+		case codeFitEmergency:
+			if w.Hint == "" {
+				w.Hint = fitEmergencyHint
+			}
 		case "stat-value":
 			if w.Hint == "" {
 				w.Hint = statValueHint

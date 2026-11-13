@@ -721,7 +721,12 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 		if split != nil {
 			if split.n == 1 {
 				warnings = append(warnings, fitSplitWarning(split))
+				if fitted != nil && fitted.emergency {
+					warnings = append(warnings, fitEmergencyWarning(fitted, split.m))
+				}
 			}
+		} else if fitted != nil && fitted.emergency {
+			warnings = append(warnings, fitEmergencyWarning(fitted, 0))
 		} else if fitted != nil {
 			warnings = append(warnings, fitAppliedWarning(fitted))
 		}

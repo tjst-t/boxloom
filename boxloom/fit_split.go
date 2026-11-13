@@ -376,17 +376,17 @@ func (t *Template) splitPlan(d *IRDeck, i int, us []splitUnit, set func(*IRSlide
 
 // splitSteps は i 枚目を組める段:元の密度 → (normal なら)dense → fit.shrink[0] → …。
 func (t *Template) splitSteps(s *IRSlide) []fitStepTry {
-	base := fitStepTry{"normal", func(*IRSlide) {}, t.Values}
+	base := fitStepTry{"normal", func(*IRSlide) {}, t.Values, false}
 	if s.dense() {
-		base = fitStepTry{fitStepDense, func(*IRSlide) {}, t.densed().Values}
+		base = fitStepTry{fitStepDense, func(*IRSlide) {}, t.densed().Values, false}
 	}
 	steps := []fitStepTry{base}
 	if !s.dense() && t.Dense != (DenseValues{}) {
-		steps = append(steps, fitStepTry{fitStepDense, func(s *IRSlide) { s.Density = densityDense }, t.densed().Values})
+		steps = append(steps, fitStepTry{fitStepDense, func(s *IRSlide) { s.Density = densityDense }, t.densed().Values, false})
 	}
 	for k := range t.Fit.Shrink {
 		r := fitRef{n: k + 1}
-		steps = append(steps, fitStepTry{r.name(), func(s *IRSlide) { s.fit = r }, r.values(t).apply(t.Values)})
+		steps = append(steps, fitStepTry{r.name(), func(s *IRSlide) { s.fit = r }, r.values(t).apply(t.Values), false})
 	}
 	return steps
 }
@@ -423,10 +423,58 @@ func (t *Template) splitSlide(d *IRDeck, i int) ([]IRSlide, error) {
 	if err != nil || len(us) < 2 {
 		return nil, err
 	}
+	// pieces は plan で分けた枚を段 st(梯子の k 段目)で組んだもの。
+	pieces := func(k int, st fitStepTry, plan [][2]int) ([]IRSlide, error) {
+		pieces, err := t.splitPieces(s, i, us, plan, len(plan), st.set)
+		if err != nil {
+			return nil, err
+		}
+		var starts []string
+		for _, r := range plan[1:] {
+			u := us[r[0]]
+			at := fmt.Sprintf("/slides/%d/body/%d", i, u.block)
+			if u.key != "" && u.from > 0 {
+				at += fmt.Sprintf("/%s/%d", u.key, u.from)
+			}
+			starts = append(starts, at)
+		}
+		var choice *fitChoice
+		if k > 0 || st.emergency {
+			choice = &fitChoice{step: st.name, body: st.v.Body, blockGap: st.v.BlockGap, group: []int{i}, over: over, broken: broken, emergency: st.emergency}
+		}
+		for p := range pieces {
+			sp := pieces[p].split
+			sp.starts, sp.choice, sp.step = starts, choice, st.name
+			sp.values = FitValues{Body: st.v.Body, BlockGap: st.v.BlockGap}
+		}
+		return pieces, nil
+	}
 	last := steps[len(steps)-1]
 	want, err := t.splitPlan(d, i, us, last.set, 0)
-	if err != nil || len(want) < 2 {
+	if err != nil {
 		return nil, err
+	}
+	if len(want) < 2 {
+		// 1つの単位(分けない図・columns・1行)が梯子の最後の段でも1枚に入らない。非常用の段
+		// (#150)を1段ずつ下り、分けずに入る段があればそこで(fitGroup が組む)、無ければ
+		// その段で分けて入るなら分ける。
+		for _, st := range t.emergencySteps() {
+			ms, err := t.measureFitGroup(d, []int{i}, st.set)
+			if err != nil || ms == nil {
+				return nil, err
+			}
+			if !ms[0].bad() {
+				return nil, nil
+			}
+			plan, err := t.splitPlan(d, i, us, st.set, 0)
+			if err != nil {
+				return nil, err
+			}
+			if len(plan) >= 2 {
+				return pieces(len(steps), st, plan)
+			}
+		}
+		return nil, nil
 	}
 	for k, st := range steps {
 		plan := want
@@ -443,29 +491,7 @@ func (t *Template) splitSlide(d *IRDeck, i int) ([]IRSlide, error) {
 				continue
 			}
 		}
-		pieces, err := t.splitPieces(s, i, us, plan, len(plan), st.set)
-		if err != nil {
-			return nil, err
-		}
-		var starts []string
-		for _, r := range plan[1:] {
-			u := us[r[0]]
-			at := fmt.Sprintf("/slides/%d/body/%d", i, u.block)
-			if u.key != "" && u.from > 0 {
-				at += fmt.Sprintf("/%s/%d", u.key, u.from)
-			}
-			starts = append(starts, at)
-		}
-		var choice *fitChoice
-		if k > 0 {
-			choice = &fitChoice{step: st.name, body: st.v.Body, blockGap: st.v.BlockGap, group: []int{i}, over: over, broken: broken}
-		}
-		for p := range pieces {
-			sp := pieces[p].split
-			sp.starts, sp.choice, sp.step = starts, choice, st.name
-			sp.values = FitValues{Body: st.v.Body, BlockGap: st.v.BlockGap}
-		}
-		return pieces, nil
+		return pieces(k, st, plan)
 	}
 	return nil, nil
 }

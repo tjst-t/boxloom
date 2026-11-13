@@ -66,7 +66,10 @@ func TestTemplateFileStrict(t *testing.T) {
 		{"spacing off scale", func(m map[string]any) { sub(m, "values")["itemGap"] = 6 }, `values.itemGap: 6 is not on the spacing scale (multiples of 4); nearest: 4 or 8`},
 		{"type off scale", func(m map[string]any) { sub(m, "values")["subPoint"] = 12.5 }, `values.subPoint: 12.5 is not on the type scale [8 10 12 14 16 18 24 36]; nearest: 12 or 14`},
 		{"type below scale", func(m map[string]any) { sub(m, "values")["small"] = 6 }, `nearest: 8`},
-		{"gantt default off a narrowed scale", func(m map[string]any) { sub(m, "scale")["typeSizes"] = []any{10, 12, 14, 16, 18, 24, 36} }, `subsystems/gantt.json.smallText: 8 is not on the type scale`},
+		{"gantt default off a narrowed scale", func(m map[string]any) {
+			sub(m, "scale")["typeSizes"] = []any{10, 12, 14, 16, 18, 24, 36}
+			delete(sub(m, "fit"), "emergency") // 非常用の段の 8pt より先に gantt を見る
+		}, `subsystems/gantt.json.smallText: 8 is not on the type scale`},
 		{"gantt override off scale", func(m map[string]any) {
 			var gv map[string]any
 			raw, _ := valueFiles.ReadFile("subsystems/gantt.json")

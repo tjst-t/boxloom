@@ -67,7 +67,7 @@ go run ./cmd/boxloom                                                      # 従�
   項目(入れ子は親ごと)、pairs は対、topics は話題。columns・図(サブシステム)・画像ほかは分けない。
   前から詰め、各枚が入る最小の枚数にする。枚数は梯子の最後の段で決め、その枚数で入る最も上の段
   (元の密度 → dense → `fit.shrink[0]` → …)で全部の枚を同じ字の大きさで組む。最後の段でも1つの単位
-  (1行・1項目・分けないブロック)が1枚に入らなければ分けない(元のまま `layout-overflow`)。
+  (1行・1項目・分けないブロック)が1枚に入らなければ、その段では分けない(次の非常用の段へ)。
   分けた表は続きの表(`continues`)と同じ仕組みで、各枚に見出しの行を繰り返し、列の幅をそろえる。
   各枚は題・リード・出典・隅の印(marker)を持ち、題の隣に「n/m」(値の表の `marks.tableContinued`)、
   2枚目からの題は `marks.continuedTitle`(dark・light・report は `{title}` で題はそのまま)。ノートは最初の
@@ -77,6 +77,16 @@ go run ./cmd/boxloom                                                      # 従�
   (…): slide 2 of 3 starts at /slides/2/body/0/rows/12, …` と書く(`check -fit` では info の `fit-split`。
   容量は枚ごとに `split`)。分けた枚は fill-ratio を測らない(前から詰めるので最後の枚が薄いのは常)。
   自動の切れ目と同じ題の続きより、作者が内容の切れ目で分けてそれぞれに題を付けるほうがよい。
+- **`-fit` の非常用の段(#150、`fit_emergency.go`)**:梯子でも分けても収まらない本文のスライド(分けられない
+  columns・図(サブシステム)・画像、または分けた後も1枚に入らない1つの単位)は、値の表の任意の `fit.emergency`
+  (`docs/template-values.md`)を1段ずつ下り、最初に収まった段で組む(「収まった」は上の判定)。分けずに入る段が
+  あればそこで分けずに組み、無ければその段で分けて入るなら分けた全部の枚をその段で組む(`fit-split` の知らせも出す)。
+  字がテンプレートの決まりより小さいので、知らせではなく警告:`slide N: [FIT-EMERGENCY WARNING] the body overflows
+  even at the template's last -fit step and it cannot be split, so -fit built it with the template's emergency step
+  fit.emergency[0] (body 8pt, …)`(`check -fit` では警告の `fit-emergency`。hint は内容で分ける・図や列を自分の
+  スライドに移す・削ること。容量の `fit` は `fit.emergency[K]`。`-strict` なら誤り)。最後の非常用の段でも
+  入らなければ元の組み方のまま `layout-overflow`(図の崩れ)が残り、`-fit` の build は誤り(`-allow-overflow`
+  なら作る)。同梱の dark・light は本文 10→8pt の1段、report は 11→10→9pt の2段。
 - **`-fit` の広げ(#128)**:同じ `-fit` で、収まっていて fill-ratio が値の表の `fillRatioMin` を
   下回る本文のスライド(normal のものだけ。dense は広げない)は、梯子 `fit.grow` を
   `fit.grow[0]` → `fit.grow[1]` と上る。各段で組み直して詰めと同じ測りではみ出し・図の崩れと fill-ratio を見て、

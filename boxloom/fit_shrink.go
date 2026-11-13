@@ -34,27 +34,34 @@ import (
 // fitStepDense は梯子の dense の段の名前(容量の fit・fit-applied の文)。
 const fitStepDense = "dense"
 
-// fitRef は -fit の段の印:ゼロなら印なし。grow なら fit.grow[n-1]、そうでなければ
-// fit.shrink[n-1]。
+// fitRef は -fit の段の印:ゼロなら印なし。grow なら fit.grow[n-1]、emergency なら
+// fit.emergency[n-1](#150)、どちらでもなければ fit.shrink[n-1]。
 type fitRef struct {
-	grow bool
-	n    int
+	grow      bool
+	emergency bool
+	n         int
 }
 
 func (r fitRef) set() bool { return r.n > 0 }
 
 // values はその段の値の組。
 func (r fitRef) values(t *Template) FitValues {
-	if r.grow {
+	switch {
+	case r.grow:
 		return t.Fit.Grow[r.n-1]
+	case r.emergency:
+		return t.Fit.Emergency[r.n-1]
 	}
 	return t.Fit.Shrink[r.n-1]
 }
 
 // name は段の名前(fit.shrink[K]・fit.grow[K])。
 func (r fitRef) name() string {
-	if r.grow {
+	switch {
+	case r.grow:
 		return fmt.Sprintf("fit.grow[%d]", r.n-1)
+	case r.emergency:
+		return fmt.Sprintf("fit.emergency[%d]", r.n-1)
 	}
 	return fmt.Sprintf("fit.shrink[%d]", r.n-1)
 }
@@ -95,13 +102,15 @@ type fitChoice struct {
 	group     []int   // 同じ段で組んだ組(続きの表のひと続き。1枚なら長さ1)
 	over      bool    // 詰めた理由:元の組み方で本文がはみ出した
 	broken    bool    // 詰めた理由:元の組み方で図が崩れた(fitBrokenCodes、#145)
+	emergency bool    // 非常用の段(fit.emergency、#150)で組んだ
 }
 
 // fitStepTry は梯子の1段(名前・写しへの当て方・値)。
 type fitStepTry struct {
-	name string
-	set  func(*IRSlide)
-	v    TemplateValues
+	name      string
+	set       func(*IRSlide)
+	v         TemplateValues
+	emergency bool // 非常用の段(fit.emergency、#150)
 }
 
 // fitSlide は -fit のとき i 枚目(本文のスライド)を梯子で詰める・広げる(i を含む組
@@ -172,12 +181,15 @@ func (t *Template) fitGroup(d *IRDeck, group []int) (map[int]*BuiltSlide, map[in
 	}
 	var steps []fitStepTry
 	if anyNormal && t.Dense != (DenseValues{}) {
-		steps = append(steps, fitStepTry{fitStepDense, func(s *IRSlide) { s.Density = densityDense }, t.densed().Values})
+		steps = append(steps, fitStepTry{fitStepDense, func(s *IRSlide) { s.Density = densityDense }, t.densed().Values, false})
 	}
 	for k := range t.Fit.Shrink {
 		r := fitRef{n: k + 1}
-		steps = append(steps, fitStepTry{r.name(), func(s *IRSlide) { s.fit = r }, r.values(t).apply(t.Values)})
+		steps = append(steps, fitStepTry{r.name(), func(s *IRSlide) { s.fit = r }, r.values(t).apply(t.Values), false})
 	}
+	// 非常用の段(#150):ここまで来るのは梯子でも分けても収まらない枚(分けられる枚は
+	// fitSplitDeck が先に分けている)。
+	steps = append(steps, t.emergencySteps()...)
 	for _, st := range steps {
 		ms, err := t.measureFitGroup(d, group, st.set)
 		if err != nil {
@@ -199,7 +211,7 @@ func (t *Template) fitGroup(d *IRDeck, group []int) (map[int]*BuiltSlide, map[in
 			}
 			built[j] = b
 			choices[j] = &fitChoice{step: st.name, body: st.v.Body, blockGap: st.v.BlockGap,
-				remaining: ms[n].remaining, ratio: ms[n].ratio, group: group, over: baseOver, broken: baseBroken}
+				remaining: ms[n].remaining, ratio: ms[n].ratio, group: group, over: baseOver, broken: baseBroken, emergency: st.emergency}
 		}
 		return built, choices, nil
 	}

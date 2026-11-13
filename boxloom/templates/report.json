@@ -202,6 +202,38 @@
         "quoteSource": 10
       }
     ],
+    "emergency": [
+      {
+        "body": 10,
+        "subPoint": 9,
+        "tableText": 9,
+        "blockGap": 6,
+        "cardPadding": 6,
+        "figureDetail": 9,
+        "matrixRowTitle": 9,
+        "orgchartMinBoxHeight": 20,
+        "matrixMinRowHeight": 16,
+        "quoteText": 11,
+        "quoteSource": 9
+      },
+      {
+        "body": 9,
+        "subPoint": 8,
+        "tableText": 8,
+        "small": 8,
+        "blockGap": 4,
+        "cardPadding": 4,
+        "figureDetail": 8,
+        "matrixRowTitle": 8,
+        "calloutMark": 14,
+        "orgchartMinBoxHeight": 18,
+        "phasesMinHeaderHeight": 20,
+        "matrixMinRowHeight": 14,
+        "pairMarkSize": 14,
+        "quoteText": 10,
+        "quoteSource": 8
+      }
+    ],
     "grow": [
       {
         "body": 16,
