@@ -43,3 +43,5 @@
 | `people-five.json` | 人物の紹介に5人を書いた(1〜4人) |
 | `people-photo-size.json` | 人物の紹介の人に写真の大きさ(`size`)を足した(大きさはテンプレートが決める) |
 | `people-three-in-column.json` | 並列のまとまりの中の人物の紹介に3人を書いた(まとまりの中は1〜2人) |
+| `pillars-label-long.json` | `../pillars.json` の表紙と1枚目だけを取り出し、1本目の柱の名前(`label`)を3字にした(2字まで) |
+| `pillars-one-pillar.json` | `../pillars.json` の表紙と1枚目だけを取り出し、柱を1本にした(2〜6本) |

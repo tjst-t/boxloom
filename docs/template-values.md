@@ -11,7 +11,7 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 | `boxloom/templates/<名前>.json` | テンプレート1つ(`dark.json`・`light.json`・`report.json`)。名前はファイル名 |
 | `boxloom/subsystems/gantt.json` | Gantt の既定の寸法。テンプレートが差し替えなければこれ |
 | `boxloom/subsystems/shapes.json` | shapes(生の図形への逃げ道)の既定の寸法 |
-| `boxloom/subsystems/process.json`・`orgchart.json`・`matrix.json`・`funnel.json`・`cycle.json` | 箱と線の図・循環の図(`docs/subsystem.md` の11節)の既定の寸法 |
+| `boxloom/subsystems/process.json`・`orgchart.json`・`matrix.json`・`funnel.json`・`cycle.json`・`pillars.json` | 箱と線の図・循環の図・屋根と柱の図(`docs/subsystem.md` の11節)の既定の寸法 |
 | `boxloom/subsystems/chart.json` | 数値のグラフ(`docs/subsystem.md` の12節)の既定の寸法 |
 | `boxloom/values.go` | 読み込みと検査 |
 
@@ -577,7 +577,7 @@ shapes の文字の大きさは、作者が `textStyle` に書く段の名前で
 `small`・`subPoint`・`optionItem`・`body`・`optionLabel`(`docs/subsystem.md` の8節)。
 テーマに無い役割名を shapes が使うと、このテンプレートの組み立てが断る。
 
-### subsystems.process・orgchart・matrix・funnel・phases・cycle(任意)
+### subsystems.process・orgchart・matrix・funnel・phases・cycle・pillars(任意)
 
 同じく、書くとこのテンプレートのその図だけがその寸法になる。全部のキーが要り、`padding`・
 間隔・文字の余白(Go の json タグに `scale:"space"` の付いたもの)は段階の刻みに載って
@@ -608,6 +608,10 @@ cycle は輪の太さ `ringFraction`(外の半径に対する割合)・扇の間
 `minDiameter`(扇の中に題が入らなければ、自然の直径は `naturalDiameter` の 1.75 倍まで
 大きく申告する)・`outsideMinDiameter`(題が扇に入らず輪の外に置くときの輪の直径の下限)・濃淡 `shadeRange`(最後の段を地の色に寄せる割合)・`mutedShade`(強調が
 あるとき、強調でない段を寄せる割合)を持つ。凡例の寸法は上と同じ。
+pillars は屋根の斜めの辺 `roofSlant`・屋根/柱/土台の高さ(`roof…`・`pillar…`・`foundation…` の
+`MinHeight`・`NaturalHeight`・`MaxHeight`。最小 ≤ 自然 ≤ 上限)・柱の間 `pillarGap`・屋根と土台の
+張り出し `pillarOverhang`・柱の幅の下限 `pillarMinWidth`・名前の丸 `labelDiameter`・塗りの淡さ
+`pillarTint`・`foundationTint`(基調色を地の色に寄せる割合。1 未満)を持つ(`docs/subsystem.md` の11節)。
 
 ### subsystems.chart(任意)
 

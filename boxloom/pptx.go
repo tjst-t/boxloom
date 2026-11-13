@@ -875,6 +875,14 @@ func shapeTextRect(prst string, box LBox, depth float64) LBox {
 			l = depth
 		}
 		return LBox{X: box.X + l, Y: box.Y, Width: chevronTextWidth(prst, box.Width, depth), Height: box.Height}
+	case "trapezoid":
+		// 台形(上の辺が狭い)。depth は斜めの辺の横の長さ。文字の枠は左右が depth の 2/3、
+		// 上が 2·h·depth/(3·w) だけ内側(OOXML の preset の il・it)。
+		if depth <= 0 || box.Width <= 0 {
+			return box
+		}
+		il, it := 2*depth/3, 2*box.Height*depth/(3*box.Width)
+		return LBox{X: box.X + il, Y: box.Y + it, Width: box.Width - 2*il, Height: box.Height - it}
 	case "ellipse":
 	default:
 		return box

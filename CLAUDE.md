@@ -75,7 +75,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
    check の警告(`shapes-overlap`)。詳細は `docs/subsystem.md` の8節。
    箱を矢印で並べる・親と子の箱・格子に評価・減っていく帯は、shapes ではなく
    **process・orgchart・matrix・funnel** のサブシステムで書く(段ごとに箱を積む事業の全体像は
-   **phases**、繰り返す段の輪は **cycle**。意味だけを書く。
+   **phases**、繰り返す段の輪は **cycle**、目指す姿を柱が支える図は **pillars**。意味だけを書く。
    `docs/subsystem.md` の11節)。数の系列は **chart**(PowerPoint の本物のグラフ+
    値を持つ埋め込みの xlsx)。作者は比べ方(Zelazny の5分類 `compare`)と項目・系列・
    値・単位・強調だけを書き、グラフの形・色・大きさはサブシステムが選ぶ。軸・ラベルの
@@ -174,7 +174,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
      (並列のまとまり)は、Phase3a で中のサブシステム(画像など)の縮められる分を
      先に返す。印の無い箱は従来どおり(既存の出力は変わらない)。
    - Go 版だけの追加(その4): 並列のまとまりの行では、まとまりの幅の下限を申告する図
-     (`columnFloor`。cycle の題を輪の外に置くのに要る幅と、phases・matrix・orgchart の Min の幅、#117)があれば、grow の配分の
+     (`columnFloor`。cycle の題を輪の外に置くのに要る幅と、phases・matrix・orgchart の Min の幅、#117、pillars の柱の文が読める幅、#121)があれば、grow の配分の
      後にそのまとまりを下限まで広げ、ほかの伸びるまとまりから取る(#112)。
 2. **inner canvas sub-engine**: サブシステムの葉(`Subsystem` interface。
    Python 版では grow=1, basis=0 で領域確保のみの `canvas`)の中に、Gantt専用の座標スケール(`TimeScale`: 日付→x座標の
@@ -223,7 +223,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `cycle.go` = 輪に並んだ段(cycle、#91)。段(3〜6)を上から時計回りに本物の `blockArc` の扇で
     並べ、基調色の濃淡で塗る。番号の丸は輪の外の縁、題は扇の中(扇に収まる枠を測って探す。
     入らなければ題を輪の外に置き輪を小さくする、#110)、detail は輪の外。縦横比を保つ(FixedAspect、余りは spare-width)。columns の中に置ける
-    サブシステムは chart・cycle・phases・matrix・orgchart(`ir.go` の `columnSubsystems`。ほかに pairs・gallery も置ける、#117。people は1〜2人、#120)。詳細は `docs/subsystem.md` の11節
+    サブシステムは chart・cycle・phases・matrix・orgchart・pillars(`ir.go` の `columnSubsystems`。ほかに pairs・gallery も置ける、#117。people は1〜2人、#120)。詳細は `docs/subsystem.md` の11節
+  - `pillars.go` = 屋根・柱・土台の図(pillars、#121)。目指す姿の屋根(文を持つ本物の `trapezoid`)・
+    2〜6本の柱(題と箇条の箱、任意の1〜2字の名前の丸)・土台(任意)を上から積む。色は基調色の系統
+    (屋根は accent、柱・土台は accent を地の色に寄せた淡い色)。columns の中に置ける。`docs/subsystem.md` の11節
   - `phases.go` = フェーズの図(phases)。段の山形(左端は homePlate、続きは chevron。先の深さは
     `ShapeOpts.Depth`)・段をまたぐ群の帯・段ごとに縦に積む番号つきの箱(題と補足。補足の列は
     段落の箇条)。群の帯の見た目は値の表 `bandStyle`(report は塗り)。番号は段をまたいで通しで、形は値の表 `subsystems.phases.numberStyle`(report は

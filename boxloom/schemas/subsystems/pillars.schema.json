@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/pillars.schema.json",
+  "title": "Boxloom IR: pillars subsystem (0.1)",
+  "description": "屋根・柱・土台の図。目指す姿(屋根)を、いくつかの柱が支え、土台の上に立つ形で、要因の関係を示す。屋根は上の台形、柱は横に等しい幅で並ぶ縦長の箱、土台は下の横長の箱。色は基調色の系統で、テンプレートが決める。並列のまとまり(columns)の中にも置ける(左に図・右に柱ごとの説明)。座標・色・大きさ・向きは書けない。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "subsystem"
+    },
+    "subsystem": {
+      "const": "pillars"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "data": {
+      "$ref": "#/$defs/pillars"
+    }
+  },
+  "required": [
+    "type",
+    "subsystem",
+    "data"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "inline": {
+      "$ref": "../core.schema.json#/$defs/inline"
+    },
+    "pillar": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "柱の題(要因の名前)。",
+          "$ref": "#/$defs/inline"
+        },
+        "items": {
+          "description": "柱の中の箇条(短い文)。1つ以上。",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/inline"
+          }
+        },
+        "label": {
+          "description": "柱の短い名前(番号・記号)。1〜2字の見える字で、柱の上の丸の印に入る。",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2,
+          "pattern": "\\S"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "pillars": {
+      "type": "object",
+      "properties": {
+        "roof": {
+          "description": "屋根の文(目指す姿)。",
+          "$ref": "#/$defs/inline"
+        },
+        "pillars": {
+          "description": "柱。左から右へ。2〜6本。",
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/pillar"
+          }
+        },
+        "foundation": {
+          "description": "土台の文(柱を支える前提・基盤)。任意。",
+          "$ref": "#/$defs/inline"
+        }
+      },
+      "required": [
+        "roof",
+        "pillars"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

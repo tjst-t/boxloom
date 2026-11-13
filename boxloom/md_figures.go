@@ -1,4 +1,4 @@
-// ```process・```orgchart・```matrix・```funnel・```phases・```cycle のコードブロックの中身(YAML の
+// ```process・```orgchart・```matrix・```funnel・```phases・```cycle・```pillars のコードブロックの中身(YAML の
 // 部分集合)を、IR の data(schema/subsystems/<名前>.schema.json)にする。
 //
 // キーは IR と同じ。文の値は本文と同じ文中の記法で読み、YAML の列で書くと各行を
@@ -75,6 +75,33 @@ func cycleDataFromYAML(p *mdParser, n *yNode, path string) any {
 		{"start", gCycleStart, false},
 		{"legend", gStatusLegend, false},
 	})(p, n, path)
+}
+
+func pillarsDataFromYAML(p *mdParser, n *yNode, path string) any {
+	pillar := []gField{
+		{"title", gInline, true},
+		{"items", gSeq(gInline, 1), false},
+		{"label", gPillarLabel, false},
+	}
+	return gObject([]gField{
+		{"roof", gInline, true},
+		{"pillars", gSeqMax(gSeq(gObject(pillar), pillarsMin), pillarsMax), true},
+		{"foundation", gInline, false},
+	})(p, n, path)
+}
+
+// gPillarLabel は柱の短い名前(1〜2字の見える字。数字だけでも文字列)。
+func gPillarLabel(p *mdParser, n *yNode, path string) any {
+	s, ok := gScalar(p, n, path, "名前")
+	if !ok {
+		return nil
+	}
+	if err := checkPillarLabel(s); err != nil {
+		gFail(p, n, path, codeInvalidValue, fmt.Sprintf("柱の名前 %q は書けません(見える字を含む %d 字まで)", s, pillarLabelMaxRunes), nil,
+			"柱の上の小さな丸に入る名前です。長い名前は title に書いてください")
+		return nil
+	}
+	return s
 }
 
 // gSeqMax は列の項目が max を越えたら誤りにする(項目の読み方は seq)。

@@ -1,0 +1,39 @@
+{
+  "boxloom": "0.1",
+  "template": "report",
+  "meta": {
+    "title": "屋根と柱の図の見本",
+    "subtitle": "目指す姿を柱が支える(すべて架空)",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "3つの柱が、町の拠点を支える",
+      "lead": "架空の町 Kirinoha の地域拠点は、3つの取り組みと住民の参加の上に立つ",
+      "body": [
+        {
+          "type": "subsystem",
+          "subsystem": "pillars",
+          "data": {
+            "roof": "だれもが週に一度は立ち寄る、町の居場所になる",
+            "pillars": [
+              {
+                "title": "場をひらく",
+                "items": [
+                  "週末に拠点を開く",
+                  "催しを月1回続ける"
+                ],
+                "label": "1"
+              }
+            ],
+            "foundation": "住民の参加と、町の小さな予算"
+          }
+        }
+      ]
+    }
+  ]
+}

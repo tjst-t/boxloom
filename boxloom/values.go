@@ -384,6 +384,8 @@ type templateSubsystems struct {
 	Chart *ChartValues `json:"chart,omitempty"`
 	// 輪に並んだ段(cycle.go)
 	Cycle *CycleValues `json:"cycle,omitempty"`
+	// 屋根・柱・土台の図(pillars.go)
+	Pillars *PillarsValues `json:"pillars,omitempty"`
 }
 
 // themeRoles はテーマが持たなければならない役割名(コア・デモのテンプレートの

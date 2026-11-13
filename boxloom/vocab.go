@@ -55,7 +55,7 @@ type BlockDecl struct {
 // columnContains は :::column の中に書けるもの(ir.go の columnBlockTypes・
 // columnSubsystems と同じ範囲を Markdown の言い方で)。
 var columnContains = []string{"段落", "箇条", "表", "画像", "画像の並び", "note", "pairs", "people(1〜2人)",
-	"```chart", "```cycle", "```phases", "```matrix", "```orgchart"}
+	"```chart", "```cycle", "```phases", "```matrix", "```orgchart", "```pillars"}
 
 // defaultBlocks は第一版の囲み(docs/content-syntax.md の3.4)。名前の順。
 func defaultBlocks() []BlockDecl {

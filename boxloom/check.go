@@ -934,7 +934,7 @@ var warnGanttSegRe = regexp.MustCompile(`^gantt: groups\[([0-9]+)\]\.rows\[([0-9
 // 頭の場所(steps[2]・units[0].members[1]・rows[1].cells[2] など)。
 // 場所のあとは「:」か「 (」が続く(「chart: needs at least …」のような最小の大きさの
 // 警告は場所を持たないので、ブロックを指す)。
-var warnFigureRe = regexp.MustCompile(`^(?:process|orgchart|matrix|funnel|phases|chart|cycle): ([a-z]+(?:\[[0-9]+\])?(?:\.[a-z]+(?:\[[0-9]+\])?)*)(?::| \()`)
+var warnFigureRe = regexp.MustCompile(`^(?:process|orgchart|matrix|funnel|phases|chart|cycle|pillars): ([a-z]+(?:\[[0-9]+\])?(?:\.[a-z]+(?:\[[0-9]+\])?)*)(?::| \()`)
 
 var warnRuleNames = map[string]string{"SUBSYSTEM": "subsystem-min", "ROLE": "theme-role"}
 

@@ -251,7 +251,7 @@ closing: true
 | `quote 出どころ` | 段落1つ(引用した言葉) | 他人の言葉。見出しの文が出どころ(必須) | `quote`(`content`・`source`) |
 | `notes` | 段落・箇条 | 発表者ノート(スライドには出ない)。3.6 | スライドの `notes` |
 | `columns` | `column` だけ(2つか3つ) | 並列のまとまり(段組みの指定ではなく「並列」という意味)。属性 `flow=true`(左が右につながる)。3.9 | `columns`(`flow`) |
-| `column 題` | 段落・箇条・表・画像・画像の並び・`note`・`pairs`・```` ```chart ````・```` ```cycle ````・```` ```phases ````・```` ```matrix ````・```` ```orgchart ```` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
+| `column 題` | 段落・箇条・表・画像・画像の並び・`note`・`pairs`・```` ```chart ````・```` ```cycle ````・```` ```phases ````・```` ```matrix ````・```` ```orgchart ````・```` ```pillars ```` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
 | `pairs 見出し \| 見出し` | `subject`・`response` を交互に(2組以上) | 対の並び(標準でない型)。2つの側の見出しを1回だけ書く。3.10 | `pairs`(`headings`・`pairs`) |
 | `people` | `person` を1〜4個(まとまりの中は1〜2個) | 人物の紹介(標準でない型)。3.11 | `people`(`people`) |
 | `person 名前 {role=… image=… alt=…}` | 経歴の段落か箇条を1つ(無くてもよい) | 1人の紹介。名前は必須、写真には `alt` も | `people.people[]` |
@@ -356,7 +356,7 @@ groups: …
   段)だけ。`x+w` が 1 を超える・テーマに無い役割名・無い id へのコネクタは
   `boxloom check` が、図形やキーの行と code(`shape-bounds`・`role-exists`・
   `target-exists`)で返す。例は `examples/md/shapes.bx.md`(↔ `examples/ir/shapes.json`)。
-- **```process**・**```orgchart**・**```matrix**・**```funnel**・**```phases**・**```cycle**(箱と線の図・輪の図。
+- **```process**・**```orgchart**・**```matrix**・**```funnel**・**```phases**・**```cycle**・**```pillars**(箱と線の図・輪の図。
   `docs/subsystem.md` の11節)も同じ作り。中身は IR の `data` と同じキーで、書けるのは
   文と状態(`status`)と強調(`emphasis`)と、状態の意味の凡例(`legend`)だけ(座標・色・
   字の大きさは書けない)。matrix の推す列は `emphasis: <列の見出しの文>`、行の題の下の
@@ -1073,7 +1073,7 @@ go run ./cmd/boxloom build ../examples/md/demo-deck.bx.md            # .md も�
   中で `{label=…}` のある `:::subject` と無いものが混ざった)・`image-path`(画像の path が URL・
   絶対パス・文書のフォルダの外)・`image-alt`(画像の代わりの文が無い)・
   `schema`(できた IR が通らない。ふつうは起きない)。
-- shapes と図(process・orgchart・matrix・funnel・phases・cycle)と chart のコードブロックは、YAML の形の検査
+- shapes と図(process・orgchart・matrix・funnel・phases・cycle・pillars)と chart のコードブロックは、YAML の形の検査
   だけをする(サブシステム自身には読ませない。意味の誤りは `boxloom check` が行つきで返す)。
 - Gantt のコードブロックは、YAML の検査が通ったあと Gantt サブシステム自身にも
   読ませる。Schema では書けない誤り(`target` の行き先が無い・id の重複・範囲の

@@ -20,7 +20,8 @@
             "funnel",
             "phases",
             "chart",
-            "cycle"
+            "cycle",
+            "pillars"
           ]
         }
       },
@@ -161,6 +162,21 @@
           },
           "then": {
             "$ref": "subsystems/cycle.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subsystem": {
+                "const": "pillars"
+              }
+            },
+            "required": [
+              "subsystem"
+            ]
+          },
+          "then": {
+            "$ref": "subsystems/pillars.schema.json"
           }
         }
       ]

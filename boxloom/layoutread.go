@@ -349,6 +349,8 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 	if m := n.Marks; m != nil {
 		// 印は語彙(layout.go の SpecOpt)で付ける。並列のまとまり・対の並びの
 		// 部品(columnGroups・pairRows)は木から作り直さない(警告を測らないため)。
+		// ただし並列のまとまりの行である印は、図が申告するまとまりの幅の下限
+		// (layout.go の applyColumnFloors)に要るので、部品の無い印として付ける。
 		var opts []SpecOpt
 		if m.IRType != "" {
 			opts = append(opts, markIRType(m.IRType))
@@ -358,6 +360,9 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 		}
 		if m.KeepLine != "" {
 			opts = append(opts, keepLine(m.KeepLine))
+		}
+		if m.ColumnGroups > 0 {
+			opts = append(opts, measureColumnGroups(&columnsInfo{}))
 		}
 		if m.NestedSlack {
 			opts = append(opts, nestedSlack())

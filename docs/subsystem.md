@@ -107,7 +107,7 @@ CSS の min-content / max-content と同じ考え方を、PPT のスライドの
 ## 4. テンプレートによる差し替え(SubsystemRegistry)
 
 - コアは既定の表(`DefaultSubsystems()`:いまは `gantt`・`shapes` と、11節の図
-  `process`・`orgchart`・`matrix`・`funnel`・`cycle`、12節の数値のグラフ `chart`)を持ちます。
+  `process`・`orgchart`・`matrix`・`funnel`・`cycle`・`pillars`、12節の数値のグラフ `chart`)を持ちます。
 - テンプレートは `Clone()` した表に `Override` で自分の描き方を入れます。
   コンテンツのデータ(`GanttChart`)は変わらず、描き方だけが変わります。
 - 種類は `Declare(kind, SubsystemDecl{Schema, Markdown})` で、作者に見せるもの
@@ -794,14 +794,64 @@ legend: {conditional: 予算が付くときだけ}      # status を使ったら
   これより狭くなるまとまりは下限まで広がり、足りる分をほかの伸びるまとまりから、それぞれの
   下限を下回らない範囲で取る。取りきれなければ図は狭いまま描き、題は扇の中のまま
   `figure-text-overflow`(と `subsystem-min`)の警告になる。下限を申告するのは cycle と、
-  phases・matrix・orgchart(図の Min の幅、#117)で、グラフ・画像のまとまりの幅は従来どおり。
+  phases・matrix・orgchart(図の Min の幅、#117)と pillars(#121)で、グラフ・画像のまとまりの幅は従来どおり。
   枠が図より広ければ、コアが図の幅まで切り詰め、余りを `spare-width`・`remainingWidth` で
   知らせる(9節)。
-- **並列のまとまり(columns)の中に置ける**(chart・cycle・phases・matrix・orgchart。左に輪・右に段ごとの説明)。
+- **並列のまとまり(columns)の中に置ける**(chart・cycle・phases・matrix・orgchart・pillars。左に輪・右に段ごとの説明)。
 - 警告:題が扇の枠に・補足が枠に収まらない(`figure-text-overflow`、path は
   `…/data/steps/N`)、状態に凡例の文が無い(`figure-legend`)。
 
+### pillars(屋根・柱・土台、#121)
+
+```yaml
+roof: だれもが立ち寄る、町の居場所になる      # 目指す姿(屋根の文)
+pillars:                                      # 2〜6本。左から右へ
+  - {title: 場をひらく, items: [週末に拠点を開く, 催しを続ける], label: "1"}
+  - {title: 担い手を育てる, items: [運営を3人で回す]}
+  - {title: 声を集める}
+foundation: 住民の参加と、町の小さな予算      # 任意。柱を支える前提
+```
+
+目指す姿(屋根)を、いくつかの柱(要因)が支え、土台(前提)の上に立つ図
+(`docs/patterns.md` の R7c)。位置(上・並ぶ・下)が意味なので、作者は向き・置き場所を
+書かない。実装は `boxloom/pillars.go`、寸法は `boxloom/subsystems/pillars.json`、例は
+`examples/md/pillars.bx.md`(↔ `examples/ir/pillars.json`。3本・5本と columns の中)。
+
+- **形**:屋根は文を持つ台形(`trapezoid`、上の辺が狭い。斜めの辺の横の長さ `roofSlant` を
+  調整値 `adj` に直す)で、図の内側の幅いっぱい。柱は縦長の箱(`rect`)を等しい幅で横に並べ
+  (間 `pillarGap`)、屋根・土台より左右に `pillarOverhang` だけ内側。土台は横長の箱(`rect`)で
+  図の内側の幅いっぱい。屋根・柱・土台の間は `rowGap`。
+- **文**:屋根は `body` の太字、真ん中に置く。台形の文字の枠(prstGeom の rect)は斜めの辺の
+  2/3 だけ内側なので、残りの 1/3 を左右の余白に足し、文は上の辺(一番狭いところ)の幅で
+  折り返す。柱は題(`body` の太字)と、`items` の箇条(`figureDetail`、印は `marks.point` の
+  段落の箇条)を1つの図形に、左上から。土台は `subPoint`、真ん中。
+- **柱の名前**:`label`(1〜2字)のある柱は、柱の上に丸(`ellipse`、基調色に `subPoint` の太字)を
+  置く。丸の直径は `labelDiameter` を下限に、名前が内接する矩形に入るまで広げ、全ての丸で同じ。
+  名前の無い柱には丸を置かない(行の高さはどれかの柱に名前があれば取る)。
+- **色**(基調色の系統):屋根と名前の丸は `accent`、柱は `accent` を `bg` に `pillarTint`
+  (85%)寄せた色、土台は `foundationTint`(40%)寄せた色。文の色は塗りとのコントラスト比で
+  役割名から選ぶ(屋根は `on_conditional` と `text_primary` の比が大きいほう、柱・土台は
+  `text_primary` を先に見る)。状態・強調・凡例は無い。
+- **大きさ**:屋根・柱・土台はそれぞれ最小・自然・上限の高さ(`roof…Height`・`pillar…Height`・
+  `foundation…Height`)を持ち、どれも中の文が収まる高さより低くしない(柱の高さは一番文の多い
+  柱にそろえる)。割り当てられた高さは部品の間で配る(11節の flexSizes)。幅の下限は、柱が
+  `pillarMinWidth` と柱の文の折れない塊(和文の4字)の広いほう・屋根と土台の文の塊が入る幅、と
+  `minWidth` の大きいほう。
+- **列の中**:並列のまとまり(columns)の中に置ける(左に図・右に柱ごとの説明)。幅の下限は
+  まとまりの幅の下限(`columnFloor`)としても申告する(cycle と同じ)。
+- 警告:屋根・柱・土台の文が収まらない(`figure-text-overflow`、path は `…/data/roof`・
+  `…/data/pillars/N`・`…/data/foundation`)。高さが足りないときは部品を縮めず、
+  `subsystem-min`・`layout-overflow` で知らせる。
+- 値の表:どの寸法も 0 より大きい(0 以下は誤り)。`pillarTint`・`foundationTint` は 1 未満、
+  高さは最小 ≤ 自然 ≤ 上限(`PillarsValues.check`)。余白の寸法は値の表の段(`spacingUnit`)の上。
+
 ### 確かめ方
+
+- `pillars_test.go`(#121):架空の文で 3本・5本の柱を、1枚に置いても columns の中に置いても
+  report・dark・light で誤り・警告が無く、屋根・名前の丸・柱・土台が図の矩形の中で重ならず、
+  描いた図形の文字の枠も重ならない/台形の adj・基調色の系統の塗り・箇条の印/狭い枠で
+  `figure-text-overflow`/柱の数・名前の長さ・知らないキー・空の items が IR でも Markdown でも
+  誤り/値の表の 0 以下・割合 1 以上・高さの順の誤り。
 
 - `phases_test.go`:例(`examples/md/phases.bx.md` ↔ `examples/ir/phases.json`。3段・群2つ・
   箱7つ)を report・light・dark で組んで警告が無い・山形と番号の形/山形の食い込み・帯の
