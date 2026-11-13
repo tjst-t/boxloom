@@ -493,6 +493,28 @@ func contrastRatio(a, b string) float64 {
 	return (la + 0.05) / (lb + 0.05)
 }
 
+// minTextContrast は文と地の最低のコントラスト比(WCAG 2 の AA、本文の字)。
+const minTextContrast = 4.5
+
+// readableRole は地 fill の上に置く文の役割名を選ぶ規則(1か所)。prefer を順に見て
+// 地とのコントラスト比が minTextContrast 以上の最初の役割を返す。どれも届かなければ
+// prefer と others のうちで比が最も大きい役割。値の表に on 系の役割があれば、呼ぶ側が
+// それを prefer の先頭に置く。
+func readableRole(fill string, roles Roles, prefer []string, others ...string) string {
+	for _, r := range prefer {
+		if contrastRatio(fill, roles.Color(r)) >= minTextContrast {
+			return r
+		}
+	}
+	best, bestCR := "", -1.0
+	for _, r := range append(append([]string{}, prefer...), others...) {
+		if cr := contrastRatio(fill, roles.Color(r)); cr > bestCR {
+			best, bestCR = r, cr
+		}
+	}
+	return best
+}
+
 // onFillRole は塗り fill の上の文の役割名:on_conditional と text_primary のうち、
 // 塗りとの差(コントラスト比)が大きいほう。
 func onFillRole(fill string, roles Roles) string {

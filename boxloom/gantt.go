@@ -777,6 +777,30 @@ func renderGanttGrid(p *PPTXBuilder, chart *GanttChart, c func(string) string, g
 }
 
 // renderGantt はbox(確定済みの絶対座標)の中にGanttチャート全体を描画する。
+// ganttBarLabelRole は帯の上の文の役割名。帯の見えている地(山形は状態の色を
+// ChevronFillOpacity で bg に重ねた色、仮の帯は塗りが無いので bg)に対して読める役割を
+// readableRole で選ぶ。従来の選び方(塗った帯は text_primary、conditional は
+// on_conditional、仮の帯は状態の色)が 4.5 に届くときはそのまま使い、届かなければ
+// text_primary・on_conditional・bg・状態の色のうち最も読めるもの。
+func ganttBarLabelRole(gv *GanttValues, seg GanttSegment, roles Roles) string {
+	bg := roles.Color("bg")
+	fill := roles.Color(seg.Role)
+	var prefer []string
+	switch {
+	case seg.Tentative:
+		fill = bg
+		prefer = []string{seg.Role, "text_primary"}
+	case gv.chevron():
+		fill = mixHex(fill, bg, 1-gv.ChevronFillOpacity)
+		prefer = []string{"text_primary"}
+	case seg.Role == "conditional":
+		prefer = []string{"on_conditional", "text_primary"}
+	default:
+		prefer = []string{"text_primary"}
+	}
+	return readableRole(fill, roles, prefer, "text_primary", "on_conditional", "bg", seg.Role)
+}
+
 // 本物のrender_gantt()と同じ手順・同じピクセル計算式で移植している。
 func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *GanttValues) {
 	c := roles.Color
@@ -937,13 +961,7 @@ func renderGantt(p *PPTXBuilder, box LBox, chart *GanttChart, roles Roles, gv *G
 					p.AddRect(LBox{X: bx1, Y: barY, Width: ww, Height: barH}, segColor, gv.BarRadius)
 				}
 				if lp := planSegmentLabel(gv, chart, chartW, seg); lp.mode == segLabelFit || lp.mode == segLabelWrap {
-					labelColor := c("text_primary")
-					if seg.Role == "conditional" && !seg.Tentative && !gv.chevron() {
-						labelColor = c("on_conditional")
-					}
-					if seg.Tentative {
-						labelColor = segColor
-					}
+					labelColor := c(ganttBarLabelRole(gv, seg, roles))
 					lbox := LBox{X: bx1 + gv.SegLabelInsetL, Y: barY, Width: bx2 - bx1 - (gv.SegLabelInsetL + gv.SegLabelInsetR), Height: barH}
 					if lp.mode == segLabelWrap {
 						p.AddTextBox(lbox, seg.Label, gv.SmallText, labelColor, false, "left", "middle")

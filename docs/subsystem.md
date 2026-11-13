@@ -465,6 +465,18 @@ Gantt の出力は変わらない。report は `monthGrid`・`chevron`・`fillHe
 保ったまま、読む資料の「薄い基調色の面に字の色」の見た目にするため(16進の色を
 サブシステムで作らない)。
 
+**帯の上の文の色**(Backlog #97):帯の見えている地(塗った帯は状態の色、山形は状態の色を
+`chevronFillOpacity` で `bg` に重ねた色、仮の帯は塗りが無いので `bg`)に対して読める役割を
+1か所の規則(`readableRole`。`gantt.go` の `ganttBarLabelRole`)で選ぶ。従来の役割(塗った帯は
+`text_primary`、不透明な `conditional` は on 系の `on_conditional`、仮の帯は状態の色)が
+コントラスト比 4.5 に届けばそのまま使い、届かなければ `text_primary`・`on_conditional`・
+`bg`・状態の色のうち比が最も大きいもの。値の表の on 系の役割はいま `on_conditional` だけ
+(テーマの鍵は決まった13個)。これで出力が変わったのは 4.5 に届いていなかった組だけ:
+dark の support・conditional・danger の帯(白系 → `bg` の濃い字)、light の danger の帯
+(→ `on_conditional`)、report の danger の山形(→ 状態の色)、各テンプレートで薄い状態の
+仮の帯の文(→ `text_primary`)。確かめ方:`gantt_bar_contrast_test.go`(3つのテンプレート・
+4つの状態・塗った帯と仮の帯で、描いた文と地のコントラスト比が 4.5 以上)。
+
 確かめ方:`gantt_month_grid_test.go`(架空の8か月:月の列の数と幅・年の境目・山形の帯・
 report で本文の高さを使い切ること・注記の行の高さ・dark/light が従来どおり・長い span)。
 
