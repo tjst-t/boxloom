@@ -695,11 +695,15 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 }
 
 // columnBlockTypes はまとまり(column)の中に置けるブロックの種類。サブシステムは
-// columnSubsystems のものだけ(グラフの横に読み取り、循環の図の横に段ごとの説明を置く形)。
-var columnBlockTypes = []string{"paragraph", "points", "note", "table", "image", "subsystem"}
+// columnSubsystems のものだけ(グラフの横に読み取り、図の横に段ごとの説明を置く形)。
+// 対の並び(pairs)と画像の並び(gallery)も置ける(#117。対の横に抽出した一覧、写真の
+// 並びの横に説明)。columns・compare は置けない。
+var columnBlockTypes = []string{"paragraph", "points", "note", "table", "image", "gallery", "pairs", "subsystem"}
 
-// columnSubsystems はまとまりの中に置けるサブシステム。
-var columnSubsystems = []string{"chart", "cycle"}
+// columnSubsystems はまとまりの中に置けるサブシステム。どれもまとまりの幅で
+// 測れる(幅→高さ)図で、gantt・process・funnel・shapes のように本文の幅を
+// 前提にするものは置けない。
+var columnSubsystems = []string{"chart", "cycle", "phases", "matrix", "orgchart"}
 
 func (c *IRColumn) UnmarshalJSON(b []byte) error {
 	var v struct {

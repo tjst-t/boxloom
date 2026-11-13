@@ -28,6 +28,7 @@
 | `table-align.json` | 表に列の揃えの指定(`align`)を足した |
 | `column-width.json` | 並列のまとまりに数の幅(`width: 2`)を足した |
 | `columns-two-mains.json` | 並列のまとまりの2つに `role: main` を付けた |
+| `column-gantt.json` | 並列のまとまりの中に Gantt を置いた(まとまりの中に置けるサブシステムは chart・cycle・phases・matrix・orgchart だけ) |
 | `columns-nested.json` | まとまりの中に `columns` を入れ子にした |
 | `image-url.json` | 画像の `src` を URL にした(`boxloom check` は `image-path`) |
 | `image-empty-alt.json` | 画像の代わりの文を空にした(`boxloom check` は `image-alt`。このフォルダに画像は無いので `image-missing` も出る) |

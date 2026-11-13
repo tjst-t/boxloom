@@ -549,8 +549,8 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 						fmt.Sprintf("囲み :::%s の中に入れる囲みは、外側(%d 個)よりコロンを少なくしてください", outer.name, outer.colons), nil,
 						fmt.Sprintf("外側の囲みを %s%s にしてください", strings.Repeat(":", colons+1), outer.name))
 				}
-				if len(stack) >= 3 {
-					p.fail(no, ind+1, "", codeMisplaced, "囲みの入れ子は3段までです", nil, "")
+				if fenceDepth(stack) >= 3 {
+					p.fail(no, ind+1, "", codeMisplaced, "囲みの入れ子は3段までです(::::columns と :::column は数えません)", nil, "")
 				}
 			}
 			stack = append(stack, f)
@@ -664,6 +664,18 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 		closeAllFences(len(lines), "")
 	}
 	return doc
+}
+
+// fenceDepth は開いている囲みの段の数。columns と column は数えない(まとまりの
+// 中は本文と同じだけ入れ子にできる。:::column の中の pairs > subject > quote、#117)。
+func fenceDepth(stack []*mdFenceBlk) int {
+	n := 0
+	for _, f := range stack {
+		if f.name != "columns" && f.name != "column" {
+			n++
+		}
+	}
+	return n
 }
 
 func lastListEnt(items []*mdListEnt) *mdListEnt {

@@ -519,7 +519,7 @@ func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
 		}
 		var allowed []*mdItem
 		for _, sub := range c.items {
-			ok := sub.kind == mdPara || sub.kind == mdList || sub.kind == mdTable || (sub.kind == mdFence && sub.fence.name == "note") ||
+			ok := sub.kind == mdPara || sub.kind == mdList || sub.kind == mdTable || (sub.kind == mdFence && (sub.fence.name == "note" || sub.fence.name == pairsType)) ||
 				(sub.kind == mdCode && contains(columnSubsystems, codeLang(sub.info)))
 			if !ok {
 				what := "コードブロック"
@@ -528,18 +528,12 @@ func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
 				} else if l := codeLang(sub.info); l != "" {
 					what = "```" + l
 				}
-				p.fail(sub.line, 1, cp, codeMisplaced, fmt.Sprintf(":::column の中に %s は書けません", what), []string{"段落", "箇条", "表", "画像", "note", "```chart", "```cycle"}, "")
+				p.fail(sub.line, 1, cp, codeMisplaced, fmt.Sprintf(":::column の中に %s は書けません", what), columnContains, "")
 				continue
 			}
 			allowed = append(allowed, sub)
 		}
 		body := p.blocks(allowed, cp+"/body")
-		for k, b := range body {
-			if o, ok := b.(*jobj); ok && len(o.vals) > 0 && o.vals[0] == "gallery" {
-				bp := fmt.Sprintf("%s/body/%d", cp, k)
-				p.fail(p.lines[bp], 1, bp, codeMisplaced, ":::column の中には画像を1枚ずつしか置けません(画像の並びは本文に置きます)", nil, "")
-			}
-		}
 		if len(body) == 0 {
 			p.fail(c.line, 1, cp, codeMisplaced, ":::column の中が空です", nil, "")
 		}

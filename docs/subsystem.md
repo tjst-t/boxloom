@@ -793,11 +793,11 @@ legend: {conditional: 予算が付くときだけ}      # status を使ったら
   としても申告する(`layout.go` の `columnFloor`)。まとまりの配分(role=main の重みなど)で
   これより狭くなるまとまりは下限まで広がり、足りる分をほかの伸びるまとまりから、それぞれの
   下限を下回らない範囲で取る。取りきれなければ図は狭いまま描き、題は扇の中のまま
-  `figure-text-overflow`(と `subsystem-min`)の警告になる。下限を申告するのは cycle だけで、
-  グラフ・画像のまとまりの幅は従来どおり。
+  `figure-text-overflow`(と `subsystem-min`)の警告になる。下限を申告するのは cycle と、
+  phases・matrix・orgchart(図の Min の幅、#117)で、グラフ・画像のまとまりの幅は従来どおり。
   枠が図より広ければ、コアが図の幅まで切り詰め、余りを `spare-width`・`remainingWidth` で
   知らせる(9節)。
-- **並列のまとまり(columns)の中に置ける**(chart と cycle だけ。左に輪・右に段ごとの説明)。
+- **並列のまとまり(columns)の中に置ける**(chart・cycle・phases・matrix・orgchart。左に輪・右に段ごとの説明)。
 - 警告:題が扇の枠に・補足が枠に収まらない(`figure-text-overflow`、path は
   `…/data/steps/N`)、状態に凡例の文が無い(`figure-legend`)。
 
@@ -932,7 +932,8 @@ series:
   直径が決まり、それより広い枠は横が空くだけなので、コアは枠を円の幅まで切り詰めて
   描き(余りは Place の側、既定は左)、余りを `spare-width`・容量の `remainingWidth` で
   知らせる(9節)。図の地(カード)も円の幅に合わせる。ほかは上限なし(大きくして困らない)。
-- **並列のまとまり(columns)の中に置ける。** グラフは循環の図(11節の cycle)と並んで、
+- **並列のまとまり(columns)の中に置ける。** グラフは循環の図・フェーズの図・評価の格子・
+  組織図(11節の cycle・phases・matrix・orgchart、#117)と並んで、
   `columns` のまとまりの中に置けるサブシステム(左にグラフ・右に読み取り)。まとまりの幅を使い切らないとき
   (円をまとまりの `role=main` に入れたときなど)は、そのブロックを指して `spare-width`。
 - この Min を使って、本文の `layout-overflow`・容量(`check -capacity`)・`subsystem-min`

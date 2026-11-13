@@ -55,6 +55,7 @@ func TestMarkdownExamplesMatchIR(t *testing.T) {
 		{"../examples/md/table-points.bx.md", "../examples/ir/table-points.json"},
 		{"../examples/md/table-continues.bx.md", "../examples/ir/table-continues.json"},
 		{"../examples/md/ordered-points.bx.md", "../examples/ir/ordered-points.json"},
+		{"../examples/md/columns-figures.bx.md", "../examples/ir/columns-figures.json"},
 		{"../examples/md/warnings/table-overflow.bx.md", "../examples/ir/check-warnings/table-overflow.json"},
 	}
 	for _, pr := range pairs {
@@ -178,7 +179,8 @@ func TestMarkdownErrors(t *testing.T) {
 		{"column two mains", "# A\n::::columns\n:::column 一 {role=main}\nx\n:::\n:::column 二 {role=main}\ny\n:::\n::::\n", codeInvalidValue, 6},
 		{"column width attr", "# A\n::::columns\n:::column 一 {width=2}\nx\n:::\n:::column 二\ny\n:::\n::::\n", codeUnknownAttribute, 3},
 		{"column compare", "# A\n:::::columns\n::::column 一\n:::compare\n:::\n::::\n::::column 二\ny\n::::\n:::::\n", codeMisplaced, 4},
-		{"column gallery", "# A\n::::columns\n:::column 一\n![a](1.png) ![b](2.png)\n:::\n:::column 二\ny\n:::\n::::\n", codeMisplaced, 4},
+		{"column process", "# A\n::::columns\n:::column 一\n```process\nsteps: [{title: a}, {title: b}]\n```\n:::\n:::column 二\ny\n:::\n::::\n", codeMisplaced, 4},
+		{"column columns", "# A\n:::::columns\n::::column 一\n:::columns\n:::\n::::\n::::column 二\ny\n::::\n:::::\n", codeMisplaced, 4},
 		{"column code", "# A\n::::columns\n:::column 一\n```gantt\nspan: 2026-01 .. 2027-01\n```\n:::\n:::column 二\ny\n:::\n::::\n", codeMisplaced, 4},
 		{"star bullet", "# A\n* x\n", codeUnsupportedSyntax, 2},
 		{"deep list", "# A\n- a\n  - b\n    - c\n", codeMisplaced, 4},

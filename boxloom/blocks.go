@@ -750,20 +750,31 @@ func galleryColumns(n int) int {
 	return 3
 }
 
-func (g *galleryLeaf) grid() (cols, rows int) {
+// grid は幅 w での列と段の数。枚数で決めた列の数(galleryColumns)で枡の幅が画像の
+// 下限(imageMinHeight)に満たなければ、満たすまで列を減らす(並列のまとまりの狭い
+// 列の中、#117)。w が 0 なら枚数で決めたまま。本文の幅では枡が十分広いので変わらない。
+func (g *galleryLeaf) grid(w float64) (cols, rows int) {
 	cols = galleryColumns(len(g.items))
+	for w > 0 && cols > 1 && g.cellWidthOf(w, cols) < g.items[0].minH {
+		cols--
+	}
 	return cols, (len(g.items) + cols - 1) / cols
 }
 
-func (g *galleryLeaf) cellWidth(w float64) float64 {
-	cols, _ := g.grid()
+func (g *galleryLeaf) cellWidthOf(w float64, cols int) float64 {
 	return math.Max(0, (w-g.gap*float64(cols-1))/float64(cols))
+}
+
+func (g *galleryLeaf) cellWidth(w float64) float64 {
+	cols, _ := g.grid(w)
+	return g.cellWidthOf(w, cols)
 }
 
 // rowsOf は段ごとの画像の高さ(枡の幅いっぱいにしたときの一番高いもの)と、
 // 説明の文の高さ(一番高いもの)。
-func (g *galleryLeaf) rowsOf(cw float64) (img, capH []float64) {
-	cols, rows := g.grid()
+func (g *galleryLeaf) rowsOf(w float64) (img, capH []float64) {
+	cols, rows := g.grid(w)
+	cw := g.cellWidthOf(w, cols)
 	img, capH = make([]float64, rows), make([]float64, rows)
 	for i, it := range g.items {
 		r := i / cols
@@ -776,13 +787,13 @@ func (g *galleryLeaf) rowsOf(cw float64) (img, capH []float64) {
 func (g *galleryLeaf) Measure(c Constraint) Measurement {
 	w := c.Width
 	if w <= 0 {
-		cols, _ := g.grid()
+		cols, _ := g.grid(0)
 		for i := 0; i < cols; i++ {
 			w += float64(g.items[i].img.W) * 0.75
 		}
 		w += g.gap * float64(cols-1)
 	}
-	img, capH := g.rowsOf(g.cellWidth(w))
+	img, capH := g.rowsOf(w)
 	nat, min := 0.0, 0.0
 	for r := range img {
 		nat += img[r] + capH[r]
@@ -797,7 +808,7 @@ func (g *galleryLeaf) Measure(c Constraint) Measurement {
 }
 
 func (g *galleryLeaf) textLines(width float64) int {
-	cols, _ := g.grid()
+	cols, _ := g.grid(width)
 	cw := g.cellWidth(width)
 	n := 0
 	for r := 0; r*cols < len(g.items); r++ {
@@ -813,9 +824,9 @@ func (g *galleryLeaf) textLines(width float64) int {
 }
 
 func (g *galleryLeaf) Render(ctx RenderContext, box LBox) {
-	cols, _ := g.grid()
+	cols, _ := g.grid(box.Width)
 	cw := g.cellWidth(box.Width)
-	img, capH := g.rowsOf(cw)
+	img, capH := g.rowsOf(box.Width)
 	want, fixed := 0.0, g.gap*float64(len(img)-1)
 	for r := range img {
 		want += img[r]

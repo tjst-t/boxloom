@@ -52,11 +52,16 @@ type BlockDecl struct {
 	IR string `json:"ir"`
 }
 
+// columnContains は :::column の中に書けるもの(ir.go の columnBlockTypes・
+// columnSubsystems と同じ範囲を Markdown の言い方で)。
+var columnContains = []string{"段落", "箇条", "表", "画像", "画像の並び", "note", "pairs",
+	"```chart", "```cycle", "```phases", "```matrix", "```orgchart"}
+
 // defaultBlocks は第一版の囲み(docs/content-syntax.md の3.4)。名前の順。
 func defaultBlocks() []BlockDecl {
 	return []BlockDecl{
 		{Name: "column", Label: "まとまりの題(任意)", Inside: []string{"columns"},
-			Contains: []string{"段落", "箇条", "表", "画像(1枚)", "note", "```chart"}, Attributes: []string{"role"},
+			Contains: columnContains, Attributes: []string{"role"},
 			Meaning: "並列のまとまりの1つ。role=main は主のまとまり(ほかがそれを補う。テンプレートが広く取る)。幅を数で書く口は無い",
 			IR:      "columns.columns[](title・role・body)"},
 		{Name: "columns", Contains: []string{"column"}, MinChildren: 2, Attributes: []string{"variant", "flow"},

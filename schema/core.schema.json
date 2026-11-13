@@ -1095,7 +1095,7 @@
       "additionalProperties": false
     },
     "columnBlock": {
-      "description": "まとまりの中に置けるブロック。columns・compare・gallery は置けない。サブシステムはグラフ(chart)と循環の図(cycle)だけ(グラフの横に読み取り、輪の横に段ごとの説明を置く形)。",
+      "description": "まとまりの中に置けるブロック。columns・compare は置けない。対の並び(pairs)と画像の並び(gallery)は置ける。サブシステムはまとまりの幅で測れる図だけ:グラフ(chart)・循環の図(cycle)・フェーズの図(phases)・評価の格子(matrix)・組織図(orgchart)(図の横に読み取り・段ごとの説明を置く形)。",
       "type": "object",
       "properties": {
         "type": {
@@ -1105,6 +1105,8 @@
             "note",
             "table",
             "image",
+            "gallery",
+            "pairs",
             "subsystem"
           ]
         }
@@ -1192,6 +1194,36 @@
           "if": {
             "properties": {
               "type": {
+                "const": "gallery"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/gallery"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "pairs"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "types/pairs.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
                 "const": "subsystem"
               }
             },
@@ -1205,7 +1237,10 @@
               "subsystem": {
                 "enum": [
                   "chart",
-                  "cycle"
+                  "cycle",
+                  "phases",
+                  "matrix",
+                  "orgchart"
                 ]
               }
             }

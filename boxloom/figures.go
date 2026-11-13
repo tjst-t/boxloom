@@ -689,3 +689,10 @@ func legendMissingWarnings(kind string, missing []string) []string {
 	}
 	return out
 }
+
+// columnMinWidth は並列のまとまりの中で要る幅(columnFloor、#117):図の Min の幅。
+// まとまりがこれより狭いと文が箱に入らないので、まとまりの行は図のまとまりを
+// ここまで広げ、ほかの伸びるまとまりから取る。
+func (s *PhasesSubsystem) columnMinWidth() float64   { return s.Measure(Constraint{}).Min.Width }
+func (s *MatrixSubsystem) columnMinWidth() float64   { return s.Measure(Constraint{}).Min.Width }
+func (s *OrgChartSubsystem) columnMinWidth() float64 { return s.Measure(Constraint{}).Min.Width }

@@ -687,7 +687,8 @@ func max0(v float64) float64 {
 }
 
 // columnFloor は、並列のまとまりの中で最小の幅を申告する図(Measure の Min.Width と
-// 違い、まとまりの幅の配分まで変える)。いまは cycle だけ(題を輪の外に置くのに要る幅)。
+// 違い、まとまりの幅の配分まで変える)。cycle(題を輪の外に置くのに要る幅)と、phases・
+// matrix・orgchart(図の Min の幅、#117)。
 // 申告しない図(グラフ・画像など)のまとまりは従来どおり。
 type columnFloor interface {
 	columnMinWidth() float64

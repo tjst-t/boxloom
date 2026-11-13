@@ -27,6 +27,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `examples/ir/figures.json` | process・orgchart・matrix・funnel の例(`examples/md/figures.bx.md` と同じ IR) |
 | `examples/ir/phases.json` | phases の例。3段・群2つ・箱7つ(`examples/md/phases.bx.md` と同じ IR) |
 | `examples/ir/cycle.json` | cycle の例(単独と columns の中。`examples/md/cycle.bx.md` と同じ IR) |
+| `examples/ir/columns-figures.json` | columns の中の pairs・phases・matrix・orgchart・gallery の例(`examples/md/columns-figures.bx.md` と同じ IR) |
 | `examples/ir/blocks.json` | 並列のまとまり・表・画像・画像の並びの例(画像は `examples/ir/images/`。`tools/gen_example_images.go` で作った架空の図) |
 | `examples/ir/charts.json` | chart の例。比べ方の5分類ごと(`examples/md/charts.bx.md` と同じ IR) |
 | `examples/yaml/charts.yaml` | `examples/ir/charts.json` を YAML の deck(IR の写し。`docs/content-syntax.md` の1章)で書いたもの。同じ IR・同じ PPTX になる |
@@ -730,7 +731,7 @@ check でも断られるもの。
   決まり、横の上限(Max)を持つ図は上限で止まるので、ブロックの幅より細く描かれる。
   余りは図の置き方(Place)の側に白く残り、縦の埋まり(`fill-ratio`)では見えない。
   ブロックの幅の 20% 以上なら `spare-width` の警告にもする。埋めるのは作者で、
-  `columns` に入れて図の横に文を置くか(画像・グラフ・循環の図はまとまりの中に置ける)、同じ
+  `columns` に入れて図の横に文を置くか(画像・画像の並び・グラフ・循環の図・フェーズの図・評価の格子・組織図・対の並びはまとまりの中に置ける)、同じ
   スライドの文を減らして図に高さを渡す。円グラフは高さで直径が決まるので、横の上限
   (その高さで要る幅)を申告する。並列のまとまりの中のブロックにも、まとまりの幅に対する
   `remainingWidth` を付ける(`columns[].blocks[]`)。図の地(カード)は図が使う矩形に
