@@ -66,7 +66,7 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc? }   
          stat     { items: [{ value: "3 → 12", unit?: "機種", label }] }   1〜4個
          quote    { content, source }                             出どころは必須
 並列     { type: "columns", flow?: true, columns: [{ title?, role?: "main", body: [paragraph|points|note|table|image] }] }  (2〜3個)
-対の並び  { type: "pairs", headings: { subject, response }, pairs: [{ subject: 側, response: 側 }] }  (2組以上。側は paragraph|points|quote)
+対の並び  { type: "pairs", headings: { subject, response }, pairs: [{ subject: 側, response: 側 }] }  (2組以上。側は paragraph|points|quote か { title?, body: [paragraph|points|quote|image|table 1〜4個] })
 表       { type: "table", header: [セル], rows: [[セル]], total?: [セル], caption? }   (セルはインライン。どの行も見出しと同じ数。total は合計の行)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 箇条     { type: "points", ordered?: true, items: [インライン | { content, items?, ordered? }] }  (ordered は番号つき。入れ子の項目の ordered はその items に効く)
@@ -282,15 +282,29 @@ Schema では書けないので `boxloom check` が見る。
   知らないキーとして断る(`examples/ir/invalid/pairs-left-right.json`)。
 - `headings` は2つの側の見出し(列の題。インライン)で、文書の中で1回だけ書く。両方必須。
 - `pairs` は2組以上。対の2つの側はそれぞれ段落・箇条・引用(`paragraph`・`points`・
-  `quote`)のどれか1つ。表・図・注記などは置けない(`examples/ir/invalid/pairs-side-table.json`)。
-  1組なら段落か `columns` にする。
+  `quote`)のどれか1つのブロックか、**見出しと複数のブロック**
+  `{ "title": 見出し(任意。インライン), "body": [ブロック 1〜4個] }`(#87)。body に置けるのは
+  段落・箇条・引用・画像・表(続きの表 `continues` は不可)。1つのブロックの形で表を置いたり、
+  body に注記・図などを置いたりはできない(`examples/ir/invalid/pairs-side-table.json`)。
+  1組なら段落か `columns` にする。例は `examples/ir/pairs-side-body.json`。
+
+```json
+{ "subject":  { "title": "家賃と広さが合わない",
+                "body": [{ "type": "points", "items": ["空き店舗の多くは 80 平米を超える", "…"] }] },
+  "response": { "body": [{ "type": "points", "items": ["区切って貸せば借りたいという声が多い"] },
+                         { "type": "quote", "content": "半分の広さなら借りたい", "source": "店主 A" }] } }
+```
+
+- 側の見出し(`title`)と body のブロックも本文のブロックと同じ意味の検査を通る
+  (`…/pairs/K/subject/title`・`…/pairs/K/subject/body/I/content` など)。
 - Schema と同じ決まりを Go の読み込みも見る(型の語彙の `Validate`)。誤りの path は
   欄まで指す(`/slides/S/body/N/headings/left`・`…/pairs/K/response`)。
 - **組み方を持たないテンプレート**(値の表だけの外のテンプレート、例
   `examples/templates/forest.json`)は、代わりの組み方で `columns` に書き換えて組み、
   警告 `component-fallback` を1件出す(path はそのブロック)。見出しはまとまりの題に、
   各対の側はそれぞれのまとまりに順に入れる。まとまりには引用を置けないので、引用は
-  言葉の段落と出どころの注(`note`)に分ける。書き換えた IR の例は
+  言葉の段落と出どころの注(`note`)に分ける。側の見出し(`title`)はまとまりの中の強調の
+  段落にし、body のブロックはその後に順に入れる。書き換えた IR の例は
   `examples/ir/pairs-fallback.json`(`examples/ir/pairs.json` を書き換えたもの。Schema と
   check を通る)。
 - **はみ出しは対ごとに測る**(下の「はみ出しの測り方」と容量の `pairs`)。

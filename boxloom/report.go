@@ -7,7 +7,7 @@
 //     その下に slideTitle・字の色で置く。題はこれまでどおり title のプレースホルダー
 //     (位置だけが下になる)。リードの無いスライドは、題を上の見出しの位置と大きさで置く。
 //   - columns・pairs:列の見出し(まとまりの題・対の側の見出し)を基調色(accent)にする。
-//     組み方は標準のもの(columnsStyled・pairsHeaded)で、見た目の選べるところだけを渡す。
+//     columns の組み方は標準のもの(columnsStyled)で、見た目の選べるところだけを渡す。
 //   - columns(Backlog #84):まとまりの題の下に罫線(grid・0.75pt)、まとまりの間の
 //     隙間の真ん中に縦の罫線(grid)を引く。flow(左が右につながる)のときは、縦の
 //     罫線の縦の真ん中に基調色の丸(直径 24pt、隙間より広ければ隙間の幅)と、
@@ -17,6 +17,9 @@
 //     丸い矢印の印、ほかは薄い字)。
 //   - toc(Backlog #86):全面の基調色に白い字。題 28pt の下に白い罫線、章 20pt、
 //     節 16pt で字下げ、頁番号は右寄せ。
+//   - pairs(Backlog #87):標準の組み方(pairsStyled)の見た目を差し替える。対ごとに
+//     A・B・C… の四角い印(基調色・白い字)を subject の頭に、2つの側の間に丸い山形の印を
+//     置き、対の間に罫線(grid)を引く。側の見出し(title)は薄い面(card)の帯の上に字の色で書く。
 //
 // 白は役割名 bg(report の地の色。白)で書く。測った大きさは段の刻み(type(n)・
 // space(n))で書く(report が自分で持つ組み方の逃げ道。標準の部品は名前だけ)。
@@ -47,7 +50,7 @@ func registerReportParts(t *Template) error {
 	}
 	// pairs は標準でない型なので、同梱の組み方(registerBundledComponents)の代わりに登録する。
 	if err := t.components.register(pairsType, componentFunc(func(ctx componentContext, b *IRBlock) (*Spec, error) {
-		return pairsHeaded(ctx, b, "accent")
+		return pairsStyled(ctx, b, reportPairsStyle)
 	})); err != nil {
 		return err
 	}
@@ -205,4 +208,79 @@ func (d reportColumnDivider) Render(ctx RenderContext, box LBox) {
 	bg := ctx.Roles.Color("bg")
 	ctx.Out.AddLine(cx-hw, cy-hh, cx+hw, cy, reportChevronWidth, bg, "")
 	ctx.Out.AddLine(cx+hw, cy, cx-hw, cy+hh, reportChevronWidth, bg, "")
+}
+
+// reportPairMarkSize は report の対の印(A・B・C の四角・側の間の丸)の一辺(段の刻み。24pt)。
+var reportPairMarkSize = spaceStep(12)
+
+// reportPairsStyle は report の pairs の見た目。
+var reportPairsStyle = pairsStyle{
+	headRole: "accent",
+	sideTitle: func(t *Template, title Inline) *Spec {
+		return Col([]*Spec{t.text(title, "body", "text_primary", true)},
+			tokBackground("card"), tokPadXY(spaceStep(4), spaceStep(2)))
+	},
+	mark: func(t *Template, k int) *Spec {
+		return SubsystemNode(&pairMark{kind: pairMarkLetter, letter: pairLetter(k), fontSize: t.Values.Body},
+			tokWidth(reportPairMarkSize), tokHeight(reportPairMarkSize))
+	},
+	between: func(t *Template) *Spec {
+		return SubsystemNode(&pairMark{kind: pairMarkChevron},
+			tokWidth(reportPairMarkSize), tokHeight(reportPairMarkSize))
+	},
+	rule: func(t *Template) *Spec {
+		return Col(nil, tokHeight("tableRuleWidth"), tokBackground("grid"))
+	},
+	spacer: func(t *Template, mark *Spec) *Spec {
+		return Col(nil, tokWidth(mark.tok.width))
+	},
+}
+
+// pairLetter は k 番目(0 から)の対の印の文字(A・B…Z・AA・AB…)。
+func pairLetter(k int) string {
+	s := ""
+	for k++; k > 0; k = (k - 1) / 26 {
+		s = string(rune('A'+(k-1)%26)) + s
+	}
+	return s
+}
+
+type pairMarkKind int
+
+const (
+	pairMarkLetter  pairMarkKind = iota // 四角い地(基調色)に白い字の A・B・C
+	pairMarkChevron                     // 丸い地(基調色)に白い山形(側の間の流れ)
+)
+
+// pairMark は report の対の印の葉。大きさは箱の幅・高さ(トークン)で決まり、
+// 自然な大きさは申告しない。色は描くときに役割名で引く。
+type pairMark struct {
+	kind     pairMarkKind
+	letter   string
+	fontSize float64
+}
+
+func (m *pairMark) Name() string {
+	if m.kind == pairMarkLetter {
+		return "pairLetter"
+	}
+	return "pairArrow"
+}
+
+func (m *pairMark) Measure(Constraint) Measurement { return Measurement{} }
+
+func (m *pairMark) ornament() {}
+
+func (m *pairMark) Render(ctx RenderContext, box LBox) {
+	fill, on := ctx.Roles.Color("accent"), ctx.Roles.Color("bg")
+	if m.kind == pairMarkLetter {
+		ctx.Out.AddShape(box, ShapeOpts{Prst: "rect", Fill: fill,
+			Runs: []TextRun{{Text: m.letter, Color: on, Bold: true}}, FontSize: m.fontSize})
+		return
+	}
+	ctx.Out.AddShape(box, ShapeOpts{Prst: "ellipse", Fill: fill})
+	// 山形は丸の中央に、幅 0.36・高さ 0.44 の割合で置く。
+	w, h := box.Width*0.36, box.Height*0.44
+	ctx.Out.AddShape(LBox{X: box.X + (box.Width-w)/2 + box.Width*0.03, Y: box.Y + (box.Height-h)/2, Width: w, Height: h},
+		ShapeOpts{Prst: "chevron", Fill: on})
 }

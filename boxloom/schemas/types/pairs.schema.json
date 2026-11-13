@@ -24,7 +24,10 @@
           "$ref": "../core.schema.json#/$defs/inline"
         }
       },
-      "required": ["subject", "response"],
+      "required": [
+        "subject",
+        "response"
+      ],
       "additionalProperties": false
     },
     "pairs": {
@@ -36,11 +39,15 @@
       }
     }
   },
-  "required": ["type", "headings", "pairs"],
+  "required": [
+    "type",
+    "headings",
+    "pairs"
+  ],
   "additionalProperties": false,
   "$defs": {
     "pair": {
-      "description": "1つの対。2つの側はそれぞれ段落・箇条・引用のどれか1つ。",
+      "description": "1つの対。2つの側はそれぞれ、段落・箇条・引用のどれか1つか、見出しと複数のブロックのまとまり(sideGroup)。",
       "type": "object",
       "properties": {
         "subject": {
@@ -50,10 +57,14 @@
           "$ref": "#/$defs/side"
         }
       },
-      "required": ["subject", "response"],
+      "required": [
+        "subject",
+        "response"
+      ],
       "additionalProperties": false
     },
     "side": {
+      "description": "対の1つの側。段落・箇条・引用のどれか1つのブロックか、見出しと複数のブロックのまとまり。",
       "oneOf": [
         {
           "$ref": "../core.schema.json#/$defs/paragraph"
@@ -63,6 +74,63 @@
         },
         {
           "$ref": "../core.schema.json#/$defs/quote"
+        },
+        {
+          "$ref": "#/$defs/sideGroup"
+        }
+      ]
+    },
+    "sideGroup": {
+      "description": "見出しと複数のブロックの側(例: 要因の名前+箇条、箇条+引用)。見出しはその側の短い文。",
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "その側の見出し(短い文。文中の記法を読む)。",
+          "$ref": "../core.schema.json#/$defs/inline"
+        },
+        "body": {
+          "description": "側の中のブロック(1〜4個。上から順に積む)。",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/sideBlock"
+          }
+        }
+      },
+      "required": [
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "sideBlock": {
+      "description": "側の中に置けるブロック:段落・箇条・引用・画像・表(続きの表は置けない)。",
+      "oneOf": [
+        {
+          "$ref": "../core.schema.json#/$defs/paragraph"
+        },
+        {
+          "$ref": "../core.schema.json#/$defs/points"
+        },
+        {
+          "$ref": "../core.schema.json#/$defs/quote"
+        },
+        {
+          "$ref": "../core.schema.json#/$defs/image"
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "../core.schema.json#/$defs/table"
+            },
+            {
+              "not": {
+                "required": [
+                  "continues"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

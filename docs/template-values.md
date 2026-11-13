@@ -53,9 +53,15 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 - 列の見出し(`columns` のまとまりの題、`pairs` の側の見出し)を `columnTitle`(16pt)・
   基調色(`accent`)にする。部品 `columns` を override し、`pairs` は自分の組み方を登録する
   (同梱の組み方 `registerBundledComponents` は、テンプレートがすでに登録した型には足さない)。
-  組み方は標準のもの(`columnsHeaded`・`pairsHeaded`)で、見出しの色の役割名だけを渡す。
+  `columns` の組み方は標準のもの(`columnsHeaded`)で、見出しの色の役割名だけを渡す。
   dark・light は標準のまま字の色(`text_primary`)。
-- 試験は `TestReportContentHeader`・`TestReportOverrideIsOnlyReport`・`TestReportColumnHeadings`。
+- `pairs` は標準の組み方の見た目を差し替えたもの(`pairsStyled` に `reportPairsStyle`。#87):
+  対ごとに A・B・C… の四角い印(一辺 `space(12)`=24pt・基調色の地・白(`bg`)の字)を subject の
+  頭に、2つの側の間に丸い山形の印(同じ大きさ)を置き、対の間に罫線(`grid`・高さ
+  `tableRuleWidth`)を引く。側の見出し(`title`)は薄い面(`card`=F1F2F1)の帯の上に字の色・
+  太字の本文で書く。印は飾りの葉(`ornament`)で、横の余り(`spare-width`)には数えない。
+- 試験は `TestReportContentHeader`・`TestReportOverrideIsOnlyReport`・`TestReportColumnHeadings`・
+  `TestReportPairsMarks`。
 
 **色(theme)**:測った色を、コアの役割名に当てた(役割名は増やしていない)。
 

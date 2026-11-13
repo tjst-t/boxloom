@@ -318,7 +318,7 @@ func TestPairsMarkdownErrors(t *testing.T) {
 		{"response first", "::::pairs A | B\n" + side("response", "い") + good + "::::\n", codeMisplaced, "/slides/1/body/0/pairs/0"},
 		{"subject twice", "::::pairs A | B\n" + side("subject", "あ") + good + "::::\n", codeMisplaced, "/slides/1/body/0/pairs/0"},
 		{"paragraph inside", "::::pairs A | B\n段落\n\n" + good + "::::\n", codeMisplaced, "/slides/1/body/0"},
-		{"two paragraphs", "::::pairs A | B\n" + side("subject", "あ\n\nか") + side("response", "い") + side("subject", "う") + side("response", "え") + "::::\n", codeMisplaced, "/slides/1/body/0/pairs/0/subject"},
+		{"five blocks", "::::pairs A | B\n" + side("subject", "あ\n\nか\n\nさ\n\nた\n\nな") + side("response", "い") + side("subject", "う") + side("response", "え") + "::::\n", codeMisplaced, "/slides/1/body/0/pairs/0/subject/body"},
 		{"note in a side", ":::::pairs A | B\n::::subject\n:::note\nあ\n:::\n::::\n" + side("response", "い") + side("subject", "う") + side("response", "え") + ":::::\n", codeMisplaced, "/slides/1/body/0/pairs/0/subject"},
 		{"subject outside", side("subject", "あ"), codeMisplaced, "/slides/1/body/0"},
 		{"unknown attribute", "::::pairs A | B {width=2}\n" + good + "::::\n", codeUnknownAttribute, "/slides/1/body/0"},
@@ -347,7 +347,7 @@ func TestPairsMarkdownErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Subject.Plain() != "A | B" || p.Response.Plain() != "C" || p.Pairs[0].Subject.Type != "quote" || p.Pairs[0].Subject.Source.Plain() != "利用者 C" {
+	if p.Subject.Plain() != "A | B" || p.Response.Plain() != "C" || p.Pairs[0].Subject.Body[0].Type != "quote" || p.Pairs[0].Subject.Body[0].Source.Plain() != "利用者 C" {
 		t.Errorf("pairs = %+v", p)
 	}
 }

@@ -15,6 +15,10 @@ import (
 	"math"
 )
 
+// ornament は飾りの印だけを描くサブシステムの葉(report の対の A・B・C の印など。
+// report.go)。図ではないので、横の余りを測らない。
+type ornament interface{ ornament() }
+
 // spareWidthWarnRatio は、横の余りがブロックの幅のこの割合以上なら警告する。
 const spareWidthWarnRatio = 0.20
 
@@ -33,6 +37,9 @@ func blockSpareWidth(b *Spec) float64 {
 	var walk func(s *Spec)
 	walk = func(s *Spec) {
 		if s.Kind == KindSubsystem && s.Subsystem != nil {
+			if _, ok := s.Subsystem.(ornament); ok {
+				return // 印は図ではない(大きさは箱の幅・高さで決まる)
+			}
 			d := subsystemDrawBox(s)
 			left = math.Min(left, d.X)
 			right = math.Max(right, d.X+d.Width)

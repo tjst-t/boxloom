@@ -228,7 +228,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     (`testdata/outputs-golden.json`。出力を変える変更では `-update-golden` で書き直す)
   - `pairs.go` = 対の並び(`pairs`)。型の語彙に足した最初の標準でない型(Schema は
     `schema/types/pairs.schema.json`、Markdown は `::::pairs 見出し | 見出し` の中に
-    `:::subject`・`:::response` を交互に)。組み方は同梱のテンプレート(dark・light)が持ち、
+    `:::subject`・`:::response` を交互に。側は1つのブロックか、見出しと1〜4個のブロック `{title, body}`、Markdown は `:::subject 見出し`)。report は A・B・C の印・側の間の山形・対の間の罫線を足す。組み方は同梱のテンプレート(dark・light)が持ち、
     対ごとに2つの側の行をそろえる。はみ出しは対ごと(印 `measurePairRows`)。組み方を
     持たないテンプレートは `columns` で組んで `component-fallback`。`docs/layers.md` の8.1・8.3
   - `skeleton.go` = 骨組みの部品の表(`cover`・`contentHeader`・`contentFrame`・`section`・

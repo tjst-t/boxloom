@@ -3,15 +3,18 @@
 // 「分かったこと ↔ 打ち手」のように、2つの側の見出しを1回だけ書き、その下に対を
 // 並べる。側の名前は意味の名前で、subject はその対が何についてか(分かったこと・
 // 課題・問い)、response はそれに応えるもの(打ち手・対策・答え)。どちらを左に
-// 置くかはテンプレートが決める。対の2つの側は、それぞれ段落・箇条・引用のどれか1つ。
+// 置くかはテンプレートが決める。対の2つの側は、それぞれ段落・箇条・引用のどれか1つか、
+// 見出し(title。任意)と複数のブロック(body。段落・箇条・引用・画像・表の1〜4個)の
+// まとまり(Backlog #87)。
 //
 //   - 型の宣言(pairsTypeDecl):Schema は schema/types/pairs.schema.json の写し、
 //     IR を読むときの形の検査、Markdown の囲み(::::pairs と :::subject・:::response)
 //     とその読み方、代わりの組み方(左右2つのまとまりの columns)。
 //   - 組み方(pairsComponent):同梱のテンプレート(dark・light・report)が持つ。対ごとに
 //     1つの行にし、2つの側を同じ上端から置いて、行の高さを高い方に合わせる。
-//     はみ出しは対ごとに測る(測る単位の印 measurePairRows)。report は側の見出しを基調色に
-//     した同じ組み方(pairsHeaded)を自分で登録する(report.go)。
+//     はみ出しは対ごとに測る(測る単位の印 measurePairRows)。見出しと複数のブロックの側は
+//     見出しと body を縦に積む。report は同じ組み方の見た目を差し替えたもの(pairsStyled。
+//     A・B・C の印・側の間の印・対の間の罫線・見出しの帯)を自分で登録する(report.go)。
 
 package boxloom
 
@@ -26,8 +29,14 @@ import (
 // pairsType は IR の type。
 const pairsType = "pairs"
 
-// pairSideTypes は対の1つの側に置けるブロックの種類。
+// pairSideTypes は対の1つの側に置けるブロックの種類(1つのブロックの形)。
 var pairSideTypes = []string{"paragraph", "points", "quote"}
+
+// pairSideBodyTypes は見出しと複数のブロックの側(body)に置けるブロックの種類。
+var pairSideBodyTypes = []string{"paragraph", "points", "quote", "image", "table"}
+
+// pairSideBodyMax は側の body に置けるブロックの数の上限。
+const pairSideBodyMax = 4
 
 // irPairs は pairs のブロックの中身(IRBlock.Raw を読んだもの)。
 type irPairs struct {
@@ -39,7 +48,66 @@ type irPairs struct {
 
 // irPair は1つの対。
 type irPair struct {
-	Subject, Response IRBlock
+	Subject, Response irPairSide
+}
+
+// irPairSide は対の1つの側。1つのブロックの形(Grouped が false)なら Body はその
+// ブロック1つ。まとまりの形({title?, body: [...]})なら Grouped が true で、Title は
+// 見出し(無ければ nil)。
+type irPairSide struct {
+	Grouped bool
+	Title   Inline
+	Body    []IRBlock
+}
+
+// readPairSide は対の1つの側を読む。type のあるオブジェクトは1つのブロック、
+// 無ければ見出しと複数のブロックのまとまり。at は誤りの文の頭(pairs[1].subject)。
+func readPairSide(raw json.RawMessage, at string) (irPairSide, error) {
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &keys); err != nil {
+		return irPairSide{}, fmt.Errorf("%s: %w", at, err)
+	}
+	if _, ok := keys["type"]; ok {
+		var b IRBlock
+		if err := b.UnmarshalJSON(raw); err != nil {
+			return irPairSide{}, fmt.Errorf("%s: %w", at, err)
+		}
+		if !contains(pairSideTypes, b.Type) {
+			return irPairSide{}, fmt.Errorf("%s: a side of a pair cannot be a %s block (allowed: %s, or {title, body} with %s)", at, b.Type,
+				strings.Join(pairSideTypes, ", "), strings.Join(pairSideBodyTypes, ", "))
+		}
+		return irPairSide{Body: []IRBlock{b}}, nil
+	}
+	var g struct {
+		Title json.RawMessage   `json:"title"`
+		Body  []json.RawMessage `json:"body"`
+	}
+	if err := strictUnmarshal(raw, &g); err != nil {
+		return irPairSide{}, fmt.Errorf("%s: %w", at, err)
+	}
+	out := irPairSide{Grouped: true}
+	if len(g.Title) > 0 {
+		if err := out.Title.UnmarshalJSON(g.Title); err != nil {
+			return irPairSide{}, fmt.Errorf("%s.title: %w", at, err)
+		}
+	}
+	if len(g.Body) == 0 || len(g.Body) > pairSideBodyMax {
+		return irPairSide{}, fmt.Errorf("%s.body: a side needs \"type\" (one block) or \"body\" with 1 to %d blocks (got %d)", at, pairSideBodyMax, len(g.Body))
+	}
+	for i, r := range g.Body {
+		var b IRBlock
+		if err := b.UnmarshalJSON(r); err != nil {
+			return irPairSide{}, fmt.Errorf("%s.body[%d]: %w", at, i, err)
+		}
+		if !contains(pairSideBodyTypes, b.Type) {
+			return irPairSide{}, fmt.Errorf("%s.body[%d]: the body of a side cannot have a %s block (allowed: %s)", at, i, b.Type, strings.Join(pairSideBodyTypes, ", "))
+		}
+		if b.Type == "table" && b.Continues {
+			return irPairSide{}, fmt.Errorf("%s.body[%d].continues: a continuing table must be a block of the slide body, not inside pairs", at, i)
+		}
+		out.Body = append(out.Body, b)
+	}
+	return out, nil
 }
 
 // readPairs は pairs の IR を読んで形を見る(知らないキー・足りない欄・側に置けない
@@ -95,17 +163,16 @@ func readPairs(raw json.RawMessage) (*irPairs, error) {
 		for _, side := range []struct {
 			name string
 			raw  json.RawMessage
-			dst  *IRBlock
+			dst  *irPairSide
 		}{{"subject", p.Subject, &pr.Subject}, {"response", p.Response, &pr.Response}} {
 			if len(side.raw) == 0 {
 				return nil, fmt.Errorf("pairs[%d].%s: missing (a pair needs \"subject\" and \"response\")", i, side.name)
 			}
-			if err := side.dst.UnmarshalJSON(side.raw); err != nil {
-				return nil, fmt.Errorf("pairs[%d].%s: %w", i, side.name, err)
+			sd, err := readPairSide(side.raw, fmt.Sprintf("pairs[%d].%s", i, side.name))
+			if err != nil {
+				return nil, err
 			}
-			if !contains(pairSideTypes, side.dst.Type) {
-				return nil, fmt.Errorf("pairs[%d].%s: a side of a pair cannot be a %s block (allowed: %s)", i, side.name, side.dst.Type, strings.Join(pairSideTypes, ", "))
-			}
+			*side.dst = sd
 		}
 		out.Pairs = append(out.Pairs, pr)
 	}
@@ -114,7 +181,8 @@ func readPairs(raw json.RawMessage) (*irPairs, error) {
 
 // pairsFallback は代わりの組み方:2つのまとまりの columns。見出しはまとまりの題に、
 // 各対の2つの側はそれぞれのまとまりに順に入れる(行は2つのまとまりでそろわなく
-// なるが読める)。まとまりには引用を置けないので、引用は言葉の段落と出どころの注に
+// なるが読める)。側の見出し(title)はまとまりの中の強調の段落にし、側の body の
+// ブロックは順に入れる。まとまりには引用を置けないので、引用は言葉の段落と出どころの注に
 // 分ける。場所の表は、まとまりを見出し(/headings/subject・/headings/response)に、
 // まとまりの中のブロックを元の対の側(/pairs/K/subject など。引用の注は …/source)に写す。
 func pairsFallback(b *IRBlock) ([]*IRBlock, fallbackPaths, error) {
@@ -127,19 +195,34 @@ func pairsFallback(b *IRBlock) ([]*IRBlock, fallbackPaths, error) {
 		"/columns/0": {To: "/headings/subject"},
 		"/columns/1": {To: "/headings/response"},
 	}
-	put := func(ci, k int, name string, side IRBlock) {
+	add := func(ci int, orig string, b IRBlock) {
 		c := &cols[ci]
 		at := func() string { return fmt.Sprintf("/columns/%d/body/%d", ci, len(c.Body)) }
-		orig := fmt.Sprintf("/pairs/%d/%s", k, name)
-		if side.Type == "quote" {
+		if b.Type == "quote" {
 			paths[at()] = fallbackPath{To: orig}
-			c.Body = append(c.Body, IRBlock{Type: "paragraph", Variant: side.Variant, Content: side.Content})
+			c.Body = append(c.Body, IRBlock{Type: "paragraph", Variant: b.Variant, Content: b.Content})
 			paths[at()] = fallbackPath{To: orig + "/source"}
-			c.Body = append(c.Body, IRBlock{Type: "note", Variant: side.Variant, Content: side.Source})
+			c.Body = append(c.Body, IRBlock{Type: "note", Variant: b.Variant, Content: b.Source})
 			return
 		}
 		paths[at()] = fallbackPath{To: orig, Same: true}
-		c.Body = append(c.Body, side)
+		c.Body = append(c.Body, b)
+	}
+	put := func(ci, k int, name string, side irPairSide) {
+		orig := fmt.Sprintf("/pairs/%d/%s", k, name)
+		if !side.Grouped {
+			add(ci, orig, side.Body[0])
+			return
+		}
+		// 側の見出しは、まとまりの中の強調の段落にする。
+		if side.Title != nil {
+			c := &cols[ci]
+			paths[fmt.Sprintf("/columns/%d/body/%d", ci, len(c.Body))] = fallbackPath{To: orig + "/title"}
+			c.Body = append(c.Body, IRBlock{Type: "paragraph", Content: Inline{{Type: "em", Content: side.Title}}})
+		}
+		for i, b := range side.Body {
+			add(ci, fmt.Sprintf("%s/body/%d", orig, i), b)
+		}
 	}
 	for k, pr := range p.Pairs {
 		put(0, k, "subject", pr.Subject)
@@ -161,12 +244,12 @@ func pairsTypeDecl() typeDecl {
 				Contains: []string{"subject", "response"}, MinChildren: 4, Attributes: []string{"variant"},
 				Meaning: "対の並び(標準でない型)。2つの側の見出しを1回だけ書き、:::subject と :::response を交互に書いて対を並べる。対の2つの側は行がそろう。組み方を持たないテンプレートは ::::columns で組む",
 				IR:      "pairs(headings が見出しの文、pairs[] が対)"},
-			{Name: "response", Inside: []string{"pairs"}, Contains: []string{"段落1つ", "箇条1つ", ":::quote 1つ"}, Attributes: []string{},
-				Meaning: "対の応える側(打ち手・対策・答え)。直前の :::subject と対になる",
-				IR:      "pairs.pairs[].response"},
-			{Name: "subject", Inside: []string{"pairs"}, Contains: []string{"段落1つ", "箇条1つ", ":::quote 1つ"}, Attributes: []string{},
-				Meaning: "対の何についての側(分かったこと・課題・問い)。直後に :::response を書く",
-				IR:      "pairs.pairs[].subject"},
+			{Name: "response", Label: "側の見出し(任意。短い文)", Inside: []string{"pairs"}, Contains: []string{"段落", "箇条", ":::quote", "画像(1枚)", "表"}, Attributes: []string{},
+				Meaning: "対の応える側(打ち手・対策・答え)。直前の :::subject と対になる。中は1〜4個のブロック(引用・表・画像を入れるときは囲みのコロンを1つ増やす)",
+				IR:      "pairs.pairs[].response(1つのブロックか {title, body})"},
+			{Name: "subject", Label: "側の見出し(任意。短い文。例: 要因の名前)", Inside: []string{"pairs"}, Contains: []string{"段落", "箇条", ":::quote", "画像(1枚)", "表"}, Attributes: []string{},
+				Meaning: "対の何についての側(分かったこと・課題・問い)。直後に :::response を書く。中は1〜4個のブロック(引用・表・画像を入れるときは囲みのコロンを1つ増やす)",
+				IR:      "pairs.pairs[].subject(1つのブロックか {title, body})"},
 		},
 		Fallback: pairsFallback,
 		Validate: func(b *IRBlock) error {
@@ -180,7 +263,7 @@ func pairsTypeDecl() typeDecl {
 
 // pairsInner は check に渡す pairs の中:2つの側の見出し(見える文字が要る)と、各対の
 // subject・response(本文のブロックと同じ検査。段落の側はその1文が側の意味なので、
-// 見える文字が要る)。
+// 見える文字が要る)。見出しと複数のブロックの側は、側の見出しと body の各ブロック。
 func pairsInner(m map[string]any) []innerPart {
 	var out []innerPart
 	if h, ok := m["headings"].(map[string]any); ok {
@@ -194,11 +277,27 @@ func pairsInner(m map[string]any) []innerPart {
 			if !ok {
 				continue
 			}
-			part := innerPart{Path: fmt.Sprintf("/pairs/%d/%s", k, side), Map: sm, Block: true}
-			if sm["type"] == "paragraph" {
-				part.Texts = []string{"content"}
+			sp := fmt.Sprintf("/pairs/%d/%s", k, side)
+			blocks := []innerPart{{Path: sp, Map: sm, Block: true}}
+			if _, ok := sm["type"]; !ok {
+				// 見出しと複数のブロックの側:見出しは見える文字が要る(書いたとき)。
+				blocks = nil
+				if _, ok := sm["title"]; ok {
+					out = append(out, innerPart{Path: sp, Map: sm, Texts: []string{"title"}})
+				}
+				body, _ := sm["body"].([]any)
+				for i, b := range body {
+					if bm, ok := b.(map[string]any); ok {
+						blocks = append(blocks, innerPart{Path: fmt.Sprintf("%s/body/%d", sp, i), Map: bm, Block: true})
+					}
+				}
 			}
-			out = append(out, part)
+			for _, part := range blocks {
+				if part.Map["type"] == "paragraph" {
+					part.Texts = []string{"content"}
+				}
+				out = append(out, part)
+			}
 		}
 	}
 	return out
@@ -209,50 +308,146 @@ func pairsInner(m map[string]any) []innerPart {
 // pairsInfo は pairs の箱の中の部品(はみ出しを対ごとに測る・layout の場所を決める)。
 type pairsInfo struct {
 	head *Spec // 見出しの行
-	list *Spec // 対の行の列
-	rows []pairRow
+	// headSubject・headResponse は見出しの行の中の2つの側の見出し。
+	headSubject, headResponse *Spec
+	list                      *Spec // 対の行の列
+	rows                      []pairRow
 }
 
-// pairRow は1つの対の行と、その2つの側の箱。
+// pairRow は1つの対の行と、その2つの側の箱。before は対の前に引いた罫線など、
+// 列の中で行の直前に置いた箱(無ければ nil。測るときに上端をずらす)。
 type pairRow struct {
 	row, subject, response *Spec
+	before                 *Spec
+	subjectParts           pairSideParts
+	responseParts          pairSideParts
+}
+
+// pairSideParts は見出しと複数のブロックの側の中の箱(layout の場所を決める)。
+// 1つのブロックの形の側では空。
+type pairSideParts struct {
+	title *Spec
+	body  []*Spec
+}
+
+// pairsStyle は pairs の組み方の見た目の差し替え口(テンプレートが部品を差し替える
+// ときの手。report.go)。零値は標準の組み方。
+type pairsStyle struct {
+	// headRole は側の見出し(列の題)の色の役割名("" なら text_primary)。
+	headRole string
+	// sideTitle は側の見出し(title)の箱(nil なら字の色の太字の本文)。
+	sideTitle func(t *Template, title Inline) *Spec
+	// mark は対の k 番目(0 から)の印の箱。subject の頭(左)に置く(nil なら置かない)。
+	mark func(t *Template, k int) *Spec
+	// between は2つの側の間の印の箱(nil なら置かない)。
+	between func(t *Template) *Spec
+	// rule は対の間の罫線の箱(nil なら引かない)。
+	rule func(t *Template) *Spec
+	// spacer は見出しの行で、印(mark・between)の幅だけ空ける箱を作る。
+	spacer func(t *Template, mark *Spec) *Spec
 }
 
 // pairsComponent は pairs の組み方:見出しの行の下に、対ごとに1つの行を置く。
 // 行の2つの側は同じ幅(grow 1・basis 0)で、交差軸は STRETCH なので上端がそろい、
 // 行の高さは高い方の側で決まる。見出しの行も同じ幅の割り方なので、側の題が側の
-// 真上に来る。
+// 真上に来る。見出しと複数のブロックの側は、見出しと body を素直に縦に積む。
 func pairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
-	return pairsHeaded(ctx, b, "text_primary")
+	return pairsStyled(ctx, b, pairsStyle{})
 }
 
-// pairsHeaded は pairsComponent の側の見出しの色の役割名を headRole にしたもの
-// (テンプレートが部品を差し替えるときの手。report.go)。
-func pairsHeaded(ctx componentContext, b *IRBlock, headRole string) (*Spec, error) {
+// pairsStyled は pairsComponent の見た目を st で差し替えたもの。
+func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error) {
 	t := ctx.t
 	p, err := readPairs(b.Raw)
 	if err != nil {
 		return nil, err
 	}
-	side := func(s *Spec) *Spec { return Col([]*Spec{s}, WithGrow(1), WithBasis(0)) }
-	row := func(a, b *Spec) *Spec { return Row([]*Spec{a, b}, tokGap("columnGap")) }
+	headRole := st.headRole
+	if headRole == "" {
+		headRole = "text_primary"
+	}
+	grow := func(kids []*Spec, opts ...SpecOpt) *Spec {
+		return Col(kids, append([]SpecOpt{WithGrow(1), WithBasis(0)}, opts...)...)
+	}
+	// row は対の行(見出しの行も同じ割り方):印・subject・間の印・response。
+	row := func(mark, a, between, b *Spec) *Spec {
+		kids := []*Spec{a, b}
+		if between != nil {
+			kids = []*Spec{a, between, b}
+		}
+		if mark != nil {
+			kids = append([]*Spec{mark}, kids...)
+		}
+		return Row(kids, tokGap("columnGap"))
+	}
+	marks := func(k int) (*Spec, *Spec) {
+		var m, bt *Spec
+		if st.mark != nil {
+			m = st.mark(t, k)
+		}
+		if st.between != nil {
+			bt = st.between(t)
+		}
+		return m, bt
+	}
 	info := &pairsInfo{}
-	info.head = row(
-		side(t.text(p.Subject, "columnTitle", headRole, true)),
-		side(t.text(p.Response, "columnTitle", headRole, true)))
+	info.headSubject = grow([]*Spec{t.text(p.Subject, "columnTitle", headRole, true)})
+	info.headResponse = grow([]*Spec{t.text(p.Response, "columnTitle", headRole, true)})
+	hm, hb := marks(0)
+	if hm != nil {
+		hm = st.spacer(t, hm)
+	}
+	if hb != nil {
+		hb = st.spacer(t, hb)
+	}
+	info.head = row(hm, info.headSubject, hb, info.headResponse)
+	side := func(k int, name string, sd *irPairSide) (*Spec, pairSideParts, error) {
+		var parts pairSideParts
+		var kids []*Spec
+		if sd.Grouped && sd.Title != nil {
+			if st.sideTitle != nil {
+				parts.title = st.sideTitle(t, sd.Title)
+			} else {
+				parts.title = t.text(sd.Title, "body", "text_primary", true)
+			}
+			kids = append(kids, parts.title)
+		}
+		for i := range sd.Body {
+			where := fmt.Sprintf("pairs[%d]: %s", k, name)
+			if sd.Grouped {
+				where = fmt.Sprintf("pairs[%d]: %s: body[%d]", k, name, i)
+			}
+			s, err := t.buildBlockIn(ctx.within(where), &sd.Body[i])
+			if err != nil {
+				return nil, parts, fmt.Errorf("%s: %w", where, err)
+			}
+			if sd.Grouped {
+				parts.body = append(parts.body, s)
+			}
+			kids = append(kids, s)
+		}
+		if !sd.Grouped {
+			return grow(kids), parts, nil
+		}
+		return grow(kids, tokGap("blockGap"), nestedSlack()), parts, nil
+	}
 	var rows []*Spec
 	for k := range p.Pairs {
 		pr := &p.Pairs[k]
-		s, err := t.buildBlockIn(ctx.within(fmt.Sprintf("pairs[%d]: subject", k)), &pr.Subject)
-		if err != nil {
-			return nil, fmt.Errorf("pairs[%d]: subject: %w", k, err)
+		var pi pairRow
+		var err error
+		if pi.subject, pi.subjectParts, err = side(k, "subject", &pr.Subject); err != nil {
+			return nil, err
 		}
-		r, err := t.buildBlockIn(ctx.within(fmt.Sprintf("pairs[%d]: response", k)), &pr.Response)
-		if err != nil {
-			return nil, fmt.Errorf("pairs[%d]: response: %w", k, err)
+		if pi.response, pi.responseParts, err = side(k, "response", &pr.Response); err != nil {
+			return nil, err
 		}
-		pi := pairRow{subject: side(s), response: side(r)}
-		pi.row = row(pi.subject, pi.response)
+		m, bt := marks(k)
+		pi.row = row(m, pi.subject, bt, pi.response)
+		if k > 0 && st.rule != nil {
+			pi.before = st.rule(t)
+			rows = append(rows, pi.before)
+		}
 		info.rows = append(info.rows, pi)
 		rows = append(rows, pi.row)
 	}
@@ -296,6 +491,10 @@ func measurePairs(block *Spec, info *pairsInfo, top, width, capacity float64) []
 	for k, r := range info.rows {
 		if k > 0 {
 			cursor += info.list.Gap
+		}
+		if r.before != nil {
+			bh, _ := requiredMeasure(r.before, width)
+			cursor += bh + info.list.Gap
 		}
 		h, n := requiredMeasure(r.row, width)
 		sh, _ := requiredMeasure(r.subject, r.subject.Box.Width)
@@ -353,7 +552,7 @@ func pairOverflowWarnings(o BlockMeasure, capacity, need float64) []string {
 
 // pairsBlock は ::::pairs 見出し | 見出し … :::: を IR の pairs にする。中には
 // :::subject と :::response を交互に書き、1組が1つの対になる。側の中身は段落・
-// 箇条・:::quote のどれか1つ。
+// 箇条・:::quote のどれか1つか、見出しの文(:::subject 見出し)と複数のブロック(pairSide)。
 func (p *mdParser) pairsBlock(f *mdFenceBlk, path string) any {
 	attrs := p.fenceAttrs(f, path, []string{"variant"})
 	ok := true
@@ -391,7 +590,6 @@ func (p *mdParser) pairsBlock(f *mdFenceBlk, path string) any {
 		sp := pp + "/" + sf.name
 		p.mark(sp, sf.line)
 		p.fenceAttrs(sf, sp, nil)
-		p.noLabel(sf, sp)
 		side := p.pairSide(sf, sp)
 		if side == nil {
 			ok = false
@@ -427,43 +625,78 @@ func (p *mdParser) pairsBlock(f *mdFenceBlk, path string) any {
 	return b
 }
 
-// pairSide は :::subject・:::response の中のただ1つの段落・箇条・:::quote を IR の
-// ブロックにする。
+// pairSide は :::subject・:::response の中を IR の側にする。見出しの文(:::subject 見出し)が
+// 無く、中がただ1つの段落・箇条・:::quote なら1つのブロックの形。見出しの文があるか、
+// 中に複数のブロック・画像・表があれば、見出しと複数のブロックの形({title?, body})。
+// body に置けるのは段落・箇条・:::quote・画像・表の1〜4個。
 func (p *mdParser) pairSide(f *mdFenceBlk, path string) any {
-	var out any
-	n := 0
+	var allowed []*mdItem
+	bad := false
 	for _, it := range f.items {
-		n++
-		if n > 1 {
-			p.fail(it.line, 1, path, codeMisplaced, fmt.Sprintf(":::%s の中には段落・箇条・:::quote を1つだけ書けます", f.name), nil,
-				"文を足すなら同じ段落か箇条に入れるか、対を分けてください")
+		ok := it.kind == mdPara || it.kind == mdList || it.kind == mdTable || (it.kind == mdFence && it.fence.name == "quote")
+		if !ok {
+			what := "コードブロック"
+			if it.kind == mdFence {
+				what = ":::" + it.fence.name
+			}
+			p.fail(it.line, 1, path, codeMisplaced, fmt.Sprintf(":::%s の中に %s は書けません", f.name, what), []string{"段落", "箇条", "quote", "画像", "表"}, "")
+			bad = true
 			continue
 		}
-		switch {
-		case it.kind == mdPara:
-			out = obj("type", "paragraph", "content", p.parseInline(it.text.trimBR(), path+"/content"))
-		case it.kind == mdList:
-			out = obj("type", "points", "items", p.listItems(it.items, path+"/items", true))
-		case it.kind == mdFence && it.fence.name == "quote":
-			out = p.quoteBlock(it.fence, path)
-		default:
-			what := "表"
-			switch it.kind {
-			case mdFence:
-				what = ":::" + it.fence.name
-			case mdCode:
-				what = "コードブロック"
-			}
-			p.fail(it.line, 1, path, codeMisplaced, fmt.Sprintf(":::%s の中に %s は書けません", f.name, what), []string{"段落", "箇条", "quote"}, "")
-		}
+		allowed = append(allowed, it)
 	}
-	if n == 0 {
+	if len(f.items) == 0 {
 		p.fail(f.line, 1, path, codeMisplaced, fmt.Sprintf(":::%s の中が空です", f.name), nil, "")
-	}
-	if n != 1 {
 		return nil
 	}
-	return out
+	if len(allowed) > pairSideBodyMax {
+		p.fail(allowed[pairSideBodyMax].line, 1, path+"/body", codeMisplaced,
+			fmt.Sprintf(":::%s の中にはブロックを %d 個まで書けます(いま %d 個)", f.name, pairSideBodyMax, len(allowed)), nil,
+			"文を足すなら同じ段落か箇条に入れるか、対を分けてください")
+		bad = true
+	}
+	if bad {
+		return nil
+	}
+	if len(f.label.r) == 0 && len(allowed) == 1 {
+		it := allowed[0]
+		switch {
+		case it.kind == mdPara:
+			if _, img := scanImages(it.text); !img {
+				return obj("type", "paragraph", "content", p.parseInline(it.text.trimBR(), path+"/content"))
+			}
+		case it.kind == mdList:
+			pts := obj("type", "points", "items", p.listItems(it.items, path+"/items", true))
+			if p.listOrdered(it.items, path+"/items") {
+				pts.set("ordered", true)
+			}
+			return pts
+		case it.kind == mdFence:
+			return p.quoteBlock(it.fence, path)
+		}
+	}
+	side := &jobj{}
+	if len(f.label.r) > 0 {
+		side.set("title", p.parseInline(f.label, path+"/title"))
+	}
+	body := p.blocks(allowed, path+"/body")
+	for k, b := range body {
+		if o, ok := b.(*jobj); ok && len(o.vals) > 0 && o.vals[0] == "gallery" {
+			bp := fmt.Sprintf("%s/body/%d", path, k)
+			p.fail(p.lines[bp], 1, bp, codeMisplaced, fmt.Sprintf(":::%s の中には画像を1枚ずつしか置けません", f.name), nil, "")
+			return nil
+		}
+		if o, ok := b.(*jobj); ok && slices.Contains(o.keys, "continues") {
+			bp := fmt.Sprintf("%s/body/%d", path, k)
+			p.fail(p.lines[bp], 1, bp+"/continues", codeMisplaced, "続きの表(continues)は対の側の中に置けません", nil, "続きの表は本文に置きます")
+			return nil
+		}
+	}
+	if len(body) != len(allowed) {
+		return nil // 中のブロックの誤りは p.blocks が場所つきで返した
+	}
+	side.set("body", body)
+	return side
 }
 
 // splitPipes は見出しの文を | で分ける(\| は文の中の |)。前後の空白は外す。

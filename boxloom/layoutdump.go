@@ -209,7 +209,7 @@ func layoutDeck(deck *IRDeck, opt BuildOptions, lines lineMap) (*LayoutDump, err
 		if i := b.SlideIndex; i != tocSlide {
 			sp, typ = fmt.Sprintf("/slides/%d", i), deck.Slides[i].Type
 		}
-		d := &layoutDumper{slide: sp, lines: lines, body: b.Body, groups: map[*Spec]columnInfo{}, pairParts: map[*Spec]string{}}
+		d := &layoutDumper{slide: sp, lines: lines, body: b.Body, groups: map[*Spec]columnInfo{}, pairPaths: map[*Spec]string{}}
 		out.Slides = append(out.Slides, LayoutSlide{Path: sp, Line: lines.Line(sp), Type: typ, Root: d.node(b.Root, sp)})
 	}
 	return out, nil
@@ -221,8 +221,9 @@ type layoutDumper struct {
 	body  *Spec
 	// groups は並列のまとまりの箱(まとまり全体・本文の列)→ そのまとまり。
 	groups map[*Spec]columnInfo
-	// pairParts は対の並びの中の箱 → "list"(対の行の列)か "row"(見出しの行・対の行)。
-	pairParts map[*Spec]string
+	// pairPaths は対の並びの中の箱 → その IR の場所(見出しの行・側の見出し・対の行・
+	// 側・側の見出しと body のブロック)。印・罫線など表に無い箱は親の場所を継ぐ。
+	pairPaths map[*Spec]string
 }
 
 // round2 は 0.01pt に丸める(読みやすさのため。PPTX の EMU とは 127 未満の差)。
@@ -349,23 +350,31 @@ func (d *layoutDumper) childPath(s *Spec, i int, c *Spec, path string) string {
 		}
 	}
 	if s.pairs != nil {
-		d.pairParts[s.pairs.list], d.pairParts[s.pairs.head] = "list", "row"
-		for _, r := range s.pairs.rows {
-			d.pairParts[r.row] = "row"
+		pi := s.pairs
+		d.pairPaths[pi.head] = path + "/headings"
+		d.pairPaths[pi.headSubject] = path + "/headings/subject"
+		d.pairPaths[pi.headResponse] = path + "/headings/response"
+		for k, r := range pi.rows {
+			pp := fmt.Sprintf("%s/pairs/%d", path, k)
+			d.pairPaths[r.row] = pp
+			for _, sd := range []struct {
+				spec  *Spec
+				name  string
+				parts pairSideParts
+			}{{r.subject, "subject", r.subjectParts}, {r.response, "response", r.responseParts}} {
+				sp := pp + "/" + sd.name
+				d.pairPaths[sd.spec] = sp
+				if sd.parts.title != nil {
+					d.pairPaths[sd.parts.title] = sp + "/title"
+				}
+				for i, b := range sd.parts.body {
+					d.pairPaths[b] = fmt.Sprintf("%s/body/%d", sp, i)
+				}
+			}
 		}
-		if c == s.pairs.head {
-			return path + "/headings"
-		}
-		return path
 	}
-	switch d.pairParts[s] {
-	case "list":
-		return fmt.Sprintf("%s/pairs/%d", path, i)
-	case "row":
-		if i == 0 {
-			return path + "/subject"
-		}
-		return path + "/response"
+	if p, ok := d.pairPaths[c]; ok {
+		return p
 	}
 	if col, ok := d.groups[s]; ok {
 		switch {

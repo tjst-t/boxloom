@@ -864,8 +864,9 @@ var warnBlockRe = regexp.MustCompile(`^body\[([0-9]+)\]: (.*)$`)
 
 var warnColumnRe = regexp.MustCompile(`^columns\[([0-9]+)\]: body\[([0-9]+)\]: (.*)$`)
 
-// warnPairRe は対の並びの中の場所(pairs[K]: か pairs[K]: subject: )。
-var warnPairRe = regexp.MustCompile(`^pairs\[([0-9]+)\]: (?:(subject|response): )?(.*)$`)
+// warnPairRe は対の並びの中の場所(pairs[K]: か pairs[K]: subject: か、見出しと複数の
+// ブロックの側の pairs[K]: subject: body[I]: )。
+var warnPairRe = regexp.MustCompile(`^pairs\[([0-9]+)\]: (?:(subject|response): (?:body\[([0-9]+)\]: )?)?(.*)$`)
 
 var warnShapeItemRe = regexp.MustCompile(`^shapes: items\[([0-9]+)\]`)
 
@@ -967,9 +968,12 @@ func warningIssue(file, w string) Issue {
 		}
 		// 対の並びの中(pairs[K]: … か pairs[K]: subject: …)。
 		if pm := warnPairRe.FindStringSubmatch(msg); pm != nil {
-			path, msg = path+"/pairs/"+pm[1], pm[3]
+			path, msg = path+"/pairs/"+pm[1], pm[4]
 			if pm[2] != "" {
 				path += "/" + pm[2]
+			}
+			if pm[3] != "" {
+				path += "/body/" + pm[3]
 			}
 		}
 		// shapes の警告は、最初に名指しした図形まで指す。
