@@ -2717,7 +2717,7 @@
       "number": 119,
       "kind": "task",
       "title": "印つきの塊の並び(topics):縦に並ぶ題つきの塊、塊ごとに短い印",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2729,7 +2729,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T06:10:07.478Z",
-      "updatedAt": "2026-11-13T06:10:07.478Z",
+      "updatedAt": "2026-11-13T06:28:15.899Z",
       "closedAt": null,
       "extra": {}
     },
