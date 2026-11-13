@@ -1938,7 +1938,7 @@
       "number": 83,
       "kind": "task",
       "title": "report を読む資料の見た目に直す(元の資料の値・リードを上の見出しに。骨組みの差し替えを report が持つ)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [
         "skeleton-components"
@@ -1952,7 +1952,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:28:26.162Z",
-      "updatedAt": "2026-11-13T02:50:17.845Z",
+      "updatedAt": "2026-11-13T02:59:54.637Z",
       "closedAt": null,
       "extra": {}
     },
