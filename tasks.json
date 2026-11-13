@@ -3167,7 +3167,7 @@
       "number": 140,
       "kind": "bug",
       "title": "表の分け方の案が他のブロックを数えず、-fit が続きの表を詰めない",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3179,7 +3179,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T09:24:37.055Z",
-      "updatedAt": "2026-11-13T09:24:37.055Z",
+      "updatedAt": "2026-11-13T09:25:01.516Z",
       "closedAt": null,
       "extra": {}
     },
