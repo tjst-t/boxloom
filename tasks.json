@@ -2801,7 +2801,7 @@
       "number": 123,
       "kind": "task",
       "title": "表の行の群を2列目以降にも:縦に結合する列を名前で指す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2813,7 +2813,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T06:10:07.478Z",
-      "updatedAt": "2026-11-13T06:10:07.478Z",
+      "updatedAt": "2026-11-13T06:50:38.301Z",
       "closedAt": null,
       "extra": {}
     }
