@@ -68,8 +68,9 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 - `pairs` は標準の組み方の見た目を差し替えたもの(`pairsStyled` に `reportPairsStyle`。#87):
   対ごとに A・B・C… の四角い印(一辺 `space(12)`=24pt・基調色の地・白(`bg`)の字)を subject の
   頭に、2つの側の間に丸い山形の印(同じ大きさ)を置き、対の間に罫線(`grid`・高さ
-  `tableRuleWidth`)を引く。側の見出し(`title`)は薄い面(`card`=F1F2F1)の帯の上に字の色・
-  太字の本文で書く。印は飾りの葉(`ornament`)で、横の余り(`spare-width`)には数えない。
+  `tableRuleWidth`)を引く。対の行と罫線の間は `space(2)`=4pt ずつ(対の行の間は約 8.75pt。
+  `pairsStyle.rowGap`、#103)。側の見出し(`title`)は帯(面)を置かず、基調色(`accent`)の
+  太字の本文1行で書く(#103)。印は飾りの葉(`ornament`)で、横の余り(`spare-width`)には数えない。
 - 表(`table`、#88)を `tableStyled` に report の見た目(`reportTableLook`)を渡して組む。
   見出しの行は面を塗らず、字を基調色(`accent`)にし、下に基調色の罫線(`tableHeaderRuleWidth`
   1.5pt)を引く。本体の行も面を塗らず、行の間は灰色(`grid`)の細い罫線(`tableRuleWidth`
@@ -93,7 +94,7 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
   色は描くときに役割名で引く。文に添える印なので、横の余り(`spare-width`)には数えない
   (`spare.go` の `ornament`)。
 - 試験は `TestReportContentHeader`・`TestReportOverrideIsOnlyReport`・`TestReportColumnHeadings`・
-  `TestReportPairsMarks`・`TestReportTableLook`・`TestReportCallouts`、#100 の
+  `TestReportPairsMarks`・`TestReportTableLook`・`TestReportCallouts`、#103 の `TestReportPairsTableSpacing`、#100 の
   `TestReportLeadNotBold`・`TestReportTableGroupVertical`・`TestReportImageCaptionAbove`。
 
 **色(theme)**:測った色を、コアの役割名に当てた(役割名は増やしていない)。
@@ -141,7 +142,7 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 | `sectionTitle` / `statementText` | 36 / 36 | 32 / 28 |
 | `statValue` / `statUnit` / `quoteMark` | 36 / 16 / 36 | 32 / 14 / 32 |
 | `cardPadding` / `columnGap` | 20 / 32 | 12 / 24 |
-| `tableCellPaddingX` / `tableCellPaddingY` / `tableRuleWidth` | 8 / 4 / 1 | 6 / 4 / 0.75 |
+| `tableCellPaddingX` / `tableCellPaddingY` / `tableRuleWidth` | 8 / 4 / 1 | 4 / 2 / 0.75 |
 | `tableHeaderRuleWidth` / `calloutMark`(report の組み方だけが使う) | 1 / 24 | 1.5 / 24 |
 
 頁番号は標準のフッターのまま右下に `small`(10pt)・`text_muted`(7F7F7F)で置く。列の見出しは
@@ -177,6 +178,20 @@ report の Gantt は月の格子(年と月の2段の見出し)・山形の帯で
 ブロックの間の空き全般に効くので、examples の deck が report ではみ出さないことを確かめた。
 この値は本文の行の高さからの見積もりで、元の PDF をこのタスクで測り直してはいない
 (サンプルはリポジトリの外)。
+
+**対の並びと表の余白(#103)**:#82 の2回目の比較で、字を小さくしても収まらない上乗せが
+対の並び(対ごとの空き・側の見出しの灰の帯)と表のセルの内側の余白に残った。元の資料はこの
+タスクの作業場所に無く測り直せなかったので、タスクの目安の値に合わせた(元の資料で測ったら
+ここを直す)。
+
+| 箇所 | 前 | 今 | 目安 |
+|---|---|---|---|
+| 対の行の間(罫線の上と下) | `blockGap` 18 ずつ(計 約 36.75pt) | `space(2)` 4 ずつ(計 約 8.75pt) | 8〜12pt |
+| 側の見出し | 薄い面(`card`)の帯・左右 8pt・上下 4pt の余白・字の色 | 帯なし・基調色の太字の1行 | 帯でなく基調色の字だけ |
+| 表のセルの余白(左右 / 上下) | 6 / 4 | 4 / 2 | 左右 4〜6・上下 2〜4 |
+
+試験 `TestReportPairsTableSpacing`:架空の対(見出しつきの側の3行)の本文の要る高さは
+292.5 → 212.5pt、架空の表(見出し+6行)は 159.9 → 131.9pt。
 
 **測った値**:本文の領域は、リードの無いスライドで約 386pt(14pt の本文で約 20 行。行の高さ
 約 18.9pt)、1行のリード文と1行の題で約 357pt(約 18 行)。1行は全角で約 58 字、題は 16pt で

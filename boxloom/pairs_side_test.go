@@ -297,7 +297,7 @@ func TestPairsSideBodyFallback(t *testing.T) {
 }
 
 // report の pairs:対ごとに A・B・C の四角い印(基調色・白い字)を subject の頭に、側の
-// 間に丸い山形の印を置き、対の間に罫線(grid)を引く。側の見出しは薄い面(card)の帯。
+// 間に丸い山形の印を置き、対の間に罫線(grid)を引く。側の見出しは帯を置かず基調色の字だけ。
 // dark・light にはどれも無い。
 func TestReportPairsMarks(t *testing.T) {
 	md, err := os.ReadFile(sideBodyMD)
@@ -351,8 +351,22 @@ func TestReportPairsMarks(t *testing.T) {
 			if gridRects != c.n-1 {
 				t.Errorf("%s: %d rules between pairs, want %d", c.name, gridRects, c.n-1)
 			}
-			if c.name == "side-body" && strings.Count(xml, `<a:srgbClr val="`+card+`"/>`) < 2 {
-				t.Errorf("%s: side titles have no band", c.name)
+			// 側の見出しは帯(面)を置かず、基調色の字だけ(#103)。
+			if c.name == "side-body" {
+				for _, title := range []string{"家賃と広さが合わない", "持ち主と借り手が出会わない"} {
+					i := strings.Index(xml, `>`+title+`</a:t>`)
+					if i < 0 {
+						t.Errorf("%s: no side title %q", c.name, title)
+						continue
+					}
+					head := xml[strings.LastIndex(xml[:i], "<p:sp>"):i]
+					if strings.Contains(head, `val="`+card+`"`) {
+						t.Errorf("%s: side title %q has a band", c.name, title)
+					}
+					if !strings.Contains(head, `val="`+accent+`"`) {
+						t.Errorf("%s: side title %q is not in the accent color", c.name, title)
+					}
+				}
 			}
 		}
 	}

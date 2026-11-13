@@ -351,6 +351,9 @@ type pairsStyle struct {
 	rule func(t *Template) *Spec
 	// spacer は見出しの行で、印(mark・between)の幅だけ空ける箱を作る。
 	spacer func(t *Template, mark *Spec) *Spec
+	// rowGap は対の行の間(罫線を引くなら罫線の上と下それぞれ)の空きのトークン
+	// ("" なら blockGap)。
+	rowGap string
 }
 
 // pairsComponent は pairs の組み方:見出しの行の下に、対ごとに1つの行を置く。
@@ -465,7 +468,11 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 		info.rows = append(info.rows, pi)
 		rows = append(rows, pi.row)
 	}
-	info.list = Col(rows, tokGap("blockGap"), noShrink(), nestedSlack())
+	rowGap := st.rowGap
+	if rowGap == "" {
+		rowGap = "blockGap"
+	}
+	info.list = Col(rows, tokGap(rowGap), noShrink(), nestedSlack())
 	return Col([]*Spec{info.head, info.list}, tokGap("itemGap"), measurePairRows(info), nestedSlack()), nil
 }
 

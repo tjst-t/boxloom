@@ -333,13 +333,18 @@ func (d reportColumnDivider) Render(ctx RenderContext, box LBox) {
 // reportPairMarkSize は report の対の印(A・B・C の四角・側の間の丸)の一辺(段の刻み。24pt)。
 var reportPairMarkSize = spaceStep(12)
 
-// reportPairsStyle は report の pairs の見た目。
+// reportPairRowGap は report の対の行と罫線の間の空き(段の刻み。4pt。#103)。罫線の上と
+// 下に取るので、対の行の間は 4 + 0.75 + 4 ≈ 8.75pt(元の資料の目安 8〜12pt)。
+var reportPairRowGap = spaceStep(2)
+
+// reportPairsStyle は report の pairs の見た目。側の見出しは帯(面)を置かず、基調色の
+// 太字の本文1行で書く(#103。元の資料はただの1行)。
 var reportPairsStyle = pairsStyle{
 	headRole: "accent",
 	sideTitle: func(t *Template, title Inline) *Spec {
-		return Col([]*Spec{t.text(title, "body", "text_primary", true)},
-			tokBackground("card"), tokPadXY(spaceStep(4), spaceStep(2)))
+		return t.text(title, "body", "accent", true)
 	},
+	rowGap: reportPairRowGap,
 	mark: func(t *Template, k int) *Spec {
 		return SubsystemNode(&pairMark{kind: pairMarkLetter, letter: pairLetter(k), fontSize: t.Values.Body},
 			tokWidth(reportPairMarkSize), tokHeight(reportPairMarkSize))
