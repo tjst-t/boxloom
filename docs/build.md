@@ -190,7 +190,7 @@ go run ./cmd/boxloom layout -template dark ../examples/ir/demo-deck.json
 - 文字の葉は `text`・`fontSize`、装飾つきなら `runs`(塊ごとの文字・色・太字・大きさ・
   印・折らない・文の切れ目で折る `phrase`・欄)、装飾なしなら `color`・`bold`。`textAlign`・`anchor`・`placeholder`。
 - 計測の印は `marks`:`irType`・`cardRow`・`columnGroups`(まとまりの数)・`keepLine`・
-  `nestedSlack`・`list`・`card`。
+  `nestedSlack`・`noShrink`・`list`・`card`。
 - サブシステム(表・画像・図・グラフ・Gantt)は `subsystem` に名前と、割り当てられた幅で
   尋ねた申告(`natural`・`min`・`max`・`fixedAspect`)と、描いた矩形 `draw` だけ。中身は出さない。
 - 部品は木に数と色を書かず、**トークン**(値の表の名前・段の刻み `space(n)`・`type(n)`・

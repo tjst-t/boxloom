@@ -277,7 +277,9 @@ func contentFrame(ctx skeletonContext) (*Spec, error) {
 	if err != nil {
 		return nil, err
 	}
-	kids := []*Spec{head, body}
+	// 本文が収まらないときも頭(題・リード文)は縮めない。はみ出しは本文の箱の中に
+	// 閉じ、layout-overflow の警告で知らせる(#96)。
+	kids := []*Spec{apply(head, []SpecOpt{noShrink()}), body}
 	return ctx.t.pageFrame(ctx, kids)
 }
 
@@ -288,15 +290,16 @@ func (t *Template) pageFrame(ctx skeletonContext, kids []*Spec) (*Spec, error) {
 	if err != nil {
 		return nil, err
 	}
+	// 出典とフッターは本文が収まらなくても縮めない(#96)。
 	if src != nil {
-		kids = append(kids, src)
+		kids = append(kids, apply(src, []SpecOpt{noShrink()}))
 	}
 	foot, err := ctx.part(skelFooter)
 	if err != nil {
 		return nil, err
 	}
 	if foot != nil {
-		kids = append(kids, foot)
+		kids = append(kids, apply(foot, []SpecOpt{noShrink()}))
 	}
 	return Col(kids, tokGap("sectionGap"), tokPadXY("pagePadding", "pagePaddingY"), tokBackground("bg")), nil
 }

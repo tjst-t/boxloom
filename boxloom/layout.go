@@ -97,6 +97,9 @@ type Spec struct {
 	// nestedSlack は、この箱が列の中で足りないとき、中のサブシステムの縮められる
 	// 分を Phase3a で先に返すか(並列のまとまりで、画像を文字より先に縮めるため)。
 	nestedSlack bool
+	// noShrink は、列・行が足りないとき、この箱を縮めない印(骨組みの頭・出典・
+	// フッター)。足りない分は印の無い兄弟(本文の箱)だけが縮めて受け持つ。
+	noShrink bool
 	// keepLine は、1行に収めたい文字の葉(Keep の塊だけの葉)の名前(警告の文に
 	// 使う。例 "stat: items[1]")。幅に入りきらなければ stat-value の警告(keepline.go)。
 	keepLine string
@@ -183,6 +186,11 @@ func keepLine(name string) SpecOpt { return func(s *Spec) { s.keepLine = name } 
 
 // nestedSlack は箱の属性: 列の中で足りないとき、中の図を文字より先に縮める。
 func nestedSlack() SpecOpt { return func(s *Spec) { s.nestedSlack = true } }
+
+// noShrink は箱の属性: 親の主軸が足りないとき、この箱は自然の大きさのまま縮めない
+// (Min を自然の大きさにする)。足りない分は印の無い兄弟だけで縮める。骨組みの頭・
+// 出典・フッターに付け、本文のはみ出しを本文の箱の中に閉じる(#96)。
+func noShrink() SpecOpt { return func(s *Spec) { s.noShrink = true } }
 
 // fromIR は箱を作った IR の場所(layout の出力の path。読むのは layoutdump.go だけで、
 // 配置・計測・書き出しは見ない)。rel はスライドからの相対("title" など)か、
@@ -556,8 +564,20 @@ func computeLayout(s *Spec, x, y, width, height float64) {
 			}
 		}
 	case free < 0 && basisTotal > 0:
+		// 縮めない印(noShrink)の子は basis のまま、足りない分は印の無い子が
+		// basis の比で受け持つ。印の無い木では従来と同じ(shrinkTotal == basisTotal)。
+		shrinkTotal := 0.0
+		for i, c := range children {
+			if !c.noShrink {
+				shrinkTotal += basisSizes[i]
+			}
+		}
 		for i, b := range basisSizes {
-			v := b + free*(b/basisTotal)
+			if children[i].noShrink || shrinkTotal <= 0 {
+				mainSizes[i] = b
+				continue
+			}
+			v := b + free*(b/shrinkTotal)
 			if v < 0 {
 				v = 0
 			}

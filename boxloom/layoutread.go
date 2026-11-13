@@ -343,6 +343,9 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 		if m.NestedSlack {
 			opts = append(opts, nestedSlack())
 		}
+		if m.NoShrink {
+			opts = append(opts, noShrink())
+		}
 		if m.List {
 			opts = append(opts, asList())
 		}
