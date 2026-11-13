@@ -87,6 +87,20 @@ go run ./cmd/boxloom                                                      # 従�
   スライドに移す・削ること。容量の `fit` は `fit.emergency[K]`。`-strict` なら誤り)。最後の非常用の段でも
   入らなければ元の組み方のまま `layout-overflow`(図の崩れ)が残り、`-fit` の build は誤り(`-allow-overflow`
   なら作る)。同梱の dark・light は本文 10→8pt の1段、report は 11→10→9pt の2段。
+- **`-fit` の列ごとの分け(#152、`fit_split_columns.go`)**:非常用の段でも入らない本文のスライドが2列以上の
+  columns を持てば、誤りにする前に列ごとに続きのスライドに分ける。列の並び順のまま(role=main の列を先には
+  しない)1列を1枚にし、各列は全幅で組む(列の題があればその枚に。flow の印は描かない)。columns の前の
+  ブロックは最初の列の枚、後のブロックは最後の列の枚、columns の間のブロックは前の列の枚に付く。分けた各枚は
+  今の `-fit` の順で組み直す(元の密度 → dense → `fit.shrink` → `fit.emergency` のうち、分けずに入る最初の段。
+  どれでも入らなければその枚を上の分けで分ける)ので、段は枚ごとに違ってよい。題・リード・出典・marker・
+  「n/m」・2枚目からの題・ノートは上の分けと同じ。知らせは `slide N: [FIT-SPLIT INFO] the columns do not fit even
+  at the template's emergency -fit step, so -fit split them by column into 2 slides (…): slide 2 of 2 starts at
+  /slides/2/body/0/columns/1; steps: slide 1 at fit.shrink[0], slide 2 at dense. …`(`check -fit` では info の
+  `fit-split`、容量は枚ごとに `split` と `fit`)。非常用の段で組んだ枚には `fit-emergency` も出る。入る columns・
+  非常用の段で入る columns は分けない。1列でも全幅で入らなければ列ごとには分けず、元の組み方のまま誤り。
+  そのとき(列ごとの分けに限らず `-fit` でも収まらなかったスライド)の `layout-overflow`・図の崩れの hint は、
+  最後の段で組んでも「あと N pt 足りません」と直し方(columns の列を別のスライドに分ける・図を別のスライドに
+  移す・文を削る)で、容量の `fitShort` が同じ N。
 - **`-fit` の広げ(#128)**:同じ `-fit` で、収まっていて fill-ratio が値の表の `fillRatioMin` を
   下回る本文のスライド(normal のものだけ。dense は広げない)は、梯子 `fit.grow` を
   `fit.grow[0]` → `fit.grow[1]` と上る。各段で組み直して詰めと同じ測りではみ出し・図の崩れと fill-ratio を見て、

@@ -46,7 +46,12 @@ func fitEmergencyWarning(c *fitChoice, parts int) string {
 		what = "a figure breaks"
 	}
 	how := "it cannot be split"
-	if parts > 0 {
+	if c.byColumn {
+		how = "it was split by column (#152) and this column does not fit a slide otherwise"
+		if parts > 0 {
+			how = fmt.Sprintf("it was split by column and this column was split into %d slides", parts)
+		}
+	} else if parts > 0 {
 		how = fmt.Sprintf("one part does not fit a slide even when split, so it was split into %d slides", parts)
 	} else if len(c.group) > 1 {
 		how = fmt.Sprintf("the continued table (slides %d-%d) is not split", c.group[0], c.group[len(c.group)-1])

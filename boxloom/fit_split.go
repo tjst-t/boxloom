@@ -44,6 +44,13 @@ type slideSplit struct {
 	choice *fitChoice // 組んだ段(元の密度のままなら nil)
 	step   string     // 段の名前(元の密度のままなら "normal" か "dense")
 	values FitValues  // その段の本文の字・blockGap(知らせの文)
+	// stepLead はこの枚が段の警告(fit-emergency)を出すか(同じ段で組んだ枚の最初)。
+	stepLead bool
+	// byColumn は列ごとに分けた枚(#152。fit_split_columns.go)。columnSteps は各枚の段、
+	// parts はこの枚を含む列の枚をさらに分けた枚数(分けていなければ 0)。
+	byColumn    bool
+	columnSteps []string
+	parts       int
 }
 
 // minParts は pairs・topics の数の下限:分けた切れ端(piece)は1つでもよい。
@@ -420,8 +427,22 @@ func (t *Template) splitSlide(d *IRDeck, i int) ([]IRSlide, error) {
 		}
 	}
 	us, err := splitUnits(s)
-	if err != nil || len(us) < 2 {
+	if err != nil {
 		return nil, err
+	}
+	if len(us) < 2 {
+		// 1つの単位だけ:非常用の段で分けずに入るなら fitGroup が組む。入らなければ
+		// 列ごとに分ける(#152)。
+		for _, st := range t.emergencySteps() {
+			ms, err := t.measureFitGroup(d, []int{i}, st.set)
+			if err != nil || ms == nil {
+				return nil, err
+			}
+			if !ms[0].bad() {
+				return nil, nil
+			}
+		}
+		return t.splitByColumns(d, i, over, broken)
 	}
 	// pieces は plan で分けた枚を段 st(梯子の k 段目)で組んだもの。
 	pieces := func(k int, st fitStepTry, plan [][2]int) ([]IRSlide, error) {
@@ -445,6 +466,7 @@ func (t *Template) splitSlide(d *IRDeck, i int) ([]IRSlide, error) {
 		for p := range pieces {
 			sp := pieces[p].split
 			sp.starts, sp.choice, sp.step = starts, choice, st.name
+			sp.stepLead = p == 0
 			sp.values = FitValues{Body: st.v.Body, BlockGap: st.v.BlockGap}
 		}
 		return pieces, nil
@@ -474,7 +496,8 @@ func (t *Template) splitSlide(d *IRDeck, i int) ([]IRSlide, error) {
 				return pieces(len(steps), st, plan)
 			}
 		}
-		return nil, nil
+		// 非常用の段でも入らない:列ごとに分ける(#152。columns が無ければ nil)。
+		return t.splitByColumns(d, i, over, broken)
 	}
 	for k, st := range steps {
 		plan := want
@@ -546,9 +569,9 @@ func fitSplitWarning(sp *slideSplit) string {
 
 // splitWarnRe は警告の文の本文の中の場所(body[N]: の後に rows[K]・items[K]・pairs[K]・
 // topics[K] が続くこともある)。
-var splitWarnRe = regexp.MustCompile(`(^|\] )body\[([0-9]+)\]((?:: (?:rows|items|pairs|topics)\[[0-9]+\])?)`)
+var splitWarnRe = regexp.MustCompile(`(^|\] )body\[([0-9]+)\]((?:: (?:rows|items|pairs|topics|columns)\[[0-9]+\])?)`)
 
-var splitInnerRe = regexp.MustCompile(`^: (rows|items|pairs|topics)\[([0-9]+)\]$`)
+var splitInnerRe = regexp.MustCompile(`^: (rows|items|pairs|topics|columns)\[([0-9]+)\]$`)
 
 // remapWarning は分けた枚の警告の文の本文の場所を IR の番号にする。
 func (sp *slideSplit) remapWarning(w string) string {
@@ -570,7 +593,7 @@ func (sp *slideSplit) remapWarning(w string) string {
 }
 
 // splitPathRe は容量の場所の本文の中の場所(/slides/S/body/N と、続く /rows/K など)。
-var splitPathRe = regexp.MustCompile(`^/slides/[0-9]+/body/([0-9]+)(/(rows|items|pairs|topics)/([0-9]+))?`)
+var splitPathRe = regexp.MustCompile(`^/slides/[0-9]+/body/([0-9]+)(/(rows|items|pairs|topics|columns)/([0-9]+))?`)
 
 // remapPath は分けた枚の容量の場所(/slides/S/body/N/…)を IR の番号にする(S は呼ぶ側が
 // 元の番号にしてある)。

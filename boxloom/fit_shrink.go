@@ -103,6 +103,7 @@ type fitChoice struct {
 	over      bool    // 詰めた理由:元の組み方で本文がはみ出した
 	broken    bool    // 詰めた理由:元の組み方で図が崩れた(fitBrokenCodes、#145)
 	emergency bool    // 非常用の段(fit.emergency、#150)で組んだ
+	byColumn  bool    // 列ごとに分けた枚(#152。fit_split_columns.go)
 }
 
 // fitStepTry は梯子の1段(名前・写しへの当て方・値)。

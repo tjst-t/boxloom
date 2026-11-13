@@ -11,7 +11,11 @@ import (
 // fitBrokenDeck は並列のまとまりに matrix を2つ並べた文書。評価の列が n 本なら、light では
 // まとまりが図の下限を割り、評価の列の「p.135」が入らない(はみ出しは無い)。
 func fitBrokenDeck(n int) []byte {
-	cols := []string{"東の地区", "西の地区", "北の地区", "南の地区", "中の地区"}[:n]
+	cols := []string{"東の地区", "西の地区", "北の地区", "南の地区", "中の地区"}
+	for k := len(cols); k < n; k++ {
+		cols = append(cols, fmt.Sprintf("第%d地区", k+1))
+	}
+	cols = cols[:n]
 	cells := strings.Repeat("      - {status: support, text: p.135}\n", n)
 	mat := fmt.Sprintf("```matrix\ncolumns: [%s]\nrows:\n  - label: 設備\n    cells:\n%s```", strings.Join(cols, ", "), cells)
 	return []byte(fmt.Sprintf("---\ntitle: t\n---\n\n# 評価\n\n::::columns\n:::column 左\n%s\n:::\n:::column 右\n%s\n:::\n::::\n", mat, mat))
@@ -58,11 +62,21 @@ func TestFitBrokenFigureStepsDown(t *testing.T) {
 
 // 全部の段でも図が崩れるスライドは、-fit の build を誤りにする(-allow-overflow なら作る)。
 // -fit なしでは今までどおり警告のまま作る(#145)。
+// (評価の列が 5 本なら列ごとに分けて収まる(#152)ので、全幅の1列でも崩れる 12 本で試す。)
 func TestFitBrokenEveryStepIsError(t *testing.T) {
-	file, data := "broken.bx.md", fitBrokenDeck(5)
+	if res := Check("broken.bx.md", fitBrokenDeck(5), CheckOptions{Template: "light", Fit: true}); hasFitBroken(res.Warnings) ||
+		len(fitIssues(res.Info, codeFitSplit)) != 1 || !strings.Contains(res.Info[0].Message, "split them by column") {
+		t.Fatalf("5 columns should be split by column: warnings %+v, info %+v", res.Warnings, res.Info)
+	}
+	file, data := "broken.bx.md", fitBrokenDeck(12)
 	res := Check(file, data, CheckOptions{Template: "light", Fit: true})
 	if !hasFitBroken(res.Warnings) || len(res.Info) != 0 {
 		t.Fatalf("the example should break at every step: warnings %+v, info %+v", res.Warnings, res.Info)
+	}
+	for _, w := range res.Warnings {
+		if fitBrokenCodes[w.Code] && !strings.Contains(w.Hint, "-fit の最後の段") {
+			t.Fatalf("hint of %s = %q", w.Code, w.Hint)
+		}
 	}
 	deck, err := ReadDeck(file, data)
 	if err != nil {

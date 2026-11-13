@@ -45,8 +45,12 @@ type SlideCapacity struct {
 	// Split は -fit で本文を続きのスライドに分けたとき(fit_split.go)の、この枚の印(何枚目・
 	// 枚数・各枚の始まり)。分けたスライドは枚ごとに容量を出し、path はどれも元の /slides/S。
 	// 分けなかったスライドでは省く。
-	Split  *SplitCapacity  `json:"split,omitempty"`
-	Blocks []BlockCapacity `json:"blocks"`
+	Split *SplitCapacity `json:"split,omitempty"`
+	// FitShort は -fit(全部の段・分け・列ごとの分け)でも本文が収まらなかったスライドを、
+	// -fit の最後の段(非常用の段、無ければ梯子の最後)で組んだときに足りない高さ(pt。#152)。
+	// 収まったスライド・-fit でないときは省く。
+	FitShort *float64        `json:"fitShort,omitempty"`
+	Blocks   []BlockCapacity `json:"blocks"`
 }
 
 // BlockCapacity は本文の1つのブロックの測り値。

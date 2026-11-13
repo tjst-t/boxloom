@@ -61,6 +61,13 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 		case "layout-overflow":
 			if w.Hint == "" {
 				w.Hint = joinHints(densityHint(w.Path, capOf), tableSplitHint(w.Path, capOf))
+				if h := fitShortHint(slideCapOf(w.Path, capOf)); h != "" {
+					w.Hint = h // -fit でも収まらなかった(#152):dense の案は言わない
+				}
+			}
+		case "figure-text-overflow", "subsystem-min", "column-floor":
+			if w.Hint == "" {
+				w.Hint = fitShortHint(slideCapOf(w.Path, capOf)) // -fit でも直らなかった崩れ(#152)
 			}
 		case codeFitEmergency:
 			if w.Hint == "" {
@@ -123,6 +130,15 @@ func densityHint(path string, capOf map[string]SlideCapacity) string {
 			"そうでなければスライドを分けるか、文を短くしてください", math.Max(0, *r))
 	}
 	return fmt.Sprintf("dense にしても %.1fpt 足りません。スライドを分けるか、文を短くしてください", -*r)
+}
+
+// slideCapOf は場所 path(/slides/S/…)のスライドの容量。
+func slideCapOf(path string, capOf map[string]SlideCapacity) SlideCapacity {
+	var s int
+	if _, err := fmt.Sscanf(path, "/slides/%d", &s); err != nil {
+		return SlideCapacity{}
+	}
+	return capOf[fmt.Sprintf("/slides/%d", s)]
 }
 
 // joinHints は空でない hint を1つの文にする。

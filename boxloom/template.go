@@ -720,10 +720,18 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 		warnings := append([]string{}, b.Warnings...)
 		if split != nil {
 			if split.n == 1 {
-				warnings = append(warnings, fitSplitWarning(split))
-				if fitted != nil && fitted.emergency {
-					warnings = append(warnings, fitEmergencyWarning(fitted, split.m))
+				if split.byColumn {
+					warnings = append(warnings, fitSplitColumnsWarning(split))
+				} else {
+					warnings = append(warnings, fitSplitWarning(split))
 				}
+			}
+			if split.stepLead && fitted != nil && fitted.emergency {
+				parts := split.m
+				if split.byColumn {
+					parts = split.parts
+				}
+				warnings = append(warnings, fitEmergencyWarning(fitted, parts))
 			}
 		} else if fitted != nil && fitted.emergency {
 			warnings = append(warnings, fitEmergencyWarning(fitted, 0))
@@ -815,6 +823,16 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 				}
 				if split != nil {
 					split.remapCapacity(&sc)
+				}
+				if _, _, _, gen := generatedSlide(i); fit && split == nil && fitted == nil && !gen && (p.overflow != nil || anyFitBroken(warnings)) {
+					// -fit でも収まらなかった:最後の段で組んでもあと何 pt 足りないか(hint。#152)。
+					short, ok, err := t.fitShortfall(d, i)
+					if err != nil {
+						return nil, nil, nil, fmt.Errorf("slides[%d]: %w", irIndex(origin, i), err)
+					}
+					if ok {
+						sc.FitShort = &short
+					}
 				}
 				caps = append(caps, sc)
 			}

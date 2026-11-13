@@ -726,7 +726,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 
 | code | 見ること |
 |---|---|
-| `fit-split` | `-fit` のとき、梯子の最後の段でも収まらない本文のスライドを続きのスライドに分けた(#149)。path はそのスライド(`/slides/S`)、文に枚数・組んだ段(`normal`・`dense`・`fit.shrink[K]`)と本文の字の大きさ・blockGap・2枚目からの各枚の始まり(IR の場所。`/slides/S/body/N` か、切れ端なら `…/rows/K`・`…/items/K`・`…/pairs/K`・`…/topics/K`)。容量は枚ごとに出て、`split`(`part`・`slides`・`starts`)を持つ。作者が内容の切れ目で分け、各枚に題を付けると元に戻る |
+| `fit-split` | `-fit` のとき、梯子の最後の段でも収まらない本文のスライドを続きのスライドに分けた(#149)。path はそのスライド(`/slides/S`)、文に枚数・組んだ段(`normal`・`dense`・`fit.shrink[K]`)と本文の字の大きさ・blockGap・2枚目からの各枚の始まり(IR の場所。`/slides/S/body/N` か、切れ端なら `…/rows/K`・`…/items/K`・`…/pairs/K`・`…/topics/K`)。容量は枚ごとに出て、`split`(`part`・`slides`・`starts`)を持つ。非常用の段でも入らない columns を列ごとに分けたとき(#152)は文が `split them by column` で、各枚の段(`steps: slide 1 at …`)と始まり(`…/columns/C`)を書く。作者が内容の切れ目で分け、各枚に題を付けると元に戻る |
 | `fit-applied` | `-fit` のとき、はみ出した本文のスライドを値の表の梯子の段で詰めて収めた、または薄い本文のスライドを `fit.grow` の段で広げた(#128。文は `the body was underfilled (NN%)` で始まり、広げた後の fill-ratio も書く)。path はそのスライド(`/slides/S`)、文に段の名前(`dense`・`fit.shrink[K]`・`fit.grow[K]`)・その段の本文の字の大きさと blockGap・残り(pt)。容量の `fit` と同じ段。字の大きさを替えたので、作者が文を削る・分ける(詰め)、根拠を足す・隣とまとめる(広げ)と元の大きさに戻せる |
 
 ### はみ出し(layout-overflow)の測り方
@@ -811,6 +811,12 @@ IR の番号(切れ端の中の番号も IR の番号)。最初の枚に info �
 警告の `fit-emergency`(上の表)と容量の `fit`(`fit.emergency[K]`)が出る。最後の非常用の段でも入らなければ
 元の組み方のまま `layout-overflow`(build は誤り)。
 
+**`-fit` の列ごとの分け(#152)**:非常用の段でも入らない本文のスライドが2列以上の columns を持てば、列の
+並び順のまま1列を1枚にし(全幅の1列。列の題はその枚に)、各枚を今の `-fit` の順(梯子 → 非常用の段、入らなければ
+その枚を分ける)で組み直す。段は枚ごとに違ってよい。最初の枚の info の `fit-split` は文が `split them by column`
+で、各枚の段を書く。容量は枚ごとに `split` と `fit`、始まりは `/slides/S/body/N/columns/C`。1列でも入らなければ
+分けず、`layout-overflow`(図の崩れ)の hint に「あと N pt 足りません」と直し方、容量に `fitShort`(N)。
+
 **`-fit` と続きの表(#140)**:続きの表(14章の `continues`)でつながったスライドは、ひと続きを
 1つの組として同じ段で組む。どれか1枚がはみ出せば、全部の枚が収まる最初の段まで全部の枚を
 下げる(はみ出さない枚も同じ段にするので、列の幅と字が枚の間でそろう)。梯子は組のどれかが
@@ -858,6 +864,8 @@ check でも断られるもの。
   // 本文の行の高さ・blocks はその段で組んだ値。詰めなかったスライドでは省く)
   // -fit で続きのスライドに分けたスライド(#149)は枚ごとに容量を出し(path はどれも元の /slides/S)、
   // "split": {"part": 2, "slides": 3, "starts": ["/slides/1/body/0/rows/12", "/slides/1/body/1"]} を持つ
+  // (列ごとに分けたとき(#152)の始まりは "/slides/1/body/0/columns/1")
+  // -fit でも収まらなかったスライドは "fitShort": 42.5(-fit の最後の段で組んでも足りない pt。#152)
   "blocks": [{
     "path": "/slides/1/body/0", "line": 40, "type": "points",
     "need": 68.7,         // そのブロックが縮めずに要る高さ

@@ -471,6 +471,13 @@ returns
   even after packing and splitting (a `columns`, figure or image cannot be split), so `-fit`
   built it with the template's emergency step (`fit.emergency[K]`, very small text). Follow its
   `hint`: split the slide by content, move the figure or a column to its own slide, or cut text.
+- With `-fit`, a `fit-split` whose message says `split them by column` means a `columns` did
+  not fit even at the emergency step, so `-fit` put each column on its own slide (full width,
+  in their order, `n/m` mark; each part may use a different step, listed in the message).
+  Better: give each column its own slide with its own title and lead yourself.
+- If a `-fit` build still fails, the `layout-overflow` hint says how many pt are still missing
+  at the last `-fit` step ("あと N pt", `capacity[].fitShort`): move a column or figure to its
+  own slide, or cut that much text.
 
 Fixes by code:
 
