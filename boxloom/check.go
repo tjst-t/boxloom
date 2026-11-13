@@ -968,9 +968,11 @@ func warningIssue(file, w string) Issue {
 		rule = strings.ToLower(m[2])
 	}
 	path, msg := fmt.Sprintf("/slides/%d", n-1), m[3]
-	// 題の警告(title: ...)は題を指す。
+	// 題の警告(title: ...)は題を、リード文の警告(lead: ...)はリード文を指す。
 	if rest, ok := strings.CutPrefix(msg, "title: "); ok {
 		path, msg = path+"/title", rest
+	} else if rest, ok := strings.CutPrefix(msg, "lead: "); ok {
+		path, msg = path+"/lead", rest
 	}
 	// 文の頭に本文の中の場所(body[2]: ...)があれば、そのブロックまで指す。
 	if bm := warnBlockRe.FindStringSubmatch(msg); bm != nil {

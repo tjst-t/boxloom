@@ -242,6 +242,7 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 		}
 		out.Body = bodies[0]
 		out.Title = placeholderLeaf(root, "title")
+		out.Lead = irLeaf(root, "lead")
 	case "section", "statement", "toc":
 		if len(bodies) != 0 || len(mains) != 1 {
 			return nil, fmt.Errorf("%s: a %s slide needs exactly one main box (markFrame(frameMain)) and no body box; found %d and %d", name, s.Type, len(mains), len(bodies))
@@ -287,6 +288,19 @@ func placeholderLeaf(root *Spec, ph string) *Spec {
 	}
 	for _, c := range root.Children {
 		if s := placeholderLeaf(c, ph); s != nil {
+			return s
+		}
+	}
+	return nil
+}
+
+// irLeaf は IR の場所(fromIR)が at の文字の葉を探す(リード文など)。無ければ nil。
+func irLeaf(root *Spec, at string) *Spec {
+	if root.Kind == KindText && root.irPath == at {
+		return root
+	}
+	for _, c := range root.Children {
+		if s := irLeaf(c, at); s != nil {
 			return s
 		}
 	}

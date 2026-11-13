@@ -105,6 +105,7 @@ Speaker notes go here. Plain paragraphs and bullets only.
   ("Vendor support of the old cluster"); a title that wraps is warned (`title-wrap`).
   **Write what the slide says — the conclusion — as a sentence in `:::lead`** right after
   the title (1–2 lines). The template puts the lead under the title, outside the body.
+  A lead longer than the template allows (`report`: 2 lines) is warned (`lead-wrap`).
 - `---` is not a slide separator (it is an error). `##` and deeper headings are errors
   (a group title is written as `:::column Title`, not as a subheading).
 - Body: paragraphs, `- ` / `1. ` bullets (two levels max; `1. ` = numbered, see below), `**emphasis**`
@@ -469,6 +470,7 @@ Fixes by code:
 | `chart-emphasis` | `chart`: `emphasis` must name existing categories and needs a single series; with several series mark one series `emphasis: true` instead |
 | `layout-overflow` (warning) | **Split the slide** (below). Do not just delete content silently. Inside `columns` the path ends in `/columns/C/body/K`: shorten that group or move it to its own slide. In `pairs` the path ends in `/pairs/K` (one warning per pair that overflows): move that pair and the ones after it to the next slide, repeating the headings. For a **table**, the `hint` and `capacity` (`blocks[].split`) say how many tables to split it into and before which rows: follow "Splitting a long table" below |
 | `title-wrap` (warning) | The slide title wraps to a second line. Make it a short headline (the topic in a few words) and move the claim into `:::lead`. Do not just cut words until it fits |
+| `lead-wrap` (warning) | The lead wraps past the template's line limit (`report`: 2 lines). Shorten the lead: one sentence with the claim; move the reasons and details into the body. Do not drop the point of the slide |
 | `fill-ratio` (warning) | Slide is mostly empty. Always fix (§4): merge with the neighbour the `hint` names, add the missing evidence or figure, or turn a one-message slide into `{type=statement}` |
 | `spare-width` (warning) | A figure/image leaves the side empty: put it in `columns` with text beside it (images, charts and cycles can go in a column), or give it more height by cutting text on that slide. In a column: remove `role=main` from the figure's group |
 | `milestone-overlap` (warning) | Milestones are too close in time: merge them into one milestone, turn one into an `annotation`, or narrow the `span` so the dates spread out |

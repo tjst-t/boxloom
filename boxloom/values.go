@@ -54,13 +54,15 @@ type TemplateValues struct {
 	CoverAuthor   float64 `json:"coverAuthor" scale:"type"`
 	SlideTitle    float64 `json:"slideTitle" scale:"type"`
 	LeadText      float64 `json:"leadText" scale:"type"` // リード文(題の下の文)
-	Body          float64 `json:"body" scale:"type"`
-	SubPoint      float64 `json:"subPoint" scale:"type"`     // 入れ子の箇条
-	OptionLabel   float64 `json:"optionLabel" scale:"type"`  // 比較の選択肢の名前
-	OptionItem    float64 `json:"optionItem" scale:"type"`   // 比較の利点・欠点
-	Small         float64 `json:"small" scale:"type"`        // 注記・フッター・図の凡例
-	FigureDetail  float64 `json:"figureDetail" scale:"type"` // 図の補足(箱の2段目・段階の下・図の説明)
-	CaptionText   float64 `json:"captionText" scale:"type"`  // 表・画像の説明の文
+	// LeadMaxLines はリード文の行の数の上限。超えると lead-wrap の警告。0 なら上限なし。
+	LeadMaxLines int     `json:"leadMaxLines"`
+	Body         float64 `json:"body" scale:"type"`
+	SubPoint     float64 `json:"subPoint" scale:"type"`     // 入れ子の箇条
+	OptionLabel  float64 `json:"optionLabel" scale:"type"`  // 比較の選択肢の名前
+	OptionItem   float64 `json:"optionItem" scale:"type"`   // 比較の利点・欠点
+	Small        float64 `json:"small" scale:"type"`        // 注記・フッター・図の凡例
+	FigureDetail float64 `json:"figureDetail" scale:"type"` // 図の補足(箱の2段目・段階の下・図の説明)
+	CaptionText  float64 `json:"captionText" scale:"type"`  // 表・画像の説明の文
 
 	SectionTitle float64 `json:"sectionTitle" scale:"type"` // 区切り(section)の章の題
 	// SectionTracker が true なら、区切りが2つ以上ある文書の区切りのスライドに
@@ -456,6 +458,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	}
 	if err := checkPositive("values", f.Values); err != nil {
 		return nil, err
+	}
+	if f.Values.LeadMaxLines < 0 {
+		return nil, fmt.Errorf("values.leadMaxLines: must be 0 (no limit) or more (got %d)", f.Values.LeadMaxLines)
 	}
 	if err := checkScaleDef(f.Scale); err != nil {
 		return nil, err

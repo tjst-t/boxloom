@@ -165,3 +165,57 @@ func TestTitleWrapExample(t *testing.T) {
 		}
 	}
 }
+
+// リード文が値の表の上限(report は 2 行)を超えたときだけ lead-wrap の警告
+// (リード文を指す)。2 行に収まるリードと、上限の無い light では出ない。
+func TestLeadWrapWarning(t *testing.T) {
+	doc := func(lead string) []byte {
+		return []byte("---\ntitle: 例\n---\n\n# 題\n\n:::lead\n" + lead + "\n:::\n\n- 箇条\n")
+	}
+	count := func(tmpl string, src []byte) []Issue {
+		_, warns, _ := checkCapacity("lead.bx.md", src, tmpl, nil, nil)
+		var got []Issue
+		for _, w := range warns {
+			if w.Code == "lead-wrap" {
+				got = append(got, w)
+			}
+		}
+		return got
+	}
+	tm, _ := LookupTemplate("report")
+	if tm.Values.LeadMaxLines != 2 {
+		t.Fatalf("report leadMaxLines = %d, want 2", tm.Values.LeadMaxLines)
+	}
+	// 行の数を測ってから文を選ぶ(字の幅の変更で試験が崩れないように)。
+	lines := func(s string) int {
+		w := tm.Values.PageW - 2*tm.Values.PagePadding
+		return len(wrapText(s, tm.Values.LeadText, w, false))
+	}
+	two, three := "", ""
+	for k := 1; k < 60 && (two == "" || three == ""); k++ {
+		s := strings.Repeat("架空の会社は来年度に新しい事業を始める。", k)
+		switch lines(s) {
+		case 2:
+			if two == "" {
+				two = s
+			}
+		case 3:
+			if three == "" {
+				three = s
+			}
+		}
+	}
+	if two == "" || three == "" {
+		t.Fatal("could not make 2- and 3-line leads")
+	}
+	got := count("report", doc(three))
+	if len(got) != 1 || got[0].Path != "/slides/1/lead" || !strings.Contains(got[0].Message, "3 lines") || !strings.Contains(got[0].Message, "limit of 2") {
+		t.Fatalf("3-line lead: %+v", got)
+	}
+	if got := count("report", doc(two)); len(got) != 0 {
+		t.Fatalf("2-line lead warned: %+v", got)
+	}
+	if got := count("light", doc(three)); len(got) != 0 {
+		t.Fatalf("light has no limit but warned: %+v", got)
+	}
+}

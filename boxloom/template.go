@@ -78,6 +78,9 @@ type BuiltSlide struct {
 	MainWhat string
 	// Title は本文のスライドの題の葉(1行に収まるかを測る。ほかでは nil)。
 	Title *Spec
+	// Lead は本文のスライドのリード文の葉(行の数を値の表の leadMaxLines と比べる。
+	// リード文の無いスライドとほかでは nil)。
+	Lead *Spec
 	// SlideIndex は組んだ元の IR のスライドの番号(d.Slides の添字)。組み立てで作った
 	// 目次のスライド(meta.toc)は tocSlide。
 	SlideIndex int
@@ -654,6 +657,13 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 			if n := textLinesFor(b.Title, b.Title.Box.Width); n > 1 {
 				warnings = append(warnings, fmt.Sprintf("[TITLE-WRAP WARNING] title: the slide title wraps to %d lines (width %.1fpt at %.0fpt); keep it to one line",
 					n, b.Title.Box.Width, b.Title.FontSize))
+			}
+		}
+		if b.Lead != nil && v.LeadMaxLines > 0 {
+			// リード文は値の表の上限の行の数まで(超えたら短くする)。
+			if n := textLinesFor(b.Lead, b.Lead.Box.Width); n > v.LeadMaxLines {
+				warnings = append(warnings, fmt.Sprintf("[LEAD-WRAP WARNING] lead: the lead wraps to %d lines, more than the template's limit of %d (width %.1fpt at %.0fpt); shorten it",
+					n, v.LeadMaxLines, b.Lead.Box.Width, b.Lead.FontSize))
 			}
 		}
 

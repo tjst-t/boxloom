@@ -55,7 +55,7 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 
 - リード文(`:::lead`)を上の見出しに置く:`leadText`(24pt)・基調色(`accent`)・標準の太さ
   (#100。元の資料も太字でない。太字だと字幅が広がり、1行の文が2行に折れていた)。
-  2行までに収める想定(越えたときの警告はまだ無い。越えると本文の領域がその分減る)。
+  2行までに収める(`leadMaxLines` 2。越えると `lead-wrap` の警告。越えた分だけ本文の領域が減る)。
 - 題はその下に `slideTitle`(16pt)・字の色(`text_primary`)で置く。題はこれまでどおり
   レイアウトの title のプレースホルダー(位置だけが下になる)。
 - リードの無いスライドは、題を上の見出しの位置と大きさ(24pt・基調色・標準の太さ)で置く。
@@ -444,6 +444,7 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `coverTitle` `coverSubtitle` `coverAuthor` | 表紙の字の大きさ |
 | `slideTitle` | 本文のスライドの題(短い見出し。折り返すと `title-wrap` の警告) |
 | `leadText` | リード文(`lead`。題の直下、色は `text_primary`、太字にしない) |
+| `leadMaxLines` | リード文の行の数の上限(整数)。超えると `lead-wrap` の警告。0 は上限なし(dark / light は 0、report は 2) |
 | `body` | 段落・箇条 |
 | `subPoint` | 入れ子の箇条 |
 | `optionLabel` `optionItem` | 比較の選択肢の名前、利点・欠点 |
