@@ -2339,7 +2339,7 @@
       "number": 101,
       "kind": "task",
       "title": "対の側の中の表が最小まで潰れる・引用の人の印が文と重なるのを直す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2351,7 +2351,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T03:53:47.843Z",
-      "updatedAt": "2026-11-13T03:53:47.843Z",
+      "updatedAt": "2026-11-13T04:16:26.089Z",
       "closedAt": null,
       "extra": {}
     }
