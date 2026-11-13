@@ -3060,7 +3060,7 @@
       "number": 135,
       "kind": "bug",
       "title": "report の pairs で左右の幅の比が段にそろったまま(#115 が効いていない?)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3072,7 +3072,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:35:27.239Z",
-      "updatedAt": "2026-11-13T07:35:27.239Z",
+      "updatedAt": "2026-11-13T08:06:10.212Z",
       "closedAt": null,
       "extra": {}
     },
