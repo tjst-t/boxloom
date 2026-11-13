@@ -709,6 +709,13 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `table-col-width` | 表の列の守りたい最小の幅(見出しの文字列・折れない語の幅。15章)の合計が表の幅に入らず、短い列が語の途中で折れうる幅で配った。path は表のブロック(並列のまとまりの中は `…/columns/C/body/K`)、文に最初に削られた列の見出し(`header[C]`)と要る幅・有る幅(pt) |
 | `theme-role` | テーマに値の無い役割名をサブシステムが使った |
 
+知らせ(誤りでも警告でもない。`-strict` でも ok のまま。`check -format json` の `info`、text では
+`info:` の行。無ければ `info` の欄は出ない):
+
+| code | 見ること |
+|---|---|
+| `fit-applied` | `-fit` のとき、はみ出した本文のスライドを値の表の梯子の段で詰めて収めた。path はそのスライド(`/slides/S`)、文に段の名前(`dense`・`fit.shrink[K]`)・その段の本文の字の大きさと blockGap・残り(pt)。容量の `fit` と同じ段。字を小さくしたので、作者が文を削る・分けると元の大きさに戻せる |
+
 ### はみ出し(layout-overflow)の測り方
 
 レイアウトエンジンは、足りないとき子を比で縮めるが、列の中の子は縮めずに要る高さ
@@ -762,6 +769,14 @@ build を止める件数を出す)。build(ライブラリの `Build`)は1件で
 (code `layout-overflow`)で全件返す。`build -allow-overflow`(`BuildOptions.AllowOverflow`)
 なら今までどおり作って警告を出す。ほかの警告(fill-ratio・title-wrap など)は build を止めない。
 
+**`-fit`(#127)**:`build -fit`・`check -fit`(`BuildOptions.Fit`・`CheckOptions.Fit`)のときだけ、
+はみ出す本文のスライドを値の表の梯子で詰める(IR は変えない)。今の密度から1段ずつ下りる:
+normal のスライドは dense の組 → `fit.shrink[0]` → …、dense のスライドは `fit.shrink[0]` → …
+(`docs/template-values.md` の fit)。各段で組み直してこの節と同じ1回の測りで測り、最初に
+収まった段で組む。そのスライドの `layout-overflow` は出ず、代わりに info の `fit-applied`
+(下の表)と容量の `fit` が出る。最後の段でも収まらなければ元の組み方のまま `layout-overflow`
+(build は誤り)。`-fit` を付けなければ組み方も出力も変わらない。
+
 例:`examples/ir/check-warnings/layout-overflow.json`(と同じ中身の
 `examples/md/warnings/layout-overflow.bx.md`)は誤り0件で、2つのブロックに
 `layout-overflow` が出る(`boxloom/overflow_test.go`)。
@@ -797,6 +812,8 @@ check でも断られるもの。
   "remainingBodyLines": 10, // 残りに本文の行がいくつ入るか(既にあるブロックに足す場合)
   "denseRemaining": 160.2,  // normal のスライドを dense にしたときの remaining(9.4。dense のスライドでは省く)
   // dense のスライドには "density": "dense"(remaining・本文の行の高さは dense の値)
+  // -fit で詰めたスライドには "fit": "fit.shrink[0]" のような段の名前("dense" も。remaining・
+  // 本文の行の高さ・blocks はその段で組んだ値。詰めなかったスライドでは省く)
   "blocks": [{
     "path": "/slides/1/body/0", "line": 40, "type": "points",
     "need": 68.7,         // そのブロックが縮めずに要る高さ

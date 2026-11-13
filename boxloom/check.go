@@ -51,6 +51,9 @@ type CheckResult struct {
 	// Capacity は本文を持つスライドごとの容量(capacity.go)。誤りがあって
 	// 組み立てまで通らなかったファイルの分は入らない。
 	Capacity []SlideCapacity `json:"capacity"`
+	// Info は知らせ(誤りでも警告でもない)。いまは -fit で詰めたスライドの fit-applied
+	// だけ。無ければ JSON に出さない。
+	Info []Issue `json:"info,omitempty"`
 }
 
 // CheckOptions は Check の選択。
@@ -66,6 +69,10 @@ type CheckOptions struct {
 	// Assets は画像(image・gallery の src)を読む fs.FS。根は文書のフォルダ。
 	// nil なら画像を使う文書は image-missing になる(BuildOptions.Assets と同じ)。
 	Assets fs.FS
+	// Fit は、はみ出す本文のスライドを値の表の梯子(dense → fit.shrink)で詰めて測る
+	// (BuildOptions.Fit と同じ組み方。fit_shrink.go)。詰めたスライドは Info に fit-applied、
+	// 容量に fit。最後の段でも収まらなければ layout-overflow のまま。
+	Fit bool
 }
 
 // Check は1つの文書(file の名前、data の中身)を検査する。file の拡張子が
@@ -79,10 +86,16 @@ type CheckOptions struct {
 // 返す CheckResult の切れ端は nil にならない(JSON で [] になる)。
 func Check(file string, data []byte, opt CheckOptions) *CheckResult {
 	defer useFonts(activeFonts)() // 組み立てが替えた字体を、終わったら戻す
-	errs, warns, caps := checkCapacity(file, data, opt.Template, opt.Values, opt.Assets)
+	errs, warns, caps := checkCapacityFit(file, data, opt.Template, opt.Values, opt.Assets, opt.Fit)
 	res := &CheckResult{Errors: []Issue{}, Warnings: []Issue{}, Capacity: []SlideCapacity{}}
 	res.Errors = append(res.Errors, errs...)
-	res.Warnings = append(res.Warnings, warns...)
+	for _, w := range warns {
+		if w.Code == codeFitApplied {
+			res.Info = append(res.Info, w) // 知らせ(警告ではない。-strict でも OK のまま)
+			continue
+		}
+		res.Warnings = append(res.Warnings, w)
+	}
 	res.Capacity = append(res.Capacity, caps...)
 	res.OK = len(res.Errors) == 0 && (!opt.Strict || len(res.Warnings) == 0)
 	return res
@@ -91,17 +104,23 @@ func Check(file string, data []byte, opt CheckOptions) *CheckResult {
 // checkCapacity は Check の中身。.md なら容量のスライドとブロックにも
 // Markdown の行を添える。
 func checkCapacity(file string, b []byte, templateOverride string, values *Template, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
+	return checkCapacityFit(file, b, templateOverride, values, assets, false)
+}
+
+// checkCapacityFit は checkCapacity に -fit の選択を足したもの(fit なら、はみ出す本文の
+// スライドを値の表の梯子で詰めて測る。詰めたスライドの fit-applied は warns に入る)。
+func checkCapacityFit(file string, b []byte, templateOverride string, values *Template, assets fs.FS, fit bool) (errs, warns []Issue, caps []SlideCapacity) {
 	if isYAMLPath(file) {
-		return checkYAMLCapacity(file, b, templateOverride, values, assets)
+		return checkYAMLCapacity(file, b, templateOverride, values, assets, fit)
 	}
 	if !isMarkdownPath(file) {
-		return checkIRCapacity(file, b, templateOverride, values, assets)
+		return checkIRCapacity(file, b, templateOverride, values, assets, fit)
 	}
 	ir, mdErrs, lines := ParseMarkdownWithMap(b, file)
 	if len(mdErrs) > 0 {
 		return mdErrs, nil, nil
 	}
-	errs, warns, caps = checkIRCapacity(file, ir, templateOverride, values, assets)
+	errs, warns, caps = checkIRCapacity(file, ir, templateOverride, values, assets, fit)
 	for _, list := range [][]Issue{errs, warns} {
 		for i := range list {
 			list[i].Line = lines.Line(list[i].Path)
@@ -113,12 +132,12 @@ func checkCapacity(file string, b []byte, templateOverride string, values *Templ
 
 // checkYAMLCapacity は YAML の deck の check。記法の誤りはそのまま返し、
 // 無ければ IR として検査して、誤りと警告に YAML の行と列を、容量に行を添える。
-func checkYAMLCapacity(file string, b []byte, templateOverride string, values *Template, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
+func checkYAMLCapacity(file string, b []byte, templateOverride string, values *Template, assets fs.FS, fit bool) (errs, warns []Issue, caps []SlideCapacity) {
 	ir, yErrs, pos := parseYAMLDeck(file, b)
 	if len(yErrs) > 0 {
 		return yErrs, nil, nil
 	}
-	errs, warns, caps = checkIRCapacity(file, ir, templateOverride, values, assets)
+	errs, warns, caps = checkIRCapacity(file, ir, templateOverride, values, assets, fit)
 	for _, list := range [][]Issue{errs, warns} {
 		for i := range list {
 			list[i].Line, list[i].Column = pos.Pos(list[i].Path)
@@ -165,12 +184,12 @@ func CheckIR(file string, b []byte, templateOverride string) (errs, warns []Issu
 // 画像のファイルは読めない(画像を使う文書は image-missing。読ませるなら Check と
 // CheckOptions.Assets を使う)。
 func CheckIRCapacity(file string, b []byte, templateOverride string) (errs, warns []Issue, caps []SlideCapacity) {
-	return checkIRCapacity(file, b, templateOverride, nil, nil)
+	return checkIRCapacity(file, b, templateOverride, nil, nil, false)
 }
 
 // checkIRCapacity は CheckIRCapacity の中身。values(外から読んだ値の表)が
 // あれば、名前より優先する。assets は画像を読む fs.FS。
-func checkIRCapacity(file string, b []byte, templateOverride string, values *Template, assets fs.FS) (errs, warns []Issue, caps []SlideCapacity) {
+func checkIRCapacity(file string, b []byte, templateOverride string, values *Template, assets fs.FS, fit bool) (errs, warns []Issue, caps []SlideCapacity) {
 	var doc any
 	if err := json.Unmarshal(b, &doc); err != nil {
 		return []Issue{{File: file, Path: "", Message: "not JSON: " + err.Error(), Code: "json"}}, nil, nil
@@ -204,7 +223,7 @@ func checkIRCapacity(file string, b []byte, templateOverride string, values *Tem
 		return c.errs, nil, nil
 	}
 	tm.images = c.images // check で読んだ画像をそのまま使う
-	pages, warnings, caps, berr := tm.renderPages(deck)
+	pages, warnings, caps, berr := tm.renderPages(deck, fit)
 	if berr == nil {
 		berr = WriteDeck(io.Discard, pages, "")
 	}
@@ -257,6 +276,9 @@ func (tm *Template) layoutIssues(file string, deck *IRDeck, warnings []string, c
 
 // codeLayoutOverflow は本文(またはページ)がはみ出したときの警告の code。
 const codeLayoutOverflow = "layout-overflow"
+
+// codeFitApplied は -fit で本文を梯子の段で詰めたスライドの知らせの code。
+const codeFitApplied = "fit-applied"
 
 // BuildBlocking は警告のうち build を止めるもの(layout-overflow)の数。
 // check は組み立てないので警告のままだが、build はこれが1件でもあれば
@@ -944,7 +966,8 @@ var unknownFieldRe = regexp.MustCompile(`json: unknown field "([^"]+)"`)
 // warningIssue は RenderDeck の警告の文("slide 2: [FILL-RATIO WARNING] ...")を
 // 1件の警告にする。rule は角括弧の中の名前から作る(FILL-RATIO → fill-ratio)。
 // 新しい種類の警告が増えても、この形で書かれていればそのまま rule になる。
-var warnRe = regexp.MustCompile(`^slide ([0-9]+): \[([A-Z-]+) WARNING\] (.*)$`)
+// 知らせ([FIT-APPLIED INFO])も同じ形で読む。
+var warnRe = regexp.MustCompile(`^slide ([0-9]+): \[([A-Z-]+) (?:WARNING|INFO)\] (.*)$`)
 
 var warnBlockRe = regexp.MustCompile(`^body\[([0-9]+)\]: (.*)$`)
 

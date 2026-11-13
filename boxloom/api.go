@@ -102,6 +102,12 @@ type BuildOptions struct {
 	// (警告は Warnings に残る)。false なら、はみ出しが1件でもあれば書かずに
 	// *OverflowError を返す。
 	AllowOverflow bool
+	// Fit は、はみ出す本文のスライドを値の表の梯子で詰めて組む(既定は縮めない)。
+	// 今の密度から1段ずつ(normal は dense の組 → fit.shrink[0] → …、dense は
+	// fit.shrink[0] → …)組み直して測り、最初に収まった段で組む。最後の段でも
+	// 収まらなければ今までどおり layout-overflow。詰めたスライドは Info に書く。
+	// IR は変えない。false なら出力は Fit の無いときと同じ。
+	Fit bool
 }
 
 // ErrLayoutOverflow は、はみ出しがあって Build が PPTX を書かなかったことを表す
@@ -138,6 +144,9 @@ type BuildResult struct {
 	// はみ出し(layout-overflow)のほかは書き出しを止めない(はみ出しは
 	// AllowOverflow のときだけここに残る)。Issue の形で欲しいときは Check を使う。
 	Warnings []string
+	// Info は知らせ(-fit で詰めたスライド。"slide 3: [FIT-APPLIED INFO] ..." の形。
+	// check の Info の fit-applied と同じ文)。無ければ nil。
+	Info []string
 }
 
 // Build は deck をテンプレートで組み、PPTX を w に書く。テンプレートが無ければ
@@ -158,7 +167,7 @@ func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 		}
 	}
 	t.SetAssets(opt.Assets)
-	pages, warnings, caps, err := t.renderPages(deck)
+	pages, warnings, caps, err := t.renderPages(deck, opt.Fit)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +192,15 @@ func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 	if err := WriteDeck(w, pages, title); err != nil {
 		return nil, err
 	}
-	return &BuildResult{Template: t.Name, Slides: len(pages), Warnings: warnings}, nil
+	res := &BuildResult{Template: t.Name, Slides: len(pages)}
+	for _, w := range warnings {
+		if strings.Contains(w, "[FIT-APPLIED INFO]") {
+			res.Info = append(res.Info, w)
+			continue
+		}
+		res.Warnings = append(res.Warnings, w)
+	}
+	return res, nil
 }
 
 // hasOverflowWarning は組み立ての警告にはみ出しがあるか。

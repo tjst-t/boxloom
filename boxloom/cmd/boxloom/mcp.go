@@ -238,6 +238,7 @@ func mcpTools() []map[string]any {
 			"description": "Check a deck without writing a PPTX: errors and warnings (each with path, line, code, message, hint) and, per slide, the body capacity (bodyArea, need, remaining pt, remainingBodyLines, per-block lines and overflow). Same as `boxloom check -format json`. Give either path or source.",
 			"inputSchema": map[string]any{"type": "object", "properties": with(mcpDeckProps, map[string]any{
 				"strict": map[string]any{"type": "boolean", "description": "Treat warnings as errors (ok becomes false)."},
+				"fit":    map[string]any{"type": "boolean", "description": "Measure as build with fit does: an overflowing body slide is packed down the template's ladder (dense, then fit.shrink); packed slides are listed in info as fit-applied and get capacity.fit. A last resort: shorten or split first."},
 			}), "additionalProperties": false},
 		},
 		{
@@ -246,6 +247,7 @@ func mcpTools() []map[string]any {
 			"inputSchema": map[string]any{"type": "object", "properties": with(mcpDeckProps, map[string]any{
 				"output":        map[string]any{"type": "string", "description": "PPTX file to write. Default: out/<deck name>.pptx under the server's working directory."},
 				"allowOverflow": map[string]any{"type": "boolean", "description": "Write the PPTX even if a slide overflows (layout-overflow stays in warnings). Default false: overflow is an error."},
+				"fit":           map[string]any{"type": "boolean", "description": "Pack an overflowing body slide down the template's ladder (dense, then fit.shrink) and build it at the first step that fits; packed slides are listed in info. If the last step still overflows, it stays layout-overflow. A last resort: shorten or split first."},
 			}), "additionalProperties": false},
 		},
 	}
@@ -311,6 +313,7 @@ func mcpCheck(args json.RawMessage) (any, error) {
 	var a struct {
 		mcpDeckArgs
 		Strict bool `json:"strict"`
+		Fit    bool `json:"fit"`
 	}
 	if err := decodeArgs(args, &a); err != nil {
 		return nil, err
@@ -323,7 +326,7 @@ func mcpCheck(args json.RawMessage) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return boxloom.Check(file, data, boxloom.CheckOptions{Template: tname, Values: tvalues, Strict: a.Strict, Assets: assets}), nil
+	return boxloom.Check(file, data, boxloom.CheckOptions{Template: tname, Values: tvalues, Strict: a.Strict, Assets: assets, Fit: a.Fit}), nil
 }
 
 // mcpBuildResult は build の道具の結果。
@@ -332,6 +335,7 @@ type mcpBuildResult struct {
 	Slides   int      `json:"slides"`
 	Template string   `json:"template"`
 	Warnings []string `json:"warnings"`
+	Info     []string `json:"info,omitempty"`
 }
 
 func mcpBuild(args json.RawMessage) (any, error) {
@@ -339,6 +343,7 @@ func mcpBuild(args json.RawMessage) (any, error) {
 		mcpDeckArgs
 		Output        string `json:"output"`
 		AllowOverflow bool   `json:"allowOverflow"`
+		Fit           bool   `json:"fit"`
 	}
 	if err := decodeArgs(args, &a); err != nil {
 		return nil, err
@@ -356,7 +361,7 @@ func mcpBuild(args json.RawMessage) (any, error) {
 		return nil, err
 	}
 	var buf bytes.Buffer
-	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: tname, Values: tvalues, Assets: assets, AllowOverflow: a.AllowOverflow})
+	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: tname, Values: tvalues, Assets: assets, AllowOverflow: a.AllowOverflow, Fit: a.Fit})
 	var oe *boxloom.OverflowError
 	if errors.As(err, &oe) {
 		for i := range oe.Issues {
@@ -384,5 +389,5 @@ func mcpBuild(args json.RawMessage) (any, error) {
 	if warnings == nil {
 		warnings = []string{}
 	}
-	return mcpBuildResult{Output: out, Slides: res.Slides, Template: res.Template, Warnings: warnings}, nil
+	return mcpBuildResult{Output: out, Slides: res.Slides, Template: res.Template, Warnings: warnings, Info: res.Info}, nil
 }

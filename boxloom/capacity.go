@@ -37,8 +37,12 @@ type SlideCapacity struct {
 	// DenseRemaining は normal の本文のスライドを dense にしたときの remaining(実際に
 	// dense の値で組み直して測る。density.go)。負なら dense でもはみ出す。
 	// dense のスライドでは省く(remaining がそれ)。
-	DenseRemaining *float64        `json:"denseRemaining,omitempty"`
-	Blocks         []BlockCapacity `json:"blocks"`
+	DenseRemaining *float64 `json:"denseRemaining,omitempty"`
+	// Fit は -fit(BuildOptions.Fit・CheckOptions.Fit)で本文を詰めたときの段の名前
+	// ("dense" か "fit.shrink[K]"。fit_shrink.go)。remaining・本文の行の高さはその段の値。
+	// 詰めなかったスライドでは省く。
+	Fit    string          `json:"fit,omitempty"`
+	Blocks []BlockCapacity `json:"blocks"`
 }
 
 // BlockCapacity は本文の1つのブロックの測り値。
@@ -178,6 +182,9 @@ func (c SlideCapacity) String() string {
 		loc, c.Path, c.BodyArea, c.Need, c.Remaining, c.RemainingBodyLines)
 	if c.Density != "" {
 		out += ", " + c.Density
+	}
+	if c.Fit != "" {
+		out += ", fit " + c.Fit
 	}
 	if c.DenseRemaining != nil {
 		out += fmt.Sprintf(", remaining %.1fpt if dense", *c.DenseRemaining)

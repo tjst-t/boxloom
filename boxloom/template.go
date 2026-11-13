@@ -632,13 +632,14 @@ func (t *Template) RenderDeck(d *IRDeck, w io.Writer) ([]string, error) {
 // RenderPages は RenderDeck のうち、ファイルに書く前まで(組み・並べ・描いた
 // スライドと警告)。字体の検査(fonts コマンド)もこれを使う。
 func (t *Template) RenderPages(d *IRDeck) ([]*PPTXBuilder, []string, error) {
-	pages, all, _, err := t.renderPages(d)
+	pages, all, _, err := t.renderPages(d, false)
 	return pages, all, err
 }
 
 // renderPages は RenderPages に、本文を持つスライドごとの容量(capacity.go)を
-// 足したもの。check が使う。
-func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapacity, error) {
+// 足したもの。check が使う。fit なら、はみ出す本文のスライドを値の表の梯子で詰める
+// (fit_shrink.go)。fit でなければ組み方は変えない。
+func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, []SlideCapacity, error) {
 	built, err := t.BuildDeck(d)
 	if err != nil {
 		return nil, nil, nil, err
@@ -650,10 +651,23 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 		// 警告と容量の場所は IR のスライドの番号(目次のスライドは IR に無いので
 		// 警告の頭は "table of contents"、容量は出さない)。
 		i := b.SlideIndex
+		var fitted *fitChoice
+		if _, _, _, gen := generatedSlide(i); fit && !gen && b.Body != nil {
+			fb, c, err := t.fitSlide(d, i)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("slides[%d]: %w", i, err)
+			}
+			if c != nil {
+				b, fitted = fb, c
+			}
+		}
 		v := t.Values
 		computeLayout(b.Root, 0, 0, v.PageW, v.PageH)
 
 		warnings := append([]string{}, b.Warnings...)
+		if fitted != nil {
+			warnings = append(warnings, fitAppliedWarning(fitted))
+		}
 		if b.Body != nil {
 			ratio := bodyFillRatio(b.Body)
 			if w := lintFillRatioMin(ratio, v.FillRatioMin); w != "" {
@@ -703,9 +717,15 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 				if d.Slides[i].dense() {
 					bodySize = t.densed().Values.Body
 				}
+				if fitted != nil {
+					bodySize = fitted.body
+				}
 				sc := slideCapacity(blocks, area, need, b.Body.Gap, i, kinds, bodySize)
 				if d.Slides[i].dense() {
 					sc.Density = densityDense
+				}
+				if fitted != nil {
+					sc.Fit = fitted.step
 				}
 				for j := range sc.Blocks {
 					if w, ok := spare[j]; ok {

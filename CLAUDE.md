@@ -281,6 +281,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     本文の箱の印 `dense`(resolveSpec)の1か所。自動で dense にはしない。check は normal のスライドを
     dense で組み直して測り、layout-overflow の hint(「{density=dense} で収まる」か「dense でも N pt
     足りない」)と容量の `denseRemaining` を出す(`docs/ir.md` の 9.4)
+  - `fit_shrink.go` = `-fit`(`BuildOptions.Fit`・`CheckOptions.Fit`、#127。opt-in の最後の手段)。はみ出す本文の
+    スライドだけを値の表の梯子(normal は dense → `fit.shrink[0]` → …、dense は `fit.shrink[0]` から)で組み直して
+    同じ measureBody で測り、最初に収まった段で組む(本文の箱の印 `fitShrink`。IR は変えない)。info の `fit-applied`
+    (`CheckResult.Info`・`BuildResult.Info`)と容量の `fit`。最後の段でも入らなければ layout-overflow のまま
   - `token.go` = 配置の段のトークン。部品と骨組みは Spec に数・色を書かず、値の表の名前・
     段の刻み(`space(n)`・`type(n)`)・役割名を書き、`BuildSlide` の中の `resolveSpec`(組み立ての
     直後・計測の前の1か所)で数と色に直す。トークンの無い数・色・段に無い刻み・知らない名前は

@@ -31,6 +31,16 @@ go run ./cmd/boxloom                                                      # 従�
   build は IR から組むので行の番号は付かない。行は `check` で見る)。直すのは作者で、
   check の hint に従う。`-allow-overflow` を付けると今までどおり作り、はみ出しは警告として
   標準出力に書く(できる PPTX は付けないときに収まる文書と同じ作り方で、バイト列も変わらない)。
+- **`-fit`(最後の手段、#127)**:はみ出す本文のスライドだけを、テンプレートの値の表の梯子で
+  詰めて組む(`BuildOptions.Fit`。IR は変えない)。今の密度から1段ずつ下りる:normal のスライドは
+  dense の組 → `fit.shrink[0]` → `fit.shrink[1]`、dense のスライドは `fit.shrink[0]` から。各段で組み直して
+  check と同じ1回の測り(`measureBody`)ではみ出しを見て、最初に収まった段で組む。字の大きさ・間は
+  梯子の値だけ(任意の倍率では縮めない)で、題・リード・出典・フッターは変えない。最後の段でも収まら
+  なければ今までどおり `layout-overflow`(build は誤り)。詰めたスライドは標準出力に
+  `slide N: [FIT-APPLIED INFO] … step (body 12pt, blockGap 8pt), remaining 3.2pt …` と書く
+  (警告ではなく知らせ。`check -fit` では info の `fit-applied`)。`-fit` を付けても、はみ出さない
+  スライドは付けないときと同じ組み方で、収まる文書のバイト列は変わらない。まず文を削る・スライドを
+  分けるのが先で、`-fit` はそれでも数 pt 足りないときのため(`skills/boxloom/SKILL.md`)。
 - ほかの警告(本文の埋まり具合・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名・
   題の折り返しなど)は止めず、標準出力にだけ書く。スライドのノートには入れない(ノートは作者の文だけ)。
 - `check` は作らないので、はみ出しは警告のまま(終了コードは変わらない)。text の出し方の
@@ -301,3 +311,5 @@ sudo apt-get install -y libreoffice-impress fonts-noto-cjk   # readers のとき
 - 本文の高さがページに収まらないときの自動の扱い(縮めない・送らない)。
   はみ出しは `check` の `layout-overflow` の警告と build の誤りで知らせ、直すのは作者
   (`docs/ir.md` の「はみ出しの測り方」)。`-allow-overflow` で作ったときは比例で縮むだけ。
+  `-fit` を明示したときだけ、テンプレートの梯子の段で詰める(上の「`-fit`」)。薄いスライドを
+  広げる側(`fit.grow`)はまだ使わない。

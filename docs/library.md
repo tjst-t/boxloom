@@ -27,6 +27,7 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 // はみ出し(layout-overflow)があれば f に何も書かず *boxloom.OverflowError を返す
 // (errors.Is(err, boxloom.ErrLayoutOverflow))。oe.Issues が check と同じ path・文・hint の全件。
 // BuildOptions.AllowOverflow なら今までどおり書き、はみ出しは res.Warnings に残る。
+// BuildOptions.Fit なら、はみ出すスライドを値の表の梯子で詰めて書き、詰めたスライドは res.Info に残る。
 // res.Warnings は本文の埋まり具合などの警告。はみ出しのほかは書き出しを止めない
 ```
 
@@ -62,13 +63,13 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 | `IRDeck` | 読んだ IR(`docs/ir.md`)。中の欄は IR の形のまま |
 | `Issue` | 誤りと警告の1件(`docs/content-syntax.md` の5章の形。`File`・`Line`・`Column`・`Path`・`Code`・`Message`・`Expected`・`Hint`)。`String()` で1行の文 |
 | `MarkdownErrors` | `[]Issue` の error(Markdown と YAML の deck の誤り。行・列つき)。`errors.As` で取り出す |
-| `CheckOptions` | `Template`(IR の template より優先)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Strict`(警告も誤り扱い)・`Assets`(画像を読む `fs.FS`) |
-| `CheckResult` | `OK`・`Errors`・`Warnings`・`Capacity`。JSON にすると `boxloom check -format json` と同じ形(切れ端は nil にならない) |
+| `CheckOptions` | `Template`(IR の template より優先)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Strict`(警告も誤り扱い)・`Assets`(画像を読む `fs.FS`)・`Fit`(`BuildOptions.Fit` と同じに詰めて測る。詰めたスライドは `Info` の `fit-applied` と容量の `fit`) |
+| `CheckResult` | `OK`・`Errors`・`Warnings`・`Capacity`・`Info`(知らせ。`-fit` の `fit-applied`。警告ではないので `Strict` でも `OK` に効かない。無ければ nil で JSON に出ない)。JSON にすると `boxloom check -format json` と同じ形(`Info` のほかの切れ端は nil にならない) |
 | `SlideCapacity` | 本文を持つスライドごとの容量(`docs/ir.md` の「容量の計測」) |
-| `BuildOptions` | `Template`(空なら IR の template、それも無ければ light)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Assets`(画像を読む `fs.FS`)・`AllowOverflow`(はみ出し `layout-overflow` があっても PPTX を書く。警告は `Warnings` に残る。false なら書かずに `*OverflowError`) |
+| `BuildOptions` | `Template`(空なら IR の template、それも無ければ light)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Assets`(画像を読む `fs.FS`)・`AllowOverflow`(はみ出し `layout-overflow` があっても PPTX を書く。警告は `Warnings` に残る。false なら書かずに `*OverflowError`)・`Fit`(はみ出す本文のスライドを値の表の梯子 dense → `fit.shrink` で詰め、最初に収まった段で組む。最後の段でも収まらなければ `layout-overflow` のまま。IR は変えず、false なら出力は変わらない) |
 | `Template` | 読んだテンプレート。`ParseTemplate` の返り値を `Values` に渡すためのもので、中の欄は安定させない |
 | `TemplateError` | `ParseTemplate` の誤り。`Issue`(code は `template-values`、path は値の表の中の場所)を持つ。`errors.As` で取り出す |
-| `BuildResult` | `Template`(使った名前)・`Slides`(枚数)・`Warnings`(`"slide 2: [FILL-RATIO WARNING] …"` の文) |
+| `BuildResult` | `Template`(使った名前)・`Slides`(枚数)・`Warnings`(`"slide 2: [FILL-RATIO WARNING] …"` の文)・`Info`(`Fit` で詰めたスライドの `"slide 2: [FIT-APPLIED INFO] …"` の文。無ければ nil) |
 | `ErrLayoutOverflow` / `OverflowError` | はみ出しで `Build` が書かなかったとき(`errors.Is` / `errors.As`)。`Issues` は check の `layout-overflow` の警告と同じ path・文・hint の全件(`File` と行は空。呼ぶ側が添える)、`Warnings` は組み立ての警告の全部 |
 | `BuildBlocking` | `([]Issue) int`。警告のうち build を止めるもの(`layout-overflow`)の数(`boxloom check` の要約の行) |
 | `ErrUnknownTemplate` | テンプレートの名前が無いとき。`Build`・`Schema` の誤りを `errors.Is` で見分ける |

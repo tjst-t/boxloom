@@ -21,6 +21,10 @@ The loop is always:
    hint. When that happens, go back to 3 and follow the `check` hints (split the slide, cut
    text, or `{density=dense}` only for reference pages). Do not reach for
    `build -allow-overflow` to get a file out: it only exists for inspecting a broken deck.
+   `build -fit` (and `check -fit`) is the **last resort**, not the fix: it packs an
+   overflowing slide down the template's ladder (dense, then smaller `fit.shrink` steps), so
+   the slide's text gets smaller than the rest of the deck. Cut text and split slides first;
+   use `-fit` only when the user asks for it or a page is a few points over after that.
 
 Commands run from the `boxloom/` directory of the repository:
 `go run ./cmd/boxloom <schema|check|build|parse> …` (Go 1.24+, no other dependency).
@@ -451,6 +455,9 @@ returns
   summary line says how many stop build) but `build` stops on it (exit 1, no PPTX).
 - Branch on `code`. Use `expected` and `hint` when present.
 - Exit code: 1 if errors, 0 if only warnings.
+- With `-fit`, an `info` list may appear (`code` `fit-applied`, path `/slides/S`): that slide
+  overflowed and was packed with the named template step (`capacity[].fit`). It is not a
+  warning (`-strict` ignores it) but it means the slide is still too full.
 
 Fixes by code:
 
@@ -500,7 +507,10 @@ First split or cut — do not reach for smaller text. Only a reference page (a d
 list the reader consults) may be made `{density=dense}`; the `layout-overflow` hint says
 whether dense would fit ("{density=dense} で収まります") or not ("dense にしても N pt 足りません"),
 and `capacity` gives `denseRemaining`. An ordinary page that argues a point is split even if
-dense would fit.
+dense would fit. `-fit` is not a way around this either: it shrinks the text of the page,
+so the deck's sizes stop matching. Use it only as the last resort after cutting and splitting
+(each packed slide shows up as an `info` entry `fit-applied` and `capacity[].fit`; read them as
+a list of pages still to shorten).
 
 1. In `capacity`, find the slide with `remaining < 0`.
 2. Find the first block with `overflow > 0`. Everything from that block on moves to a

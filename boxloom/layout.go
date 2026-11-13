@@ -112,6 +112,9 @@ type Spec struct {
 	// dense は密なスライドの本文の箱の印(density.go)。この下のトークンは値の表の
 	// dense の組で引く。
 	dense bool
+	// fitShrink は -fit で詰めた本文の箱の印(fit_shrink.go)。k なら、この下のトークンは
+	// 値の表の fit.shrink[k-1] の組で引く。
+	fitShrink int
 	// irPath はこの箱を作った IR の場所(fromIR。layout の出力の path に使う)。
 	// "/" で始まれば文書の中の絶対の場所、そうでなければスライドからの相対
 	// ("title"・"lead" など)。空なら親の場所を継ぐ。

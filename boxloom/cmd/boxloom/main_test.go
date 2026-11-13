@@ -210,3 +210,32 @@ func TestBuildOverflow(t *testing.T) {
 		t.Errorf("check of a deck that fits mentions stop build: %q", stdout.String())
 	}
 }
+
+// -fit なら、はみ出すスライドを梯子で詰めて作り、詰めたことを info で知らせる。
+// check -fit も同じく info を出し、json の capacity に fit が付く(#127)。
+func TestBuildCheckFit(t *testing.T) {
+	const deck = "../../../examples/md/warnings/layout-overflow.bx.md"
+	out := t.TempDir() + "/x.pptx"
+	var stdout, stderr bytes.Buffer
+	if c := run([]string{"build", "-fit", "-o", out, deck}, &stdout, &stderr); c != 0 {
+		t.Fatalf("-fit: exit %d: %s", c, stderr.String())
+	}
+	if _, err := os.Stat(out); err != nil {
+		t.Errorf("-fit: %v", err)
+	}
+	if s := stdout.String(); !strings.Contains(s, "[FIT-APPLIED INFO]") || strings.Contains(s, "LAYOUT-OVERFLOW") {
+		t.Errorf("-fit: stdout = %q", s)
+	}
+	stdout.Reset()
+	if c := run([]string{"check", "-fit", "-strict", deck}, &stdout, io.Discard); c != 0 {
+		t.Errorf("check -fit -strict: exit %d (info is not a warning): %s", c, stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "info: "+deck+":7 /slides/1: fit-applied:") {
+		t.Errorf("check -fit = %q", stdout.String())
+	}
+	stdout.Reset()
+	run([]string{"check", "-fit", "-format", "json", deck}, &stdout, io.Discard)
+	if s := stdout.String(); !strings.Contains(s, `"fit": "fit.shrink[0]"`) || !strings.Contains(s, `"code": "fit-applied"`) {
+		t.Errorf("check -fit -format json = %s", s)
+	}
+}

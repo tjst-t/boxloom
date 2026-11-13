@@ -98,10 +98,7 @@ func (ctx skeletonContext) blocks() ([]*Spec, error) {
 		return ctx.st.blocks, nil
 	}
 	// 密なスライドの本文は dense の値の表で組む(density.go)。
-	bt := ctx.t
-	if ctx.slide.dense() {
-		bt = ctx.t.densed()
-	}
+	bt := ctx.t.bodyTemplate(ctx.slide)
 	cc := componentContext{t: bt, warn: func(w string) { ctx.st.warns = append(ctx.st.warns, w) }}
 	var out []*Spec
 	for bi := range ctx.slide.Body {
@@ -258,7 +255,10 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 			return nil, fmt.Errorf("%s: a content slide needs exactly one body box (markFrame(frameBody)) and no main box; found %d and %d", name, len(bodies), len(mains))
 		}
 		out.Body = bodies[0]
-		if s.dense() {
+		if s.fitShrink > 0 {
+			// -fit で詰めた本文の箱の下は fit.shrink の段の値の表で引く(fit_shrink.go)。
+			apply(out.Body, []SpecOpt{markFitShrink(s.fitShrink)})
+		} else if s.dense() {
 			// 本文の箱の下(ブロックの間・部品のトークン)は dense の値の表で引く。
 			apply(out.Body, []SpecOpt{markDense()})
 		}

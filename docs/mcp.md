@@ -6,8 +6,8 @@ MCP(Model Context Protocol)サーバで、道具を3つ出す。
 | 道具 | コマンドで言えば | 返すもの |
 |---|---|---|
 | `schema` | `boxloom schema [-template]` | 囲み・属性・サブシステム・IR の Schema を1つの JSON(`docs/schema-command.md`) |
-| `check` | `boxloom check -format json [-template] [-strict]` | `{ok, errors, warnings, capacity}`。容量(`capacity`)はいつも付く(`docs/ir.md` の「容量の計測」) |
-| `build` | `boxloom build -o 出力 [-template]` | `{output, slides, template, warnings}`。PPTX はファイルに書く |
+| `check` | `boxloom check -format json [-template] [-strict] [-fit]` | `{ok, errors, warnings, capacity}`(`fit` で詰めたスライドがあれば `info` も)。容量(`capacity`)はいつも付く(`docs/ir.md` の「容量の計測」) |
+| `build` | `boxloom build -o 出力 [-template] [-fit]` | `{output, slides, template, warnings}`(`fit` で詰めたスライドがあれば `info` も)。PPTX はファイルに書く |
 
 ## 決めたこと
 
@@ -38,6 +38,7 @@ MCP(Model Context Protocol)サーバで、道具を3つ出す。
 | `name` | check・build | `source` のときの名前(拡張子で読み方が決まる。省くと `deck.bx.md`)。画像はサーバの作業フォルダから読む |
 | `template` | 3つとも | テンプレートの名前(`dark`・`light`)か値の表のファイル(`./my.json`)。省くと文書の `template`、それも無ければ light |
 | `strict` | check | 警告も誤りにする(`ok` が false になる) |
+| `fit` | check・build | はみ出す本文のスライドをテンプレートの梯子(dense → `fit.shrink`)で詰める(`boxloom build -fit`・`check -fit` と同じ。詰めたスライドは `info` の `fit-applied`。最後の手段で、まず文を削る・分ける) |
 | `output` | build | 書く PPTX。省くとサーバの作業フォルダの `out/<文書の名前>.pptx`。返す `output` は絶対パス |
 | `allowOverflow` | build | はみ出し(`layout-overflow`)があっても書く。省くと(false)はみ出しは誤り:書かずに isError で、はみ出しを hint つきで全件返す(`boxloom build` と同じ、`docs/build.md`) |
 

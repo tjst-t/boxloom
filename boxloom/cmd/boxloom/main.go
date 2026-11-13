@@ -2,8 +2,8 @@
 // 入口(docs/library.md)だけを使い、ここではフラグ・ファイルの読み書き・
 // 終了コードを受け持つ。
 //
-//	boxloom build [-o out.pptx] [-template dark|light|report|./my.json] [-allow-overflow] deck.json|deck.yaml|deck.bx.md
-//	boxloom check [-format text|json] [-capacity] [-template dark|light|report|./my.json] [-strict] deck.json|deck.yaml|deck.bx.md ...
+//	boxloom build [-o out.pptx] [-template dark|light|report|./my.json] [-allow-overflow] [-fit] deck.json|deck.yaml|deck.bx.md
+//	boxloom check [-format text|json] [-capacity] [-template dark|light|report|./my.json] [-strict] [-fit] deck.json|deck.yaml|deck.bx.md ...
 //	boxloom parse [-format text|json] deck.bx.md|deck.yaml
 //	boxloom schema [-template NAME]
 //	boxloom layout [-template dark|light|report|./my.json] deck.json|deck.bx.md|deck.yaml   # 配置の段の木(JSON)
@@ -147,11 +147,12 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	out := fs.String("o", "", "書き出す pptx(省くと out/<IR の名前>.pptx)")
 	tmpl := fs.String("template", "", "テンプレートの名前か値の表のファイル(./my.json。省くと IR の template)")
 	allowOverflow := fs.Bool("allow-overflow", false, "はみ出し(layout-overflow)があっても pptx を書く(警告は出す)")
+	fit := fs.Bool("fit", false, "はみ出す本文のスライドをテンプレートの梯子(dense → fit.shrink)で詰めて組む(最後の手段。まず文を削る・分ける)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(stderr, "usage: boxloom build [-o out.pptx] [-template dark|light|report|./my.json] [-allow-overflow] deck.json|deck.yaml|deck.bx.md")
+		fmt.Fprintln(stderr, "usage: boxloom build [-o out.pptx] [-template dark|light|report|./my.json] [-allow-overflow] [-fit] deck.json|deck.yaml|deck.bx.md")
 		return 2
 	}
 	in := fs.Arg(0)
@@ -166,7 +167,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	var buf bytes.Buffer
-	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: tname, Values: tvalues, Assets: deckAssets(in), AllowOverflow: *allowOverflow})
+	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: tname, Values: tvalues, Assets: deckAssets(in), AllowOverflow: *allowOverflow, Fit: *fit})
 	if errors.Is(err, boxloom.ErrUnknownTemplate) {
 		fmt.Fprintln(stderr, "error:", err)
 		return 1
@@ -198,6 +199,9 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	for _, w := range res.Warnings {
 		fmt.Fprintln(stdout, w)
 	}
+	for _, w := range res.Info {
+		fmt.Fprintln(stdout, w)
+	}
 	fmt.Fprintf(stdout, "saved: %s (%d slides, template %s)\n", *out, res.Slides, res.Template)
 	return 0
 }
@@ -211,11 +215,12 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	strict := fs.Bool("strict", false, "警告も誤りとして扱う(終了コード 1)")
 	format := fs.String("format", "text", "出し方: text か json")
 	showCap := fs.Bool("capacity", false, "text の出し方でも容量(本文の残り)を出す(json では常に出る)")
+	fit := fs.Bool("fit", false, "build -fit と同じく、はみ出す本文のスライドを梯子で詰めて測る(詰めたスライドは info の fit-applied)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if fs.NArg() == 0 || (*format != "text" && *format != "json") {
-		fmt.Fprintln(stderr, "usage: boxloom check [-format text|json] [-capacity] [-template dark|light|report|./my.json] [-strict] deck.json|deck.yaml|deck.bx.md ...")
+		fmt.Fprintln(stderr, "usage: boxloom check [-format text|json] [-capacity] [-template dark|light|report|./my.json] [-strict] [-fit] deck.json|deck.yaml|deck.bx.md ...")
 		return 2
 	}
 	res := boxloom.CheckResult{OK: true, Errors: []boxloom.Issue{}, Warnings: []boxloom.Issue{}, Capacity: []boxloom.SlideCapacity{}}
@@ -233,11 +238,12 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 			res.Errors = append(res.Errors, boxloom.Issue{File: f, Message: err.Error(), Code: "read"})
 			continue
 		}
-		r := boxloom.Check(f, b, boxloom.CheckOptions{Template: tname, Values: tvalues, Strict: *strict, Assets: deckAssets(f)})
+		r := boxloom.Check(f, b, boxloom.CheckOptions{Template: tname, Values: tvalues, Strict: *strict, Assets: deckAssets(f), Fit: *fit})
 		res.OK = res.OK && r.OK
 		res.Errors = append(res.Errors, r.Errors...)
 		res.Warnings = append(res.Warnings, r.Warnings...)
 		res.Capacity = append(res.Capacity, r.Capacity...)
+		res.Info = append(res.Info, r.Info...)
 	}
 	if *format == "json" {
 		enc := json.NewEncoder(stdout)
@@ -250,6 +256,9 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		}
 		for _, w := range res.Warnings {
 			fmt.Fprintln(stdout, "warning:", w.String())
+		}
+		for _, w := range res.Info {
+			fmt.Fprintln(stdout, "info:", w.String())
 		}
 		if *showCap {
 			for _, c := range res.Capacity {

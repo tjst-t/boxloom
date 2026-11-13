@@ -117,7 +117,7 @@ func TestSkeletonContentHeaderOverride(t *testing.T) {
 	}
 	run := func(tm *Template) result {
 		t.Helper()
-		_, warns, caps, err := tm.renderPages(deck)
+		_, warns, caps, err := tm.renderPages(deck, false)
 		if err != nil {
 			t.Fatal(err)
 		}
