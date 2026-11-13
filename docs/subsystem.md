@@ -645,8 +645,8 @@ emphasis: コンテナ                             # 任意。推す列(列の�
 ```yaml
 columns: [東, 西, 北]
 columnGroups:                                  # 左から。span の合計は列の数
-  - {title: 本州, span: 2}
-  - {title: 北海道, span: 1}
+  - {title: 東の拠点, span: 2}
+  - {title: 西の拠点, span: 1}
 rows:
   - label: 人手の不足
     detail: [採用が遅れる, 退職が続く]           # 文の列は箇条、1つの文なら段落

@@ -7,7 +7,7 @@ import (
 )
 
 const matrixStyleData = `{"columns": ["東", "西", "北"],
-  "columnGroups": [{"title": "本州", "span": 2}, {"title": "北海道", "span": 1}],
+  "columnGroups": [{"title": "東の拠点", "span": 2}, {"title": "西の拠点", "span": 1}],
   "rows": [
     {"label": "人手の不足", "detail": ["採用が遅れる", "退職が続く"],
      "cells": [{"status": "support", "text": "p.35"}, {"status": "none"}, {"status": "conditional"}]},
@@ -21,7 +21,7 @@ func TestMatrixDetailAndColumnGroupsRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(d.ColumnGroups) != 2 || d.ColumnGroups[0].Span != 2 || d.ColumnGroups[1].Title.Plain() != "北海道" {
+	if len(d.ColumnGroups) != 2 || d.ColumnGroups[0].Span != 2 || d.ColumnGroups[1].Title.Plain() != "西の拠点" {
 		t.Errorf("columnGroups = %+v", d.ColumnGroups)
 	}
 	if len(d.Rows[0].Points) != 2 || d.Rows[0].Points[1].Plain() != "退職が続く" || len(d.Rows[0].Detail) != 0 {
@@ -138,12 +138,12 @@ func TestMatrixMarkStyle(t *testing.T) {
 			}
 		}
 	}
-	// 列の群:本州は2列(と間)の幅、北海道は1列。
+	// 列の群:東の拠点は2列(と間)の幅、西の拠点は1列。
 	if len(pl.groups) != 2 || pl.groups[0].X != pl.cells[0][0].X || pl.groups[0].X+pl.groups[0].Width != pl.cells[0][1].X+pl.cells[0][1].Width ||
 		pl.groups[1].Width != pl.cells[0][2].Width {
 		t.Errorf("groups = %+v", pl.groups)
 	}
-	for _, s := range []string{"本州", "北海道", "採用が遅れる", "機械が古い"} {
+	for _, s := range []string{"東の拠点", "西の拠点", "採用が遅れる", "機械が古い"} {
 		ok := false
 		for i := range p.Shapes {
 			ok = ok || strings.Contains(p.Shapes[i].text, s)
