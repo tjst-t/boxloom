@@ -2074,7 +2074,7 @@
       "number": 89,
       "kind": "task",
       "title": "Gantt:月の格子(年と月の2段の見出し)・山形の棒・縦の余白を使う",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -2088,7 +2088,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:31:17.139Z",
-      "updatedAt": "2026-11-13T02:51:49.269Z",
+      "updatedAt": "2026-11-13T03:38:26.027Z",
       "closedAt": null,
       "extra": {}
     },
