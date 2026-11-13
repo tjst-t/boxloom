@@ -2909,7 +2909,7 @@
       "number": 128,
       "kind": "task",
       "title": "-fit:薄いスライドを梯子で広げてそろえる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "auto-fit",
       "dependsOn": [
         "fit-shrink"
@@ -2923,7 +2923,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:29:03.385Z",
-      "updatedAt": "2026-11-13T08:53:31.802Z",
+      "updatedAt": "2026-11-13T08:53:36.865Z",
       "closedAt": null,
       "extra": {}
     },
