@@ -294,19 +294,76 @@ func (s *MatrixSubsystem) legendItemW(li LegendItem) float64 {
 	return v.LegendDotSize + v.DotGap/2 + runWidthPt(li.Label, tx.Small, false)
 }
 
+// rowHeadWidth は内側の幅 inner のときの行の見出しの列の幅。題と説明を折り返さない
+// 幅(自然の幅)と、列(見出しの文とセルの中身。mark なら印と小さい字)の自然の幅を
+// 比べる:両方が入ればその自然の幅、入らなければ、どちらも折れない塊の幅(floor)を
+// 先に取り、残りを自然の幅と floor の差の比で配る(表の列と同じ配り方)。floor も
+// 入らなければ自然の幅の比で配る。どの場合も内側の幅の maxRowHeaderFraction まで。
+func (s *MatrixSubsystem) rowHeadWidth(inner float64) float64 {
+	v, tx := s.vals(), s.text()
+	pad := 2 * v.TextInsetX
+	headNat, headFloor := 0.0, 0.0
+	for i := range s.Data.Rows {
+		r := &s.Data.Rows[i]
+		label, detail := s.rowHeadParas(r, "", "", nil)
+		headNat = math.Max(headNat, runsNaturalWidth(label, tx.Title))
+		headFloor = math.Max(headFloor, runsChunkWidth(label, tx.Title))
+		for _, p := range detail {
+			headNat = math.Max(headNat, runsNaturalWidth(p, tx.Detail))
+			markW := 0.0
+			if len(r.Points) > 0 {
+				markW = runWidthPt(tx.Point+" ", tx.Detail, true)
+				p = p[1:]
+			}
+			headFloor = math.Max(headFloor, runsChunkWidth(p, tx.Detail)+markW)
+		}
+	}
+	headNat += pad
+	headFloor = math.Min(headFloor+pad, headNat)
+	// 列は同じ幅なので、一番広く要る列で測る。
+	colNat, colFloor := 0.0, 0.0
+	for j := range s.Data.Columns {
+		h := s.headerRuns(j, "", nil)
+		colNat = math.Max(colNat, runsNaturalWidth(h, tx.Title))
+		colFloor = math.Max(colFloor, runsChunkWidth(h, tx.Title))
+	}
+	lead := v.DotSize + v.DotGap // filled: 丸と空きの後に文
+	if v.mark() {
+		lead = 0
+		colNat, colFloor = math.Max(colNat, v.MarkSize), math.Max(colFloor, v.MarkSize)
+	}
+	for _, r := range s.Data.Rows {
+		for _, c := range r.Cells {
+			if len(c.Text) == 0 {
+				continue
+			}
+			runs := itemRuns(c.Text, "", nil)
+			colNat = math.Max(colNat, lead+runsNaturalWidth(runs, s.cellTextSize()))
+			colFloor = math.Max(colFloor, lead+runsChunkWidth(runs, s.cellTextSize()))
+		}
+	}
+	colNat += pad
+	colFloor = math.Min(colFloor+pad, colNat)
+	C := float64(len(s.Data.Columns))
+	avail := inner - C*v.CellGap
+	var w float64
+	switch {
+	case headNat+C*colNat <= avail:
+		w = headNat
+	case headFloor+C*colFloor <= avail:
+		span := (headNat - headFloor) + C*(colNat-colFloor)
+		w = headFloor + (avail-headFloor-C*colFloor)*(headNat-headFloor)/span
+	default:
+		w = math.Max(0, avail) * headNat / (headNat + C*colNat)
+	}
+	return math.Min(w, inner*v.RowHeaderFrac)
+}
+
 func (s *MatrixSubsystem) geom(width float64) *matrixGeom {
 	v, tx := s.vals(), s.text()
 	g := &matrixGeom{inner: math.Max(0, width-2*v.Padding)}
 	C := float64(len(s.Data.Columns))
-	for i := range s.Data.Rows {
-		r := &s.Data.Rows[i]
-		g.headW = math.Max(g.headW, runsNaturalWidth(itemRuns(r.Label, "", nil), tx.Title)+2*v.TextInsetX)
-		_, detail := s.rowHeadParas(r, "", "", nil)
-		for _, p := range detail {
-			g.headW = math.Max(g.headW, runsNaturalWidth(p, tx.Detail)+2*v.TextInsetX)
-		}
-	}
-	g.headW = math.Min(g.headW, g.inner*v.RowHeaderFrac)
+	g.headW = s.rowHeadWidth(g.inner)
 	g.colW = math.Max(0, (g.inner-g.headW-C*v.CellGap)/C)
 
 	for j := range s.Data.Columns {

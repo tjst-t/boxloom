@@ -113,6 +113,13 @@ func runsMinWidth(runs []TextRun, size float64) float64 {
 	return w
 }
 
+// runsChunkWidth は語の途中で折らないための最小の幅:一番長い語(欧文)と、和文の
+// 続いた字を tableCJKChunk 字ずつの塊とみなした一番広い塊の、広い方(#98 の表の列と
+// 同じ規則)。これより狭い枠では和文が1〜2字ずつに折れる。
+func runsChunkWidth(runs []TextRun, size float64) float64 {
+	return math.Max(runsMinWidth(runs, size), cjkChunkWidth(runs, size))
+}
+
 // --- 縦の配り方 ---
 
 // flexPart は縦に積む1つの部品の大きさ(最小・自然・上限)。固定なら3つとも同じ。

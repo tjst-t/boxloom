@@ -210,7 +210,7 @@
       "minRowHeight": 28,
       "naturalRowHeight": 48,
       "maxRowHeight": 72,
-      "maxRowHeaderFraction": 0.35,
+      "maxRowHeaderFraction": 0.6,
       "dotSize": 10,
       "dotGap": 8,
       "legendGap": 12,

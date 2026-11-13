@@ -344,9 +344,34 @@ func (s *PhasesSubsystem) Measure(c Constraint) Measurement {
 	min, nat, max := flexTotals(s.geom(w).parts)
 	return Measurement{
 		Natural: Size{Width: w, Height: nat},
-		Min:     Size{Width: v.MinWidth, Height: min},
+		Min:     Size{Width: math.Max(v.MinWidth, s.minWidth()), Height: min},
 		Max:     Size{Height: max},
 	}
+}
+
+// minWidth は、どの箱も山形も一番長い語を割らずに置ける図の幅:段の列の幅を
+// 一番広く要る箱(山形は文字の枠の両端の欠けを足した幅)にそろえた幅。
+func (s *PhasesSubsystem) minWidth() float64 {
+	v, tx := s.vals(), s.text()
+	n := len(s.Data.Steps)
+	col := 0.0
+	num := 0
+	for i := range s.Data.Steps {
+		st := &s.Data.Steps[i]
+		title, period := headerParas(st, "", nil)
+		hw := runsMinWidth(title, tx.Title)
+		if len(period) > 0 {
+			hw = math.Max(hw, runsMinWidth(period, tx.Detail))
+		}
+		// 山形の文字の枠は、最後の段では列の幅から先と切り欠きの分(2つの深さ)を引いた幅。
+		col = math.Max(col, hw+2*v.HeaderInsetX+2*v.ChevronDepth)
+		for k := range st.Items {
+			num++
+			w, _ := s.itemNeed(num, &st.Items[k], 0)
+			col = math.Max(col, w)
+		}
+	}
+	return float64(n)*col + float64(n-1)*v.ColumnGap + 2*v.Padding
 }
 
 type phasesPlaced struct {
@@ -363,6 +388,9 @@ func columnSizes(need []float64, c flexPart, b float64, v *PhasesValues) []float
 	k := len(need)
 	gaps := float64(k-1) * v.ItemGap
 	out := make([]float64, k)
+	if b < gaps {
+		return out // 箱の間の空きも入らない(箱は高さ 0。Lint が警告する)
+	}
 	if b < c.min {
 		f := 0.0
 		if c.min-gaps > 0 {
@@ -392,6 +420,17 @@ func (s *PhasesSubsystem) place(box LBox) (*phasesGeom, *phasesPlaced) {
 	v := s.vals()
 	g := s.geom(box.Width)
 	sizes := flexSizes(g.parts, box.Height)
+	if min, _, _ := flexTotals(g.parts); box.Height < min {
+		// 枠が最小より低い(layout-overflow で知らせる)。箱の列だけを縮めて、図を
+		// 枠の外に描かない(箱の文は収まらず、Lint が警告する)。
+		fixed := 0.0
+		for k, sz := range sizes {
+			if k != g.bodyIdx {
+				fixed += sz
+			}
+		}
+		sizes[g.bodyIdx] = math.Max(0, box.Height-fixed)
+	}
 	x0 := box.X + v.Padding
 	y := box.Y + v.Padding
 	pl := &phasesPlaced{}

@@ -574,12 +574,15 @@ matrix の `cellStyle` はセルの描き方で、`filled`(塗りの箱に状態
 `mark`(塗らない。support は丸に白いチェック、none は何も描かない、その他は状態の色の丸。
 丸の直径 `markSize`、丸と文の間 `markGap`、文は丸の下に `small` の字)。ほかの形は誤り。
 `groupRuleWidth` は列の群(`columnGroups`)の名前の下の罫線の太さ。report は matrix を
-書いていて、`mark`・`markSize` 14・行の高さ 48〜72・行の見出しの列は幅の 35% まで。
+書いていて、`mark`・`markSize` 14・行の高さ 48〜72・行の見出しの列は幅の 60% まで。
+`maxRowHeaderFraction`(既定 0.5)は行の見出しの列の幅の上限で、列の幅そのものは題と説明の
+自然な幅と列(見出しとセルの中身。`mark` なら印)の自然な幅から決める(`docs/subsystem.md` の11節)。
 phases の `numberStyle` は数でなく箱の番号の形で、`arabic`(1. 2.)か `roman`(I. II.)。
 ほかの形は誤り。`chevronDepth` は山形の先の深さ、`chevronGap` は山形と山形の間。
 cycle は輪の太さ `ringFraction`(外の半径に対する割合)・扇の間 `gapAngle`(度)・番号の丸
 `numberDiameter`・補足の幅 `labelMinWidth`〜`labelMaxWidth`・輪の直径 `naturalDiameter`・
-`minDiameter`・濃淡 `shadeRange`(最後の段を地の色に寄せる割合)・`mutedShade`(強調が
+`minDiameter`(扇の中に題が入らなければ、自然の直径は `naturalDiameter` の 1.75 倍まで
+大きく申告する)・濃淡 `shadeRange`(最後の段を地の色に寄せる割合)・`mutedShade`(強調が
 あるとき、強調でない段を寄せる割合)を持つ。凡例の寸法は上と同じ。
 
 ### subsystems.chart(任意)

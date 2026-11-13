@@ -66,6 +66,8 @@ type CycleSubsystem struct {
 	Data *CycleData
 	V    *CycleValues // nil なら既定(subsystems/cycle.json)
 	Text *FigureText  // nil なら既定のテンプレート(light)の段
+
+	titleR *float64 // titleRadius の測り値(一度だけ測る)
 }
 
 func NewCycleSubsystem(data any) (Subsystem, error) {
@@ -284,7 +286,8 @@ func (s *CycleSubsystem) Measure(c Constraint) Measurement {
 		r = s.radiusFor(c.Height, 1, sizes)
 	default:
 		sizes = s.labelSizes(v.LabelMaxWidth)
-		r = v.NaturalDiameter / 2
+		// 題が自然の輪の扇に入らなければ、入る大きさの輪を自然の大きさにする。
+		r = math.Max(v.NaturalDiameter/2, s.titleRadius())
 	}
 	w, h := s.size(r, sizes)
 	mw, mh := s.size(v.MinDiameter/2, s.labelSizes(v.LabelMinWidth))
@@ -300,6 +303,7 @@ type cyclePlaced struct {
 	cx, cy, r float64
 	labels    []cycleLabel // 補足の無い段は幅 0
 	titles    []LBox       // 扇の中の題の枠
+	titleRoom []LBox       // 題が扇に収まらなかった段だけ、扇の中に取れた枠(幅 0 なら収まった)
 	numbers   []LBox       // 番号の丸
 	legend    LBox
 	legendL   figureLegendLayout
@@ -321,7 +325,12 @@ func (s *CycleSubsystem) place(box LBox) *cyclePlaced {
 		a := cycleAngle(i, n)
 		d := v.NumberDiameter
 		pl.numbers = append(pl.numbers, LBox{X: pl.cx + r*math.Cos(a) - d/2, Y: pl.cy + r*math.Sin(a) - d/2, Width: d, Height: d})
-		pl.titles = append(pl.titles, s.titleBox(i, pl.cx, pl.cy, r))
+		tb, room, ok := s.titleBox(i, pl.cx, pl.cy, r)
+		pl.titles = append(pl.titles, tb)
+		if ok {
+			room = LBox{}
+		}
+		pl.titleRoom = append(pl.titleRoom, room)
 	}
 	items, _ := s.legend()
 	w := sh.maxX - sh.minX
@@ -335,9 +344,11 @@ func (s *CycleSubsystem) place(box LBox) *cyclePlaced {
 // titleBox は段 i の扇の中の題の枠(輪の中心が原点ではなく絶対の座標)。題を1行・
 // 2行…と増やしながら、中心の候補(titleCandidates)ごとに、扇(輪の内と外の縁・扇の境目から titleInset 内側)と番号の丸を
 // 避けて置ける一番広い横長の枠を探し、題がその行の数に収まる(最後の行が1〜2字だけに
-// ならない)最初の枠を返す。
-// どれにも収まらなければ一番広い枠を返す(Lint が警告する)。
-func (s *CycleSubsystem) titleBox(i int, cx, cy, r float64) LBox {
+// ならない)最初の枠を返す。枠は折れない塊(runsChunkWidth:欧文の語・和文の4字)より
+// 狭くしない(題が1字ずつ縦に折れないように)。
+// どれにも収まらなければ ok が false で、一番広い枠(塊の幅より狭ければ塊の幅に広げ、
+// 扇の真ん中に置いたもの)を返す。room は扇の中に取れた枠(Lint が警告に書く)。
+func (s *CycleSubsystem) titleBox(i int, cx, cy, r float64) (box, room LBox, ok bool) {
 	v, tx := s.vals(), s.text()
 	n := len(s.Data.Steps)
 	a := cycleAngle(i, n)
@@ -386,6 +397,7 @@ func (s *CycleSubsystem) titleBox(i int, cx, cy, r float64) LBox {
 		return lo
 	}
 	runs := s.titleRuns(&s.Data.Steps[i], "", nil)
+	chunk := runsChunkWidth(runs, tx.Sub)
 	lineH := tx.Sub * lineHeightMult()
 	var best LBox
 	var loose LBox // 行の数には収まるが最後の行が短いもの
@@ -399,7 +411,7 @@ func (s *CycleSubsystem) titleBox(i int, cx, cy, r float64) LBox {
 			if w > best.Width*1.0001 {
 				best = box
 			}
-			if w <= 0 {
+			if w < chunk {
 				continue
 			}
 			got := wrapRuns(runs, tx.Sub, w)
@@ -407,18 +419,69 @@ func (s *CycleSubsystem) titleBox(i int, cx, cy, r float64) LBox {
 				continue
 			}
 			if len(got) < 2 || len([]rune(runsText(got[len(got)-1]))) > orphanRunes {
-				return box
+				return box, box, true
 			}
 			if loose.Width == 0 {
 				loose = box
 			}
 		}
 		if loose.Width > 0 {
-			return loose
+			return loose, loose, true
 		}
 	}
-	return best
+	room = best
+	if best.Width < chunk {
+		// 扇に入らない。1字ずつ折れないよう塊の幅に広げ、扇の真ん中に置く。
+		_, h := runsBox(runs, tx.Sub, chunk)
+		px, py := rm*math.Cos(a), rm*math.Sin(a)
+		best = LBox{X: cx + px - chunk/2, Y: cy + py - h/2, Width: chunk, Height: h}
+	}
+	return best, room, false
 }
+
+// titlesFit は外の半径 r のとき、どの段の題も扇の中に収まるか。
+func (s *CycleSubsystem) titlesFit(r float64) bool {
+	for i := range s.Data.Steps {
+		if _, _, ok := s.titleBox(i, 0, 0, r); !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// titleRadius は全ての段の題が扇に収まる一番小さい外の半径(最小の直径の半分から、
+// 自然の直径の cycleTitleGrow 倍の半分まで探す)。最小の輪で収まれば 0。上限でも
+// 収まらなければ上限(題が長すぎる。Lint が警告する)。形の大きさだけで決まるので
+// 一度だけ測る。
+func (s *CycleSubsystem) titleRadius() float64 {
+	if s.titleR != nil {
+		return *s.titleR
+	}
+	v := s.vals()
+	lo, hi := v.MinDiameter/2, v.NaturalDiameter*cycleTitleGrow/2
+	r := 0.0
+	switch {
+	case s.titlesFit(lo):
+	case !s.titlesFit(hi):
+		r = hi
+	default:
+		for k := 0; k < 20; k++ {
+			mid := (lo + hi) / 2
+			if s.titlesFit(mid) {
+				hi = mid
+			} else {
+				lo = mid
+			}
+		}
+		r = hi
+	}
+	s.titleR = &r
+	return r
+}
+
+// cycleTitleGrow は、題を扇に収めるために自然の直径を広げる上限(自然の直径の倍)。
+// これより大きい輪はスライドに入らないので、題を短くするよう警告に任せる。
+const cycleTitleGrow = 1.75
 
 // titleCandidates は題の枠の中心の候補(輪の太さに対する内への寄せ、扇の半分の角度に
 // 対する回し)。番号の丸から離れる順に試す。
@@ -592,9 +655,12 @@ func (s *CycleSubsystem) Lint(box LBox) []string {
 		st := &s.Data.Steps[i]
 		tb := pl.titles[i]
 		runs := s.titleRuns(st, "", nil)
-		needW := runsMinWidth(runs, tx.Sub)
+		needW := runsChunkWidth(runs, tx.Sub)
 		_, needH := runsBox(runs, tx.Sub, tb.Width)
-		if !textFits(needW, needH, tb.Width, tb.Height) {
+		if room := pl.titleRoom[i]; room.Width > 0 || room.Height > 0 {
+			// 扇に入らない(題は塊の幅で扇の真ん中に置いた)。扇の中に取れた枠を書く。
+			out = append(out, overflowWarning("cycle", fmt.Sprintf("steps[%d]", i), st.Title, needW, needH, room.Width, room.Height))
+		} else if !textFits(needW, needH, tb.Width, tb.Height) {
 			out = append(out, overflowWarning("cycle", fmt.Sprintf("steps[%d]", i), st.Title, needW, needH, tb.Width, tb.Height))
 		}
 		if l := pl.labels[i].box; l.Width > 0 {
