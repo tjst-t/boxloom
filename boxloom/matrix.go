@@ -196,9 +196,50 @@ type matrixGeom struct {
 func (s *MatrixSubsystem) cellTextWidth(colW float64) float64 {
 	v := s.vals()
 	if v.mark() {
-		return colW - 2*v.TextInsetX
+		return colW - 2*s.colInsetX()
 	}
-	return colW - 2*v.TextInsetX - v.DotSize - v.DotGap
+	return colW - 2*s.colInsetX() - v.DotSize - v.DotGap
+}
+
+// colInsetX は評価の列(列の見出しとセル)の左右の余白。説明の列(detailColumn)があるときは
+// 評価の列を印と短い文の幅まで縮めるので、縦の余白(textInsetY)と同じ小さい余白にする(#151。
+// textInsetX のままだと「p.35」の列が余白だけで 24pt を取った)。説明の列が無ければ textInsetX
+// (従来どおり)。
+func (s *MatrixSubsystem) colInsetX() float64 {
+	v := s.vals()
+	if s.detailCol() {
+		return math.Min(v.TextInsetX, v.TextInsetY)
+	}
+	return v.TextInsetX
+}
+
+// matrixHeaderMaxLines は説明の列があるときに評価の列の見出しを折り返してよい行の数(#151)。
+const matrixHeaderMaxLines = 3
+
+// headerFitWidth は評価の列の見出しがどれも matrixHeaderMaxLines 行以内に収まる一番狭い文の幅
+// (余白を除く)。一番長い語(和文は1字)より狭くはしない。
+func (s *MatrixSubsystem) headerFitWidth() float64 {
+	tx := s.text()
+	w := 0.0
+	for j := range s.Data.Columns {
+		h := s.headerRuns(j, "", nil)
+		lo, hi := runsMinWidth(h, tx.Title), runsNaturalWidth(h, tx.Title)
+		maxH := float64(matrixHeaderMaxLines)*tx.Title*lineHeightMult() + 1e-6
+		if _, hh := runsBox(h, tx.Title, lo); hh > maxH {
+			// 二分で、3行に収まる一番狭い幅を探す(0.1pt まで)。
+			for hi-lo > 0.1 {
+				mid := (lo + hi) / 2
+				if _, hh := runsBox(h, tx.Title, mid); hh <= maxH {
+					hi = mid
+				} else {
+					lo = mid
+				}
+			}
+			lo = hi
+		}
+		w = math.Max(w, lo)
+	}
+	return w
 }
 
 // cellTextSize はセルの文の字の大きさ(mark は小さい字)。
@@ -380,13 +421,24 @@ func (s *MatrixSubsystem) widths() matrixWidths {
 		m.detMin = math.Min(math.Max(m.detMin, runsMinWidth(h, tx.Title))+pad, m.detFloor)
 		m.detGap = v.CellGap
 	}
-	// 列は同じ幅なので、一番広く要る列で測る。
+	// 列は同じ幅なので、一番広く要る列で測る。説明の列があるときは、評価の列の幅は中身(印・
+	// 短い文)で決め、列の見出しは折り返す(和文は字の境。matrixHeaderMaxLines 行まで)。見出しは
+	// その行の数に収まる幅だけを下限に足し、自然の幅(広げる上限)にも見出しの1行の幅は足さない
+	// (#151。以前は見出しを折らない幅まで広げ、題と要約の列が狭くなった)。
+	if s.detailCol() {
+		hw := s.headerFitWidth()
+		m.colNat, m.colFloor, m.colMin = hw, hw, hw
+	}
 	for j := range s.Data.Columns {
+		if s.detailCol() {
+			break
+		}
 		h := s.headerRuns(j, "", nil)
 		m.colNat = math.Max(m.colNat, runsNaturalWidth(h, tx.Title))
 		m.colFloor = math.Max(m.colFloor, runsChunkWidth(h, tx.Title))
 		m.colMin = math.Max(m.colMin, runsMinWidth(h, tx.Title))
 	}
+	pad = 2 * s.colInsetX()      // 評価の列の余白
 	lead := v.DotSize + v.DotGap // filled: 丸と空きの後に文
 	if v.mark() {
 		lead = 0
@@ -553,7 +605,7 @@ func (s *MatrixSubsystem) searchDetailWidths(inner, avail float64, m matrixWidth
 	topTab := monotoneTable(K+1, func(k int) float64 {
 		top := 0.0
 		for j := range s.Data.Columns {
-			_, h := runsBox(s.headerRuns(j, "", nil), tx.Title, colAt(k)-2*v.TextInsetX)
+			_, h := runsBox(s.headerRuns(j, "", nil), tx.Title, colAt(k)-2*s.colInsetX())
 			top = math.Max(top, h+2*v.TextInsetY)
 		}
 		return top
@@ -664,7 +716,7 @@ func (s *MatrixSubsystem) geom(width float64) *matrixGeom {
 	}
 
 	for j := range s.Data.Columns {
-		_, h := runsBox(s.headerRuns(j, "", nil), tx.Title, g.colW-2*v.TextInsetX)
+		_, h := runsBox(s.headerRuns(j, "", nil), tx.Title, g.colW-2*s.colInsetX())
 		g.headerNeed = math.Max(g.headerNeed, h+2*v.TextInsetY)
 	}
 	if s.detailCol() {
@@ -805,6 +857,7 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 		p.AddShape(b, ShapeOpts{Prst: "rect", Runs: runs, FontSize: size,
 			InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: align})
 	}
+	colInset := s.colInsetX()
 	for k, gr := range s.Data.ColumnGroups {
 		b := pl.groups[k]
 		p.AddShape(LBox{X: b.X, Y: b.Y, Width: b.Width, Height: b.Height - v.GroupRuleW}, ShapeOpts{Prst: "rect",
@@ -813,7 +866,8 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 		p.AddLine(b.X, ry, b.X+b.Width, ry, v.GroupRuleW, ctx.Roles.Color("grid"), "")
 	}
 	for j := range s.Data.Columns {
-		header(pl.header[j], s.headerRuns(j, "text_primary", ctx.Roles), tx.Title, "center")
+		p.AddShape(pl.header[j], ShapeOpts{Prst: "rect", Runs: s.headerRuns(j, "text_primary", ctx.Roles), FontSize: tx.Title,
+			InsetX: colInset, InsetY: v.TextInsetY, Align: "center"})
 	}
 	if s.detailCol() {
 		header(pl.detHead, s.detailHeaderRuns("text_primary", ctx.Roles), tx.Title, "left")
@@ -852,7 +906,7 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 			// 状態の丸は文の段落の印(a:buChar ●、a:buClr に状態の色)。文が無いセルは
 			// ● だけを真ん中に置く。丸はセルの図形の中にあるので、セルと一緒に動く。
 			o := ShapeOpts{Prst: "roundRect", Fill: ctx.Roles.Color("card_alt"), Radius: v.CellCornerRadi, FontSize: tx.Sub,
-				InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: "left"}
+				InsetX: colInset, InsetY: v.TextInsetY, Align: "left"}
 			b := pl.cells[i][j]
 			color := ctx.Roles.Color(c.Status)
 			if len(c.Text) > 0 {
@@ -931,7 +985,7 @@ func (s *MatrixSubsystem) renderMarkCell(ctx RenderContext, b LBox, c MatrixCell
 	insetTop := top - b.Y + v.MarkSize + v.MarkGap
 	ctx.Out.AddShape(LBox{X: b.X, Y: b.Y + insetTop - v.TextInsetY, Width: b.Width, Height: b.Height - insetTop + v.TextInsetY},
 		ShapeOpts{Prst: "rect", Runs: itemRuns(c.Text, "text_primary", ctx.Roles), FontSize: s.cellTextSize(),
-			InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: "center", Anchor: "top"})
+			InsetX: s.colInsetX(), InsetY: v.TextInsetY, Align: "center", Anchor: "top"})
 }
 
 // Lint は見出し・セルの文が収まらないことを警告にする。
@@ -956,7 +1010,7 @@ func (s *MatrixSubsystem) Lint(box LBox) []string {
 		if j == s.Data.Emphasis {
 			c = Inline{{Type: "em", Content: c}} // 太字で測る
 		}
-		check(fmt.Sprintf("columns[%d]", j), c, tx.Title, b.Width-2*v.TextInsetX, b)
+		check(fmt.Sprintf("columns[%d]", j), c, tx.Title, b.Width-2*s.colInsetX(), b)
 	}
 	if s.detailCol() {
 		check("detailColumn", s.Data.DetailColumn, tx.Title, pl.detHead.Width-2*v.TextInsetX, pl.detHead)

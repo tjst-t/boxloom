@@ -46,8 +46,8 @@ func TestMatrixDetailColumnWidths(t *testing.T) {
 			if !(mc.Min.Height < mu.Min.Height) {
 				t.Errorf("%s width %v: Min height with detailColumn %.1f, under the label %.1f", tmpl, w, mc.Min.Height, mu.Min.Height)
 			}
-			// 評価の列は自然な最小の幅(列の見出しを語の途中で折らない幅)。広げても行は低くならない。
-			if g.colW > m.colFloor+0.01 || g.colW >= m.colNat {
+			// 評価の列は中身の幅(列の見出しは3行まで折り返す、#151)。広げても行は低くならない。
+			if g.colW > m.colFloor+0.01 {
 				t.Errorf("%s width %v: evaluation column %.1f, wider than its floor %.1f", tmpl, w, g.colW, m.colFloor)
 			}
 			// 題と要約の列が残りの幅を取る:要約の列は評価の列より広い。
