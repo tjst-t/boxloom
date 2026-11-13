@@ -2097,7 +2097,7 @@
       "number": 90,
       "kind": "task",
       "title": "フェーズの図(phases):段の山形の見出し+段ごとの箱(番号・題・箇条)+段をまたぐ群の帯",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -2111,7 +2111,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:31:17.139Z",
-      "updatedAt": "2026-11-13T02:51:53.448Z",
+      "updatedAt": "2026-11-13T03:38:27.209Z",
       "closedAt": null,
       "extra": {}
     },
