@@ -3398,6 +3398,27 @@
       "updatedAt": "2026-11-13T12:25:44.494Z",
       "closedAt": "2026-11-13T12:25:44.494Z",
       "extra": {}
+    },
+    {
+      "id": "matrix-header-min",
+      "number": 151,
+      "kind": "bug",
+      "title": "matrix の評価の列の最小が列の見出しの字幅で決まり、題と要約の列が狭くなる",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "再現の第9回(元の p28・29):#144 の後も、detailColumn の matrix の評価の列は1つ 48〜51pt(印と「p.35」なら 24pt で足りる)。列の見出し(全角3字程度)を折らない幅が最小を決めているため。6列で約 300pt を取り、題と要約の列は 150〜190pt(元は評価の列が約 40pt、要約の列が約 230pt)。\n直し方:評価の列の最小は中身(印・短い文)の幅で決め、列の見出しは折り返す(和文は字の境、2〜3行まで)。見出しの行の高さは折り返した行の数で測る。見出しが長すぎて3行を超えるときだけ今の最小。Measure の Min と一致させる。架空の内容で試験。",
+      "doneWhen": "見出しが全角3字・中身が印と短い文の評価の列が、印の幅程度(30pt 前後)まで縮み、見出しが折り返される試験/detailColumn なし・十分な幅の matrix の golden が変わらない(変わるなら理由)/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T12:33:46.062Z",
+      "updatedAt": "2026-11-13T12:33:46.062Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
