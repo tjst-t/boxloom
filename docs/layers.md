@@ -279,6 +279,9 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
    値の表の `pairsSideMin`〜1 − `pairsSideMin` から 5% 刻みで選ぶ(差が 1pt 以内なら半々に
    近い方)。短い側(論点・名前)は狭く、長い側が広くなり、両側が同じくらいなら半々のまま。
    全ての行(見出しの行も)を同じ割り方にそろえる。dark・light・report で同じ規則。
+   割るのは各側の自然な幅(最長の1行で決まり、量を表さない)ではなく要る面積(要る高さの
+   釣り合い)で、長い箇条の側が広くなり、対の要る高さは半々のとき以下になる(#108。試験は
+   `boxloom/pairs_width_test.go` の `TestPairsSideWidthByArea`)。
    はみ出しは測る単位の印 `measurePairRows` で対ごとに測る(2.1 の表)。例は
    `examples/md/pairs.bx.md`、代わりの組み方の IR は `examples/ir/pairs-fallback.json`、
    試験は `boxloom/pairs_test.go`。
