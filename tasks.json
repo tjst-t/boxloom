@@ -2696,7 +2696,7 @@
       "number": 118,
       "kind": "task",
       "title": "対の名前(label):対ごとの短い名前を書けるようにし、report は行の左の見出しの列か印に使う",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2708,7 +2708,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T06:10:07.478Z",
-      "updatedAt": "2026-11-13T06:10:07.478Z",
+      "updatedAt": "2026-11-13T06:12:48.388Z",
       "closedAt": null,
       "extra": {}
     },
