@@ -2444,7 +2444,7 @@
       "number": 106,
       "kind": "task",
       "title": "図の中の収まり:循環の図の扇の題が細切れに折れる・段階の図の箱が枠の外に出る・対応表の行の題の列が狭い",
-      "status": "in-progress",
+      "status": "done",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2452,12 +2452,12 @@
       "labels": [],
       "body": "## なぜ\n#82 の2回目の比較で、新しい図に収まりの不具合が見つかった。\n- cycle:長い題が扇の中で細切れ・縦に折れる(作者は題を短くして回避した)。\n- phases:段の箱が図の枠の外に出る。\n- matrix:行の題の列が狭く、題と説明の箇条が長く折れる。\n\n## やること\n- cycle:題が扇に入らないときは、題を扇の外(番号の丸の横)に置くか、自然の大きさを大きく申告する。語の途中で1字ずつ折れないよう、折れない塊(#98 と同じ規則)の幅を最小に。どうしても入らなければ警告。\n- phases:箱の要る高さ・幅を Measure に含め、枠の外に描かない。収まらなければ Min を申告して layout-overflow で知らせる。\n- matrix:行の題の列の幅を、題と説明の自然な幅から取る(印の列は印の幅で足りる)。割合の上限は値の表の名前で。\n\n## 確かめ方\n- 試験(架空の文):cycle の長い題が1字ずつ折れない/phases の全ての箱が図の矩形の中/matrix の行の題の列が前より広く、題が折れない。",
       "doneWhen": "3点を試験で確かめる/golden の差は理由を書く/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/cycle-phases-matrix-fit）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T04:39:01.378Z",
-      "updatedAt": "2026-11-13T04:47:55.739Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T05:01:30.011Z",
+      "closedAt": "2026-11-13T05:01:30.011Z",
       "extra": {}
     }
   ]
