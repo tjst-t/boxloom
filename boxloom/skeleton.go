@@ -255,9 +255,9 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 			return nil, fmt.Errorf("%s: a content slide needs exactly one body box (markFrame(frameBody)) and no main box; found %d and %d", name, len(bodies), len(mains))
 		}
 		out.Body = bodies[0]
-		if s.fitShrink > 0 {
-			// -fit で詰めた本文の箱の下は fit.shrink の段の値の表で引く(fit_shrink.go)。
-			apply(out.Body, []SpecOpt{markFitShrink(s.fitShrink)})
+		if s.fit.set() {
+			// -fit で詰めた・広げた本文の箱の下は梯子の段の値の表で引く(fit_shrink.go)。
+			apply(out.Body, []SpecOpt{markFit(s.fit)})
 		} else if s.dense() {
 			// 本文の箱の下(ブロックの間・部品のトークン)は dense の値の表で引く。
 			apply(out.Body, []SpecOpt{markDense()})

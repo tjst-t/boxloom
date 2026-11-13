@@ -25,6 +25,8 @@ The loop is always:
    overflowing slide down the template's ladder (dense, then smaller `fit.shrink` steps), so
    the slide's text gets smaller than the rest of the deck. Cut text and split slides first;
    use `-fit` only when the user asks for it or a page is a few points over after that.
+   `-fit` also widens a thin slide one template step (bigger text and gaps, `fit.grow`), but
+   that is no answer to `fill-ratio` either: merge, add evidence or use a statement first.
 
 Commands run from the `boxloom/` directory of the repository:
 `go run ./cmd/boxloom <schema|check|build|parse> …` (Go 1.24+, no other dependency).
@@ -456,8 +458,9 @@ returns
 - Branch on `code`. Use `expected` and `hint` when present.
 - Exit code: 1 if errors, 0 if only warnings.
 - With `-fit`, an `info` list may appear (`code` `fit-applied`, path `/slides/S`): that slide
-  overflowed and was packed with the named template step (`capacity[].fit`). It is not a
-  warning (`-strict` ignores it) but it means the slide is still too full.
+  overflowed and was packed with the named template step (`capacity[].fit`), or (message
+  starting "the body was underfilled", step `fit.grow[K]`) it was thin and was widened. It is
+  not a warning (`-strict` ignores it) but it means the slide is still too full or too thin.
 
 Fixes by code:
 

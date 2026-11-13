@@ -141,12 +141,18 @@
         "tableText": 16,
         "blockGap": 24,
         "itemGap": 12,
-        "cardPadding": 24
+        "cardPadding": 24,
+        "matrixRowTitle": 18,
+        "tableCellPaddingX": 12,
+        "tableCellPaddingY": 8,
+        "pairsRowGap": 24,
+        "pairMarkSize": 28
       },
       {
         "blockGap": 32,
         "itemGap": 16,
-        "cardPadding": 28
+        "cardPadding": 28,
+        "pairsRowGap": 32
       }
     ]
   },

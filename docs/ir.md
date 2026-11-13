@@ -714,7 +714,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 
 | code | 見ること |
 |---|---|
-| `fit-applied` | `-fit` のとき、はみ出した本文のスライドを値の表の梯子の段で詰めて収めた。path はそのスライド(`/slides/S`)、文に段の名前(`dense`・`fit.shrink[K]`)・その段の本文の字の大きさと blockGap・残り(pt)。容量の `fit` と同じ段。字を小さくしたので、作者が文を削る・分けると元の大きさに戻せる |
+| `fit-applied` | `-fit` のとき、はみ出した本文のスライドを値の表の梯子の段で詰めて収めた、または薄い本文のスライドを `fit.grow` の段で広げた(#128。文は `the body was underfilled (NN%)` で始まり、広げた後の fill-ratio も書く)。path はそのスライド(`/slides/S`)、文に段の名前(`dense`・`fit.shrink[K]`・`fit.grow[K]`)・その段の本文の字の大きさと blockGap・残り(pt)。容量の `fit` と同じ段。字の大きさを替えたので、作者が文を削る・分ける(詰め)、根拠を足す・隣とまとめる(広げ)と元の大きさに戻せる |
 
 ### はみ出し(layout-overflow)の測り方
 
@@ -777,6 +777,12 @@ normal のスライドは dense の組 → `fit.shrink[0]` → …、dense の�
 (下の表)と容量の `fit` が出る。最後の段でも収まらなければ元の組み方のまま `layout-overflow`
 (build は誤り)。`-fit` を付けなければ組み方も出力も変わらない。
 
+**`-fit` の広げ(#128)**:同じ `-fit` のとき、収まっていて fill-ratio が値の表の `fillRatioMin` を
+下回る normal の本文のスライドは、梯子 `fit.grow` を1段ずつ上る。各段で組み直して同じ測りで測り、
+はみ出す段の手前で止め、fill-ratio が目標に届いたらその段で止める(上がらない段は選ばない)。
+そのスライドには info の `fit-applied` と容量の `fit`(`fit.grow[K]`)が出て、`fill-ratio` の警告は
+広げて組んだ後の値で出る。dense のスライドは広げない。
+
 例:`examples/ir/check-warnings/layout-overflow.json`(と同じ中身の
 `examples/md/warnings/layout-overflow.bx.md`)は誤り0件で、2つのブロックに
 `layout-overflow` が出る(`boxloom/overflow_test.go`)。
@@ -812,7 +818,7 @@ check でも断られるもの。
   "remainingBodyLines": 10, // 残りに本文の行がいくつ入るか(既にあるブロックに足す場合)
   "denseRemaining": 160.2,  // normal のスライドを dense にしたときの remaining(9.4。dense のスライドでは省く)
   // dense のスライドには "density": "dense"(remaining・本文の行の高さは dense の値)
-  // -fit で詰めたスライドには "fit": "fit.shrink[0]" のような段の名前("dense" も。remaining・
+  // -fit で詰めた・広げたスライドには "fit": "fit.shrink[0]" のような段の名前("dense"・"fit.grow[1]" も。remaining・
   // 本文の行の高さ・blocks はその段で組んだ値。詰めなかったスライドでは省く)
   "blocks": [{
     "path": "/slides/1/body/0", "line": 40, "type": "points",

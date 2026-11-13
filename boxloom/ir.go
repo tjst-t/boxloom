@@ -94,9 +94,9 @@ type IRSlide struct {
 	Level int
 	Body  []IRBlock
 	Notes string
-	// fitShrink は IR に無い、組み立ての中だけの印(-fit。fit.go の fitDeck が写しに入れる):
-	// 0 なら印なし、k なら本文を値の表の fit.shrink[k-1] の組で組む。
-	fitShrink int
+	// fit は IR に無い、組み立ての中だけの印(-fit。fit_shrink.go の fitDeckCopy が写しに入れる):
+	// ゼロなら印なし、そうでなければ本文を値の表の fit.shrink か fit.grow の段の組で組む。
+	fit fitRef
 }
 
 // IRBlock は本文のブロック。Type で種類を選び、種類ごとに使う欄が違う。

@@ -147,7 +147,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	out := fs.String("o", "", "書き出す pptx(省くと out/<IR の名前>.pptx)")
 	tmpl := fs.String("template", "", "テンプレートの名前か値の表のファイル(./my.json。省くと IR の template)")
 	allowOverflow := fs.Bool("allow-overflow", false, "はみ出し(layout-overflow)があっても pptx を書く(警告は出す)")
-	fit := fs.Bool("fit", false, "はみ出す本文のスライドをテンプレートの梯子(dense → fit.shrink)で詰めて組む(最後の手段。まず文を削る・分ける)")
+	fit := fs.Bool("fit", false, "はみ出す本文のスライドをテンプレートの梯子(dense → fit.shrink)で詰め、薄い本文のスライドは fit.grow で広げて組む(最後の手段。まず文を削る・分ける・まとめる)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -215,7 +215,7 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	strict := fs.Bool("strict", false, "警告も誤りとして扱う(終了コード 1)")
 	format := fs.String("format", "text", "出し方: text か json")
 	showCap := fs.Bool("capacity", false, "text の出し方でも容量(本文の残り)を出す(json では常に出る)")
-	fit := fs.Bool("fit", false, "build -fit と同じく、はみ出す本文のスライドを梯子で詰めて測る(詰めたスライドは info の fit-applied)")
+	fit := fs.Bool("fit", false, "build -fit と同じく、はみ出す本文のスライドを梯子で詰め、薄いものは広げて測る(調整したスライドは info の fit-applied)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}

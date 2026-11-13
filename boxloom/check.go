@@ -51,7 +51,7 @@ type CheckResult struct {
 	// Capacity は本文を持つスライドごとの容量(capacity.go)。誤りがあって
 	// 組み立てまで通らなかったファイルの分は入らない。
 	Capacity []SlideCapacity `json:"capacity"`
-	// Info は知らせ(誤りでも警告でもない)。いまは -fit で詰めたスライドの fit-applied
+	// Info は知らせ(誤りでも警告でもない)。いまは -fit で詰めた・広げたスライドの fit-applied
 	// だけ。無ければ JSON に出さない。
 	Info []Issue `json:"info,omitempty"`
 }
@@ -69,8 +69,9 @@ type CheckOptions struct {
 	// Assets は画像(image・gallery の src)を読む fs.FS。根は文書のフォルダ。
 	// nil なら画像を使う文書は image-missing になる(BuildOptions.Assets と同じ)。
 	Assets fs.FS
-	// Fit は、はみ出す本文のスライドを値の表の梯子(dense → fit.shrink)で詰めて測る
-	// (BuildOptions.Fit と同じ組み方。fit_shrink.go)。詰めたスライドは Info に fit-applied、
+	// Fit は、はみ出す本文のスライドを値の表の梯子(dense → fit.shrink)で詰め、薄い normal の
+	// 本文のスライドを fit.grow で広げて測る
+	// (BuildOptions.Fit と同じ組み方。fit_shrink.go・fit_grow.go)。調整したスライドは Info に fit-applied、
 	// 容量に fit。最後の段でも収まらなければ layout-overflow のまま。
 	Fit bool
 }

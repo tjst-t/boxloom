@@ -78,8 +78,8 @@ type tokenTable struct {
 	// 使う。density.go。初めて要るときに作る)。dense の表の denseTT は自分。
 	tmpl    *Template
 	denseTT *tokenTable
-	// fitShrink はこの表が fit.shrink の段のものなら k(段の番号+1)。
-	fitShrink int
+	// fit はこの表が -fit の段(fit.shrink・fit.grow)のものならその段。
+	fit fitRef
 }
 
 func newTokenTable(t *Template) *tokenTable {
@@ -202,10 +202,10 @@ func resolveSpec(t *Template, root *Spec) error {
 }
 
 func (tt *tokenTable) resolve(s *Spec, at string) error {
-	if s.fitShrink > 0 && tt.fitShrink != s.fitShrink {
-		// -fit で詰めた本文の箱:この下は fit.shrink の段の値の表で引く(fit_shrink.go)。
-		sub := newTokenTable(tt.tmpl.fitShrunk(s.fitShrink - 1))
-		sub.fitShrink, sub.denseTT = s.fitShrink, sub
+	if s.fit.set() && tt.fit != s.fit {
+		// -fit で詰めた・広げた本文の箱:この下は段の値の表で引く(fit_shrink.go)。
+		sub := newTokenTable(tt.tmpl.fitStepped(s.fit))
+		sub.fit, sub.denseTT = s.fit, sub
 		return sub.resolve(s, at)
 	}
 	if s.dense && tt.denseTT != tt {

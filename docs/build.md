@@ -38,9 +38,19 @@ go run ./cmd/boxloom                                                      # 従�
   梯子の値だけ(任意の倍率では縮めない)で、題・リード・出典・フッターは変えない。最後の段でも収まら
   なければ今までどおり `layout-overflow`(build は誤り)。詰めたスライドは標準出力に
   `slide N: [FIT-APPLIED INFO] … step (body 12pt, blockGap 8pt), remaining 3.2pt …` と書く
-  (警告ではなく知らせ。`check -fit` では info の `fit-applied`)。`-fit` を付けても、はみ出さない
-  スライドは付けないときと同じ組み方で、収まる文書のバイト列は変わらない。まず文を削る・スライドを
+  (警告ではなく知らせ。`check -fit` では info の `fit-applied`)。まず文を削る・スライドを
   分けるのが先で、`-fit` はそれでも数 pt 足りないときのため(`skills/boxloom/SKILL.md`)。
+- **`-fit` の広げ(#128)**:同じ `-fit` で、収まっていて fill-ratio が値の表の `fillRatioMin` を
+  下回る本文のスライド(normal のものだけ。dense は広げない)は、梯子 `fit.grow` を
+  `fit.grow[0]` → `fit.grow[1]` と上る。各段で組み直して詰めと同じ測りではみ出しと fill-ratio を見て、
+  はみ出す段の手前で止め、fill-ratio が目標に届いたらその段で止める。fill-ratio が前の段より
+  上がらない段(図が本文の高さを決めるときなど)は選ばない。字と間合いの段を上げるだけで任意の倍率は
+  使わず、本文の下の余りをブロックの間に配ることもしない。広げたスライドは
+  `slide N: [FIT-APPLIED INFO] the body was underfilled (50.0%), … fit.grow[1] step (…), fill ratio 66.8%, …`
+  と書き、fill-ratio の警告は広げて組んだ後の値で出す(目標に届けば消える)。例は
+  `examples/md/warnings/fill-ratio.bx.md`。
+- `-fit` を付けても、はみ出さず薄くもないスライドは付けないときと同じ組み方で、そういう文書の
+  バイト列は変わらない。`-fit` を付けなければ、はみ出しも薄いスライドも今までどおり(警告だけ)。
 - ほかの警告(本文の埋まり具合・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名・
   題の折り返しなど)は止めず、標準出力にだけ書く。スライドのノートには入れない(ノートは作者の文だけ)。
 - `check` は作らないので、はみ出しは警告のまま(終了コードは変わらない)。text の出し方の
@@ -311,5 +321,4 @@ sudo apt-get install -y libreoffice-impress fonts-noto-cjk   # readers のとき
 - 本文の高さがページに収まらないときの自動の扱い(縮めない・送らない)。
   はみ出しは `check` の `layout-overflow` の警告と build の誤りで知らせ、直すのは作者
   (`docs/ir.md` の「はみ出しの測り方」)。`-allow-overflow` で作ったときは比例で縮むだけ。
-  `-fit` を明示したときだけ、テンプレートの梯子の段で詰める(上の「`-fit`」)。薄いスライドを
-  広げる側(`fit.grow`)はまだ使わない。
+  `-fit` を明示したときだけ、テンプレートの梯子の段で詰め、薄いスライドは広げる(上の「`-fit`」)。

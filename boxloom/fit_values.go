@@ -10,7 +10,7 @@
 //   - shrink の段は前の段(最初は dense)より大きくならない、grow の段は前の段(最初は
 //     values)より小さくならない。前の段と同じだけの組(何も替えない段)も誤り
 //
-// shrink は -fit の詰め(fit_shrink.go、#127)が使う。grow はまだ使わない(fit-grow)。
+// shrink は -fit の詰め(fit_shrink.go、#127)、grow は -fit の広げ(fit_grow.go、#128)が使う。
 
 package boxloom
 

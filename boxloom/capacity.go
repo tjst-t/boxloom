@@ -39,7 +39,7 @@ type SlideCapacity struct {
 	// dense のスライドでは省く(remaining がそれ)。
 	DenseRemaining *float64 `json:"denseRemaining,omitempty"`
 	// Fit は -fit(BuildOptions.Fit・CheckOptions.Fit)で本文を詰めたときの段の名前
-	// ("dense" か "fit.shrink[K]"。fit_shrink.go)。remaining・本文の行の高さはその段の値。
+	// ("dense"・"fit.shrink[K]"・"fit.grow[K]"。fit_shrink.go・fit_grow.go)。remaining・本文の行の高さはその段の値。
 	// 詰めなかったスライドでは省く。
 	Fit    string          `json:"fit,omitempty"`
 	Blocks []BlockCapacity `json:"blocks"`

@@ -105,7 +105,9 @@ type BuildOptions struct {
 	// Fit は、はみ出す本文のスライドを値の表の梯子で詰めて組む(既定は縮めない)。
 	// 今の密度から1段ずつ(normal は dense の組 → fit.shrink[0] → …、dense は
 	// fit.shrink[0] → …)組み直して測り、最初に収まった段で組む。最後の段でも
-	// 収まらなければ今までどおり layout-overflow。詰めたスライドは Info に書く。
+	// 収まらなければ今までどおり layout-overflow。fill-ratio が下回る normal の本文の
+	// スライドは fit.grow を上り、はみ出さない最も上の段で組む(目標に届いたらそこで
+	// 止める。fit_grow.go)。詰めた・広げたスライドは Info に書く。
 	// IR は変えない。false なら出力は Fit の無いときと同じ。
 	Fit bool
 }
@@ -144,7 +146,7 @@ type BuildResult struct {
 	// はみ出し(layout-overflow)のほかは書き出しを止めない(はみ出しは
 	// AllowOverflow のときだけここに残る)。Issue の形で欲しいときは Check を使う。
 	Warnings []string
-	// Info は知らせ(-fit で詰めたスライド。"slide 3: [FIT-APPLIED INFO] ..." の形。
+	// Info は知らせ(-fit で詰めた・広げたスライド。"slide 3: [FIT-APPLIED INFO] ..." の形。
 	// check の Info の fit-applied と同じ文)。無ければ nil。
 	Info []string
 }

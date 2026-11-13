@@ -145,9 +145,10 @@ func TestFitShrinkLastStepStillOverflows(t *testing.T) {
 	}
 }
 
-// 収まるデッキは -fit でも1バイトも変わらない。
+// はみ出しも薄いスライドも無いデッキは -fit でも1バイトも変わらない(薄いスライドは
+// fit.grow で広がる。fit_grow_test.go)。
 func TestFitShrinkNoChangeWhenFits(t *testing.T) {
-	for _, f := range []string{"../examples/ir/demo-deck.json", "../examples/ir/charts.json"} {
+	for _, f := range []string{"../examples/ir/charts.json"} {
 		file, data := readFitDeck(t, f, nil)
 		deck, err := ReadDeck(file, data)
 		if err != nil {
