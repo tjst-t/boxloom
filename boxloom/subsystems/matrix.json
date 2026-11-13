@@ -16,5 +16,9 @@
   "textInsetX": 12,
   "textInsetY": 4,
   "cellCornerRadius": 4,
-  "emphasisLineWidth": 2
+  "emphasisLineWidth": 2,
+  "groupRuleWidth": 0.75,
+  "markSize": 16,
+  "markGap": 4,
+  "cellStyle": "filled"
 }

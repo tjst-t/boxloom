@@ -318,7 +318,9 @@ groups: …
 - **```process**・**```orgchart**・**```matrix**・**```funnel**・**```phases**・**```cycle**(箱と線の図・輪の図。
   `docs/subsystem.md` の11節)も同じ作り。中身は IR の `data` と同じキーで、書けるのは
   文と状態(`status`)と強調(`emphasis`)と、状態の意味の凡例(`legend`)だけ(座標・色・
-  字の大きさは書けない)。matrix の推す列は `emphasis: <列の見出しの文>`。funnel の
+  字の大きさは書けない)。matrix の推す列は `emphasis: <列の見出しの文>`、行の題の下の
+  説明は `detail`(1行なら文、YAML の列なら文の列で各行が箇条)、列の見出しの上の群は
+  `columnGroups: [{title: 名前, span: 2}]`(span は1以上の引用しない整数。合計は列の数)。funnel の
   `value` は引用しない数なら数、それ以外は文字列。phases の箱の `detail` は1行なら文、
   YAML の列なら文の列(各行が箇条。process と違って改行でつながない)。cycle の段は3〜6つ、
   `start` は 0 か 1(引用しない数)。
@@ -334,7 +336,7 @@ groups: …
 
   パーサーが断るのは形の誤り(知らないキー・知らない状態の名前・型)だけ。matrix の
   行のセルの数が列の数と違うこと・`emphasis` が見出しに無いことは `boxloom check` が
-  `matrix-cells`・`matrix-emphasis`(その行の行つき)で返す。`status` を使ったのに
+  `matrix-cells`・`matrix-emphasis`・`matrix-column-groups`(その行の行つき)で返す。`status` を使ったのに
   `legend` に文が無いと警告 `figure-legend`。例は `examples/md/figures.bx.md`(↔ `examples/ir/figures.json`)。
 - **```chart**(数値のグラフ。`docs/subsystem.md` の12節)も同じ作り。書くのは比べ方
   `compare`(item・timeSeries・component・frequency・correlation)と、項目・系列・値・

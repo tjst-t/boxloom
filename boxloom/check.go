@@ -727,7 +727,8 @@ func (c *checker) checkShapes(data map[string]any, ptr string, docIDs map[string
 	}
 }
 
-// checkMatrix は matrix の各行のセルの数が列の数と同じかを見る(matrix-cells)。
+// checkMatrix は matrix の各行のセルの数が列の数と同じか(matrix-cells)・推す列が
+// 見出しにあるか(matrix-emphasis)・列の群の span の合計が列の数か(matrix-column-groups)を見る。
 func (c *checker) checkMatrix(data map[string]any, ptr string) {
 	cols, ok := data["columns"].([]any)
 	if !ok {
@@ -750,6 +751,20 @@ func (c *checker) checkMatrix(data map[string]any, ptr string) {
 		}
 		if j, msg := matrixEmphasisColumn(names, e); j < 0 {
 			c.add(ptr+"/emphasis", msg, "matrix-emphasis")
+		}
+	}
+	if groups, ok := data["columnGroups"].([]any); ok {
+		var spans []int
+		for _, g := range groups {
+			gm, _ := g.(map[string]any)
+			n, ok := gm["span"].(float64)
+			if !ok || n < 1 || n != float64(int(n)) {
+				return // 形の誤りは Schema(読み込み)に任せる
+			}
+			spans = append(spans, int(n))
+		}
+		if msg := matrixGroupSpans(spans, len(cols)); msg != "" {
+			c.add(ptr+"/columnGroups", msg, "matrix-column-groups")
 		}
 	}
 }

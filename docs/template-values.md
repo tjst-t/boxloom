@@ -522,6 +522,11 @@ process・orgchart・funnel・phases の状態の凡例(`docs/subsystem.md` の1
 `legendSwatchHeight`(見本の箱)・`legendSwatchGap`(見本と文の間)。funnel の `rateGap` は
 帯の列と転換率の列の間。matrix の `emphasisLineWidth` は推す列の枠線の太さで、
 `naturalRowHeight` 36・`maxRowHeight` 44 は1行の文のセルが間延びしない高さ。
+matrix の `cellStyle` はセルの描き方で、`filled`(塗りの箱に状態の色の丸と文。既定・dark・light)か
+`mark`(塗らない。support は丸に白いチェック、none は何も描かない、その他は状態の色の丸。
+丸の直径 `markSize`、丸と文の間 `markGap`、文は丸の下に `small` の字)。ほかの形は誤り。
+`groupRuleWidth` は列の群(`columnGroups`)の名前の下の罫線の太さ。report は matrix を
+書いていて、`mark`・`markSize` 14・行の高さ 48〜72・行の見出しの列は幅の 35% まで。
 phases の `numberStyle` は数でなく箱の番号の形で、`arabic`(1. 2.)か `roman`(I. II.)。
 ほかの形は誤り。`chevronDepth` は山形の先の深さ、`chevronGap` は山形と山形の間。
 cycle は輪の太さ `ringFraction`(外の半径に対する割合)・扇の間 `gapAngle`(度)・番号の丸

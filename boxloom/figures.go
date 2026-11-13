@@ -346,6 +346,9 @@ func loadFigureDefaults() {
 		if err := phasesDefaults.check("subsystems/phases.json"); err != nil {
 			panic(err)
 		}
+		if err := matrixDefaults.check("subsystems/matrix.json"); err != nil {
+			panic(err)
+		}
 		loadFigureValues("cycle", &cycleDefaults)
 	})
 }
@@ -432,6 +435,11 @@ func templateFigures(t *Template, f *templateFile) error {
 	}
 	if phv != nil {
 		if err := phv.check("subsystems.phases"); err != nil {
+			return err
+		}
+	}
+	if mv != nil {
+		if err := mv.check("subsystems.matrix"); err != nil {
 			return err
 		}
 	}

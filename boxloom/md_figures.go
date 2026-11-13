@@ -4,7 +4,8 @@
 // キーは IR と同じ。文の値は本文と同じ文中の記法で読み、YAML の列で書くと各行を
 // 意味のある改行(br)でつなぐ。ここで断るのは Schema と同じ形の誤り(知らない
 // キー・型・知らない状態の名前)だけ。matrix の行のセルの数が列の数と合わない
-// ことは、boxloom check が matrix-cells の誤り(その行の行つき)で返す。
+// ことは、boxloom check が matrix-cells の誤り(その行の行つき)で、列の群の span の
+// 合計が列の数と違うことは matrix-column-groups で返す。
 
 package boxloom
 
@@ -32,6 +33,7 @@ func init() {
 	matrixCellFields = []gField{{"status", status, true}, {"text", gInline, false}}
 	matrixRowFields = []gField{
 		{"label", gInline, true},
+		{"detail", gPhaseDetail, false},
 		{"cells", gSeq(gObject(matrixCellFields), 1), true},
 	}
 	funnelStageField = []gField{
@@ -60,6 +62,7 @@ func orgChartDataFromYAML(p *mdParser, n *yNode, path string) any {
 func matrixDataFromYAML(p *mdParser, n *yNode, path string) any {
 	return gObject([]gField{
 		{"columns", gSeq(gInline, 1), true},
+		{"columnGroups", gSeq(gObject([]gField{{"title", gInline, true}, {"span", gCount, true}}), 1), false},
 		{"rows", gSeq(gObject(matrixRowFields), 1), true},
 		{"legend", gStatusLegend, false},
 		{"emphasis", gString, false},
@@ -159,6 +162,21 @@ func phasesDataFromYAML(p *mdParser, n *yNode, path string) any {
 		{"groups", gSeq(gObject(group), 1), false},
 		{"legend", gStatusLegend, false},
 	})(p, n, path)
+}
+
+// gCount は1以上の整数(引用しない)。matrix の列の群の span。合計が列の数かは
+// boxloom check が matrix-column-groups で見る。
+func gCount(p *mdParser, n *yNode, path string) any {
+	s, ok := gScalar(p, n, path, "数")
+	if !ok {
+		return nil
+	}
+	k, err := strconv.Atoi(s)
+	if err != nil || k < 1 || n.quoted {
+		gFail(p, n, path, codeInvalidValue, fmt.Sprintf("%s は1以上の整数で書いてください", s), nil, "例 span: 2")
+		return nil
+	}
+	return k
 }
 
 // gPhaseDetail は1つの文か、文の列(各項目が箇条の1つ。gInline と違って改行でつながない)。

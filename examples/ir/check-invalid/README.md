@@ -23,6 +23,7 @@
 | `quote-empty-source.json` | 引用の出どころを空白だけにした | `empty-text` |
 | `matrix-cells.json` | matrix の2行目のセルを1つ減らした(列は3つ) | `matrix-cells` |
 | `matrix-emphasis.json` | matrix の推す列(emphasis)に、見出しに無い名前を書いた | `matrix-emphasis` |
+| `matrix-column-groups.json` | `matrix-emphasis.json` の emphasis を除き、列の群(columnGroups)を span 1 の2つにした(列は3つ) | `matrix-column-groups` |
 | `table-shape.json` | 表の2行目のセルを1つ減らした(見出しは4つ) | `table-shape` |
 | `table-total-shape.json` | `table-shape.json` の2行目を直し、セルが3つの合計の行(`total`)を足した(見出しは4つ) | `table-shape` |
 | `table-groups.json` | `../table-groups.json` の表紙と1枚目の表だけを取り出し、最初の群の行の数(`groups/0/rows`)を3から2にした(群の行の和が本体の行より1つ少ない) | `table-groups` |

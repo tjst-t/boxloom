@@ -497,6 +497,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `empty-text` | 区切りの `title`・本文のスライドの `lead`・主張の `content`・`takeaway` の `content`・`quote` の `content` と `source`・`stat` の各 `label`・スライドの `source`・`meta` の `confidential` と `disclaimer`・`pairs` の2つの見出し(`headings`)と段落の側の `content` に、見える文字がある(Schema は `""` や空白だけを通す)。`pairs` の側の引用・`variant` も本文のブロックと同じに見る(path は IR の場所 `…/pairs/K/subject/…`。テンプレートや代わりの組み方に依らない) |
 | `matrix-cells` | matrix の各行の `cells` の数が `columns` の数と同じ(path はその行の `cells`) |
 | `matrix-emphasis` | matrix の `emphasis`(推す列)が `columns` の見出しのどれか(文中の記法を除いた文字)と同じ(path は `…/data/emphasis`) |
+| `matrix-column-groups` | matrix の `columnGroups`(列の群)の `span` の合計が `columns` の数と同じ(path は `…/data/columnGroups`) |
 | `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`)。`groups` があると本体の行は見出しより1つ少ない |
 | `table-points` | 表のセルの中の箇条(`{"points": [...]}`)の項目が2つ以上で(path は `…/rows/R/C/points` か `…/total/C/points`)、空の項目が無い(path は `…/points/I`) |
 | `table-continues` | 続きの表(`continues`)が、すぐ前のスライドの本文の最後の表に続く(前のスライドに表が無い・間にスライドを挟む・そのスライドの2つ目の表・並列のまとまりの中は path `…/continues`)。`header` を書かない(path `…/header`)。`groups` の有無が最初の表と同じ(path `…/groups`)。合計の行はひと続きの最後の表だけ(path は続きのある表の `…/total`)。`continues` は `true` だけ |

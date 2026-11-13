@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/matrix.schema.json",
   "title": "Boxloom IR: matrix subsystem (0.1)",
-  "description": "行×列の評価(docs/patterns.md の R6)。セルは評価(status)と短い文。セルが文字・数だけなら matrix ではなく表(table)。各行の cells の数は columns の数と同じ(boxloom check が matrix-cells で見る)。凡例は使った状態から自動で付く。",
+  "description": "行×列の評価(docs/patterns.md の R6)。セルは評価(status)と短い文。セルが文字・数だけなら matrix ではなく表(table)。各行の cells の数は columns の数と同じ(boxloom check が matrix-cells で見る)。凡例は使った状態から自動で付く。列の群(columnGroups)の span の合計は列の数と同じ(boxloom check が matrix-column-groups で見る)。",
   "type": "object",
   "properties": {
     "type": {
@@ -62,6 +62,21 @@
         "label": {
           "$ref": "#/$defs/inline"
         },
+        "detail": {
+          "description": "行の題の下の説明。1つの文(inline)か、文の列(各項目が箇条の1つ)。列の項目に文中の要素(em など)が直に並ぶ列は1つの文として読む。",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/inline"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/inline"
+              }
+            }
+          ]
+        },
         "cells": {
           "type": "array",
           "minItems": 1,
@@ -76,6 +91,25 @@
       ],
       "additionalProperties": false
     },
+    "columnGroup": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "列の群の名前(またぐ列の見出しの上に置く)。",
+          "$ref": "#/$defs/inline"
+        },
+        "span": {
+          "description": "またぐ列の数。",
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "title",
+        "span"
+      ],
+      "additionalProperties": false
+    },
     "matrix": {
       "type": "object",
       "properties": {
@@ -85,6 +119,14 @@
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/inline"
+          }
+        },
+        "columnGroups": {
+          "description": "列の群(列の見出しの上に、2列・3列をまたいで置く名前)。左から順に。span の合計は columns の数と同じ(違えば boxloom check が matrix-column-groups の誤りにする)。",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/columnGroup"
           }
         },
         "rows": {
