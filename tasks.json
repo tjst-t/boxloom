@@ -3467,7 +3467,7 @@
       "number": 154,
       "kind": "bug",
       "title": "cycle: 縦長の狭い枠で輪が最小(96pt)・題が5字幅に潰れる→輪の下に番号つきの題を並べる置き方",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3482,7 +3482,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T14:35:49.693Z",
-      "updatedAt": "2026-11-13T14:35:49.693Z",
+      "updatedAt": "2026-11-13T14:36:03.991Z",
       "closedAt": null,
       "extra": {}
     }
