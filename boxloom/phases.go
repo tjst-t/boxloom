@@ -421,11 +421,17 @@ func (s *PhasesSubsystem) place(box LBox) (*phasesGeom, *phasesPlaced) {
 	g := s.geom(box.Width)
 	// 枠が最小より低くても箱は縮めない(縮めると箱の文が次の箱に重なる、#107)。図は
 	// 最小の高さで描き、枠の下にはみ出す分は layout-overflow・subsystem-min で知らせる。
+	// そのとき凡例は図の頭(群の帯の上)に置き、枠の中に残す(下の注や本文に重ねない、#114)。
 	min, _, _ := flexTotals(g.parts)
 	sizes := flexSizes(g.parts, math.Max(box.Height, min))
 	x0 := box.X + v.Padding
 	y := box.Y + v.Padding
 	pl := &phasesPlaced{}
+	legendTop := box.Height < min-1e-6 && g.legend.h > 0
+	if legendTop {
+		pl.legend = LBox{X: x0, Y: y, Width: g.inner, Height: g.legend.h}
+		y += g.legend.h + v.LegendGap
+	}
 	n := len(s.Data.Steps)
 	if g.bandH > 0 {
 		for _, gr := range s.Data.Groups {
@@ -451,7 +457,9 @@ func (s *PhasesSubsystem) place(box LBox) (*phasesGeom, *phasesPlaced) {
 		}
 		pl.items = append(pl.items, col)
 	}
-	pl.legend = LBox{X: x0, Y: y + b + v.LegendGap, Width: g.inner, Height: g.legend.h}
+	if !legendTop {
+		pl.legend = LBox{X: x0, Y: y + b + v.LegendGap, Width: g.inner, Height: g.legend.h}
+	}
 	return g, pl
 }
 

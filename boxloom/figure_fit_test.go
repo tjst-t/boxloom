@@ -189,3 +189,43 @@ func TestPhasesTooTallWarns(t *testing.T) {
 		t.Errorf("no layout-overflow / subsystem-min warning: %v", res.Warnings)
 	}
 }
+
+// phases: 枠が最小より低いとき、凡例は図の頭に移り、枠の中に残る。群の帯・山形・箱と
+// 重ならない(#114)。枠が足りていれば凡例は箱の列の下のまま。
+func TestPhasesLegendStaysInFrame(t *testing.T) {
+	var items []string
+	for i := 0; i < 4; i++ {
+		items = append(items, `{"title": "地域の拠点の運営", "status": "conditional", "detail": ["週末の催しを開く", "担い手を三人育てる"]}`)
+	}
+	for _, tm := range []string{"report", "light", "dark"} {
+		sub := figureFromIR(t, tm, "phases", `{"steps": [
+		  {"title": "調べる", "id": "a", "items": [`+strings.Join(items, ",")+`]},
+		  {"title": "試す", "id": "b", "items": [{"title": "小さく試す", "status": "danger"}]},
+		  {"title": "広げる", "id": "c", "items": [{"title": "仲間を増やす"}]}],
+		  "groups": [{"title": "一年目", "from": "a", "to": "b"}],
+		  "legend": {"conditional": "条件つきで進める", "danger": "遅れの見込み"}}`).(*PhasesSubsystem)
+		m := sub.Measure(Constraint{Width: 860})
+		for _, h := range []float64{m.Min.Height * 0.87, m.Min.Height * 0.6, m.Min.Height, m.Natural.Height} {
+			box := LBox{X: 50, Y: 120, Width: 860, Height: h}
+			_, pl := sub.place(box)
+			if pl.legend.Height <= 0 {
+				t.Fatalf("%s: no legend", tm)
+			}
+			if !within(box, pl.legend) {
+				t.Errorf("%s h=%.1f (min %.1f): legend %+v is outside the frame %+v", tm, h, m.Min.Height, pl.legend, box)
+			}
+			others := append(append([]LBox{}, pl.bands...), pl.chevrons...)
+			for _, col := range pl.items {
+				others = append(others, col...)
+			}
+			for _, b := range others {
+				if boxesOverlap(pl.legend, b) {
+					t.Errorf("%s h=%.1f: legend %+v overlaps %+v", tm, h, pl.legend, b)
+				}
+			}
+			if top := pl.legend.Y < pl.chevrons[0].Y; top != (h < m.Min.Height-1) {
+				t.Errorf("%s h=%.1f (min %.1f): legend at top = %v", tm, h, m.Min.Height, top)
+			}
+		}
+	}
+}
