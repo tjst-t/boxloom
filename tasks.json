@@ -2885,7 +2885,7 @@
       "number": 127,
       "kind": "task",
       "title": "-fit:はみ出すスライドを梯子で詰めて収める",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "auto-fit",
       "dependsOn": [
         "build-overflow-error",
@@ -2900,7 +2900,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:29:03.385Z",
-      "updatedAt": "2026-11-13T07:29:03.385Z",
+      "updatedAt": "2026-11-13T08:25:44.153Z",
       "closedAt": null,
       "extra": {}
     },
