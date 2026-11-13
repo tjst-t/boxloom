@@ -2947,6 +2947,27 @@
       "updatedAt": "2026-11-13T07:35:00.116Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "pair-side-untitled-multi",
+      "number": 130,
+      "kind": "task",
+      "title": "pairs の側は見出しを省いても複数のブロックを書ける",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "再現の第6回(p36)で、応答の側に「箇条+表」「引用×2」を見出し無しで置けず、原本に無い見出しを足していた。記法:`:::subject`・`:::response`(ラベル {label=…} の有無とも)の見出しの文を省いても、中に1〜4ブロックを書ける。見出しが無ければ帯を描かない。まず今の挙動を試験で確かめ(Markdown・IR の両方。単独の pairs と列の中の pairs)、通らない形を直す。docs/content-syntax.md の pairs の節に例を足す。",
+      "doneWhen": "見出しの無い側に2ブロック以上(箇条+表、引用×2)を書いた例が parse・check・build を通り、帯が描かれない試験/golden の既存の値が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:35:04.497Z",
+      "updatedAt": "2026-11-13T07:35:04.497Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
