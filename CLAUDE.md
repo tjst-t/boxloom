@@ -304,8 +304,8 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     だけが下り、最初に収まった段で組む(分けずに入らなければその段で分ける)。警告の `fit-emergency`(hint は
     分ける・削る)。最後の段でも入らなければ -fit の build は誤り。dark・light は本文 8pt の1段、report は 10・9pt の2段
   - `fit_split_columns.go` = `-fit` の列ごとの分け(#152)。非常用の段でも入らない2列以上の columns を持つ枚を、
-    列の並び順のまま1列1枚(全幅の1列の columns。列の題はその枚に)に分け、各枚を今の fit の順(段 → 非常用 →
-    その枚の分け)で組み直す(段は枚ごと)。info の `fit-split`(`split them by column`・各枚の段)。1列でも入らなければ
+    列の並び順のまま1列1枚(全幅の1列の columns。列の題はその枚に)に分け、各枚を今の fit の順(段 → その枚の分け →
+    非常用)で組み直す(段は枚ごと)。info の `fit-split`(`split them by column`・各枚の段)。1列でも入らなければ
     分けず誤りのまま、hint に「あと N pt」と直し方(容量の `fitShort`。-fit の最後の段で測る)
   - `token.go` = 配置の段のトークン。部品と骨組みは Spec に数・色を書かず、値の表の名前・
     段の刻み(`space(n)`・`type(n)`)・役割名を書き、`BuildSlide` の中の `resolveSpec`(組み立ての

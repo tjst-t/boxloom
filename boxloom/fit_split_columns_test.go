@@ -108,3 +108,58 @@ func TestFitSplitColumnsStillOverflows(t *testing.T) {
 		t.Fatalf("build -fit = %v", err)
 	}
 }
+
+// 列ごとに分けた枚も fit の順(段 → 分ける → 非常用)で組む:非常用の段なら分けずに入る列の枚
+// (列と後ろの長い箇条)でも、分ければ梯子の段で入るなら分ける(非常用の小さい字にしない)。
+func TestFitSplitColumnsSplitsBeforeEmergency(t *testing.T) {
+	const n = 16
+	var body strings.Builder
+	body.WriteString(columnsWithFigure(6, 4) + "\n")
+	for i := 0; i < n; i++ {
+		fmt.Fprintf(&body, "- %s(%d)\n", splitSentence, i+1)
+	}
+	md := splitDeckMD("light", body.String())
+
+	// 前提:最後の列の枚(2列目と箇条)は梯子では入らず、非常用の段なら分けずに入る。
+	d, _, err := ParseMarkdown("c.bx.md", []byte(md))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tm := mustTemplate("light")
+	if _, err := tm.BuildDeck(d); err != nil {
+		t.Fatal(err)
+	}
+	si := 2
+	bodies, _ := columnGroups(&d.Slides[si])
+	dd := *d
+	dd.Slides = append([]IRSlide{}, d.Slides...)
+	dd.Slides[si].Body = bodies[len(bodies)-1]
+	for _, st := range tm.splitSteps(&dd.Slides[si]) {
+		if ms, err := tm.measureFitGroup(&dd, []int{si}, st.set); err != nil || ms == nil || !ms[0].bad() {
+			t.Fatalf("the last column's slide fits whole at %s: %+v %v", st.name, ms, err)
+		}
+	}
+	em := tm.emergencySteps()
+	if ms, err := tm.measureFitGroup(&dd, []int{si}, em[len(em)-1].set); err != nil || ms == nil || ms[0].bad() {
+		t.Fatalf("the last column's slide should fit whole at the emergency step: %+v %v", ms, err)
+	}
+
+	res := Check("c.bx.md", []byte(md), CheckOptions{Fit: true})
+	if len(fitIssues(res.Info, codeFitSplit)) != 1 || len(fitIssues(res.Warnings, codeFitEmergency)) != 0 || len(fitIssues(res.Warnings, codeLayoutOverflow)) != 0 {
+		t.Fatalf("check -fit = warnings %+v info %+v", res.Warnings, res.Info)
+	}
+	var steps []string
+	for _, c := range res.Capacity {
+		if c.Path == "/slides/2" {
+			if strings.HasPrefix(c.Fit, "fit.emergency") {
+				t.Errorf("part %+v built at the emergency step", c.Split)
+			}
+			steps = append(steps, c.Fit)
+		}
+	}
+	if len(steps) != 3 {
+		t.Fatalf("parts = %q, want the figure column and the text column split in two", steps)
+	}
+}
+
+var splitBeforeEmergencyItems = 17

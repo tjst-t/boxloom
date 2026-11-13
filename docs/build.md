@@ -91,8 +91,9 @@ go run ./cmd/boxloom                                                      # 従�
   columns を持てば、誤りにする前に列ごとに続きのスライドに分ける。列の並び順のまま(role=main の列を先には
   しない)1列を1枚にし、各列は全幅で組む(列の題があればその枚に。flow の印は描かない)。columns の前の
   ブロックは最初の列の枚、後のブロックは最後の列の枚、columns の間のブロックは前の列の枚に付く。分けた各枚は
-  今の `-fit` の順で組み直す(元の密度 → dense → `fit.shrink` → `fit.emergency` のうち、分けずに入る最初の段。
-  どれでも入らなければその枚を上の分けで分ける)ので、段は枚ごとに違ってよい。題・リード・出典・marker・
+  今の `-fit` の順(段 → 分ける → 非常用)で組み直す:元の密度 → dense → `fit.shrink` のうち分けずに入る最初の段、
+  どれでも入らなければその枚を上の分けで分け(1つの単位が入らなければ非常用の段で分ける)、分けられなければ
+  `fit.emergency` で分けずに入る最初の段。分ければ普通の字で入る列を非常用の段の小さい字にはしない。段は枚ごとに違ってよい。題・リード・出典・marker・
   「n/m」・2枚目からの題・ノートは上の分けと同じ。知らせは `slide N: [FIT-SPLIT INFO] the columns do not fit even
   at the template's emergency -fit step, so -fit split them by column into 2 slides (…): slide 2 of 2 starts at
   /slides/2/body/0/columns/1; steps: slide 1 at fit.shrink[0], slide 2 at dense. …`(`check -fit` では info の

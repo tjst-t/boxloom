@@ -8,9 +8,10 @@
 //     (1列だけの columns。列の題があればその枚に)、flow の印・role は持たない
 //   - columns の前のブロックは最初の列の枚に、後のブロックは最後の列の枚に、columns の間の
 //     ブロックは前の列の枚に付く
-//   - 分けた各枚は今の fit の順で組み直す:元の密度 → 梯子 → 非常用の段のうち、分けずに入る
-//     最初の段で組み、どれでも入らなければその枚を分ける(fit_split.go の splitSlide。分けた
-//     枚はその段でそろう)。1枚でも入らなければ列ごとには分けない(元のまま。-fit の build は
+//   - 分けた各枚は今の fit の順(段 → 分ける → 非常用)で組み直す:元の密度 → dense →
+//     fit.shrink のうち分けずに入る最初の段で組み、どれでも入らなければその枚を分ける
+//     (fit_split.go の splitSlide。分けた枚はその段でそろい、1つの単位が入らなければ非常用の
+//     段で分ける)。分けられなければ非常用の段で分けずに入る最初の段。1枚でも入らなければ列ごとには分けない(元のまま。-fit の build は
 //     誤りで、hint に「あと N pt」と直し方。容量の fitShort)
 //   - 段は枚ごとに違ってよい。知らせの fit-split は最初の枚に「列ごとに分けた」と各枚の段を、
 //     非常用の段で組んだ枚には fit-emergency を出す。警告と容量の場所は IR の番号
@@ -73,7 +74,7 @@ func (t *Template) splitByColumns(d *IRDeck, i int, over, broken bool) ([]IRSlid
 		return nil, nil
 	}
 	bodies, refs := columnGroups(s)
-	steps := append(t.splitSteps(s), t.emergencySteps()...)
+	ladder, emergency := t.splitSteps(s), t.emergencySteps()
 	var out []IRSlide
 	var leads []bool // 枚が段の知らせ(fit-emergency)を出すか
 	for g := range bodies {
@@ -90,31 +91,40 @@ func (t *Template) splitByColumns(d *IRDeck, i int, over, broken bool) ([]IRSlid
 		if err := linkTableChains(&dd); err != nil {
 			return nil, err
 		}
-		var placed bool
-		for k, st := range steps {
-			ms, err := t.measureFitGroup(&dd, []int{at}, st.set)
-			if err != nil {
-				return nil, err
+		// whole は分けずに入る steps の最初の段で組んだ枚を out に足す(入れば true)。
+		// first は steps の先頭が元の密度(段の印を付けない)か。
+		whole := func(steps []fitStepTry, first bool) (bool, error) {
+			for k, st := range steps {
+				ms, err := t.measureFitGroup(&dd, []int{at}, st.set)
+				if err != nil {
+					return false, err
+				}
+				if ms == nil || ms[0].bad() {
+					continue
+				}
+				q := p
+				st.set(&q)
+				sp := *p.split
+				sp.step, sp.values = st.name, FitValues{Body: st.v.Body, BlockGap: st.v.BlockGap}
+				if k > 0 || !first || st.emergency {
+					sp.choice = &fitChoice{step: st.name, body: st.v.Body, blockGap: st.v.BlockGap, group: []int{i}, over: over, broken: broken, emergency: st.emergency, byColumn: true}
+				}
+				q.split = &sp
+				out, leads = append(out, q), append(leads, true)
+				return true, nil
 			}
-			if ms == nil || ms[0].bad() {
-				continue
-			}
-			q := p
-			st.set(&q)
-			sp := *p.split
-			sp.step, sp.values = st.name, FitValues{Body: st.v.Body, BlockGap: st.v.BlockGap}
-			if k > 0 || st.emergency {
-				sp.choice = &fitChoice{step: st.name, body: st.v.Body, blockGap: st.v.BlockGap, group: []int{i}, over: over, broken: broken, emergency: st.emergency, byColumn: true}
-			}
-			q.split = &sp
-			out, leads = append(out, q), append(leads, true)
-			placed = true
-			break
+			return false, nil
+		}
+		// fit の順:梯子の段(分けずに)→ 分ける → 非常用の段(#150。分けられないものだけ)。
+		placed, err := whole(ladder, true)
+		if err != nil {
+			return nil, err
 		}
 		if placed {
 			continue
 		}
-		// 分けずにはどの段でも入らない:その枚を分ける(fit_split.go)。
+		// 梯子の段では分けずに入らない:その枚を分ける(fit_split.go)。
+		pcol := p
 		p.split = nil
 		p.Title, p.Notes = s.Title, s.Notes
 		if len(out) > 0 {
@@ -126,7 +136,17 @@ func (t *Template) splitByColumns(d *IRDeck, i int, over, broken bool) ([]IRSlid
 			return nil, err
 		}
 		if pieces == nil {
-			return nil, nil // この列は分けても入らない
+			// 分けられない(1つの単位が入らない):非常用の段で分けずに入るか。splitSlide は
+			// 非常用の段で分けて入るならもう分けている。
+			p = pcol
+			dd.Slides[at] = p
+			if placed, err = whole(emergency, false); err != nil {
+				return nil, err
+			}
+			if !placed {
+				return nil, nil // この列は分けても非常用の段でも入らない
+			}
+			continue
 		}
 		for n, q := range pieces {
 			sp := *q.split
