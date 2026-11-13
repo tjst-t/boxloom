@@ -2297,7 +2297,7 @@
       "number": 99,
       "kind": "task",
       "title": "対の並び:側の幅を中身で割る(短い側を狭く、長い側を広く)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2309,7 +2309,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T03:53:47.843Z",
-      "updatedAt": "2026-11-13T03:53:47.843Z",
+      "updatedAt": "2026-11-13T04:09:08.027Z",
       "closedAt": null,
       "extra": {}
     },
