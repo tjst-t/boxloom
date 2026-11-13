@@ -37,6 +37,8 @@ type shape struct {
 	// ph は文字の図形をプレースホルダーとして書く種類("title" | "ctrTitle" |
 	// "subTitle" | "sldNum" | "ftr"。空ならテキストボックス)。
 	ph string
+	// name は図形の名前(p:cNvPr の name)。空なら種類と id から作る("TextBox 5" など)。
+	name string
 
 	box    LBox
 	fill   string // "" = 塗りなし
@@ -119,6 +121,9 @@ type PPTXBuilder struct {
 	BackgroundImage *imageAsset
 	bgMedia, bgRID  string
 	nextID          int
+	// overflow は本文がはみ出したときの印の置き場所(overflow_mark.go)。組み立てが
+	// 測って置き、Build が AllowOverflow のときだけ図形にする。nil ならはみ出し無し。
+	overflow *overflowMark
 }
 
 // DeckColors は PPTX のテーマに写すテンプレートの名前と色(役割名 → 16進)。
@@ -520,14 +525,14 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 			h = -h
 		}
 		return fmt.Sprintf(`<p:cxnSp>
-<p:nvCxnSpPr><p:cNvPr id="%d" name="Line %d"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+<p:nvCxnSpPr><p:cNvPr id="%d" name="%s"/><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
 <p:spPr>
 <a:xfrm%s%s><a:off x="%d" y="%d"/><a:ext cx="%d" cy="%d"/></a:xfrm>
 <a:prstGeom prst="line"><a:avLst/></a:prstGeom>
 <a:ln w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill>%s</a:ln>
 </p:spPr>
 </p:cxnSp>
-`, s.id, s.id, flipH, flipV, ptToEMU(x0), ptToEMU(y0), ptToEMU(w), ptToEMU(h), ptToEMU(s.lineWidthPt), hexColor(s.lineColor), dashXML)
+`, s.id, shapeName(s, "Line"), flipH, flipV, ptToEMU(x0), ptToEMU(y0), ptToEMU(w), ptToEMU(h), ptToEMU(s.lineWidthPt), hexColor(s.lineColor), dashXML)
 
 	case skShape:
 		return p.shapeWithTextXML(s)
@@ -790,7 +795,7 @@ func (p *PPTXBuilder) bulletXML(mark []TextRun, fontSize, base float64) (bullet,
 func textNvSpPr(s *shape) string {
 	switch s.ph {
 	case "":
-		return fmt.Sprintf(`<p:nvSpPr><p:cNvPr id="%d" name="TextBox %d"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>`, s.id, s.id)
+		return fmt.Sprintf(`<p:nvSpPr><p:cNvPr id="%d" name="%s"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>`, s.id, shapeName(s, "TextBox"))
 	case "title", "ctrTitle":
 		return fmt.Sprintf(`<p:nvSpPr><p:cNvPr id="%d" name="Title %d"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="%s"/></p:nvPr></p:nvSpPr>`, s.id, s.id, s.ph)
 	case "subTitle":
@@ -1572,4 +1577,12 @@ func writeChart(write func(name, content string) error, n int, d *ChartData) err
 		return err
 	}
 	return write(fmt.Sprintf("ppt/embeddings/Microsoft_Excel_Worksheet%d.xlsx", n), string(xlsx))
+}
+
+// shapeName は図形の名前。s.name があればそれ、無ければ kind と id から("Line 7" など)。
+func shapeName(s *shape, kind string) string {
+	if s.name != "" {
+		return s.name
+	}
+	return fmt.Sprintf("%s %d", kind, s.id)
 }

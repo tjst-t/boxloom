@@ -110,6 +110,10 @@ type BuildOptions struct {
 	// 止める。fit_grow.go)。詰めた・広げたスライドは Info に書く。
 	// IR は変えない。false なら出力は Fit の無いときと同じ。
 	Fit bool
+
+	// noOverflowMark は試験用:AllowOverflow でもはみ出しの印(overflow_mark.go)を
+	// 描かない。印は配置の段の木に無いので、木を読み直した PPTX と比べるときに使う。
+	noOverflowMark bool
 }
 
 // ErrLayoutOverflow は、はみ出しがあって Build が PPTX を書かなかったことを表す
@@ -186,6 +190,14 @@ func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 			}
 		}
 		return nil, oe
+	}
+	if opt.AllowOverflow && !opt.noOverflowMark {
+		// はみ出したスライドにだけ、本文の領域の下端の印を描く(overflow_mark.go)。
+		for _, p := range pages {
+			if p.overflow != nil {
+				p.addOverflowMark(p.overflow)
+			}
+		}
 	}
 	title := ""
 	if deck.Meta != nil {

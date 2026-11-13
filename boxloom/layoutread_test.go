@@ -70,7 +70,7 @@ func TestLayoutRoundTrip(t *testing.T) {
 				t.Fatal(err)
 			}
 			var want, got, stub bytes.Buffer
-			if _, err := Build(&want, deck, BuildOptions{Template: tmpl, Assets: assets, AllowOverflow: true}); err != nil {
+			if _, err := Build(&want, deck, BuildOptions{Template: tmpl, Assets: assets, AllowOverflow: true, noOverflowMark: true}); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := BuildLayout(&got, "tree.json", src, LayoutReadOptions{Deck: deck, Assets: assets}); err != nil {

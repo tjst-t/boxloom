@@ -734,6 +734,12 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 			// 警告と容量は同じ測り値から作る(数字が食い違わないように)。
 			if blocks, area, need, ok := measureBody(b.Root, b.Body); ok {
 				warnings = append(warnings, overflowWarnings(blocks, area, need, kinds)...)
+				for _, bm := range blocks {
+					if bm.Overflow > 0 {
+						p.overflow = t.newOverflowMark(b.Body, area, need)
+						break
+					}
+				}
 				bodySize := v.Body
 				if d.Slides[i].dense() {
 					bodySize = t.densed().Values.Body
@@ -769,6 +775,7 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 			if _, area, need, ok := measureBody(b.Root, b.Main); ok && need > area+overflowEps {
 				warnings = append(warnings, fmt.Sprintf("[LAYOUT-OVERFLOW WARNING] %s overflows the slide by %.1fpt (needs %.1fpt; available %.1fpt)",
 					b.MainWhat, need-area, need, area))
+				p.overflow = t.newOverflowMark(b.Main, area, need)
 			}
 		}
 

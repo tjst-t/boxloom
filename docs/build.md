@@ -30,7 +30,14 @@ go run ./cmd/boxloom                                                      # 従�
   path・文・hint は `check` の警告と同じで、dense で収まるかの案・表の分け方の案もそのまま。
   build は IR から組むので行の番号は付かない。行は `check` で見る)。直すのは作者で、
   check の hint に従う。`-allow-overflow` を付けると今までどおり作り、はみ出しは警告として
-  標準出力に書く(できる PPTX は付けないときに収まる文書と同じ作り方で、バイト列も変わらない)。
+  標準出力に書く(できる PPTX は付けないときに収まる文書と同じ作り方で、収まる文書ならバイト列も
+  変わらない)。押し出された分はページの下端の外に描かれ、PowerPoint では切れて見えるだけなので、
+  **はみ出したスライドにだけ印を描く**(#141、`overflow_mark.go`):本文の領域(区切り・主張は
+  ページの中身の領域)の下端に、本文の幅の細い線(1.5pt)と、その右上に「ここから N pt はみ出し」
+  (N は本文の領域を越えた高さ。字は値の表の `small`)。色は役割名 `danger`(無いテンプレートでは
+  `accent`、それも無ければ `text`)。2つの図形はどちらも名前 `boxloom-overflow` で、図形の並びの
+  最後(一番上)に置くので、選択ウィンドウで選んで消せる。はみ出しの無いスライドと、
+  `-allow-overflow` を付けない build(はみ出せば誤り)には描かない。
 - **`-fit`(最後の手段、#127)**:はみ出す本文のスライドだけを、テンプレートの値の表の梯子で
   詰めて組む(`BuildOptions.Fit`。IR は変えない)。今の密度から1段ずつ下りる:normal のスライドは
   dense の組 → `fit.shrink[0]` → `fit.shrink[1]`、dense のスライドは `fit.shrink[0]` から。各段で組み直して
@@ -109,6 +116,7 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 | `gantt_ir.go` | Gantt の `data` から `GanttChart` を組む(軸の圧縮・目盛りの文字・注釈の指す先) |
 | `gantt.go` | 注釈の置き場所と箱の大きさを決める(`planAnnotations`)。置けない注釈は警告(`Lint`)。確定していない区間を破線で描く |
 | `overflow.go` | 本文のはみ出しの検査(`layout-overflow`)。縮めなければ要る高さを測り直し、本文の領域と比べる |
+| `overflow_mark.go` | `-allow-overflow` で作るとき、はみ出したスライドの本文の領域の下端に描く印(`boxloom-overflow`) |
 | `pptx.go` | 複数枚の書き出し(`WriteDeck`。io.Writer に書く)と、装飾つきの文字(`AddRichTextBox`) |
 
 ## テンプレートが決めていること(dark / light)
@@ -320,5 +328,6 @@ sudo apt-get install -y libreoffice-impress fonts-noto-cjk   # readers のとき
 - 押せるリンク、`code` の等幅の字体。
 - 本文の高さがページに収まらないときの自動の扱い(縮めない・送らない)。
   はみ出しは `check` の `layout-overflow` の警告と build の誤りで知らせ、直すのは作者
-  (`docs/ir.md` の「はみ出しの測り方」)。`-allow-overflow` で作ったときは比例で縮むだけ。
+  (`docs/ir.md` の「はみ出しの測り方」)。`-allow-overflow` で作ったときは押し出された分がページの外に出て、
+  本文の領域の下端に印(`boxloom-overflow`)が付くだけ。
   `-fit` を明示したときだけ、テンプレートの梯子の段で詰め、薄いスライドは広げる(上の「`-fit`」)。
