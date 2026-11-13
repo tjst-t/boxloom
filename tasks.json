@@ -3253,7 +3253,7 @@
       "number": 144,
       "kind": "bug",
       "title": "detailColumn の matrix で評価の列が広く取られ、題と要約の列が潰れる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3265,7 +3265,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T10:44:08.814Z",
-      "updatedAt": "2026-11-13T10:44:08.814Z",
+      "updatedAt": "2026-11-13T10:44:15.706Z",
       "closedAt": null,
       "extra": {}
     }
