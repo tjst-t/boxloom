@@ -2205,6 +2205,27 @@
       "updatedAt": "2026-11-13T00:31:17.139Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "skeleton-components",
+      "number": 95,
+      "kind": "task",
+      "title": "骨組み(表紙・本文の頭・区切り・主張・フッター)を部品にし、テンプレートが差し替えられるようにする(出力は変えない)",
+      "status": "ready",
+      "parent": "sample-fidelity",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "## なぜ\n#82 の調べで、元の資料との違いのいちばん大きい部分は骨組みにあると分かった。具体的には、題とリードの置き方・区切りのスライド・表紙・フッターの4つ。\n\nいまの骨組みは `boxloom/template.go` の Template のメソッド(buildCover・buildContent・buildSection・sectionTracker・buildStatement・footer・slideSource)に直に書いてある。テンプレートからは差し替えられない。docs/layers.md の 2.3 も「骨組みは今回の範囲の外。同じ形で後から部品にできる」と残している。\n\nこのままでは、見た目を1つ足すたびにコアを直すことになる。人が決めた向きは「骨組みを部品にし、テンプレートが自分の組み方で差し替える」。\n\n## 決め事\n- **骨組みの部品の表**を作る。いまの部品の登録簿(component.go の componentRegistry)と同じ作り。\n  - 標準の骨組みの表(defaultSkeleton)をコアが持つ。\n  - テンプレートは Clone した表で、名前ごとに override する。\n- **骨組みの部品の名前と役目**:\n  - `cover`(表紙のスライド全体)\n  - `contentHeader`(本文のスライドの頭:題・リード)\n  - `contentFrame`(本文の頭・本文・出典・フッターの並べ方)\n  - `section`(区切りのスライド)\n  - `statement`(主張のスライド)\n  - `footer`(頁番号・機密区分)\n  - `source`(出典の行)\n  - 部品は文書(IRDeck)・スライドの番号・スライドを受け取り、配置の段の木(Spec)を返す。\n- 骨組みの部品にも、組み方と同じトークンの決まり(#68)を掛ける。値の表の名前・段の刻み・役割名だけで書き、解決は resolveSpec の1か所でする。\n- 題を PowerPoint のプレースホルダーに書く決まり(#1301886)は、部品が「この文字の葉は title・ctrTitle・subTitle のプレースホルダー」という印を付けて保つ。\n- 容量の計測(本文の領域・bodyArea)は、contentFrame が本文の箱に付ける印から取る。骨組みを差し替えても layout-overflow・capacity・fill-ratio がそのまま働くこと。\n- **出力は変えない**:dark・light・report の PPTX の golden と examples の全 deck の出力が、バイト単位で同じであること。\n- docs/layers.md を直す:\n  - 2.3 の「骨組みは範囲の外」を「骨組みも部品で、テンプレートが差し替える」に改める。\n  - 3章の表と 8章に、決めたこととして書く。\n  - Go でテンプレートが骨組みを差し替える例を書く。\n\n## 確かめ方\n試験用のテンプレートを1つ用意し、contentHeader を差し替えて(リードを題の上に置く)、次を確かめる。\n- 位置が変わる。\n- プレースホルダーの印が保たれる。\n- 容量が同じに測れる。",
+      "doneWhen": "骨組みの7つの部品が登録簿にあり、テンプレートが名前ごとに override できる/dark・light・report の golden と examples の全 deck の出力が変わらない/試験のテンプレートで contentHeader を差し替えると位置が変わり、題のプレースホルダーと容量の計測が保たれることを試験で確かめる/docs/layers.md の 2.3・3章・8章が直っている/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T02:49:50.871Z",
+      "updatedAt": "2026-11-13T02:49:50.871Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
