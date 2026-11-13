@@ -2549,7 +2549,7 @@
       "number": 111,
       "kind": "task",
       "title": "PPTX:LibreOffice でも和文がテンプレートの字体で描かれるようにする(+mn-ea が解決されない)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2561,7 +2561,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T05:34:46.314Z",
-      "updatedAt": "2026-11-13T05:34:46.314Z",
+      "updatedAt": "2026-11-13T05:34:56.440Z",
       "closedAt": null,
       "extra": {}
     },
