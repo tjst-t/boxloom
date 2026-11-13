@@ -238,8 +238,8 @@ func (s *MatrixSubsystem) rowHeadParas(r *MatrixRow, color, markColor string, ro
 func (s *MatrixSubsystem) rowHeadNeed(r *MatrixRow, w float64) (needW, needH float64) {
 	tx := s.text()
 	label, detail := s.rowHeadParas(r, "", "", nil)
-	_, needH = runsBox(label, tx.Title, w)
-	needW = runsMinWidth(label, tx.Title)
+	_, needH = runsBox(label, tx.RowTitle, w)
+	needW = runsMinWidth(label, tx.RowTitle)
 	markW := 0.0
 	if len(r.Points) > 0 {
 		markW = runWidthPt(tx.Point+" ", tx.Detail, true)
@@ -306,8 +306,8 @@ func (s *MatrixSubsystem) rowHeadWidth(inner float64) float64 {
 	for i := range s.Data.Rows {
 		r := &s.Data.Rows[i]
 		label, detail := s.rowHeadParas(r, "", "", nil)
-		headNat = math.Max(headNat, runsNaturalWidth(label, tx.Title))
-		headFloor = math.Max(headFloor, runsChunkWidth(label, tx.Title))
+		headNat = math.Max(headNat, runsNaturalWidth(label, tx.RowTitle))
+		headFloor = math.Max(headFloor, runsChunkWidth(label, tx.RowTitle))
 		for _, p := range detail {
 			headNat = math.Max(headNat, runsNaturalWidth(p, tx.Detail))
 			markW := 0.0
@@ -482,8 +482,8 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 	v, tx := s.vals(), s.text()
 	pl := s.place(box)
 	p := ctx.Out
-	header := func(b LBox, runs []TextRun, align string) {
-		p.AddShape(b, ShapeOpts{Prst: "rect", Runs: runs, FontSize: tx.Title,
+	header := func(b LBox, runs []TextRun, size float64, align string) {
+		p.AddShape(b, ShapeOpts{Prst: "rect", Runs: runs, FontSize: size,
 			InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: align})
 	}
 	for k, gr := range s.Data.ColumnGroups {
@@ -494,15 +494,15 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 		p.AddLine(b.X, ry, b.X+b.Width, ry, v.GroupRuleW, ctx.Roles.Color("grid"), "")
 	}
 	for j := range s.Data.Columns {
-		header(pl.header[j], s.headerRuns(j, "text_primary", ctx.Roles), "center")
+		header(pl.header[j], s.headerRuns(j, "text_primary", ctx.Roles), tx.Title, "center")
 	}
 	for i := range s.Data.Rows {
 		r := &s.Data.Rows[i]
 		label, detail := s.rowHeadParas(r, "text_primary", "accent", ctx.Roles)
 		if len(detail) == 0 {
-			header(pl.heads[i], label, "left")
+			header(pl.heads[i], label, tx.RowTitle, "left")
 		} else {
-			o := ShapeOpts{Prst: "rect", Runs: label, FontSize: tx.Title, InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: "left", Anchor: "middle"}
+			o := ShapeOpts{Prst: "rect", Runs: label, FontSize: tx.RowTitle, InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: "left", Anchor: "middle"}
 			for _, para := range detail {
 				o.Paras = append(o.Paras, para)
 				o.ParaSizes = append(o.ParaSizes, tx.Detail)
@@ -634,7 +634,7 @@ func (s *MatrixSubsystem) Lint(box LBox) []string {
 		r := &s.Data.Rows[i]
 		b := pl.heads[i]
 		if len(r.Detail) == 0 && len(r.Points) == 0 {
-			check(fmt.Sprintf("rows[%d].label", i), r.Label, tx.Title, b.Width-2*v.TextInsetX, b)
+			check(fmt.Sprintf("rows[%d].label", i), r.Label, tx.RowTitle, b.Width-2*v.TextInsetX, b)
 		} else {
 			textW, haveH := b.Width-2*v.TextInsetX, b.Height-2*v.TextInsetY
 			if needW, needH := s.rowHeadNeed(r, textW); !textFits(needW, needH, textW, haveH) {

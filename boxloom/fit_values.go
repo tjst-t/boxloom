@@ -29,6 +29,12 @@ type fitStep struct {
 	BlockGap    *float64 `json:"blockGap,omitempty"`
 	ItemGap     *float64 `json:"itemGap,omitempty"`
 	CardPadding *float64 `json:"cardPadding,omitempty"`
+	// 行ごとの余白(#136。dense と同じ名前)
+	TableCellPadX  *float64 `json:"tableCellPaddingX,omitempty"`
+	TableCellPadY  *float64 `json:"tableCellPaddingY,omitempty" zero:"allowed"`
+	PairsRowGap    *float64 `json:"pairsRowGap,omitempty"`
+	PairMarkSize   *float64 `json:"pairMarkSize,omitempty"`
+	MatrixRowTitle *float64 `json:"matrixRowTitle,omitempty"`
 }
 
 // templateFit は値の表の fit の形。
@@ -46,6 +52,12 @@ type FitValues struct {
 	BlockGap    float64 `json:"blockGap" scale:"space"`
 	ItemGap     float64 `json:"itemGap" scale:"space"`
 	CardPadding float64 `json:"cardPadding" scale:"space"`
+
+	TableCellPadX  float64 `json:"tableCellPaddingX" scale:"space"`
+	TableCellPadY  float64 `json:"tableCellPaddingY" scale:"space"`
+	PairsRowGap    float64 `json:"pairsRowGap" scale:"space"`
+	PairMarkSize   float64 `json:"pairMarkSize" scale:"space"`
+	MatrixRowTitle float64 `json:"matrixRowTitle" scale:"type"`
 }
 
 // TemplateFit は収めの梯子(各段は前の段に重ねたあとの値の組)。Shrink は詰める順
@@ -60,15 +72,22 @@ type TemplateFit struct {
 func (f FitValues) apply(v TemplateValues) TemplateValues {
 	v.Body, v.SubPoint, v.TableText, v.Small = f.Body, f.SubPoint, f.TableText, f.Small
 	v.BlockGap, v.ItemGap, v.CardPadding = f.BlockGap, f.ItemGap, f.CardPadding
+	v.TableCellPadX, v.TableCellPadY = f.TableCellPadX, f.TableCellPadY
+	v.PairsRowGap, v.PairMarkSize, v.MatrixRowTitle = f.PairsRowGap, f.PairMarkSize, f.MatrixRowTitle
 	return v
 }
 
 func fitBaseValues(v TemplateValues) FitValues {
-	return FitValues{v.Body, v.SubPoint, v.TableText, v.Small, v.BlockGap, v.ItemGap, v.CardPadding}
+	return FitValues{Body: v.Body, SubPoint: v.SubPoint, TableText: v.TableText, Small: v.Small,
+		BlockGap: v.BlockGap, ItemGap: v.ItemGap, CardPadding: v.CardPadding,
+		TableCellPadX: v.TableCellPadX, TableCellPadY: v.TableCellPadY,
+		PairsRowGap: v.PairsRowGap, PairMarkSize: v.PairMarkSize, MatrixRowTitle: v.MatrixRowTitle}
 }
 
+// fitBaseDense は詰める梯子の土台:dense の組を重ねた values の値(dense の持たない
+// cardPadding は values のまま)。
 func fitBaseDense(d DenseValues, v TemplateValues) FitValues {
-	return FitValues{d.Body, d.SubPoint, d.TableText, d.Small, d.BlockGap, d.ItemGap, v.CardPadding}
+	return fitBaseValues(d.apply(v))
 }
 
 // resolveFit は値の表の fit を検査し、各段を重ねた値の組の梯子にする。
@@ -108,7 +127,7 @@ func resolveLadder(at string, steps []fitStep, base FitValues, baseName string, 
 			if from == "dense" && name == "cardPadding" {
 				from = "values" // dense は cardPadding を持たない(values のまま)
 			}
-			if !(x > 0) {
+			if !(x > 0) && !(x == 0 && sv.Type().Field(k).Tag.Get("zero") == "allowed") {
 				return nil, fmt.Errorf("%s.%s: must be greater than 0 (got %v)", here, name, x)
 			}
 			if dir < 0 && x > was+scaleEps {

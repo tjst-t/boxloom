@@ -74,7 +74,7 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
   対ごとに A・B・C… の四角い印(一辺 `space(12)`=24pt・基調色の地・白(`bg`)の字)を subject の
   頭に、2つの側の間に丸い山形の印(同じ大きさ)を置き、対の間に罫線(`grid`・高さ
   `tableRuleWidth`)を引く。対の行と罫線の間は `space(2)`=4pt ずつ(対の行の間は約 8.75pt。
-  `pairsStyle.rowGap`、#103)。側の見出し(`title`)は帯(面)を置かず、基調色(`accent`)の
+  値の表の `pairsRowGap`(normal 4・dense 2。#103・#136)。印の一辺も値の表の `pairMarkSize`(normal 24・dense 20)。側の見出し(`title`)は帯(面)を置かず、基調色(`accent`)の
   太字の本文1行で書く(#103)。印は飾りの葉(`ornament`)で、横の余り(`spare-width`)には数えない。
 - 表(`table`、#88)を `tableStyled` に report の見た目(`reportTableLook`)を渡して組む。
   見出しの行は面を塗らず、字を基調色(`accent`)にし、下に基調色の罫線(`tableHeaderRuleWidth`
@@ -198,7 +198,7 @@ report の Gantt は月の格子(年と月の2段の見出し)・山形の帯で
 
 | 箇所 | 前 | 今 | 目安 |
 |---|---|---|---|
-| 対の行の間(罫線の上と下) | `blockGap` 18 ずつ(計 約 36.75pt) | `space(2)` 4 ずつ(計 約 8.75pt) | 8〜12pt |
+| 対の行の間(罫線の上と下) | `blockGap` 18 ずつ(計 約 36.75pt) | `pairsRowGap` 4 ずつ(計 約 8.75pt。値の表へ移した、#136) | 8〜12pt |
 | 側の見出し | 薄い面(`card`)の帯・左右 8pt・上下 4pt の余白・字の色 | 帯なし・基調色の太字の1行 | 帯でなく基調色の字だけ |
 | 表のセルの余白(左右 / 上下) | 6 / 4 | 4 / 2 | 左右 4〜6・上下 2〜4 |
 
@@ -279,7 +279,8 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
   "fonts":  { "latin": "Noto Sans CJK JP", "eastAsian": "Noto Sans CJK JP",
               "fallbackFonts": ["BIZ UDPGothic", "…"], "widthMargin": 1.05, "fixedLineSpacing": true,
               "lineHeight": 1.35 },
-  "dense":  { "body": 14, "subPoint": 12, "tableText": 12, "small": 10, "blockGap": 12, "itemGap": 4 },
+  "dense":  { "body": 14, "subPoint": 12, "tableText": 12, "small": 10, "blockGap": 12, "itemGap": 4,
+              "tableCellPaddingX": 4, "tableCellPaddingY": 4, "pairsRowGap": 8, "pairMarkSize": 20, "matrixRowTitle": 12 },
   "fit":    { "shrink": [{ "body": 12, "...": 0 }, { "...": 0 }], "grow": [{ "body": 18, "...": 0 }, { "...": 0 }] },
   "variants": [],
   "subsystems": { "gantt": { "...": "subsystems/gantt.json と同じ形" } }
@@ -300,8 +301,8 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 
 | 種類 | values | subsystems/gantt.json | subsystems/shapes.json |
 |---|---|---|---|
-| 余白 | `pagePadding` `pagePaddingY` `coverPadding` `sectionGap` `blockGap` `itemGap` `headerGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `captionGap` `sectionTrackerPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap`、#70 で移した `legendSwatchGap` `milestonePaddingX` `milestoneAxisGap` `groupBoxGap` `subgroupInsetRight` `rowLabelGap` `annotationFixedPaddingX` `annotationFixedPaddingY` `annotationGap` `annotationShift`、箱の大きさ `milestoneMinWidth` `tickLabelWidth` `tickSubLabelOffset` `tickSubLabelWidth` `tickSubLabelHeight` | `padding` `textInsetX` `textInsetY` |
-| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `leadText` `body` `subPoint` `optionLabel` `optionItem` `small` `figureDetail` `captionText` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
+| 余白 | `pagePadding` `pagePaddingY` `coverPadding` `sectionGap` `blockGap` `itemGap` `headerGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `pairsRowGap` `pairMarkSize` `captionGap` `sectionTrackerPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap`、#70 で移した `legendSwatchGap` `milestonePaddingX` `milestoneAxisGap` `groupBoxGap` `subgroupInsetRight` `rowLabelGap` `annotationFixedPaddingX` `annotationFixedPaddingY` `annotationGap` `annotationShift`、箱の大きさ `milestoneMinWidth` `tickLabelWidth` `tickSubLabelOffset` `tickSubLabelWidth` `tickSubLabelHeight` | `padding` `textInsetX` `textInsetY` |
+| 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `leadText` `body` `subPoint` `optionLabel` `optionItem` `small` `figureDetail` `matrixRowTitle` `captionText` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
 ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率、図の中の細部の寸法は
 段階に載せない(図の寸法で、刻みに合わせても読みやすさは変わらないため)。0 以下は
@@ -490,6 +491,9 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `columnGap` | 並列のまとまりの間(32) |
 | `columnMainWeight` | 主のまとまり(`role: main`)の幅の比。ほかのまとまりは 1(2。倍率なので段階に載せない) |
 | `pairsSideMin` | 対の並び(pairs)の側の幅の下限(2つの側の幅の合計に対する割合、0.5 未満。0.2 → 各側 20〜80%)。この範囲で中身から割る(`docs/layers.md` の8.1) |
+| `pairsRowGap` | 対の並びの対の行の間(罫線を引く report では行と罫線の間。dark / light は `blockGap` と同じ 20、report は 4。#136) |
+| `pairMarkSize` | 対の印(A・B・C の四角・側の間の印)の一辺。印を描く report の対の行の高さの下限(24。dark / light は使わない) |
+| `matrixRowTitle` | matrix の行の題(行の見出しの列の名前)の字。列の見出し・列の群の名前は `body`(normal は `body` と同じ。dense で別に詰める、#136) |
 | `personPhoto` | 人物の紹介(people)の写真の一辺(64。正方形。縦横比の違う写真は端を切る) |
 | `personPhotoShape` | 写真の形(`circle` は円で切り抜く・`square` は四角。dark・report は circle、light は square) |
 | `personMinWidth` | 人を横に1列に並べるときの1人の幅の下限(240)。本文の幅を人数で割ってこれに足りなければ2人ずつの段に積む(`docs/ir.md` の10.3) |
@@ -546,12 +550,13 @@ dark / light / report は `{n}/{m}`)。目次のスライド(`meta.toc`)の題(`
 持つ字体に限る。`widthMargin` は 1〜1.5、`lineHeight` は 1〜2(dark / light は 1.35、report は 1.2)。
 意味・測った数字・推奨する値は `docs/fonts.md`。
 
-### dense(密なスライドの本文の値。必須、#116)
+### dense(密なスライドの本文の値。必須、#116・#136)
 
 本文のスライドに `density: dense`(Markdown は `# 題 {density=dense}`。`docs/ir.md` の 9.4)を
 書いたとき、本文の部品・サブシステムが `values` の同じ名前の代わりに使う値の組。題・リード・
-出典・フッターは `values` のまま。6つのキーは全部書く(欠け・知らないキーは誤り)。字の大きさは
-段(`typeSizes`)、間隔は余白の刻みに載り、`values` の同じ名前より大きくはできない。
+出典・フッターは `values` のまま。11のキーは全部書く(欠け・知らないキーは誤り)。字の大きさは
+段(`typeSizes`)、間隔は余白の刻みに載り、`values` の同じ名前より大きくはできない。0 以下は
+誤りで、表のセルの上下の余白(`tableCellPaddingY`)だけは 0 でもよい。
 
 | キー | 意味 | dark・light | report |
 |---|---|---|---|
@@ -561,8 +566,16 @@ dark / light / report は `{n}/{m}`)。目次のスライド(`meta.toc`)の題(`
 | `small` | 注記・図の凡例 | 10(10) | 9(10) |
 | `blockGap` | 本文のブロックの間 | 12(20) | 12(18) |
 | `itemGap` | 箇条の項目の間 | 4(8) | 4(6) |
+| `tableCellPaddingX` | 表のセルの左右の余白 | 4(8) | 2(4) |
+| `tableCellPaddingY` | 表のセルの上下の余白 | 4(4) | 0(2) |
+| `pairsRowGap` | 対の並びの対の行の間(report は行と罫線の間) | 8(20) | 2(4) |
+| `pairMarkSize` | 対の印の一辺(report の対の行の高さの下限。dark・light は使わない) | 20(24) | 20(24) |
+| `matrixRowTitle` | matrix の行の題の字 | 12(16) | 11(14) |
 
-report の値は読む資料のサンプルの密なページ(本文 10〜12pt、表 10〜11pt)から決めた。
+report の値は読む資料のサンプルの密なページ(本文 10〜12pt、表 10〜11pt でセルの余白が小さい)
+から決めた。後の6つ(#136)は、dense にしても字ではなく行ごとの余白で収まらなかったページ
+(表のセルの上下の余白・対の行の間と印・matrix の行の題の字が元の資料より大きい)のために足した。
+report の表のセルの上下の余白は刻み(2pt)の下が 0 しか無いので 0(行の送り 1.2 の分の空きは残る)。
 
 ### fit(収めの梯子。任意、#126)
 
@@ -576,14 +589,17 @@ dense は `shrink[0]` から)下り、最初に収まった段で組む。`grow`
 各段は dense と同じく本文の値の一部を重ねる組で、書いた名前だけを前の段から替える
 (書かない名前は前の段のまま)。`shrink` の最初の段は `dense` の組に、`grow` の最初の段は
 `values` に重ねる(`cardPadding` は dense に無いので、詰めの最初の段でも `values` が前)。
+同梱の梯子は #136 で足した名前を書かない(どの段も dense・values の値のまま)。
 書ける名前:
 
 | キー | 意味 |
 |---|---|
 | `body` `subPoint` `tableText` `small` | 本文・入れ子の箇条・表・小さい字(字の段 `typeSizes` に載る) |
 | `blockGap` `itemGap` `cardPadding` | ブロックの間・項目の間・カードの内側の余白(余白の刻みに載る) |
+| `tableCellPaddingX` `tableCellPaddingY` `pairsRowGap` `pairMarkSize` | 表のセルの余白・対の行の間・対の印(余白の刻みに載る。`tableCellPaddingY` は 0 でもよい。#136) |
+| `matrixRowTitle` | matrix の行の題の字(字の段に載る。#136) |
 
-誤り:知らないキー、`null`、0 以下、段階に無い値、`shrink` の段で前の段より大きい値、
+誤り:知らないキー、`null`、0 以下(`tableCellPaddingY` は 0 まで)、段階に無い値、`shrink` の段で前の段より大きい値、
 `grow` の段で前の段より小さい値、前の段から何も替えない段(空の組も)。`fit`・`shrink`・
 `grow` はどれも書かなくてよい(書かなければその向きには収めない)。
 

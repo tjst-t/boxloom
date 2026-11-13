@@ -385,14 +385,16 @@ func (d reportColumnDivider) Render(ctx RenderContext, box LBox) {
 	ctx.Out.AddLine(cx+hw, cy, cx-hw, cy+hh, reportChevronWidth, bg, "")
 }
 
-// reportPairMarkSize は report の対の印(A・B・C の四角・側の間の丸)の一辺(段の刻み。24pt)。
+// reportPairMarkSize は report の topics の丸い印の一辺(段の刻み。24pt)。pairs の印は
+// 値の表の pairMarkSize(normal は同じ 24pt。dense で詰める、#136)。
 var reportPairMarkSize = spaceStep(12)
 
 // reportPairLabelWidth は report の対の名前の見出しの列の幅(段の刻み。80pt。本文の字で
 // 5〜6字。長い名前は列の中で折り返す)。
 var reportPairLabelWidth = spaceStep(40)
 
-// reportPairRowGap は report の対の行と罫線の間の空き(段の刻み。4pt。#103)。罫線の上と
+// reportPairRowGap は report の topics の塊と罫線の間の空き(段の刻み。4pt)。pairs は
+// 値の表の pairsRowGap(normal は同じ 4pt、#136)で、対の行と罫線の間の空き(#103)。罫線の上と
 // 下に取るので、対の行の間は 4 + 0.75 + 4 ≈ 8.75pt(元の資料の目安 8〜12pt)。
 var reportPairRowGap = spaceStep(2)
 
@@ -403,13 +405,13 @@ var reportPairsStyle = pairsStyle{
 	sideTitle: func(t *Template, title Inline) *Spec {
 		return t.text(title, "body", "accent", true)
 	},
-	rowGap: reportPairRowGap,
+	rowGap: "pairsRowGap", // 値の表(normal は reportPairRowGap と同じ 4pt。dense で詰める、#136)
 	mark: func(t *Template, k int, label string) *Spec {
 		if label == "" {
 			label = pairLetter(k)
 		}
 		return SubsystemNode(&pairMark{kind: pairMarkLetter, letter: label, fontSize: t.Values.Body, smallSize: t.Values.Small},
-			tokWidth(reportPairMarkSize), tokHeight(reportPairMarkSize))
+			tokWidth("pairMarkSize"), tokHeight("pairMarkSize"))
 	},
 	// 2字までの対の名前(要因の番号など)は A・B・C の代わりに印の中に、3字以上は
 	// 行の左の見出しの列(基調色の太字。#118)に書く。
@@ -419,7 +421,7 @@ var reportPairsStyle = pairsStyle{
 	},
 	between: func(t *Template) *Spec {
 		return SubsystemNode(&pairMark{kind: pairMarkChevron},
-			tokWidth(reportPairMarkSize), tokHeight(reportPairMarkSize))
+			tokWidth("pairMarkSize"), tokHeight("pairMarkSize"))
 	},
 	rule: func(t *Template) *Spec {
 		return Col(nil, tokHeight("tableRuleWidth"), tokBackground("grid"))

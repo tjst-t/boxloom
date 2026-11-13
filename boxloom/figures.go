@@ -33,11 +33,13 @@ type FigureText struct {
 	Sub    float64 // 2段目の文字・セルの文字(values.subPoint)
 	Detail float64 // 箱の補足・段階の下の補足・図の説明(values.figureDetail)
 	Small  float64 // 凡例(values.small)
-	Point  string  // 箇条の印(marks.point。phases の箱の箇条)
+	// RowTitle は matrix の行の題(values.matrixRowTitle。dense で詰められる。#136)。
+	RowTitle float64
+	Point    string // 箇条の印(marks.point。phases の箱の箇条)
 }
 
 func figureTextFrom(v TemplateValues) FigureText {
-	return FigureText{Title: v.Body, Sub: v.SubPoint, Detail: v.FigureDetail, Small: v.Small}
+	return FigureText{Title: v.Body, Sub: v.SubPoint, Detail: v.FigureDetail, Small: v.Small, RowTitle: v.MatrixRowTitle}
 }
 
 // defaultFigureText は既定のテンプレート(light)の段。

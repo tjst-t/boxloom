@@ -83,6 +83,9 @@
     "columnGap": 24,
     "columnMainWeight": 2,
     "pairsSideMin": 0.2,
+    "pairsRowGap": 4,
+    "pairMarkSize": 24,
+    "matrixRowTitle": 14,
     "personPhoto": 64,
     "personPhotoShape": "circle",
     "personMinWidth": 240,
@@ -126,7 +129,12 @@
     "tableText": 10,
     "small": 9,
     "blockGap": 12,
-    "itemGap": 4
+    "itemGap": 4,
+    "tableCellPaddingX": 2,
+    "tableCellPaddingY": 0,
+    "pairsRowGap": 2,
+    "pairMarkSize": 20,
+    "matrixRowTitle": 11
   },
   "fit": {
     "shrink": [

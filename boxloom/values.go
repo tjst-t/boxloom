@@ -106,6 +106,13 @@ type TemplateValues struct {
 	// 0〜0.5)。どちらの側もこれより狭くしない(上限は 1 − これ)。側の幅はこの範囲で
 	// 中身から決める(pairs.go の pairSideShare)。
 	PairsSideMin float64 `json:"pairsSideMin" unit:"ratio"`
+	// PairsRowGap は対の並び(pairs)の対の行の間(罫線を引くテンプレートでは行と罫線の間)。
+	// PairMarkSize は対の印(A・B・C の四角・側の間の印)の一辺で、印を描くテンプレート
+	// (report)の対の行の高さの下限になる。どちらも dense で詰められる(#136)。
+	PairsRowGap  float64 `json:"pairsRowGap" scale:"space"`
+	PairMarkSize float64 `json:"pairMarkSize" scale:"space"`
+	// MatrixRowTitle は matrix の行の題(行の見出しの列の名前)の字。列の見出しは body。
+	MatrixRowTitle float64 `json:"matrixRowTitle" scale:"type"`
 	// PersonPhoto は人物の紹介(people)の写真の一辺(pt)。PersonPhotoShape はその形
 	// (personPhotoShapes のどれか)。PersonMinWidth は人を横に並べるときの1人の幅の下限
 	// (これを下回るなら2人ずつの段に積む。people.go)。
@@ -139,16 +146,26 @@ type DenseValues struct {
 	Small     float64 `json:"small" scale:"type"`     // 注記・図の凡例
 	BlockGap  float64 `json:"blockGap" scale:"space"` // 本文のブロックの間
 	ItemGap   float64 `json:"itemGap" scale:"space"`  // 箇条の項目の間
+	// 行ごとの余白(#136):表のセルの余白(上下は 0 でもよい)・対の行の間と印の一辺・
+	// matrix の行の題の字。
+	TableCellPadX  float64 `json:"tableCellPaddingX" scale:"space"`
+	TableCellPadY  float64 `json:"tableCellPaddingY" scale:"space" zero:"allowed"`
+	PairsRowGap    float64 `json:"pairsRowGap" scale:"space"`
+	PairMarkSize   float64 `json:"pairMarkSize" scale:"space"`
+	MatrixRowTitle float64 `json:"matrixRowTitle" scale:"type"`
 }
 
 // apply は v の本文の値を dense の組に替えたもの。
 func (d DenseValues) apply(v TemplateValues) TemplateValues {
 	v.Body, v.SubPoint, v.TableText, v.Small = d.Body, d.SubPoint, d.TableText, d.Small
 	v.BlockGap, v.ItemGap = d.BlockGap, d.ItemGap
+	v.TableCellPadX, v.TableCellPadY = d.TableCellPadX, d.TableCellPadY
+	v.PairsRowGap, v.PairMarkSize, v.MatrixRowTitle = d.PairsRowGap, d.PairMarkSize, d.MatrixRowTitle
 	return v
 }
 
-// checkDense は dense の組が正で段に載り、values の同じ名前より大きくないことを見る。
+// checkDense は dense の組が正(zero:"allowed" の名前は 0 も)で段に載り、values の
+// 同じ名前より大きくないことを見る(同じ json の名前の values の値と比べる)。
 func checkDense(d DenseValues, v TemplateValues, sc TemplateScale) error {
 	if err := checkPositive("dense", d); err != nil {
 		return err
@@ -156,18 +173,33 @@ func checkDense(d DenseValues, v TemplateValues, sc TemplateScale) error {
 	if err := checkOnScale("dense", d, sc); err != nil {
 		return err
 	}
-	for _, c := range []struct {
-		name      string
-		dense, at float64
-	}{
-		{"body", d.Body, v.Body}, {"subPoint", d.SubPoint, v.SubPoint}, {"tableText", d.TableText, v.TableText},
-		{"small", d.Small, v.Small}, {"blockGap", d.BlockGap, v.BlockGap}, {"itemGap", d.ItemGap, v.ItemGap},
-	} {
-		if c.dense > c.at+scaleEps {
-			return fmt.Errorf("dense.%s: %v is larger than values.%s (%v); dense packs the body, so it cannot be larger", c.name, c.dense, c.name, c.at)
+	at := valuesByJSONName(v)
+	dv, dt := reflect.ValueOf(d), reflect.TypeOf(d)
+	for i := 0; i < dt.NumField(); i++ {
+		name, _, _ := strings.Cut(dt.Field(i).Tag.Get("json"), ",")
+		was, ok := at[name]
+		if !ok {
+			return fmt.Errorf("dense.%s: values has no %s", name, name) // 組み立ての誤り
+		}
+		if x := dv.Field(i).Float(); x > was+scaleEps {
+			return fmt.Errorf("dense.%s: %v is larger than values.%s (%v); dense packs the body, so it cannot be larger", name, x, name, was)
 		}
 	}
 	return nil
+}
+
+// valuesByJSONName は values の数の値を json の名前で引ける表にしたもの。
+func valuesByJSONName(v TemplateValues) map[string]float64 {
+	out := map[string]float64{}
+	rv, rt := reflect.ValueOf(v), reflect.TypeOf(v)
+	for i := 0; i < rt.NumField(); i++ {
+		if rv.Field(i).Kind() != reflect.Float64 {
+			continue
+		}
+		name, _, _ := strings.Cut(rt.Field(i).Tag.Get("json"), ",")
+		out[name] = rv.Field(i).Float()
+	}
+	return out
 }
 
 // TemplateScale は値の表の段階(見た目のトークンの刻み)。
@@ -646,7 +678,11 @@ func checkPositive(at string, v any) error {
 		if rv.Field(i).Kind() != reflect.Float64 {
 			continue
 		}
-		if x := rv.Field(i).Float(); !(x > 0) {
+		x := rv.Field(i).Float()
+		if x == 0 && rt.Field(i).Tag.Get("zero") == "allowed" {
+			continue // 0 を書いてよい名前(dense の表のセルの上下の余白)
+		}
+		if !(x > 0) {
 			name, _, _ := strings.Cut(rt.Field(i).Tag.Get("json"), ",")
 			return fmt.Errorf("%s.%s: must be greater than 0 (got %v)", at, name, x)
 		}

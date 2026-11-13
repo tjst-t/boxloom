@@ -75,6 +75,8 @@ func TestFitValuesChecked(t *testing.T) {
 		{"shrink padding above values", func(m map[string]any) { step(m, "shrink", 0)["cardPadding"] = 24 }, "fit.shrink[0].cardPadding: 24 is larger than values.cardPadding (20)"},
 		{"grow below values", func(m map[string]any) { step(m, "grow", 0)["body"] = 14 }, "fit.grow[0].body: 14 is smaller than values.body (16)"},
 		{"grow below previous", func(m map[string]any) { step(m, "grow", 1)["itemGap"] = 8 }, "fit.grow[1].itemGap: 8 is smaller than fit.grow[0].itemGap (12)"},
+		{"shrink row gap above dense", func(m map[string]any) { step(m, "shrink", 0)["pairsRowGap"] = 12 }, "fit.shrink[0].pairsRowGap: 12 is larger than dense.pairsRowGap (8)"},
+		{"grow cell padding below values", func(m map[string]any) { step(m, "grow", 0)["tableCellPaddingY"] = 0 }, "fit.grow[0].tableCellPaddingY: 0 is smaller than values.tableCellPaddingY (4)"},
 		{"zero", func(m map[string]any) { step(m, "shrink", 1)["itemGap"] = 0 }, "fit.shrink[1].itemGap: must be greater than 0"},
 		{"unknown step key", func(m map[string]any) { step(m, "grow", 0)["slideTitle"] = 24 }, `unknown field "slideTitle"`},
 		{"unknown ladder", func(m map[string]any) { m["fit"].(map[string]any)["steady"] = []any{} }, `unknown field "steady"`},
@@ -88,5 +90,13 @@ func TestFitValuesChecked(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), c.want) {
 			t.Errorf("%s: err = %v, want %q", c.name, err, c.want)
 		}
+	}
+	// 表のセルの上下の余白だけは 0 まで詰めてよい(#136)。
+	tm, err := parseTemplateFile("light", mutate(t, func(m map[string]any) { step(m, "shrink", 1)["tableCellPaddingY"] = 0 }))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := tm.Fit.Shrink[1].TableCellPadY; got != 0 {
+		t.Errorf("shrink[1].tableCellPaddingY = %v, want 0", got)
 	}
 }

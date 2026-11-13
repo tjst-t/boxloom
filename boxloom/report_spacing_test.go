@@ -75,7 +75,7 @@ func TestReportPairsTableSpacing(t *testing.T) {
 	before := func() *Template {
 		tm := mustTemplate("report")
 		old := reportPairsStyle
-		old.rowGap = ""
+		old.rowGap = "blockGap"
 		old.sideTitle = func(t *Template, title Inline) *Spec {
 			return Col([]*Spec{t.text(title, "body", "text_primary", true)},
 				tokBackground("card"), tokPadXY(spaceStep(4), spaceStep(2)))
