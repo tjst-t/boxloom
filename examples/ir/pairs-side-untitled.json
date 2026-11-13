@@ -1,0 +1,268 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "対の側に見出し無しで複数のブロックを置く例",
+    "subtitle": "側の見出しの文を省いても、中に1〜4個のブロックを書ける",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "図書館の夜の利用を増やす",
+      "lead": "夜の利用が少ない要因ごとに、打ち手と根拠の数・利用者の声を並べた",
+      "body": [
+        {
+          "type": "pairs",
+          "headings": {
+            "subject": "分かったこと",
+            "response": "打ち手と根拠"
+          },
+          "pairs": [
+            {
+              "subject": {
+                "type": "paragraph",
+                "content": "平日の夜は 19 時に閉まり、仕事帰りに寄れない"
+              },
+              "response": {
+                "body": [
+                  {
+                    "type": "points",
+                    "items": [
+                      "木曜と金曜だけ 21 時まで開ける",
+                      "夜の窓口は貸し出しと返却に絞る"
+                    ]
+                  },
+                  {
+                    "type": "table",
+                    "header": [
+                      "曜日",
+                      "19 時以降の来館(試行)"
+                    ],
+                    "rows": [
+                      [
+                        "木曜",
+                        "62 人"
+                      ],
+                      [
+                        "金曜",
+                        "75 人"
+                      ]
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "subject": {
+                "type": "paragraph",
+                "content": "夜に来ても、座れる席が少ない"
+              },
+              "response": {
+                "body": [
+                  {
+                    "type": "quote",
+                    "content": "席があれば、帰り道に1時間だけ寄りたい",
+                    "source": "会社員 A、聞き取りにて"
+                  },
+                  {
+                    "type": "quote",
+                    "content": "自習室が夜も使えるなら毎日来る",
+                    "source": "学生 B、聞き取りにて"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "source": "架空の試行と聞き取り(利用者 12 人)"
+    },
+    {
+      "type": "content",
+      "title": "要因ごとの手ごたえ",
+      "body": [
+        {
+          "type": "pairs",
+          "headings": {
+            "subject": "分かったこと",
+            "response": "打ち手"
+          },
+          "pairs": [
+            {
+              "label": "A",
+              "subject": {
+                "body": [
+                  {
+                    "type": "points",
+                    "items": [
+                      "夜の来館は試行の2か月で倍になった",
+                      "返却だけの人が半分を占める"
+                    ]
+                  },
+                  {
+                    "type": "table",
+                    "header": [
+                      "月",
+                      "夜の来館"
+                    ],
+                    "rows": [
+                      [
+                        "9 月",
+                        "64 人"
+                      ],
+                      [
+                        "10 月",
+                        "137 人"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              "response": {
+                "type": "paragraph",
+                "content": "返却箱を入口の外に置き、窓口は貸し出しに絞る"
+              }
+            },
+            {
+              "label": "B",
+              "subject": {
+                "body": [
+                  {
+                    "type": "quote",
+                    "content": "夜は暗くて、入口が分かりにくい",
+                    "source": "会社員 C、聞き取りにて"
+                  },
+                  {
+                    "type": "quote",
+                    "content": "開いているのか外から見えない",
+                    "source": "会社員 D、聞き取りにて"
+                  }
+                ]
+              },
+              "response": {
+                "type": "paragraph",
+                "content": "入口の灯りと「開館中」の札を道から見える場所に出す"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "content",
+      "title": "2つの館を並べる",
+      "body": [
+        {
+          "type": "columns",
+          "columns": [
+            {
+              "title": "中央館",
+              "body": [
+                {
+                  "type": "pairs",
+                  "headings": {
+                    "subject": "分かったこと",
+                    "response": "打ち手"
+                  },
+                  "pairs": [
+                    {
+                      "subject": {
+                        "type": "paragraph",
+                        "content": "夜の席が足りない"
+                      },
+                      "response": {
+                        "body": [
+                          {
+                            "type": "points",
+                            "items": [
+                              "2階の会議室を夜だけ自習に開く"
+                            ]
+                          },
+                          {
+                            "type": "table",
+                            "header": [
+                              "席",
+                              "数"
+                            ],
+                            "rows": [
+                              [
+                                "今",
+                                "24"
+                              ],
+                              [
+                                "開いた後",
+                                "60"
+                              ]
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "subject": {
+                        "type": "paragraph",
+                        "content": "入口が暗い"
+                      },
+                      "response": {
+                        "type": "paragraph",
+                        "content": "入口に灯りを足す"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "駅前分館",
+              "body": [
+                {
+                  "type": "pairs",
+                  "headings": {
+                    "subject": "分かったこと",
+                    "response": "打ち手"
+                  },
+                  "pairs": [
+                    {
+                      "subject": {
+                        "type": "paragraph",
+                        "content": "返却だけの人が多い"
+                      },
+                      "response": {
+                        "type": "paragraph",
+                        "content": "返却箱を外に置く"
+                      }
+                    },
+                    {
+                      "subject": {
+                        "type": "paragraph",
+                        "content": "開いているか分からない"
+                      },
+                      "response": {
+                        "body": [
+                          {
+                            "type": "quote",
+                            "content": "駅から見えれば寄る",
+                            "source": "会社員 E"
+                          },
+                          {
+                            "type": "quote",
+                            "content": "閉まっていると思っていた",
+                            "source": "学生 F"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
