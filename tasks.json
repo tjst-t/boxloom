@@ -3098,6 +3098,27 @@
       "updatedAt": "2026-11-13T07:35:32.458Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "report-section-doors",
+      "number": 137,
+      "kind": "task",
+      "title": "report の区切りの扉:節(level 2)は下の項目の一覧を出し、項目(level 3)は簡素な扉にする",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "再現の第6回(元の p9・p30):元の資料は、節の扉に「その節の中の項目の一覧」を並べ、項目の扉は題だけの簡素な形。記法は足さない(区切りの level と並び順で意味は足りている)。report の骨組み section の override で、level 2 の扉にはその節の下の level 3 の区切りの題を並べ(数は組み立てで数える。IR には書かない)、level 3 の扉は小さい簡素な形で描く。dark・light は今のまま。合わせて report の表紙・終わりの箱が左の縁に付いている点を、元の資料の余白に合わせて直す。docs/template-values.md(report の骨組み)に書く。",
+      "doneWhen": "report で level 2 の扉に下の level 3 の題が並び、level 3 の扉が簡素になる試験/表紙・終わりの箱が左の余白を取る/dark・light の出力と golden が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:35:54.518Z",
+      "updatedAt": "2026-11-13T07:35:54.518Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
