@@ -369,7 +369,7 @@ groups: …
   `docs/subsystem.md` の11節)も同じ作り。中身は IR の `data` と同じキーで、書けるのは
   文と状態(`status`)と強調(`emphasis`)と、状態の意味の凡例(`legend`)だけ(座標・色・
   字の大きさは書けない)。matrix の推す列は `emphasis: <列の見出しの文>`、行の題の下の
-  説明は `detail`(1行なら文、YAML の列なら文の列で各行が箇条)、列の見出しの上の群は
+  説明は `detail`(1行なら文、YAML の列なら文の列で各行が箇条。`detailColumn: 見出しの文` があれば題の右の列)、列の見出しの上の群は
   `columnGroups: [{title: 名前, span: 2}]`(span は1以上の引用しない整数。合計は列の数)。funnel の
   `value` は引用しない数なら数、それ以外は文字列。phases の箱の `detail` は1行なら文、
   YAML の列なら文の列(各行が箇条。process と違って改行でつながない)。cycle の段は3〜6つ、

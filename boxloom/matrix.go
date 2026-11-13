@@ -4,7 +4,7 @@
 // table(パターンの2.1)で、こちらは使わない。列の見出しは列の真ん中に、行の
 // 見出しは左に揃えて縦の真ん中に置く。セルは塗りの箱に、状態の色の丸と文を
 // 置く(値の表の cellStyle が mark なら塗らず、丸とチェックの下に文)。行の題の
-// 下に説明(detail)、列の見出しの上に列の群(columnGroups)を置ける。下に、使った
+// 下に説明(detail。detailColumn があれば題の右の見出しつきの列)、列の見出しの上に列の群(columnGroups)を置ける。下に、使った
 // 状態の凡例を自動で付ける(文は data の legend、無ければ既定の文)。設計は docs/subsystem.md の11節。IR の data の形は
 // schema/subsystems/matrix.schema.json。
 
@@ -88,7 +88,13 @@ type MatrixData struct {
 	Legend       []LegendItem // 書いた順(状態 → 文)
 	// Emphasis は推す列(columns の位置)。無ければ -1。
 	Emphasis int
+	// DetailColumn は行の説明(detail)の列の見出し(#143)。あると説明を行の題の下で
+	// なく、題の右の見出しつきの列に置く。無ければ nil(題の下)。
+	DetailColumn Inline
 }
+
+// detailCol は行の説明を独立した列に置くか(detailColumn がある)。
+func (s *MatrixSubsystem) detailCol() bool { return len(s.Data.DetailColumn) > 0 }
 
 // matrixDefaultLegend は legend に書いていない状態の凡例の文。
 var matrixDefaultLegend = map[string]string{
@@ -176,6 +182,8 @@ type matrixGeom struct {
 	inner      float64
 	groupNeed  float64 // 列の群の行の高さ(群が無ければ 0)
 	headW      float64 // 行の見出しの列
+	detW       float64 // 説明の列(detailColumn が無ければ 0)
+	detGap     float64 // 行の見出しと説明の列の間(detailColumn が無ければ 0)
 	colW       float64
 	headerNeed float64
 	rowNeed    []float64
@@ -235,11 +243,23 @@ func (s *MatrixSubsystem) rowHeadParas(r *MatrixRow, color, markColor string, ro
 }
 
 // rowHeadNeed は幅 w の行の見出しに題と説明が収まる幅(一番長い語)と高さ(余白を除く)。
+// 説明が独立した列(detailColumn)なら題だけ。
 func (s *MatrixSubsystem) rowHeadNeed(r *MatrixRow, w float64) (needW, needH float64) {
 	tx := s.text()
-	label, detail := s.rowHeadParas(r, "", "", nil)
+	label, _ := s.rowHeadParas(r, "", "", nil)
 	_, needH = runsBox(label, tx.RowTitle, w)
 	needW = runsMinWidth(label, tx.RowTitle)
+	if s.detailCol() {
+		return needW, needH
+	}
+	dw, dh := s.detailNeed(r, w)
+	return math.Max(needW, dw), needH + dh
+}
+
+// detailNeed は幅 w に行の説明が収まる幅(一番長い語と印)と高さ(余白を除く)。
+func (s *MatrixSubsystem) detailNeed(r *MatrixRow, w float64) (needW, needH float64) {
+	tx := s.text()
+	_, detail := s.rowHeadParas(r, "", "", nil)
 	markW := 0.0
 	if len(r.Points) > 0 {
 		markW = runWidthPt(tx.Point+" ", tx.Detail, true)
@@ -301,6 +321,8 @@ func (s *MatrixSubsystem) legendItemW(li LegendItem) float64 {
 type matrixWidths struct {
 	headNat, headFloor       float64
 	colNat, colFloor, colMin float64
+	// 説明の列(detailColumn、#143)。無ければどれも 0。detGap は題の列との間(CellGap)。
+	detNat, detFloor, detGap float64
 }
 
 func (s *MatrixSubsystem) widths() matrixWidths {
@@ -312,18 +334,28 @@ func (s *MatrixSubsystem) widths() matrixWidths {
 		label, detail := s.rowHeadParas(r, "", "", nil)
 		m.headNat = math.Max(m.headNat, runsNaturalWidth(label, tx.RowTitle))
 		m.headFloor = math.Max(m.headFloor, runsChunkWidth(label, tx.RowTitle))
+		nat, floor := &m.headNat, &m.headFloor
+		if s.detailCol() {
+			nat, floor = &m.detNat, &m.detFloor
+		}
 		for _, p := range detail {
-			m.headNat = math.Max(m.headNat, runsNaturalWidth(p, tx.Detail))
+			*nat = math.Max(*nat, runsNaturalWidth(p, tx.Detail))
 			markW := 0.0
 			if len(r.Points) > 0 {
 				markW = runWidthPt(tx.Point+" ", tx.Detail, true)
 				p = p[1:]
 			}
-			m.headFloor = math.Max(m.headFloor, runsChunkWidth(p, tx.Detail)+markW)
+			*floor = math.Max(*floor, runsChunkWidth(p, tx.Detail)+markW)
 		}
 	}
 	m.headNat += pad
 	m.headFloor = math.Min(m.headFloor+pad, m.headNat)
+	if s.detailCol() {
+		h := s.detailHeaderRuns("", nil)
+		m.detNat = math.Max(m.detNat, runsNaturalWidth(h, tx.Title)) + pad
+		m.detFloor = math.Min(math.Max(m.detFloor, runsChunkWidth(h, tx.Title))+pad, m.detNat)
+		m.detGap = v.CellGap
+	}
 	// 列は同じ幅なので、一番広く要る列で測る。
 	for j := range s.Data.Columns {
 		h := s.headerRuns(j, "", nil)
@@ -358,7 +390,65 @@ func (s *MatrixSubsystem) widths() matrixWidths {
 // はみ出す(figure-text-overflow)。Measure の Min の幅(rowHeadWidth の段 4 の境)。
 func (m matrixWidths) minWidth(v *MatrixValues, cols int) float64 {
 	C := float64(cols)
-	return 2*v.Padding + C*v.CellGap + m.headFloor + C*m.colMin
+	return 2*v.Padding + C*v.CellGap + m.headFloor + C*m.colMin + m.detGap + m.detFloor
+}
+
+// detailHeaderRuns は説明の列の見出しの文。
+func (s *MatrixSubsystem) detailHeaderRuns(color string, roles Roles) []TextRun {
+	return itemRuns(s.Data.DetailColumn, color, roles)
+}
+
+// colWidths は内側の幅 inner のときの行の見出しの列・説明の列・評価の列の幅。説明の列
+// (detailColumn)が無ければ説明の列は 0 で、行の見出しは rowHeadWidth。
+func (s *MatrixSubsystem) colWidths(inner float64) (headW, detW, colW float64) {
+	v := s.vals()
+	C := float64(len(s.Data.Columns))
+	if !s.detailCol() {
+		headW = s.rowHeadWidth(inner)
+		return headW, 0, math.Max(0, (inner-headW-C*v.CellGap)/C)
+	}
+	headW, detW, colW = s.detailColWidths(inner)
+	return
+}
+
+// detailColWidths は説明の列があるときの幅(#143)。評価の列は印と短い文の幅に留め、
+// 幅は文の列(行の題・説明)が取る。幅が減るにつれて次の順に譲る(段の境で幅はつながる):
+//  1. 文の列が floor を保って評価の列が自然の幅(と noWrapSlack)で入れば、評価の列は自然の幅、残りは文の列へ
+//     (評価の列の短い文・見出しは折り返さない)。
+//  2. 文の列は floor のまま、評価の列を min まで縮める。
+//  3. 最小が入らなければ最小の比で配る(figure-text-overflow)。
+//
+// 文の列の幅は、題と説明に分ける(両方が自然の幅で入れば題は自然の幅、余りは説明へ。
+// floor が入れば floor を先に取り残りを自然の幅と floor の差の比で、入らなければ floor の比)。
+// 題は内側の幅の maxRowHeaderFraction まで(越えた分は説明へ)。
+func (s *MatrixSubsystem) detailColWidths(inner float64) (headW, detW, colW float64) {
+	v := s.vals()
+	m := s.widths()
+	C := float64(len(s.Data.Columns))
+	avail := inner - C*v.CellGap - m.detGap
+	// 自然の幅ちょうどだと、アプリの字の幅のわずかな違いで見出し・題が折れるので、
+	// 評価の列と題の列には noWrapSlack を足しておく。
+	colNat, headNat := m.colNat+noWrapSlack, m.headNat+noWrapSlack
+	textNat, textFloor := headNat+m.detNat, m.headFloor+m.detFloor
+	switch {
+	case textFloor+C*colNat <= avail:
+		colW = colNat
+	case textFloor+C*m.colMin <= avail:
+		colW = (avail - textFloor) / C
+	default:
+		colW = math.Max(0, avail) * m.colMin / (textFloor + C*m.colMin)
+	}
+	text := math.Max(0, avail-C*colW)
+	switch {
+	case text >= textNat:
+		headW = headNat
+	case text >= textFloor && textNat > textFloor:
+		headW = m.headFloor + (text-textFloor)*(headNat-m.headFloor)/(textNat-textFloor)
+	case textFloor > 0:
+		headW = text * m.headFloor / textFloor
+	}
+	headW = math.Min(headW, inner*v.RowHeaderFrac)
+	return headW, text - headW, colW
 }
 
 // rowHeadWidth は内側の幅 inner のときの行の見出しの列の幅。幅が減るにつれて次の
@@ -395,12 +485,17 @@ func (s *MatrixSubsystem) rowHeadWidth(inner float64) float64 {
 func (s *MatrixSubsystem) geom(width float64) *matrixGeom {
 	v, tx := s.vals(), s.text()
 	g := &matrixGeom{inner: math.Max(0, width-2*v.Padding)}
-	C := float64(len(s.Data.Columns))
-	g.headW = s.rowHeadWidth(g.inner)
-	g.colW = math.Max(0, (g.inner-g.headW-C*v.CellGap)/C)
+	g.headW, g.detW, g.colW = s.colWidths(g.inner)
+	if s.detailCol() {
+		g.detGap = v.CellGap
+	}
 
 	for j := range s.Data.Columns {
 		_, h := runsBox(s.headerRuns(j, "", nil), tx.Title, g.colW-2*v.TextInsetX)
+		g.headerNeed = math.Max(g.headerNeed, h+2*v.TextInsetY)
+	}
+	if s.detailCol() {
+		_, h := runsBox(s.detailHeaderRuns("", nil), tx.Title, g.detW-2*v.TextInsetX)
 		g.headerNeed = math.Max(g.headerNeed, h+2*v.TextInsetY)
 	}
 	for _, gr := range s.Data.ColumnGroups {
@@ -410,6 +505,10 @@ func (s *MatrixSubsystem) geom(width float64) *matrixGeom {
 	for i := range s.Data.Rows {
 		r := &s.Data.Rows[i]
 		_, need := s.rowHeadNeed(r, g.headW-2*v.TextInsetX)
+		if s.detailCol() {
+			_, dh := s.detailNeed(r, g.detW-2*v.TextInsetX)
+			need = math.Max(need, dh)
+		}
 		for _, c := range r.Cells {
 			need = math.Max(need, s.cellNeed(c, g.colW))
 		}
@@ -418,7 +517,7 @@ func (s *MatrixSubsystem) geom(width float64) *matrixGeom {
 
 	// 凡例: 1列目のセルの左端から並べ、幅を越えたら次の行へ。
 	legend := s.legend()
-	avail := g.inner - g.headW - v.CellGap
+	avail := g.inner - g.headW - v.CellGap // 凡例は行の見出しの右(説明の列があればその左端)から
 	x := 0.0
 	for i, li := range legend {
 		w := s.legendItemW(li)
@@ -448,6 +547,11 @@ func (s *MatrixSubsystem) geom(width float64) *matrixGeom {
 	return g
 }
 
+// cellsX は内側の左端から、評価の列の前の空きまでの幅(行の見出しと説明の列)。
+func (g *matrixGeom) cellsX() float64 {
+	return g.headW + g.detGap + g.detW
+}
+
 // Measure: 高さは見出しの行・各行(文が収まる高さ以上)・凡例の、最小・自然・
 // 上限の和。行の見出しの列は一番長い見出しの幅(内側の幅の一定の割合まで)、
 // 残りを列に等しく分ける。
@@ -470,6 +574,8 @@ type matrixPlaced struct {
 	groups  []LBox // 列の群の名前の箱(下の端に罫線)
 	header  []LBox
 	heads   []LBox
+	detHead LBox   // 説明の列の見出し(detailColumn が無ければ空)
+	dets    []LBox // 行ごとの説明の箱(detailColumn が無ければ nil)
 	cells   [][]LBox
 	legendY float64
 	x0      float64 // 内側の左端
@@ -480,7 +586,8 @@ func (s *MatrixSubsystem) place(box LBox) *matrixPlaced {
 	g := s.geom(box.Width)
 	sizes := flexSizes(g.parts, box.Height)
 	pl := &matrixPlaced{g: g, x0: box.X + v.Padding}
-	colX := func(j int) float64 { return pl.x0 + g.headW + v.CellGap + float64(j)*(g.colW+v.CellGap) }
+	colX := func(j int) float64 { return pl.x0 + g.cellsX() + v.CellGap + float64(j)*(g.colW+v.CellGap) }
+	detX := pl.x0 + g.headW + g.detGap
 	y := box.Y + sizes[0]
 	k := 1
 	if g.groupNeed > 0 {
@@ -495,11 +602,17 @@ func (s *MatrixSubsystem) place(box LBox) *matrixPlaced {
 	for j := range s.Data.Columns {
 		pl.header = append(pl.header, LBox{X: colX(j), Y: y, Width: g.colW, Height: sizes[k]})
 	}
+	if s.detailCol() {
+		pl.detHead = LBox{X: detX, Y: y, Width: g.detW, Height: sizes[k]}
+	}
 	y += sizes[k]
 	for i, r := range s.Data.Rows {
 		y += sizes[k+1+2*i]
 		h := sizes[k+2+2*i]
 		pl.heads = append(pl.heads, LBox{X: pl.x0, Y: y, Width: g.headW, Height: h})
+		if s.detailCol() {
+			pl.dets = append(pl.dets, LBox{X: detX, Y: y, Width: g.detW, Height: h})
+		}
 		var row []LBox
 		for j := range r.Cells {
 			row = append(row, LBox{X: colX(j), Y: y, Width: g.colW, Height: h})
@@ -529,10 +642,24 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 	for j := range s.Data.Columns {
 		header(pl.header[j], s.headerRuns(j, "text_primary", ctx.Roles), tx.Title, "center")
 	}
+	if s.detailCol() {
+		header(pl.detHead, s.detailHeaderRuns("text_primary", ctx.Roles), tx.Title, "left")
+	}
 	for i := range s.Data.Rows {
 		r := &s.Data.Rows[i]
 		label, detail := s.rowHeadParas(r, "text_primary", "accent", ctx.Roles)
-		if len(detail) == 0 {
+		if s.detailCol() {
+			header(pl.heads[i], label, tx.RowTitle, "left")
+			if len(detail) > 0 {
+				// 説明の列:題と同じく縦の真ん中、左に揃える。
+				o := ShapeOpts{Prst: "rect", Runs: detail[0], FontSize: tx.Detail, InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: "left"}
+				for _, para := range detail[1:] {
+					o.Paras = append(o.Paras, para)
+					o.ParaSizes = append(o.ParaSizes, tx.Detail)
+				}
+				p.AddShape(pl.dets[i], o)
+			}
+		} else if len(detail) == 0 {
 			header(pl.heads[i], label, tx.RowTitle, "left")
 		} else {
 			o := ShapeOpts{Prst: "rect", Runs: label, FontSize: tx.RowTitle, InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: "left", Anchor: "middle"}
@@ -658,6 +785,9 @@ func (s *MatrixSubsystem) Lint(box LBox) []string {
 		}
 		check(fmt.Sprintf("columns[%d]", j), c, tx.Title, b.Width-2*v.TextInsetX, b)
 	}
+	if s.detailCol() {
+		check("detailColumn", s.Data.DetailColumn, tx.Title, pl.detHead.Width-2*v.TextInsetX, pl.detHead)
+	}
 	for k, gr := range s.Data.ColumnGroups {
 		b := pl.groups[k]
 		check(fmt.Sprintf("columnGroups[%d]", k), Inline{{Type: "em", Content: gr.Title}}, tx.Title, b.Width-2*v.TextInsetX,
@@ -666,7 +796,18 @@ func (s *MatrixSubsystem) Lint(box LBox) []string {
 	for i := range s.Data.Rows {
 		r := &s.Data.Rows[i]
 		b := pl.heads[i]
-		if len(r.Detail) == 0 && len(r.Points) == 0 {
+		if s.detailCol() && (len(r.Detail) > 0 || len(r.Points) > 0) {
+			db := pl.dets[i]
+			textW, haveH := db.Width-2*v.TextInsetX, db.Height-2*v.TextInsetY
+			if needW, needH := s.detailNeed(r, textW); !textFits(needW, needH, textW, haveH) {
+				in := r.Detail
+				if len(in) == 0 {
+					in = r.Points[0]
+				}
+				out = append(out, overflowWarning("matrix", fmt.Sprintf("rows[%d].detail", i), in, needW, needH, textW, haveH))
+			}
+		}
+		if s.detailCol() || (len(r.Detail) == 0 && len(r.Points) == 0) {
 			check(fmt.Sprintf("rows[%d].label", i), r.Label, tx.RowTitle, b.Width-2*v.TextInsetX, b)
 		} else {
 			textW, haveH := b.Width-2*v.TextInsetX, b.Height-2*v.TextInsetY
@@ -709,8 +850,9 @@ type matrixIR struct {
 			Text   Inline `json:"text"`
 		} `json:"cells"`
 	} `json:"rows"`
-	Legend   orderedLegend `json:"legend"`
-	Emphasis *string       `json:"emphasis"`
+	Legend       orderedLegend `json:"legend"`
+	Emphasis     *string       `json:"emphasis"`
+	DetailColumn *Inline       `json:"detailColumn"`
 }
 
 // matrixEmphasisColumn は emphasis(列の見出しの文)が指す列。見つからなければ
@@ -749,6 +891,12 @@ func matrixFromIR(raw json.RawMessage) (*MatrixData, error) {
 		return nil, fmt.Errorf("matrix: rows needs at least one row")
 	}
 	d := &MatrixData{Columns: in.Columns, Emphasis: -1}
+	if in.DetailColumn != nil {
+		if in.DetailColumn.Plain() == "" {
+			return nil, fmt.Errorf("matrix: detailColumn: must not be empty")
+		}
+		d.DetailColumn = *in.DetailColumn
+	}
 	var names []string
 	for j, c := range in.Columns {
 		if len(c) == 0 {
@@ -826,6 +974,7 @@ func matrixDecl() SubsystemDecl {
 		"各行の cells の数は columns の数と同じ(違えば boxloom check が matrix-cells の誤りにする)",
 		"凡例は使った状態から自動で作る。文を変えるときは legend: {support: 良い, …}",
 		"行の題の下の説明は detail(1つの文か、文の列。列は箇条になる)",
+		"detailColumn: <見出しの文> を書くと、各行の detail を題の下でなく題の右の見出しつきの列に置く(行が低くなる。評価の列は印と短い文の幅になり、幅は題と説明の列が取る)",
 		"列の見出しの上の群の名前は columnGroups: [{title, span: またぐ列の数}](左から。span の合計は列の数。違えば check の matrix-column-groups の誤り)",
 		"推す列(おすすめの選択肢)は emphasis: <列の見出しの文>。見出しと列がアクセントの色で目立つ。見出しに無い名前は check の matrix-emphasis の誤り",
 	)

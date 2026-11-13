@@ -63,7 +63,7 @@
           "$ref": "#/$defs/inline"
         },
         "detail": {
-          "description": "行の題の下の説明。1つの文(inline)か、文の列(各項目が箇条の1つ)。列の項目に文中の要素(em など)が直に並ぶ列は1つの文として読む。",
+          "description": "行の題の下の説明(detailColumn があれば題の右の列)。1つの文(inline)か、文の列(各項目が箇条の1つ)。列の項目に文中の要素(em など)が直に並ぶ列は1つの文として読む。",
           "anyOf": [
             {
               "$ref": "#/$defs/inline"
@@ -151,6 +151,10 @@
           "additionalProperties": {
             "$ref": "#/$defs/inline"
           }
+        },
+        "detailColumn": {
+          "description": "行の説明(rows[].detail)の列の見出し。あると説明を行の題の下でなく、題の右の見出しつきの列に置く(行が低くなる)。評価の列は印と短い文の幅になり、幅は文の列(行の題・説明)が取る。",
+          "$ref": "#/$defs/inline"
         },
         "emphasis": {
           "description": "推す列(おすすめの選択肢)。columns の見出しの文(文中の記法を除いた文字)と同じ文字列。見出しと列がアクセントの色で目立つ。見出しに無い名前は boxloom check が matrix-emphasis の誤りにする。",

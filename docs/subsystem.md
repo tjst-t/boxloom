@@ -675,6 +675,29 @@ rows:
   下限を数 pt 割っただけで評価の列が 4pt ほどに崩れた(#138)。Measure の Min の幅は
   この両方の最小が入る幅(値の表の `minWidth` より狭くはしない)。どの場合も内側の幅の
   `maxRowHeaderFraction`(既定 0.5、report は 0.6)まで(#106)。
+- **説明の列(`detailColumn`、#143)**:`detailColumn: 見出しの文` を書くと、各行の
+  `detail` を題の下でなく、題の右の見出しつきの列(見出しは左揃え)に置く。行の高さは
+  題・説明・セルのうち高いもので決まるので、説明を題の下に積むより行が低くなる(元の
+  資料の p28 を列の中に置いたとき、題の下だと Min の高さが 992pt になっていた)。
+  幅は文の列(行の題・説明)が取り、評価の列は印と短い文の自然な幅(と、アプリの字の幅の
+  違いで見出しが折れない `noWrapSlack`)に留める。足りなくなると、文の列は塊の幅を保った
+  まま評価の列を最小まで縮め、それも入らなければ最小の比で配る。文の列は題と説明に分け
+  (両方が自然な幅で入れば題は自然な幅で余りは説明へ、入らなければ塊の幅を先に取って
+  自然な幅との差の比で)、題は `maxRowHeaderFraction` まで。凡例は説明の列の左端から。
+  説明が収まらなければ `figure-text-overflow`(`rows[N].detail`)。書かなければ従来どおり
+  題の下(出力は変わらない)。
+
+  ```yaml
+  detailColumn: 要約
+  columns: [案 A, 案 B, 案 C]
+  rows:
+    - label: 費用
+      detail: 初年度の持ち出しと、毎年かかる保守の費用を合わせて比べる
+      cells: [{status: support, text: 少}, {status: conditional}, {status: danger, text: 多}]
+    - label: 止まる時間
+      detail: [夜間に切り替える, 週末の作業は避ける]
+      cells: [{status: support}, {status: support}, {status: danger}]
+  ```
 - **列の群(`columnGroups`)**:列の見出しの上の行に、`span` 列(と間)の幅で群の名前を
   太字で真ん中に置き、下に `grid` の色の罫線(太さ `groupRuleWidth`)を引く。群は左から
   順に列を埋め、`span` の合計は列の数と同じ(違えば読み込みの誤りで、check は

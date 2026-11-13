@@ -222,7 +222,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `process.go` / `orgchart.go` / `matrix.go` / `funnel.go`(共通は `figures.go`、
     Markdown は `md_figures.go`)= 箱と線の図のサブシステム。作者は文・状態・強調だけを
     書き、置き場所・色はサブシステムが決める。線は箱に繋がった本物のコネクタ(組織図は
-    曲がる線)。check の誤り `matrix-cells`・`matrix-emphasis`・`matrix-column-groups`、警告 `figure-text-overflow`・`funnel-increase`・`figure-legend`。状態の凡例(legend)は4つの図すべて、funnel は段の間の転換率を描き、matrix は推す列(emphasis)を持つ。
+    曲がる線)。check の誤り `matrix-cells`・`matrix-emphasis`・`matrix-column-groups`、警告 `figure-text-overflow`・`funnel-increase`・`figure-legend`。状態の凡例(legend)は4つの図すべて、funnel は段の間の転換率を描き、matrix は推す列(emphasis)と、行の説明を題の右の見出しつきの列に置く `detailColumn`(#143)を持つ。
   - `cycle.go` = 輪に並んだ段(cycle、#91)。段(3〜6)を上から時計回りに本物の `blockArc` の扇で
     並べ、基調色の濃淡で塗る。番号の丸は輪の外の縁、題は扇の中(扇に収まる枠を測って探す。
     入らなければ題を輪の外に置き輪を小さくする、#110)、detail は輪の外。縦横比を保つ(FixedAspect、余りは spare-width)。columns の中に置ける
