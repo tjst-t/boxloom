@@ -2995,7 +2995,7 @@
       "number": 132,
       "kind": "bug",
       "title": "列の両側の図が下限を持つと、片方(matrix)が幅 4pt まで潰れる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3007,7 +3007,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:35:13.370Z",
-      "updatedAt": "2026-11-13T07:35:13.370Z",
+      "updatedAt": "2026-11-13T07:48:06.525Z",
       "closedAt": null,
       "extra": {}
     },
