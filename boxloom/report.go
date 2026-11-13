@@ -432,7 +432,8 @@ func (t *Template) reportQuote(content, source Inline) *Spec {
 			tokPad("cardPadding"), tokBackground("card"), tokRadius("cardRadius"), WithGrow(1), WithBasis(0), asCard()),
 		SubsystemNode(&calloutMark{kind: calloutTail, size: size}),
 	}, WithGrow(3), WithBasis(0))
-	person := []*Spec{SubsystemNode(&calloutMark{kind: calloutPerson, size: size})}
+	// 人の印は縮めない(縮めた箱に印を描くと、下の出どころの文と重なる)。
+	person := []*Spec{SubsystemNode(&calloutMark{kind: calloutPerson, size: size}, noShrink())}
 	if len(source) > 0 {
 		person = append(person, t.prose(source, "quoteSource", "text_muted", false))
 	}

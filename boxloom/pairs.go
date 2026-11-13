@@ -408,7 +408,7 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 	if hb != nil {
 		hb = st.spacer(t, hb)
 	}
-	info.head = row(hm, info.headSubject, hb, info.headResponse)
+	info.head = apply(row(hm, info.headSubject, hb, info.headResponse), []SpecOpt{noShrink()})
 	side := func(k int, name string, sd *irPairSide) (*Spec, pairSideParts, error) {
 		var parts pairSideParts
 		var kids []*Spec
@@ -418,6 +418,7 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 			} else {
 				parts.title = t.text(sd.Title, "body", "text_primary", true)
 			}
+			parts.title = apply(parts.title, []SpecOpt{noShrink()})
 			kids = append(kids, parts.title)
 		}
 		for i := range sd.Body {
@@ -429,6 +430,9 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 			if err != nil {
 				return nil, parts, fmt.Errorf("%s: %w", where, err)
 			}
+			// 側の中のブロックは縮めずに要る高さで積む(足りなければ layout-overflow)。
+			// 画像など縮められるサブシステムは、Phase3a で先に縮む。
+			s = apply(s, []SpecOpt{noShrink()})
 			if sd.Grouped {
 				parts.body = append(parts.body, s)
 			}
@@ -451,16 +455,18 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 			return nil, err
 		}
 		m, bt := marks(k)
-		pi.row = row(m, pi.subject, bt, pi.response)
+		// 対の行も縮めない。足りないときは、中の縮められるサブシステムの分
+		// (nestedSlack)だけを先に返し、残りははみ出させて layout-overflow で知らせる。
+		pi.row = apply(row(m, pi.subject, bt, pi.response), []SpecOpt{noShrink(), nestedSlack()})
 		if k > 0 && st.rule != nil {
-			pi.before = st.rule(t)
+			pi.before = apply(st.rule(t), []SpecOpt{noShrink()})
 			rows = append(rows, pi.before)
 		}
 		info.rows = append(info.rows, pi)
 		rows = append(rows, pi.row)
 	}
-	info.list = Col(rows, tokGap("blockGap"))
-	return Col([]*Spec{info.head, info.list}, tokGap("itemGap"), measurePairRows(info)), nil
+	info.list = Col(rows, tokGap("blockGap"), noShrink(), nestedSlack())
+	return Col([]*Spec{info.head, info.list}, tokGap("itemGap"), measurePairRows(info), nestedSlack()), nil
 }
 
 // pairSideStep は側の幅の割合の候補の刻み(pairsSideMin から 1 − pairsSideMin まで)。
