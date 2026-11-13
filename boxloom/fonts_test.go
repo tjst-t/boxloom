@@ -11,7 +11,7 @@ import (
 // 同梱した字体の寸法は全部読め、従来の Noto Sans CJK JP の幅と同じ。
 func TestBundledFontMetrics(t *testing.T) {
 	fams := FontFamilies()
-	want := "BIZ UDGothic,BIZ UDPGothic,DejaVu Sans,IPAexGothic,Liberation Sans,Noto Sans CJK JP"
+	want := "BIZ UDGothic,BIZ UDPGothic,DejaVu Sans,IPAPGothic,IPAexGothic,Liberation Sans,Mochiy Pop P One,Noto Sans CJK JP"
 	if strings.Join(fams, ",") != want {
 		t.Fatalf("families = %v", fams)
 	}

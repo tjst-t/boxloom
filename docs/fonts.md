@@ -63,6 +63,8 @@ ascent・descent。
 | BIZ UDPGothic | 実測 | OFL-1.1 | ○ | 1.001em | googlefonts/morisawa-biz-ud-gothic(Windows 10 以降にも同梱) |
 | BIZ UDGothic | 実測 | OFL-1.1 | ○ | 1.001em | 同上(欧文が半角の等幅。MS ゴシックと同じ振る舞い) |
 | IPAexGothic | 実測(太字なし) | IPA | ○ | 1.001em | moji.or.jp |
+| IPAPGothic | 実測(太字なし) | IPA | ○ | 1.001em | この環境の `/usr/share/fonts/opentype/ipafont-gothic/ipagp.ttf`(仮名・約物がプロポーショナル。9章) |
+| Mochiy Pop P One | 実測(太字なし) | OFL-1.1 | ○ | 1.448em | google/fonts の `ofl/mochiypoppone`(仮名がプロポーショナルのポップ体。9章) |
 | Liberation Sans | 実測 | OFL-1.1 | × | 1.118em | この環境。**Arial と同じ幅に作られた字体** |
 | DejaVu Sans | 実測 | Bitstream Vera | × | 1.165em | この環境。欧文の広い字体 |
 
@@ -245,7 +247,7 @@ Noto Sans CJK JP を置き換わり得る字体5つのいちばん広い幅で�
 | **BIZ UDPGothic** | **0.947em** | **0.916em** |
 | (参考)元の資料の字体 | 約 0.86em | — |
 
-同梱の字体で仮名と約物が詰まっているのは BIZ UDPGothic だけ(漢字はどれも 1em)。
+#102 の時点で、同梱の字体で仮名と約物が詰まっているのは BIZ UDPGothic だけだった(漢字はどれも 1em)。#147 で IPAPGothic などの候補を足した(9章)。
 測るときの送り(置き換わり得る字体の最大と `widthMargin` を掛けた値)は、変更前 1.000em、
 変更後 **0.968em**(BIZ UDPGothic の仮名・約物は全角より狭いので余裕 1.05 が掛かる)。
 元の 0.86em にはまだ届かない。もっと狭い字体の実測の寸法が手に入れば寄せられる。
@@ -349,3 +351,73 @@ report が BIZUDPGothic-Regular・Bold だけ、dark・light が NotoSansCJKjp-R
 `+mn-`・`+mj-` の参照がテーマの外に無いことを XML で確かめる。
 
 発表者ノート(ノートのマスター)の字体は書いていない(PDF に出ないので確かめていない)。
+
+## 9. 和文の送りが狭い自由な字体の候補(#147)
+
+report(6章)は BIZ UDPGothic で和文1字が平均 0.947em(見積もり 0.968em)。元の資料の字体は
+約 0.85em で、残りの差(約 16%)を埋められる自由な字体を探した。**report の既定は変えていない**
+(変えるかは人が決める)。寸法を同梱した字体は値の表の `fonts.eastAsian` に書けば選べる。
+
+### 9.1 測り方
+
+- 字体の**既定の送り**(OpenType の機能を当てない幅)を Pillow で測った。PowerPoint は
+  和文の詰め(`palt`)を既定では当てない前提なので、`palt` でだけ詰まる字体は全角として描かれる
+  (確かめてはいない)。
+- 架空の段落(6.1 と同じ `densityParagraph`、122 字)の1字あたりの平均。「仮名と約物」は漢字以外(6.1 と同じく「〇」を含む)。
+  「見積もり」は report の設定で和文の字体だけを替えて組むときの値(全角より狭い文字に
+  `widthMargin` 1.05 を掛ける)。要る高さは 6.3 と同じ 244 字・14pt・行送り 1.2。
+  同梱した字体の数は試験 `TestNarrowFontCandidates`(`go test -run TestNarrowFontCandidates -v`)が出す。
+- 漢字は調べたどの字体でも 1em(IPAPGothic・Mochiy Pop P One は CJK 統合漢字の全部が「一」と同じ幅)。
+  詰まるのは仮名と約物だけなので、漢字の多い文では差が小さい。
+
+### 9.2 比べの表
+
+| 字体 | 平均の送り | 仮名と約物 | 見積もり | 420pt / 860pt の高さ | ライセンス | Windows に標準 | Mac に標準 | 寸法 |
+|---|---|---|---|---|---|---|---|---|
+| BIZ UDPGothic(いまの report) | 0.947em | 0.916em | 0.968em | 8行 134.4pt / 4行 67.2pt | OFL-1.1 | ○(10 以降) | × | 同梱 |
+| **IPAPGothic** | **0.902em** | **0.845em** | **0.929em** | 8行 134.4pt / 4行 67.2pt | IPA | × | × | **同梱**(`ipapgothic.json`) |
+| Mochiy Pop P One | 0.910em | 0.858em | 0.934em | 8行 134.4pt / 4行 67.2pt | OFL-1.1 | × | × | 同梱(`mochiy-pop-p-one.json`)。丸いポップ体で、読む資料の本文には向かない |
+| UmePlus P Gothic | 0.985em | 0.977em | 1.016em | 9行 / 5行 | M+FONTS・BSD-3-Clause | × | × | 入れない(BIZ UDPGothic より広い) |
+| Zen Kaku Gothic New・Antique | 1.000em | 1.000em | — | — | OFL-1.1 | × | × | 入れない(既定の送りは全角。`palt` でだけ詰まる) |
+| IBM Plex Sans JP | 1.000em | 1.000em | — | — | OFL-1.1 | × | × | 同上 |
+| M PLUS 1p・M PLUS 2・M PLUS Rounded 1c | 1.000em | 1.000em | — | — | OFL-1.1 | × | × | 同上 |
+| Murecho・Sawarabi Gothic・Zen Maru Gothic | 1.000em | 1.000em | — | — | OFL-1.1 | × | × | 同上 |
+| LINE Seed JP | 1.000em | 1.000em | — | — | OFL-1.1 | × | × | 同上 |
+| Noto Sans JP | 1.000em | 1.000em | — | — | OFL-1.1 | × | × | 同上(Noto Sans CJK JP と同じ) |
+| Kosugi | 1.000em | 1.000em | — | — | Apache-2.0 | × | × | 全角 |
+| VL PGothic・Migu 1P・MigMix 1P/2P | 1.000em | 1.000em | — | — | VL・IPA ほか | × | × | 欧文だけプロポーショナルで、和文は全角 |
+
+手に入れた場所:google/fonts(OFL の字体)、Ubuntu 24.04 のパッケージ(fonts-ipafont-gothic・
+fonts-umeplus・fonts-vlgothic・fonts-migmix)、seed.line.me(LINE Seed JP)。源真ゴシックP・Mgen+ 1pp
+(源ノ角ゴシックに `palt` を焼き込んだ字体。OFL)は配布元(OSDN)から取れず、測っていない。
+Mplus1(fonts-mplus の新しい M PLUS 1)は一部の漢字が 1em より狭く(段落の漢字の平均 0.979em)、
+漢字を「一」の1字で代表させる `export_font_metrics.py` の前提に合わないので入れていない。
+
+### 9.3 分かったこと
+
+- 自由な字体で BIZ UDPGothic より狭いのは **IPAPGothic** だけ(読む資料の本文に使える字面のもの)。
+  見積もりは 0.968em → 0.929em で約 4% 狭い。元の資料の約 0.85em との差(約 16%)の4分の1ほど。
+  6.3 の段落では行の数は変わらなかった(1行の余りの中に収まる差)。
+- 漢字が 1em のままなので、既定の送りが詰まった字体を替えるだけでは 0.85em に届かない。
+  元の資料の字体は漢字か約物の送りも詰まっていると思われる(確かめていない)。
+- **置き換わり**:IPAPGothic は Windows にも Mac にも標準で入っていない。PPTX は字体を埋め込まない
+  ので、見る人の PC では別の字体(多くは全角の仮名)に置き換わり、詰めて組んだ行が描く側で広がる
+  (6.2 の BIZ UDPGothic の無い環境と同じ問題が、Windows でも起きる)。選ぶなら、読む人の環境に
+  字体を入れてもらうか、PDF にして配る前提になる。
+- 商用で Windows に標準の Meiryo UI・Yu Gothic UI は仮名が詰まった字体として知られるが、自由な
+  ライセンスではなく寸法も持っていない(3章)。測っていない。
+
+### 9.4 選び方(値の表)
+
+```json
+"fonts": {
+  "latin": "BIZ UDPGothic",
+  "eastAsian": "IPAPGothic",
+  "fallbackFonts": ["Liberation Sans", "DejaVu Sans"],
+  "widthMargin": 1.05,
+  "fixedLineSpacing": true,
+  "lineHeight": 1.2
+}
+```
+
+6.2 と同じく、`fallbackFonts` に全角の和文の字体を入れると仮名が 1em に戻る。

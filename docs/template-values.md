@@ -127,11 +127,11 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 **大きさ(values)**:960×540pt。`fillRatioMin`(0.65)・印(marks)は前のまま。
 
 **字体と行送り(fonts、#102)**:元の資料は同じ 14pt でも載る量が約1.3倍だった(行送りが約1.2倍、
-和文1字の送りが平均約 0.86em)。report は `latin`・`eastAsian` を BIZ UDPGothic(同梱の字体で唯一、
+和文1字の送りが平均約 0.86em)。report は `latin`・`eastAsian` を BIZ UDPGothic(#102 の時点で同梱の字体で唯一、
 仮名と約物がプロポーショナル)、`fallbackFonts` を欧文の字体だけ(Liberation Sans・DejaVu Sans)、
 `widthMargin` 1.05、`lineHeight` 1.2 にした。架空の和文の段落(14pt)の要る高さは、変更前の
 **0.790 倍**(幅 420pt、9行→8行)・**0.889 倍**(幅 860pt、4行のまま)。測り方と、字体が置き換わった
-ときの余裕は `docs/fonts.md` の6章(試験 `TestReportFontDensity`)。
+ときの余裕は `docs/fonts.md` の6章(試験 `TestReportFontDensity`)。もっと狭い自由な字体の候補(IPAPGothic など。既定は変えていない)は同じ文書の9章。
 
 | 値 | light | report |
 |---|---|---|
