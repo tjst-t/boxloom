@@ -2675,7 +2675,7 @@
       "number": 117,
       "kind": "task",
       "title": "列のまとまりの中に置けるものを広げる(pairs・phases・matrix・orgchart・gallery)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2687,7 +2687,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T06:10:07.478Z",
-      "updatedAt": "2026-11-13T06:10:07.478Z",
+      "updatedAt": "2026-11-13T06:10:20.189Z",
       "closedAt": null,
       "extra": {}
     },
