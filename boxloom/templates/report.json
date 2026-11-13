@@ -128,6 +128,38 @@
     "blockGap": 12,
     "itemGap": 4
   },
+  "fit": {
+    "shrink": [
+      {
+        "body": 11,
+        "subPoint": 10,
+        "blockGap": 10,
+        "itemGap": 2,
+        "cardPadding": 10
+      },
+      {
+        "body": 10,
+        "subPoint": 9,
+        "blockGap": 8,
+        "cardPadding": 8
+      }
+    ],
+    "grow": [
+      {
+        "body": 16,
+        "subPoint": 14,
+        "tableText": 12,
+        "blockGap": 20,
+        "itemGap": 8,
+        "cardPadding": 14
+      },
+      {
+        "blockGap": 24,
+        "itemGap": 10,
+        "cardPadding": 16
+      }
+    ]
+  },
   "variants": [],
   "subsystems": {
     "gantt": {

@@ -28,7 +28,9 @@ type Template struct {
 	Scale  TemplateScale // 値の表の段階(余白の刻み・字の大きさの段)
 	Values TemplateValues
 	// Dense は密なスライド(density: dense)の本文の値の組(densed が Values に重ねる)。
-	Dense      DenseValues
+	Dense DenseValues
+	// Fit は収めの梯子(値の表の fit。詰める段と広げる段。fit_values.go)。
+	Fit        TemplateFit
 	Marks      TemplateMarks
 	Fonts      *FontSet // 字体と幅の余裕(値の表の fonts)
 	Subsystems *SubsystemRegistry

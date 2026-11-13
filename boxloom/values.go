@@ -367,6 +367,8 @@ type templateFile struct {
 	Variants []string          `json:"variants"`
 	// Dense は密なスライド(content の density: dense)の本文の値の組(必須)。
 	Dense DenseValues `json:"dense"`
+	// Fit は収めの梯子(任意。fit_values.go)。
+	Fit *templateFit `json:"fit,omitempty"`
 	// Subsystems はサブシステムの値の差し替え(任意)。書くなら全部の値を書く。
 	Subsystems *templateSubsystems `json:"subsystems,omitempty"`
 }
@@ -526,6 +528,10 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	if err := checkDense(f.Dense, f.Values, f.Scale); err != nil {
 		return nil, err
 	}
+	fit, err := resolveFit(f.Fit, f.Values, f.Dense, f.Scale)
+	if err != nil {
+		return nil, err
+	}
 	if v := f.Values.PairsSideMin; v >= 0.5 {
 		return nil, fmt.Errorf("values.pairsSideMin: %v must be below 0.5 (each of the two sides gets at least this share)", v)
 	}
@@ -552,6 +558,7 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		Scale:      f.Scale,
 		Values:     f.Values,
 		Dense:      f.Dense,
+		Fit:        fit,
 		Marks:      f.Marks,
 		Fonts:      fonts,
 		Subsystems: DefaultSubsystems().Clone(),

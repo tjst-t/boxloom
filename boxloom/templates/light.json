@@ -111,5 +111,36 @@
     "blockGap": 12,
     "itemGap": 4
   },
+  "fit": {
+    "shrink": [
+      {
+        "body": 12,
+        "subPoint": 10,
+        "tableText": 10,
+        "blockGap": 8,
+        "cardPadding": 16
+      },
+      {
+        "body": 10,
+        "blockGap": 4,
+        "cardPadding": 12
+      }
+    ],
+    "grow": [
+      {
+        "body": 18,
+        "subPoint": 16,
+        "tableText": 16,
+        "blockGap": 24,
+        "itemGap": 12,
+        "cardPadding": 24
+      },
+      {
+        "blockGap": 32,
+        "itemGap": 16,
+        "cardPadding": 28
+      }
+    ]
+  },
   "variants": []
 }
