@@ -355,8 +355,8 @@ func (s *CycleSubsystem) radiusFor(limit float64, axis int, sizes []Size, outsid
 }
 
 // Measure: 幅を受けたらその幅での高さ、高さを受けたらその高さでの幅(どちらも
-// 輪の大きさを決めてから測る)。形を保つので FixedAspect。最小は最小の直径の輪と、
-// 下限まで折り返した補足。
+// 輪の大きさを決めてから測る)。形を保つので FixedAspect。最小は題が読める一番
+// 小さい形(minLayout:扇に入らなければ、題を輪の外に置くのに要る幅を含む)。
 func (s *CycleSubsystem) Measure(c Constraint) Measurement {
 	v := s.vals()
 	var lay cycleLayout
@@ -374,12 +374,61 @@ func (s *CycleSubsystem) Measure(c Constraint) Measurement {
 		}
 	}
 	w, h := s.size(lay.r, lay.sizes, lay.outside)
-	mw, mh := s.size(v.MinDiameter/2, s.labelSizes(v.LabelMinWidth))
+	mw, mh := s.minSize(c.Width)
 	return Measurement{
 		Natural:     Size{Width: w, Height: h},
 		Min:         Size{Width: mw, Height: mh},
 		FixedAspect: true,
 	}
+}
+
+// minLayout は題が読める一番小さい形(Measure の Min)。題が最小の輪の扇に入れば
+// 最小の輪と下限まで折り返した補足。入らなければ、題が扇に入る輪(titleRadius)と、
+// 題を輪の外に置いた最小の輪(題は折れない塊まで折り返す)のうち幅の狭いほう
+// (列の中では幅が足りなくなりやすいので、幅で選ぶ)。扇に入る輪が無ければ外。
+func (s *CycleSubsystem) minLayout() cycleLayout {
+	v := s.vals()
+	if s.titlesFit(v.MinDiameter / 2) {
+		return cycleLayout{r: v.MinDiameter / 2, sizes: s.labelSizes(v.LabelMinWidth)}
+	}
+	out := cycleLayout{r: v.minR(true), sizes: s.labelSizes(0, true), outside: true}
+	if r := s.titleRadius(); s.titlesFit(r) {
+		in := cycleLayout{r: r, sizes: s.labelSizes(v.LabelMinWidth)}
+		iw, _ := s.size(in.r, in.sizes)
+		ow, _ := s.size(out.r, out.sizes, true)
+		if iw <= ow {
+			return in
+		}
+	}
+	return out
+}
+
+// minSize は Min:幅は minLayout の幅。高さは題が読める形のうち一番低いもの(幅
+// width を受けたらその幅で折り返す。題を外に置く形は、折り返しを広くするほど低い)。
+// 幅と高さで別の形を取る(狭い列では幅、低い列では高さが効く)。
+func (s *CycleSubsystem) minSize(width float64) (w, h float64) {
+	v := s.vals()
+	ml := s.minLayout()
+	w, h = s.size(ml.r, ml.sizes, ml.outside)
+	if !ml.outside && ml.r == v.MinDiameter/2 {
+		return w, h
+	}
+	cap := v.LabelMaxWidth
+	if width > 0 {
+		cap = s.labelCap(math.Max(width, w), true)
+	}
+	if _, oh := s.size(v.minR(true), s.labelSizes(cap, true), true); oh < h {
+		h = oh
+	}
+	return w, h
+}
+
+// columnMinWidth は並列のまとまりの中で要る幅(columnFloor):題が読める一番小さい
+// 形の幅。まとまりがこれより狭いと、題は扇にも輪の外にも入らない。
+func (s *CycleSubsystem) columnMinWidth() float64 {
+	ml := s.minLayout()
+	w, _ := s.size(ml.r, ml.sizes, ml.outside)
+	return w
 }
 
 // cycleLayout は輪の大きさと枠の大きさ、題を輪の外に置くか。

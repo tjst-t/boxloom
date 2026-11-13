@@ -11,6 +11,8 @@
 
 package boxloom
 
+import "math"
+
 type AlignItems int
 
 const (
@@ -595,6 +597,9 @@ func computeLayout(s *Spec, x, y, width, height float64) {
 	default:
 		copy(mainSizes, basisSizes)
 	}
+	if isRow && s.columns != nil {
+		applyColumnFloors(children, mainSizes)
+	}
 
 	// --- Phase 4: justify_content ---
 	usedMain := gapTotal
@@ -668,4 +673,78 @@ func max0(v float64) float64 {
 		return 0
 	}
 	return v
+}
+
+// columnFloor は、並列のまとまりの中で最小の幅を申告する図(Measure の Min.Width と
+// 違い、まとまりの幅の配分まで変える)。いまは cycle だけ(題を輪の外に置くのに要る幅)。
+// 申告しない図(グラフ・画像など)のまとまりは従来どおり。
+type columnFloor interface {
+	columnMinWidth() float64
+}
+
+// columnMinWidth はまとまりの箱 c(列)の中で、columnFloor の図が申告する幅の最大
+// (無ければ 0)。
+func columnMinWidth(c *Spec) float64 {
+	if c.Kind == KindSubsystem {
+		if f, ok := c.Subsystem.(columnFloor); ok {
+			return f.columnMinWidth()
+		}
+		return 0
+	}
+	if c.Kind != KindCol && c.Kind != KindRow {
+		return 0
+	}
+	m := 0.0
+	for _, k := range c.Children {
+		if v := columnMinWidth(k); v > m {
+			m = v
+		}
+	}
+	if m > 0 {
+		m += 2 * c.padX()
+	}
+	return m
+}
+
+// applyColumnFloors は並列のまとまりの行で、図が申告した最小の幅(columnFloor)に
+// 足りないまとまりを広げ、足りる分を伸びるほかのまとまりから、それぞれの最小の幅を
+// 下回らない範囲で、余りの比で取る(取れなければ取れた分だけ。足りない分は図の
+// 警告に任せる)。申告の無い行では何もしない。
+func applyColumnFloors(children []*Spec, main []float64) {
+	n := len(children)
+	floor := make([]float64, n)
+	need := 0.0
+	for i, c := range children {
+		if c.Grow <= 0 {
+			continue
+		}
+		floor[i] = columnMinWidth(c)
+		if floor[i] > main[i] {
+			need += floor[i] - main[i]
+		}
+	}
+	if need <= 0 {
+		return
+	}
+	spare := make([]float64, n)
+	total := 0.0
+	for i, c := range children {
+		if c.Grow <= 0 || floor[i] >= main[i] {
+			continue
+		}
+		spare[i] = main[i] - floor[i]
+		total += spare[i]
+	}
+	if total <= 0 {
+		return
+	}
+	take := math.Min(need, total)
+	for i := range children {
+		switch {
+		case spare[i] > 0:
+			main[i] -= take * spare[i] / total
+		case floor[i] > main[i]:
+			main[i] += take * (floor[i] - main[i]) / need
+		}
+	}
 }

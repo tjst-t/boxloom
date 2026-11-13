@@ -44,8 +44,13 @@ func TestCycleLongTitlesDoNotBreakPerChar(t *testing.T) {
 		if ws := sub.Lint(box); len(ws) != 0 {
 			t.Errorf("%s: natural size warns %v", tm, ws)
 		}
-		// 最小の輪では入らない題があり、警告になる(題は塊の幅のまま)。
-		small := LBox{Width: m.Min.Width, Height: m.Min.Height}
+		// 最小の大きさ(Min)では題が読める(扇に入るか輪の外。#112)。
+		if ws := sub.Lint(LBox{Width: m.Min.Width, Height: sub.Measure(Constraint{Width: m.Min.Width}).Natural.Height}); len(ws) != 0 {
+			t.Errorf("%s: min size warns %v", tm, ws)
+		}
+		// それより小さい最小の輪では入らない題があり、警告になる(題は塊の幅のまま)。
+		sw, sh := sub.size(v.MinDiameter/2, sub.labelSizes(v.LabelMinWidth))
+		small := LBox{Width: sw, Height: sh}
 		ws := sub.Lint(small)
 		if len(ws) == 0 || !strings.Contains(strings.Join(ws, "\n"), "cycle: steps[") {
 			t.Errorf("%s: min size gives no title warning: %v", tm, ws)
