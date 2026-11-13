@@ -2858,6 +2858,74 @@
       "updatedAt": "2026-11-13T07:28:44.192Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "fit-values",
+      "number": 126,
+      "kind": "task",
+      "title": "値の表に収めの梯子 fit.shrink・fit.grow を足す",
+      "status": "ready",
+      "parent": "auto-fit",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "親 #125 の決めに従う。templates/<名前>.json に任意の `fit`:{ \"shrink\": [組…], \"grow\": [組…] }。各組は dense と同じく values の一部(本文・入れ子の箇条・表の字・small・blockGap・itemGap・cardPadding など dense が持てる名前と同じ範囲)を重ねるもの。値は scale の段に無ければ誤り、shrink は前の段(最初は dense の組)より大きければ誤り、grow は前の段(最初は values)より小さければ誤り、知らないキーは誤り。dark・light・report に梯子を入れる(例:shrink は dense から本文 1 段・間合い 1 段ずつ下げて2段、grow は本文・間合いを 1〜2 段上げて2段。report は元の資料の密な表 10〜11pt を下限の目安に)。まだ使わない(組み立ては変えない)。docs/template-values.md に節を足す。",
+      "doneWhen": "3つのテンプレートが fit を持って読み込める/段に無い値・順の逆転・知らないキーが誤りになる試験/build の出力と golden が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:29:03.385Z",
+      "updatedAt": "2026-11-13T07:29:03.385Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
+      "id": "fit-shrink",
+      "number": 127,
+      "kind": "task",
+      "title": "-fit:はみ出すスライドを梯子で詰めて収める",
+      "status": "ready",
+      "parent": "auto-fit",
+      "dependsOn": [
+        "build-overflow-error",
+        "fit-values"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "BuildOptions.Fit・CheckOptions.Fit と CLI `build -fit`・`check -fit`(IR は変えない)。Fit のとき、layout-overflow になる本文のスライドは、今の密度(normal なら dense の組、dense なら fit.shrink の最初)から1段ずつ下りて組み直して測り(measureBody と同じ1回の測り)、最初に収まった段で組む。最後の段でも収まらなければ今までどおり layout-overflow(build は誤り、#124)。調整したスライドには info の Issue `fit-applied`(path=/slides/S、message に段と残り pt)を出し、check -format json の capacity にそのスライドの `fit`(段の名前)を出す。Fit でないときの出力は1バイトも変えない。docs/build.md・docs/ir.md(capacity と code の表)・docs/library.md・SKILL.md(-fit は最後の手段で、まず文を削る・分ける)を直す。",
+      "doneWhen": "はみ出す例が -fit で収まり fit-applied が出る/最後の段でも収まらない例は誤りのまま/-fit なしの golden が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:29:03.385Z",
+      "updatedAt": "2026-11-13T07:29:03.385Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
+      "id": "fit-grow",
+      "number": 128,
+      "kind": "task",
+      "title": "-fit:薄いスライドを梯子で広げてそろえる",
+      "status": "ready",
+      "parent": "auto-fit",
+      "dependsOn": [
+        "fit-shrink"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "Fit のとき、fill-ratio が下回る本文のスライド(normal のものだけ)は fit.grow を上り、はみ出さない最も上の段で組む(段を上げても fill-ratio が目標を越えたらそこで止める)。字と間合いの段を上げるだけで、任意の倍率は使わない。調整したら fit-applied(上げた段)を出し、fill-ratio の警告は組んだ後の値で出す。Fit でないときの出力は変えない(本文の下の余りをブロックの間に配らない既定はそのまま)。docs を fit-shrink と同じ所に書き足す。",
+      "doneWhen": "薄い例が -fit で広がり fit-applied が出て fill-ratio が上がる/広げてはみ出すことが無い試験/-fit なしの golden が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:29:03.385Z",
+      "updatedAt": "2026-11-13T07:29:03.385Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
