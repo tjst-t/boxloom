@@ -2780,7 +2780,7 @@
       "number": 122,
       "kind": "task",
       "title": "箇条の3段目と、表のセルの中の2段の箇条",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2792,7 +2792,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T06:10:07.478Z",
-      "updatedAt": "2026-11-13T06:10:07.478Z",
+      "updatedAt": "2026-11-13T06:50:26.432Z",
       "closedAt": null,
       "extra": {}
     },
