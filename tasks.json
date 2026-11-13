@@ -2339,7 +2339,7 @@
       "number": 101,
       "kind": "task",
       "title": "対の側の中の表が最小まで潰れる・引用の人の印が文と重なるのを直す",
-      "status": "in-progress",
+      "status": "done",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2347,12 +2347,12 @@
       "labels": [],
       "body": "## なぜ\n#82 の比較(36ページ相当)で、対の応答の側に表と引用を入れると、表が 76pt に押しつぶされ、引用の人の印が文に重なった。\n\n## やること\n- 原因を調べる(側の中の高さの割り当て・表の Min の申告・引用の印の位置)。\n- 側の中のブロックは縮めずに要る高さで積み、足りなければ layout-overflow で知らせる(他のブロックと同じ)。\n- 引用の人の印は文の箱と重ならない位置に置く。\n\n## 確かめ方\n- 試験:架空の対(片側に表+引用2つ)で、表の高さが自然の高さ・人の印の矩形が文の矩形と重ならない(report・dark・light)。",
       "doneWhen": "表が潰れず、人の印が文と重ならないことを3テンプレートの試験で確かめる/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/pairs-side-crush）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T03:53:47.843Z",
-      "updatedAt": "2026-11-13T04:16:26.089Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T04:28:23.191Z",
+      "closedAt": "2026-11-13T04:28:23.191Z",
       "extra": {}
     }
   ]
