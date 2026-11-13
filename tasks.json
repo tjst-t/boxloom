@@ -2166,7 +2166,7 @@
       "number": 93,
       "kind": "task",
       "title": "スライドの隅の印(marker)と、今の項目のパンくず",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template",
@@ -2181,7 +2181,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:31:17.139Z",
-      "updatedAt": "2026-11-13T02:52:08.192Z",
+      "updatedAt": "2026-11-13T03:51:01.613Z",
       "closedAt": null,
       "extra": {}
     },
