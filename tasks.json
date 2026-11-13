@@ -2738,7 +2738,7 @@
       "number": 120,
       "kind": "task",
       "title": "人物の紹介(profile):写真・名前・役職・経歴の箇条。横に並べられる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2750,7 +2750,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T06:10:07.478Z",
-      "updatedAt": "2026-11-13T06:10:07.478Z",
+      "updatedAt": "2026-11-13T06:29:38.135Z",
       "closedAt": null,
       "extra": {}
     },
