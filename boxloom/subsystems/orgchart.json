@@ -25,5 +25,6 @@
   "legendSwatchGap": 8,
   "assistantGap": 16,
   "minAssistantWidth": 64,
-  "maxAssistantWidth": 96
+  "maxAssistantWidth": 96,
+  "stackIndent": 24
 }

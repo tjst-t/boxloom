@@ -43,6 +43,7 @@ type OrgChartValues struct {
 	LegendSwatchH float64 `json:"legendSwatchHeight"`
 	LegendSwatchG float64 `json:"legendSwatchGap" scale:"space"` // 見本と文の間
 	AssistantGap  float64 `json:"assistantGap" scale:"space"`    // 2段目の箱と補佐の箱の間(#131)
+	StackIndent   float64 `json:"stackIndent" scale:"space"`     // 縦に積む3段目の字下げ(#134)
 	MinAssistantW float64 `json:"minAssistantWidth"`
 	MaxAssistantW float64 `json:"maxAssistantWidth"`
 }
@@ -144,6 +145,16 @@ type orgGeom struct {
 	needMember   float64
 	legend       figureLegendLayout
 	parts        []flexPart
+	stacked      bool      // 3段目を親の下に字下げして縦に積む形(#134)
+	spineX       []float64 // 縦に積む形の左の縦線の x(枠の左端から)
+}
+
+// memberPart は列の j 番目の3段目の箱の高さが parts の何番目か。
+func (g *orgGeom) memberPart(j int) int {
+	if g.stacked {
+		return orgPartUnit + 2 + 2*j
+	}
+	return orgPartMem
 }
 
 const (
@@ -154,7 +165,101 @@ const (
 	orgPartMem  = 5
 )
 
+// geom は幅 width の置き方。3段目を横に並べる形と、親の下に縦に積む形(#134)の
+// うち、最小の高さが低いほうを選ぶ(同じなら横に並べる形)。広い枠では横に並べる形の
+// ほうが低いので、従来の置き方のまま。
 func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
+	g := s.geomRow(width)
+	if !s.hasMembers() {
+		return g
+	}
+	st := s.geomStacked(width)
+	gmin, _, _ := flexTotals(g.parts)
+	smin, _, _ := flexTotals(st.parts)
+	if smin < gmin-0.5 {
+		return st
+	}
+	return g
+}
+
+// geomStacked は3段目を縦に積む形:各 unit の列は同じ幅で、2段目の箱の下に3段目の箱を
+// stackIndent だけ字下げして memberGap の間で積み、2段目の箱の下から左の縦線で繋ぐ。
+func (s *OrgChartSubsystem) geomStacked(width float64) *orgGeom {
+	v, tx := s.vals(), s.text()
+	inner := math.Max(0, width-2*v.Padding)
+	x0 := v.Padding
+	g := &orgGeom{stacked: true}
+	U := len(s.Data.Units)
+	colW := math.Max(0, (inner-float64(U-1)*v.UnitGap)/float64(U))
+	g.unitX, g.unitW, g.memberX = make([]float64, U), make([]float64, U), make([][]float64, U)
+	g.memberWs, g.spineX = make([]float64, U), make([]float64, U)
+	g.asstX, g.asstW, g.needAsst = make([]float64, U), make([]float64, U), make([]float64, U)
+	rows := 0
+	for i, u := range s.Data.Units {
+		x := x0 + float64(i)*(colW+v.UnitGap)
+		g.unitW[i] = math.Min(colW, v.MaxUnitW)
+		g.unitW[i] = nodeComfortWidth(&u.FigureNode, tx.Title, tx.Sub, g.unitW[i], colW, s.boxValues("rect"))
+		g.unitX[i] = x + (colW-g.unitW[i])/2
+		s.placeAssistant(g, i, x, colW, 0)
+		indent := math.Min(v.StackIndent, g.unitW[i]/2)
+		g.spineX[i] = g.unitX[i] + indent/2
+		g.memberWs[i] = math.Max(0, g.unitW[i]-indent)
+		for range u.Members {
+			g.memberX[i] = append(g.memberX[i], g.unitX[i]+indent)
+		}
+		rows = max(rows, len(u.Members))
+	}
+	g.memberW = g.memberWs[0]
+	g.rootW = math.Min(inner, v.MaxRootW)
+	g.rootW = nodeComfortWidth(&s.Data.Root, tx.Title, tx.Sub, g.rootW, inner, s.boxValues("rect"))
+	g.rootX = x0 + (inner-g.rootW)/2
+	s.measureNeeds(g)
+	box := s.boxPart
+	gap := flexPart{v.MinLevelGap, v.NaturalLevel, v.MaxLevelGap}
+	g.parts = []flexPart{fixedPart(v.Padding), box(g.needRoot), gap, box(g.needUnit)}
+	for j := 0; j < rows; j++ {
+		g.parts = append(g.parts, fixedPart(v.MemberGap), box(g.needMember))
+	}
+	s.finishParts(g, inner)
+	return g
+}
+
+// measureNeeds は箱の幅から、各段の文が収まる高さを測る。
+func (s *OrgChartSubsystem) measureNeeds(g *orgGeom) {
+	tx := s.text()
+	_, g.needRoot = nodeTextSize(&s.Data.Root, tx.Title, tx.Sub, g.rootW, s.boxValues("rect"))
+	for i := range s.Data.Units {
+		u := &s.Data.Units[i]
+		_, h := nodeTextSize(&u.FigureNode, tx.Title, tx.Sub, g.unitW[i], s.boxValues("rect"))
+		g.needUnit = math.Max(g.needUnit, h)
+		if u.Assistant != nil {
+			_, g.needAsst[i] = nodeTextSize(u.Assistant, tx.Sub, tx.Detail, g.asstW[i], s.boxValues("roundRect"))
+			g.needUnit = math.Max(g.needUnit, g.needAsst[i])
+		}
+		for j := range u.Members {
+			_, h := nodeTextSize(&u.Members[j], tx.Sub, tx.Detail, g.memberWs[i], s.boxValues("roundRect"))
+			g.needMember = math.Max(g.needMember, h)
+		}
+	}
+}
+
+// boxPart は文の高さ need の箱の段の最小・自然・上限。
+func (s *OrgChartSubsystem) boxPart(need float64) flexPart {
+	v := s.vals()
+	return flexPart{math.Max(need, v.MinBoxH), math.Max(need, v.NaturalBoxH), math.Max(need, v.MaxBoxH)}
+}
+
+// finishParts は凡例と下の余白を足す。
+func (s *OrgChartSubsystem) finishParts(g *orgGeom, inner float64) {
+	v, tx := s.vals(), s.text()
+	items, _ := s.legend()
+	g.legend = layoutFigureLegend(items, inner, tx.Small, v.legendValues(0))
+	g.parts = append(g.parts, g.legend.part(v.legendValues(0))...)
+	g.parts = append(g.parts, fixedPart(v.Padding))
+}
+
+// geomRow は3段目を横に並べる形。
+func (s *OrgChartSubsystem) geomRow(width float64) *orgGeom {
 	v, tx := s.vals(), s.text()
 	inner := math.Max(0, width-2*v.Padding)
 	x0 := v.Padding // 枠の左端からの位置(描くときに枠の X を足す)
@@ -211,32 +316,14 @@ func (s *OrgChartSubsystem) geom(width float64) *orgGeom {
 	g.rootW = nodeComfortWidth(&s.Data.Root, tx.Title, tx.Sub, g.rootW, inner, s.boxValues("rect"))
 	g.rootX = x0 + (inner-g.rootW)/2
 
-	_, g.needRoot = nodeTextSize(&s.Data.Root, tx.Title, tx.Sub, g.rootW, s.boxValues("rect"))
-	for i := range s.Data.Units {
-		u := &s.Data.Units[i]
-		_, h := nodeTextSize(&u.FigureNode, tx.Title, tx.Sub, g.unitW[i], s.boxValues("rect"))
-		g.needUnit = math.Max(g.needUnit, h)
-		if u.Assistant != nil {
-			_, g.needAsst[i] = nodeTextSize(u.Assistant, tx.Sub, tx.Detail, g.asstW[i], s.boxValues("roundRect"))
-			g.needUnit = math.Max(g.needUnit, g.needAsst[i])
-		}
-		for j := range u.Members {
-			_, h := nodeTextSize(&u.Members[j], tx.Sub, tx.Detail, g.memberWs[i], s.boxValues("roundRect"))
-			g.needMember = math.Max(g.needMember, h)
-		}
-	}
-	box := func(need float64) flexPart {
-		return flexPart{math.Max(need, v.MinBoxH), math.Max(need, v.NaturalBoxH), math.Max(need, v.MaxBoxH)}
-	}
+	s.measureNeeds(g)
+	box := s.boxPart
 	gap := flexPart{v.MinLevelGap, v.NaturalLevel, v.MaxLevelGap}
 	g.parts = []flexPart{fixedPart(v.Padding), box(g.needRoot), gap, box(g.needUnit)}
 	if s.hasMembers() {
 		g.parts = append(g.parts, gap, box(g.needMember))
 	}
-	items, _ := s.legend()
-	g.legend = layoutFigureLegend(items, inner, tx.Small, v.legendValues(0))
-	g.parts = append(g.parts, g.legend.part(v.legendValues(0))...)
-	g.parts = append(g.parts, fixedPart(v.Padding))
+	s.finishParts(g, inner)
 	return g
 }
 
@@ -329,7 +416,8 @@ func (s *OrgChartSubsystem) place(box LBox) *orgPlaced {
 		pl.assts = append(pl.assts, ab)
 		var ms []LBox
 		for j := range u.Members {
-			ms = append(ms, LBox{X: box.X + g.memberX[i][j], Y: y[orgPartMem], Width: g.memberWs[i], Height: sizes[orgPartMem]})
+			k := g.memberPart(j)
+			ms = append(ms, LBox{X: box.X + g.memberX[i][j], Y: y[k], Width: g.memberWs[i], Height: sizes[k]})
 		}
 		pl.members = append(pl.members, ms)
 	}
@@ -367,6 +455,18 @@ func (s *OrgChartSubsystem) Render(ctx RenderContext, box LBox) {
 	}
 	for i := range s.Data.Units {
 		link(pl.root, pl.units[i], rootID, unitIDs[i])
+		if ms := pl.members[i]; pl.g.stacked && len(ms) > 0 {
+			// 縦に積む形:2段目の箱の下から左の縦線を下ろし、3段目の箱の左の辺へ横の線。
+			ub := pl.units[i]
+			x := box.X + pl.g.spineX[i]
+			last := ms[len(ms)-1]
+			p.AddLine(x, ub.Y+ub.Height, x, last.Y+last.Height/2, v.LineWidth, color, "")
+			for j, m := range ms {
+				yc := m.Y + m.Height/2
+				p.AddConnector(x, yc, m.X, yc, v.LineWidth, color, false, ConnectorEnd{}, ConnectorEnd{memberIDs[i][j], 1})
+			}
+			continue
+		}
 		for j := range s.Data.Units[i].Members {
 			link(pl.units[i], pl.members[i][j], unitIDs[i], memberIDs[i][j])
 		}
