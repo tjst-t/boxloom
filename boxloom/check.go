@@ -362,6 +362,23 @@ func (c *checker) checkBodyBlock(bm map[string]any, bp string, tm *Template, ids
 		c.checkNotEmpty(bm, bp, "content")
 	case "quote":
 		c.checkNotEmpty(bm, bp, "content", "source")
+	case pairsType:
+		// 対の名前(label)は、全ての対に書くか、どれにも書かない(pairs-label)。
+		pairs, _ := bm["pairs"].([]any)
+		var has []bool
+		for _, p := range pairs {
+			pm, _ := p.(map[string]any)
+			_, ok := pm["label"]
+			has = append(has, ok)
+		}
+		if k, msg := pairLabelMixed(has); k >= 0 {
+			at := fmt.Sprintf("%s/pairs/%d", bp, k)
+			if has[k] {
+				at += "/label"
+			}
+			c.addIssue(Issue{Path: at, Message: msg, Code: codePairsLabel,
+				Hint: "対の名前は、全ての対に {label=名前} を書くか、どれにも書かないでください"})
+		}
 	case "stat":
 		items, _ := bm["items"].([]any)
 		for ii, it := range items {

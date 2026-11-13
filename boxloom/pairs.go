@@ -25,6 +25,7 @@ import (
 	"math"
 	"slices"
 	"strings"
+	"unicode/utf8"
 )
 
 // pairsType は IR の type。
@@ -47,9 +48,57 @@ type irPairs struct {
 	Pairs    []irPair
 }
 
-// irPair は1つの対。
+// irPair は1つの対。Label は対の短い名前(無ければ "")。
 type irPair struct {
+	Label             string
 	Subject, Response irPairSide
+}
+
+// pairLabelMaxRunes は対の名前(label)の字の数の上限。
+const pairLabelMaxRunes = 12
+
+// pairLabelMarkMax は report が対の名前を四角い印の中に書く字の数の上限(これより長い
+// 名前は行の左の見出しの列に書く)。
+const pairLabelMarkMax = 2
+
+// checkPairLabel は対の名前が、見える字を含む1〜12字の文であることを確かめる。
+func checkPairLabel(l string) error {
+	if strings.TrimSpace(l) == "" {
+		return fmt.Errorf("the label of a pair must not be empty")
+	}
+	if n := utf8.RuneCountInString(l); n > pairLabelMaxRunes {
+		return fmt.Errorf("the label %q is longer than %d characters (got %d; it names the pair briefly)", l, pairLabelMaxRunes, n)
+	}
+	return nil
+}
+
+// pairLabelMixed は名前(label)のある・無いが最初の対と違う対の番号(無ければ -1)と、
+// その誤りの文。1つの pairs の中では、全ての対に名前を書くか、どれにも書かない。
+func pairLabelMixed(has []bool) (int, string) {
+	word := func(b bool) string {
+		if b {
+			return "has"
+		}
+		return "has no"
+	}
+	for k := 1; k < len(has); k++ {
+		if has[k] != has[0] {
+			return k, fmt.Sprintf("write a label on every pair of the pairs or on none (pair 0 %s a label, pair %d %s)", word(has[0]), k, word(has[k]))
+		}
+	}
+	return -1, ""
+}
+
+// labels は対の名前の並び(名前の無い pairs は nil)。
+func (p *irPairs) labels() []string {
+	if len(p.Pairs) == 0 || p.Pairs[0].Label == "" {
+		return nil
+	}
+	out := make([]string, len(p.Pairs))
+	for k, pr := range p.Pairs {
+		out[k] = pr.Label
+	}
+	return out
 }
 
 // irPairSide は対の1つの側。1つのブロックの形(Grouped が false)なら Body はその
@@ -152,8 +201,10 @@ func readPairs(raw json.RawMessage) (*irPairs, error) {
 	if len(v.Pairs) < 2 {
 		return nil, fmt.Errorf("pairs needs at least two pairs (got %d)", len(v.Pairs))
 	}
+	var has []bool
 	for i, raw := range v.Pairs {
 		var p struct {
+			Label    *string         `json:"label"`
 			Subject  json.RawMessage `json:"subject"`
 			Response json.RawMessage `json:"response"`
 		}
@@ -161,6 +212,13 @@ func readPairs(raw json.RawMessage) (*irPairs, error) {
 			return nil, fmt.Errorf("pairs[%d]: %w", i, err)
 		}
 		var pr irPair
+		if p.Label != nil {
+			if err := checkPairLabel(*p.Label); err != nil {
+				return nil, fmt.Errorf("pairs[%d].label: %w", i, err)
+			}
+			pr.Label = *p.Label
+		}
+		has = append(has, p.Label != nil)
 		for _, side := range []struct {
 			name string
 			raw  json.RawMessage
@@ -177,6 +235,13 @@ func readPairs(raw json.RawMessage) (*irPairs, error) {
 		}
 		out.Pairs = append(out.Pairs, pr)
 	}
+	if k, msg := pairLabelMixed(has); k >= 0 {
+		at := fmt.Sprintf("pairs[%d]", k)
+		if has[k] {
+			at += ".label"
+		}
+		return nil, fmt.Errorf("%s: %s", at, msg)
+	}
 	return out, nil
 }
 
@@ -186,6 +251,7 @@ func readPairs(raw json.RawMessage) (*irPairs, error) {
 // ブロックは順に入れる。まとまりには引用を置けないので、引用は言葉の段落と出どころの注に
 // 分ける。場所の表は、まとまりを見出し(/headings/subject・/headings/response)に、
 // まとまりの中のブロックを元の対の側(/pairs/K/subject など。引用の注は …/source)に写す。
+// 対の名前(label)は subject のまとまりの中の強調の段落にする(/pairs/K/label に写す)。
 func pairsFallback(b *IRBlock) ([]*IRBlock, fallbackPaths, error) {
 	p, err := readPairs(b.Raw)
 	if err != nil {
@@ -211,6 +277,12 @@ func pairsFallback(b *IRBlock) ([]*IRBlock, fallbackPaths, error) {
 	}
 	put := func(ci, k int, name string, side irPairSide) {
 		orig := fmt.Sprintf("/pairs/%d/%s", k, name)
+		// 対の名前は、subject のまとまりの中の強調の段落にする。
+		if l := p.Pairs[k].Label; l != "" && name == "subject" {
+			c := &cols[ci]
+			paths[fmt.Sprintf("/columns/%d/body/%d", ci, len(c.Body))] = fallbackPath{To: fmt.Sprintf("/pairs/%d/label", k)}
+			c.Body = append(c.Body, IRBlock{Type: "paragraph", Content: Inline{{Type: "em", Content: plainInline(l)}}})
+		}
 		if !side.Grouped {
 			add(ci, orig, side.Body[0])
 			return
@@ -248,9 +320,9 @@ func pairsTypeDecl() typeDecl {
 			{Name: "response", Label: "側の見出し(任意。短い文)", Inside: []string{"pairs"}, Contains: []string{"段落", "箇条", ":::quote", "画像(1枚)", "表"}, Attributes: []string{},
 				Meaning: "対の応える側(打ち手・対策・答え)。直前の :::subject と対になる。中は1〜4個のブロック(引用・表・画像を入れるときは囲みのコロンを1つ増やす)",
 				IR:      "pairs.pairs[].response(1つのブロックか {title, body})"},
-			{Name: "subject", Label: "側の見出し(任意。短い文。例: 要因の名前)", Inside: []string{"pairs"}, Contains: []string{"段落", "箇条", ":::quote", "画像(1枚)", "表"}, Attributes: []string{},
-				Meaning: "対の何についての側(分かったこと・課題・問い)。直後に :::response を書く。中は1〜4個のブロック(引用・表・画像を入れるときは囲みのコロンを1つ増やす)",
-				IR:      "pairs.pairs[].subject(1つのブロックか {title, body})"},
+			{Name: "subject", Label: "側の見出し(任意。短い文。例: 要因の名前)", Inside: []string{"pairs"}, Contains: []string{"段落", "箇条", ":::quote", "画像(1枚)", "表"}, Attributes: []string{"label"},
+				Meaning: "対の何についての側(分かったこと・課題・問い)。直後に :::response を書く。中は1〜4個のブロック(引用・表・画像を入れるときは囲みのコロンを1つ増やす)。{label=名前} でその対の短い名前(12字まで。空白を含むときは \" で囲む。全ての :::subject に書くか、どれにも書かない。描き方はテンプレート)",
+				IR:      "pairs.pairs[].subject(1つのブロックか {title, body})。label は pairs.pairs[].label"},
 		},
 		Fallback: pairsFallback,
 		Validate: func(b *IRBlock) error {
@@ -348,7 +420,15 @@ type pairsStyle struct {
 	// sideTitle は側の見出し(title)の箱(nil なら字の色の太字の本文)。
 	sideTitle func(t *Template, title Inline) *Spec
 	// mark は対の k 番目(0 から)の印の箱。subject の頭(左)に置く(nil なら置かない)。
-	mark func(t *Template, k int) *Spec
+	// label は印に書く対の名前(名前の無い pairs と、名前を見出しの列に書くときは "")。
+	mark func(t *Template, k int, label string) *Spec
+	// markLabelMax は対の名前を印(mark)の中に書く字の数の上限。全ての対の名前が
+	// これ以下なら印の中に、1つでも長ければ見出しの列(labelColumn)に書く(0 なら
+	// 印の中には書かない)。
+	markLabelMax int
+	// labelColumn は対の名前を書く、行の左の見出しの列の箱(幅をトークンで持つ。
+	// nil なら名前は subject の頭に太字で書く)。
+	labelColumn func(t *Template, label string) *Spec
 	// between は2つの側の間の印の箱(nil なら置かない)。
 	between func(t *Template) *Spec
 	// rule は対の間の罫線の箱(nil なら引かない)。
@@ -395,10 +475,27 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 		}
 		return Row(kids, tokGap("columnGap"))
 	}
+	// 対の名前(label)の置き場所:印の中(短い名前)・行の左の見出しの列・subject の頭。
+	labels := p.labels()
+	inMark, inColumn := false, false
+	if labels != nil {
+		inMark = st.mark != nil && st.markLabelMax > 0
+		for _, l := range labels {
+			if utf8.RuneCountInString(l) > st.markLabelMax {
+				inMark = false
+			}
+		}
+		inColumn = !inMark && st.labelColumn != nil
+	}
 	marks := func(k int) (*Spec, *Spec) {
 		var m, bt *Spec
-		if st.mark != nil {
-			m = st.mark(t, k)
+		switch {
+		case inColumn:
+			m = st.labelColumn(t, labels[k])
+		case inMark:
+			m = st.mark(t, k, labels[k])
+		case st.mark != nil:
+			m = st.mark(t, k, "")
 		}
 		if st.between != nil {
 			bt = st.between(t)
@@ -419,6 +516,10 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 	side := func(k int, name string, sd *irPairSide) (*Spec, pairSideParts, error) {
 		var parts pairSideParts
 		var kids []*Spec
+		if labels != nil && !inMark && !inColumn && name == "subject" {
+			// 印も見出しの列も持たない組み方:対の名前を subject の頭に太字で。
+			kids = append(kids, apply(t.text(plainInline(labels[k]), "body", "accent", true), []SpecOpt{noShrink()}))
+		}
 		if sd.Grouped && sd.Title != nil {
 			if st.sideTitle != nil {
 				parts.title = st.sideTitle(t, sd.Title)
@@ -446,6 +547,9 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 			kids = append(kids, s)
 		}
 		if !sd.Grouped {
+			if len(kids) > 1 {
+				return grow(kids, tokGap("itemGap")), parts, nil // 名前と1つのブロック
+			}
 			return grow(kids), parts, nil
 		}
 		return grow(kids, tokGap("blockGap"), nestedSlack()), parts, nil
@@ -877,6 +981,9 @@ func (p *mdParser) pairsBlock(f *mdFenceBlk, path string) any {
 	}
 	var pairs []any
 	var cur *jobj // subject を読んで response を待っている対
+	// labelAt は対の名前({label=…})を書いた :::subject の行(書かなければ 0)。対ごと。
+	var labelAt []int
+	var curLabel int
 	for _, it := range f.items {
 		if it.kind != mdFence || (it.fence.name != "subject" && it.fence.name != "response") {
 			p.fail(it.line, 1, path, codeMisplaced, "::::pairs の中には :::subject と :::response だけを書けます", []string{"subject", "response"}, "")
@@ -892,13 +999,28 @@ func (p *mdParser) pairsBlock(f *mdFenceBlk, path string) any {
 			}
 			p.mark(pp, sf.line)
 			cur = &jobj{}
+			curLabel = 0
+			attrs := p.fenceAttrs(sf, pp+"/subject", []string{"label"})
+			if l, has := attrs["label"]; has {
+				if err := checkPairLabel(l); err != nil {
+					p.fail(sf.line, sf.attrsCol, pp+"/label", codeInvalidValue,
+						fmt.Sprintf("対の名前 %q は書けません(見える字を含む %d 字まで)", l, pairLabelMaxRunes), nil,
+						"{label=要因1} や {label=\"住まい の 課題\"} のように短く書きます(空白を含むときは \" で囲みます)")
+					ok = false
+				} else {
+					cur.set("label", l)
+					curLabel = sf.line
+				}
+			}
 		} else if cur == nil {
 			p.fail(sf.line, 1, pp, codeMisplaced, ":::response の前に :::subject がありません", []string{"subject"}, "対は :::subject と :::response の1組です")
 			continue
 		}
 		sp := pp + "/" + sf.name
 		p.mark(sp, sf.line)
-		p.fenceAttrs(sf, sp, nil)
+		if sf.name == "response" {
+			p.fenceAttrs(sf, sp, nil)
+		}
 		side := p.pairSide(sf, sp)
 		if side == nil {
 			ok = false
@@ -906,14 +1028,32 @@ func (p *mdParser) pairsBlock(f *mdFenceBlk, path string) any {
 			cur.set(sf.name, side)
 		}
 		if sf.name == "response" {
-			if len(cur.vals) == 2 {
+			if slices.Contains(cur.keys, "subject") && slices.Contains(cur.keys, "response") {
 				pairs = append(pairs, cur)
+				labelAt = append(labelAt, curLabel)
 			}
 			cur = nil
 		}
 	}
 	if cur != nil {
 		p.fail(f.line, 1, path, codeMisplaced, "最後の :::subject に :::response がありません", []string{"response"}, "")
+		ok = false
+	}
+	// 対の名前は、全ての対に書くか、どれにも書かない。
+	has := make([]bool, len(labelAt))
+	for k, l := range labelAt {
+		has[k] = l > 0
+	}
+	if k, _ := pairLabelMixed(has); k >= 0 && ok {
+		at, line := fmt.Sprintf("%s/pairs/%d", path, k), p.lines[fmt.Sprintf("%s/pairs/%d", path, k)]
+		if has[k] {
+			at, line = at+"/label", labelAt[k]
+		}
+		hint := fmt.Sprintf("1つ目の対には名前があり、%d つ目の対にはありません", k+1)
+		if !has[0] {
+			hint = fmt.Sprintf("1つ目の対には名前が無く、%d つ目の対にはあります", k+1)
+		}
+		p.fail(line, 1, at, codePairsLabel, "対の名前({label=…})は、全ての :::subject に書くか、どれにも書きません", nil, hint)
 		ok = false
 	}
 	if len(pairs) < 2 && ok {

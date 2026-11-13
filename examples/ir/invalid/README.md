@@ -35,3 +35,4 @@
 | `chart-form-as-compare.json` | chart の比べ方(compare)にグラフの形の名前(bar)を書いた(形はサブシステムが選ぶ) |
 | `pairs-left-right.json` | 対の並び(pairs)の見出しを位置の名前(`left`・`right`)で書いた(側の名前は意味の `subject`・`response`) |
 | `pairs-side-table.json` | 対の1つの側に表を置いた(側は段落・箇条・引用のどれか) |
+| `pairs-label-long.json` | `../pairs-label.json` の表紙と1枚目だけを取り出し、1つ目の対の名前(`label`)を13字にした(12字まで) |

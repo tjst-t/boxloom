@@ -68,7 +68,7 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc?, cov
          stat     { items: [{ value: "3 → 12", unit?: "機種", label }] }   1〜4個
          quote    { content, source }                             出どころは必須
 並列     { type: "columns", flow?: true, columns: [{ title?, role?: "main", body: [paragraph|points|note|table|image] }] }  (2〜3個)
-対の並び  { type: "pairs", headings: { subject, response }, pairs: [{ subject: 側, response: 側 }] }  (2組以上。側は paragraph|points|quote か { title?, body: [paragraph|points|quote|image|table 1〜4個] })
+対の並び  { type: "pairs", headings: { subject, response }, pairs: [{ label?, subject: 側, response: 側 }] }  (2組以上。側は paragraph|points|quote か { title?, body: [paragraph|points|quote|image|table 1〜4個] })
 表       { type: "table", header: [セル], rows: [[セル]], total?: [セル], caption? }   (セルはインライン。どの行も見出しと同じ数。total は合計の行)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 箇条     { type: "points", ordered?: true, items: [インライン | { content, items?, ordered? }] }  (ordered は番号つき。入れ子の項目の ordered はその items に効く)
@@ -333,6 +333,13 @@ Schema では書けないので `boxloom check` が見る。
                          { "type": "quote", "content": "半分の広さなら借りたい", "source": "店主 A" }] } }
 ```
 
+- **対の名前** `label`(任意。#118):その対の短い名前(要因の番号・行の名前)。見える字を
+  含む1〜12字の文(空白を含んでよい。Schema の `maxLength`・`pattern`、Go の読み込みも同じ)。
+  1つの `pairs` の中では全ての対に書くか、どれにも書かない。混ざれば `boxloom check` の誤り
+  `pairs-label`(Schema は通す。`examples/ir/check-invalid/pairs-label-mixed.json`)。
+  置き場所はテンプレートが決める(report は2字までなら対の印の中、3字以上なら行の左の
+  見出しの列。dark・light は subject の頭に太字。代わりの組み方は subject のまとまりの頭の
+  強調の段落で、場所 `…/pairs/K/label` に写す)。例は `examples/ir/pairs-label.json`。
 - 側の見出し(`title`)と body のブロックも本文のブロックと同じ意味の検査を通る
   (`…/pairs/K/subject/title`・`…/pairs/K/subject/body/I/content` など)。
 - Schema と同じ決まりを Go の読み込みも見る(型の語彙の `Validate`)。誤りの path は
@@ -542,6 +549,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`)。`groups` があると本体の行は見出しより1つ少ない |
 | `table-points` | 表のセルの中の箇条(`{"points": [...]}`)の項目が2つ以上で(path は `…/rows/R/C/points` か `…/total/C/points`)、空の項目が無い(path は `…/points/I`) |
 | `table-continues` | 続きの表(`continues`)が、すぐ前のスライドの本文の最後の表に続く(前のスライドに表が無い・間にスライドを挟む・そのスライドの2つ目の表・並列のまとまりの中は path `…/continues`)。`header` を書かない(path `…/header`)。`groups` の有無が最初の表と同じ(path `…/groups`)。合計の行はひと続きの最後の表だけ(path は続きのある表の `…/total`)。`continues` は `true` だけ |
+| `pairs-label` | `pairs` の対の名前(`label`)が、全ての対にあるか、どれにも無い(path は名前の有無が1つ目の対と違う対:名前があれば `…/pairs/K/label`、無ければ `…/pairs/K`) |
 | `table-groups` | 表の `groups` の名前が空でなく(path は `…/groups/G/label`)、`rows` の和が本体の行の数で、群の列のほかに列がある(path は `…/groups`) |
 | `image-path` | 画像の `src` が文書からの相対パス(URL・絶対パス・`..`・`\` は断る) |
 | `image-missing` | 画像のファイルが読める(`CheckOptions.Assets` から。コマンドは文書のフォルダ) |

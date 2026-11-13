@@ -47,9 +47,16 @@
   "additionalProperties": false,
   "$defs": {
     "pair": {
-      "description": "1つの対。2つの側はそれぞれ、段落・箇条・引用のどれか1つか、見出しと複数のブロックのまとまり(sideGroup)。",
+      "description": "1つの対。2つの側はそれぞれ、段落・箇条・引用のどれか1つか、見出しと複数のブロックのまとまり(sideGroup)。label は対の短い名前(任意。1つの pairs の中では全ての対に書くか、どれにも書かない。混ざれば boxloom check の誤り pairs-label)。",
       "type": "object",
       "properties": {
+        "label": {
+          "description": "対の短い名前(例: 要因の番号・行の名前)。1〜12字の文で、空白を含んでよい。描き方はテンプレートが決める(report は2字までなら対の印の中、3字以上なら行の左の見出しの列。dark・light は subject の頭に太字で)。",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 12,
+          "pattern": "\\S"
+        },
         "subject": {
           "$ref": "#/$defs/side"
         },

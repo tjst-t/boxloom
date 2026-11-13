@@ -24,6 +24,8 @@
 //   - pairs(Backlog #87):標準の組み方(pairsStyled)の見た目を差し替える。対ごとに
 //     A・B・C… の四角い印(基調色・白い字)を subject の頭に、2つの側の間に丸い山形の印を
 //     置き、対の間に罫線(grid)を引く。側の見出し(title)は薄い面(card)の帯の上に字の色で書く。
+//     対の名前(label。#118)が全て2字までなら A・B・C の代わりに印の中に、3字以上が
+//     あれば印の代わりに行の左の見出しの列(幅 80pt・基調色の太字)に書く。
 //   - table(#88):見出しの行は面を塗らず基調色の字にし、下に基調色の罫線
 //     (tableHeaderRuleWidth)を引く。行の間は灰色(grid)の細い罫線で、本体の行も
 //     面を塗らない。行の群の名前のセルは濃い基調色(support)の面に白い字(bg)。
@@ -379,6 +381,10 @@ func (d reportColumnDivider) Render(ctx RenderContext, box LBox) {
 // reportPairMarkSize は report の対の印(A・B・C の四角・側の間の丸)の一辺(段の刻み。24pt)。
 var reportPairMarkSize = spaceStep(12)
 
+// reportPairLabelWidth は report の対の名前の見出しの列の幅(段の刻み。80pt。本文の字で
+// 5〜6字。長い名前は列の中で折り返す)。
+var reportPairLabelWidth = spaceStep(40)
+
 // reportPairRowGap は report の対の行と罫線の間の空き(段の刻み。4pt。#103)。罫線の上と
 // 下に取るので、対の行の間は 4 + 0.75 + 4 ≈ 8.75pt(元の資料の目安 8〜12pt)。
 var reportPairRowGap = spaceStep(2)
@@ -391,9 +397,18 @@ var reportPairsStyle = pairsStyle{
 		return t.text(title, "body", "accent", true)
 	},
 	rowGap: reportPairRowGap,
-	mark: func(t *Template, k int) *Spec {
-		return SubsystemNode(&pairMark{kind: pairMarkLetter, letter: pairLetter(k), fontSize: t.Values.Body},
+	mark: func(t *Template, k int, label string) *Spec {
+		if label == "" {
+			label = pairLetter(k)
+		}
+		return SubsystemNode(&pairMark{kind: pairMarkLetter, letter: label, fontSize: t.Values.Body, smallSize: t.Values.Small},
 			tokWidth(reportPairMarkSize), tokHeight(reportPairMarkSize))
+	},
+	// 2字までの対の名前(要因の番号など)は A・B・C の代わりに印の中に、3字以上は
+	// 行の左の見出しの列(基調色の太字。#118)に書く。
+	markLabelMax: pairLabelMarkMax,
+	labelColumn: func(t *Template, label string) *Spec {
+		return Col([]*Spec{t.text(plainInline(label), "body", "accent", true)}, tokWidth(reportPairLabelWidth), noShrink())
 	},
 	between: func(t *Template) *Spec {
 		return SubsystemNode(&pairMark{kind: pairMarkChevron},
@@ -416,6 +431,9 @@ func pairLetter(k int) string {
 	return s
 }
 
+// pairMarkFill は印の文字が印の幅に占めてよい割合(越えれば小さい字にする)。
+const pairMarkFill = 0.85
+
 type pairMarkKind int
 
 const (
@@ -429,6 +447,8 @@ type pairMark struct {
 	kind     pairMarkKind
 	letter   string
 	fontSize float64
+	// smallSize は、印の文字(2字の対の名前)が fontSize では印の幅に入らないときの大きさ。
+	smallSize float64
 }
 
 func (m *pairMark) Name() string {
@@ -445,8 +465,12 @@ func (m *pairMark) ornament() {}
 func (m *pairMark) Render(ctx RenderContext, box LBox) {
 	fill, on := ctx.Roles.Color("accent"), ctx.Roles.Color("bg")
 	if m.kind == pairMarkLetter {
+		size := m.fontSize
+		if m.smallSize > 0 && runWidthPt(m.letter, size, true) > box.Width*pairMarkFill {
+			size = m.smallSize
+		}
 		ctx.Out.AddShape(box, ShapeOpts{Prst: "rect", Fill: fill,
-			Runs: []TextRun{{Text: m.letter, Color: on, Bold: true}}, FontSize: m.fontSize})
+			Runs: []TextRun{{Text: m.letter, Color: on, Bold: true}}, FontSize: size})
 		return
 	}
 	ctx.Out.AddShape(box, ShapeOpts{Prst: "ellipse", Fill: fill})

@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -81,6 +82,7 @@ const (
 	codeTableContinues    = "table-continues"    // 続きの表({continues})の形が違う(見出しの行を書いた・前の表と列や群が違う)
 	codeImagePath         = "image-path"         // 画像の src が絶対パス・URL・文書のフォルダの外
 	codeImageAlt          = "image-alt"          // 画像の代わりの文が無い
+	codePairsLabel        = "pairs-label"        // 対の名前(label)が、ある対と無い対で混ざった
 )
 
 // --- 出力: キーの順を保つ JSON の object ---
@@ -698,9 +700,44 @@ func (p *mdParser) placeListEnt(list *mdItem, ent *mdListEnt) {
 // flagAttributes は値を書かない属性({continues})。
 var flagAttributes = map[string]bool{"continues": true}
 
+// attrFields は属性の並びを空白で分ける。値を " か ' で囲めば、中の空白は値に入る
+// ({label="住まい の 課題"})。
+func attrFields(s string) []string {
+	var out []string
+	var b strings.Builder
+	var quote rune
+	in := false
+	for _, r := range s {
+		switch {
+		case quote != 0:
+			if r == quote {
+				quote = 0
+			}
+			b.WriteRune(r)
+		case r == '"' || r == '\'':
+			quote = r
+			b.WriteRune(r)
+			in = true
+		case unicode.IsSpace(r):
+			if in {
+				out = append(out, b.String())
+				b.Reset()
+				in = false
+			}
+		default:
+			b.WriteRune(r)
+			in = true
+		}
+	}
+	if in {
+		out = append(out, b.String())
+	}
+	return out
+}
+
 func (p *mdParser) parseAttrs(s string, line, col int, path string, allowed []string) map[string]string {
 	out := map[string]string{}
-	for _, tok := range strings.Fields(s) {
+	for _, tok := range attrFields(s) {
 		k, v, ok := strings.Cut(tok, "=")
 		v = strings.Trim(v, `"'`)
 		switch {

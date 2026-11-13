@@ -33,6 +33,7 @@
 | `image-format.json` | 画像の src を、画像でないファイル(`README.md`)にした | `image-format` |
 | `chart-values.json` | chart(時系列の縦棒)の系列の値を1つ減らした(項目は6つ) | `chart-values` |
 | `chart-emphasis.json` | chart(構成比の円)の強調に、項目に無い名前を書いた | `chart-emphasis` |
+| `pairs-label-mixed.json` | `../pairs-label.json` の表紙と1枚目だけを取り出し、3つ目の対の名前(`label`)を消した(名前のある対と無い対が混ざる) | `pairs-label` |
 
 形が誤っていて Schema で断られる例は `../invalid/` にある。それらも
 `boxloom check` は断る(Go の IR の読み込みが断る。rule は `ir-read` か `build`)。

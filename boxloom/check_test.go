@@ -61,6 +61,7 @@ func TestCheckInvalidSemanticExamples(t *testing.T) {
 		"table-continues.json":          {"table-continues", "/slides/3/body/0/continues"},
 		"image-missing.json":            {"image-missing", "/slides/1/body/0/src"},
 		"image-format.json":             {"image-format", "/slides/1/body/0/src"},
+		"pairs-label-mixed.json":        {"pairs-label", "/slides/1/body/0/pairs/2"},
 	}
 	files, _ := filepath.Glob("../examples/ir/check-invalid/*.json")
 	if len(files) != len(want) {

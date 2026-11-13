@@ -748,7 +748,33 @@ GFM の表で書く。1行目が見出しの行、2行目が区切りの行、3�
   dark・light は側の見出し(太字の本文)と中のブロックを縦に積む。report は対ごとに
   A・B・C の四角い印を subject の頭に、2つの側の間に丸い山形の印を置き、対の間に罫線を
   引き、側の見出しを薄い面の帯の上に書く。
-- 属性は `variant` だけ。幅や並べ方の属性は無い(`unknown-attribute`)。
+- **対の名前(label。#118)**:`:::subject {label=短い名前}` で、その対の短い名前(要因の番号・
+  行の名前)を書ける。IR は対の `label`(`pairs.pairs[].label`)。見える字を含む12字までの文で、
+  空白を含むときは `"` で囲む(`{label="夕方 18 時以降"}`)。空・13字以上は `invalid-value`
+  (場所 `…/pairs/K/label`)。1つの `pairs` の中では、全ての `:::subject` に書くか、どれにも
+  書かない(混ざれば `pairs-label`。場所は名前の有無が1つ目の対と違う対で、名前を書いた方なら
+  `…/pairs/K/label`、書かなかった方なら `…/pairs/K`)。`:::response` には書けない
+  (`unknown-attribute`)。描き方はテンプレートが決める:report は全ての名前が2字までなら
+  A・B・C の代わりに四角い印の中に、3字以上の名前があれば印を置かず行の左に細い見出しの列
+  (幅 80pt・基調色の太字。長い名前は列の中で折り返す)。dark・light は subject の頭に
+  基調色の太字で。組み方を持たないテンプレートは subject のまとまりの頭の強調の段落にする。
+  名前の無い pairs は今までどおり(report は A・B・C)。例は `examples/md/pairs-label.bx.md`
+  (IR は `examples/ir/pairs-label.json`)。
+
+```
+:::::pairs 分かったこと | 打ち手
+:::subject {label=1}
+空き店舗の多くは 80 平米を超え、小さな店には広すぎる
+:::
+:::response
+区切って貸せるよう、仕切りの工事に補助を出す
+:::
+:::subject {label=5}
+…
+:::::
+```
+
+- 属性は `pairs` の `variant` と `:::subject` の `label` だけ。幅や並べ方の属性は無い(`unknown-attribute`)。
 - はみ出しは対ごとに測る(対の高さは2つの側の高い方)。`layout-overflow` は、はみ出した
   対を `/slides/S/body/N/pairs/K` で指す。容量(`check -format json`)の `pairs` に
   対ごと・側ごとの高さが出る。見出しと複数のブロックの側の高さは、見出しと body の
@@ -913,7 +939,8 @@ go run ./cmd/boxloom build ../examples/md/demo-deck.bx.md            # .md も�
   `table-shape`(表の行のセルの数が見出しと違う)・`table-points`(`{points=列名}` の列名が
   見出しに無い・セルの箇条の項目が空)・`table-groups`(`{groups=first}` の表の
   最初の行の群の名前が空)・`table-continues`(`{continues}` の表に見出しの行を書いた・
-  前の表と列の数や groups・points が違う・前のスライドに続ける表が無い)・`image-path`(画像の path が URL・
+  前の表と列の数や groups・points が違う・前のスライドに続ける表が無い)・`pairs-label`(`::::pairs` の
+  中で `{label=…}` のある `:::subject` と無いものが混ざった)・`image-path`(画像の path が URL・
   絶対パス・文書のフォルダの外)・`image-alt`(画像の代わりの文が無い)・
   `schema`(できた IR が通らない。ふつうは起きない)。
 - shapes と図(process・orgchart・matrix・funnel・phases・cycle)と chart のコードブロックは、YAML の形の検査
