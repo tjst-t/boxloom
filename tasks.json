@@ -3209,7 +3209,7 @@
       "number": 142,
       "kind": "task",
       "title": "区切りに agenda:親の項目の一覧を出し、今の項目に印を付ける扉",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3221,7 +3221,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T09:24:45.899Z",
-      "updatedAt": "2026-11-13T09:24:45.899Z",
+      "updatedAt": "2026-11-13T09:48:12.762Z",
       "closedAt": null,
       "extra": {}
     },
