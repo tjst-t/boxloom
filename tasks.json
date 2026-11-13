@@ -3010,6 +3010,27 @@
       "updatedAt": "2026-11-13T07:35:13.370Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "under-min-no-overlap",
+      "number": 133,
+      "kind": "bug",
+      "title": "最小を割った図・表が枠の外に描かれ、次のブロックに重なる",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "再現の第6回:表が注に重なり(p13・14)、phases の箱が注に重なり(p5)、列の中の組織図が下の箇条に重なる(p33)。本文の箱の外へのはみ出しは layout-overflow(#124 で build は誤り)で止まるが、本文の中でブロックどうしが重なるのは機械的な破綻で、計測と描画が食い違っている。\n直し方:ブロックの枠は Min を下回らせない(足りない分は次のブロックを下へ押し出す)。押し出した結果、本文の箱を越えた分は今の layout-overflow の測り(measureBody)と一致させる。列の中でも同じ。描いた図形が自分の枠を越えないことを試験で確かめる(全例で、各ブロックの描いた図形の外接矩形が次のブロックの枠と重ならない)。",
+      "doneWhen": "最小を割る表・phases・orgchart の例で、次のブロックと図形が重ならない試験/layout-overflow の pt と描いた結果が一致する/収まる文書の golden は変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:35:17.920Z",
+      "updatedAt": "2026-11-13T07:35:17.920Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
