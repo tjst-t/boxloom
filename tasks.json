@@ -3289,6 +3289,27 @@
       "updatedAt": "2026-11-13T11:05:30.355Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "report-values-tighten",
+      "number": 146,
+      "kind": "task",
+      "title": "report の値を元の資料の詰め方に寄せる(題と箇条の間・項目の間・フッター・dense 11pt・一覧の行送り)",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "人が決めた(元の資料が入って Boxloom で入らない理由の分解 .tmp-samples の gaps-why の結論:不足の約6割は値)。report だけを直し、dark・light は変えない。\n- まとまりの題(側の題・列の題・topic の題)と、その下の箇条の間を 0〜2pt に。箇条の項目の間(itemGap)を report で 2pt 程度に(元は 0)。\n- フッターの帯と下の余白を小さくし、本文の領域を下へ広げる(ページ番号・フッターと本文は重ねない原理は守る)。元の資料は本文をページ番号の線まで使っている。\n- dense の本文を 11pt(元の資料の 22 頁)。\n- リードと一覧の行送りを詰める(元は 1.08 倍。値の表に名前が無ければ足し、段の検査の決まりに従う。本文の段落の 1.2 は今のまま)。\n- 値の名前を足したら docs/template-values.md に書く。golden の report の値は変わる(理由を書く)。",
+      "doneWhen": "report で題と箇条の間・項目の間・フッター・dense の本文・一覧の行送りが新しい値になる試験/本文とフッター・ページ番号が重ならない試験/dark・light の出力が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T11:31:02.859Z",
+      "updatedAt": "2026-11-13T11:31:02.859Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
