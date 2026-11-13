@@ -3358,7 +3358,7 @@
       "number": 149,
       "kind": "task",
       "title": "-fit:段で入らないスライドを続きのスライドに自動で分ける",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "fit-split",
       "dependsOn": [
         "fit-broken-criteria"
@@ -3372,7 +3372,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T11:32:00.803Z",
-      "updatedAt": "2026-11-13T11:32:00.803Z",
+      "updatedAt": "2026-11-13T11:33:41.674Z",
       "closedAt": null,
       "extra": {}
     },
