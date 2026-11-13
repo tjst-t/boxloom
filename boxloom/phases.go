@@ -383,22 +383,13 @@ type phasesPlaced struct {
 }
 
 // columnSizes は高さ b を段の箱に配る。上限を越えた分も箱に等しく配り(下の端を
-// そろえる)、最小に足りなければ文の高さに比例して縮める(Lint が警告する)。
+// そろえる)。箱は文の要る高さより低くしない(b が最小に足りなくても、#107)。
 func columnSizes(need []float64, c flexPart, b float64, v *PhasesValues) []float64 {
 	k := len(need)
 	gaps := float64(k-1) * v.ItemGap
 	out := make([]float64, k)
-	if b < gaps {
-		return out // 箱の間の空きも入らない(箱は高さ 0。Lint が警告する)
-	}
 	if b < c.min {
-		f := 0.0
-		if c.min-gaps > 0 {
-			f = math.Max(0, b-gaps) / (c.min - gaps)
-		}
-		for i, h := range need {
-			out[i] = h * f
-		}
+		copy(out, need)
 		return out
 	}
 	parts := make([]flexPart, k)
@@ -419,18 +410,10 @@ func columnSizes(need []float64, c flexPart, b float64, v *PhasesValues) []float
 func (s *PhasesSubsystem) place(box LBox) (*phasesGeom, *phasesPlaced) {
 	v := s.vals()
 	g := s.geom(box.Width)
-	sizes := flexSizes(g.parts, box.Height)
-	if min, _, _ := flexTotals(g.parts); box.Height < min {
-		// 枠が最小より低い(layout-overflow で知らせる)。箱の列だけを縮めて、図を
-		// 枠の外に描かない(箱の文は収まらず、Lint が警告する)。
-		fixed := 0.0
-		for k, sz := range sizes {
-			if k != g.bodyIdx {
-				fixed += sz
-			}
-		}
-		sizes[g.bodyIdx] = math.Max(0, box.Height-fixed)
-	}
+	// 枠が最小より低くても箱は縮めない(縮めると箱の文が次の箱に重なる、#107)。図は
+	// 最小の高さで描き、枠の下にはみ出す分は layout-overflow・subsystem-min で知らせる。
+	min, _, _ := flexTotals(g.parts)
+	sizes := flexSizes(g.parts, math.Max(box.Height, min))
 	x0 := box.X + v.Padding
 	y := box.Y + v.Padding
 	pl := &phasesPlaced{}

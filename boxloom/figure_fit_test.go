@@ -1,6 +1,7 @@
 package boxloom
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -57,9 +58,10 @@ func TestCycleLongTitlesDoNotBreakPerChar(t *testing.T) {
 	}
 }
 
-// phases: 枠が最小より低くても、箱・山形・群の帯は図の矩形の外に描かない(はみ出しは
-// layout-overflow と箱の警告で知らせる)。最小の幅は箱の一番長い語を割らない幅を含む。
-func TestPhasesBoxesStayInFrame(t *testing.T) {
+// phases: 枠が最小より低くても、箱は文の要る高さより低くしない(#107)。箱どうし・
+// 箱の文の矩形どうしは重ならず、山形・群の帯は枠の中。足りない分は図の下へはみ出し、
+// layout-overflow・subsystem-min で知らせる。最小の幅は箱の一番長い語を割らない幅を含む。
+func TestPhasesBoxesNeverCrushed(t *testing.T) {
 	var items []string
 	for i := 0; i < 5; i++ {
 		items = append(items, `{"title": "地域の拠点の運営", "detail": ["週末の催しを開く", "担い手を三人育てる", "費用の見通しを立てる"]}`)
@@ -69,27 +71,47 @@ func TestPhasesBoxesStayInFrame(t *testing.T) {
 	  {"title": "試す", "id": "b", "items": [{"title": "小さく試す"}]},
 	  {"title": "広げる", "id": "c", "items": [{"title": "Infrastructure-Operations"}]}],
 	  "groups": [{"title": "一年目", "from": "a", "to": "b"}]}`).(*PhasesSubsystem)
+	v := sub.vals()
 	m := sub.Measure(Constraint{Width: 860})
 	for _, h := range []float64{m.Min.Height * 0.5, m.Min.Height * 0.8, m.Min.Height, m.Natural.Height} {
 		box := LBox{X: 50, Y: 120, Width: 860, Height: h}
 		_, pl := sub.place(box)
-		var all []LBox
-		all = append(all, pl.bands...)
-		all = append(all, pl.chevrons...)
-		for _, col := range pl.items {
-			all = append(all, col...)
-		}
-		for _, b := range all {
+		var heads []LBox
+		heads = append(heads, pl.bands...)
+		heads = append(heads, pl.chevrons...)
+		for _, b := range heads {
 			if !within(box, b) {
 				t.Errorf("h=%.1f (min %.1f): %+v is outside the frame %+v", h, m.Min.Height, b, box)
 			}
 		}
-		if h < m.Min.Height-1 && len(sub.Lint(box)) == 0 {
-			t.Errorf("h=%.1f: a frame below the minimum gives no warning", h)
+		num := 0
+		for i, col := range pl.items {
+			var texts []LBox
+			for k, b := range col {
+				num++
+				_, needH := sub.itemNeed(num, &sub.Data.Steps[i].Items[k], b.Width)
+				if b.Height+1e-6 < needH {
+					t.Errorf("h=%.1f: steps[%d].items[%d] is %.1fpt, its text needs %.1fpt", h, i, k, b.Height, needH)
+				}
+				// 文の矩形(内側の余白の中、文の要る高さ)
+				texts = append(texts, LBox{X: b.X + v.TextInsetX, Y: b.Y + v.TextInsetY, Width: b.Width - 2*v.TextInsetX, Height: needH - 2*v.TextInsetY})
+			}
+			for a := range texts {
+				for b := a + 1; b < len(texts); b++ {
+					if boxesOverlap(texts[a], texts[b]) {
+						t.Errorf("h=%.1f: steps[%d] text of items[%d] overlaps items[%d]", h, i, a, b)
+					}
+				}
+			}
+		}
+		if ws := sub.Lint(box); len(ws) != 0 {
+			t.Errorf("h=%.1f: boxes keep their text, but Lint warns %v", h, ws)
+		}
+		if ws := lintSubsystemMin(&Spec{Kind: KindSubsystem, Subsystem: sub, Box: box}); (h < m.Min.Height-1) != (len(ws) > 0) {
+			t.Errorf("h=%.1f (min %.1f): subsystem-min warnings %v", h, m.Min.Height, ws)
 		}
 	}
 	// 最小の幅: どの箱も一番長い語を割らずに置ける。
-	v := sub.vals()
 	n := float64(len(sub.Data.Steps))
 	colW := (m.Min.Width - 2*v.Padding - (n-1)*v.ColumnGap) / n
 	need, _ := sub.itemNeed(7, &sub.Data.Steps[2].Items[0], colW)
@@ -132,5 +154,33 @@ func TestMatrixRowHeadTakesNaturalWidth(t *testing.T) {
 	}
 	if ws := sub.Lint(LBox{Width: width, Height: sub.Measure(Constraint{Width: width}).Natural.Height}); len(ws) != 0 {
 		t.Errorf("warnings %v", ws)
+	}
+}
+
+// phases の箱の中身が本文に収まらないとき、check は警告を1件以上出し、箱の文は
+// 収まったまま(figure-text-overflow は出さない、#107)。
+func TestPhasesTooTallWarns(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("---\ntitle: 架空の計画\ntemplate: report\n---\n\n# 進め方\n\n```phases\nsteps:\n")
+	for i, st := range []string{"調べる", "試す", "広げる"} {
+		fmt.Fprintf(&b, "  - title: %s\n    items:\n", st)
+		for k := 0; k < 6-2*i; k++ {
+			b.WriteString("      - title: 地域の拠点の運営\n        detail:\n          - 週末の催しを開く\n          - 担い手を三人育てる\n          - 費用の見通しを立てる\n")
+		}
+	}
+	b.WriteString("```\n")
+	res := Check("plan.bx.md", []byte(b.String()), CheckOptions{})
+	if len(res.Errors) > 0 {
+		t.Fatalf("errors %v", res.Errors)
+	}
+	var codes []string
+	for _, w := range res.Warnings {
+		codes = append(codes, w.Code)
+		if w.Code == "figure-text-overflow" {
+			t.Errorf("box text crushed: %v", w)
+		}
+	}
+	if !strings.Contains(strings.Join(codes, " "), "layout-overflow") && !strings.Contains(strings.Join(codes, " "), "subsystem-min") {
+		t.Errorf("no layout-overflow / subsystem-min warning: %v", res.Warnings)
 	}
 }

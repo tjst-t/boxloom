@@ -724,10 +724,13 @@ legend: {conditional: 追加の検討}               # status を使ったら書
 - **高さ**:箱の最小は「列の幅で文を折り返して収まる高さ」、自然・上限は
   `naturalItemHeight`・`maxItemHeight` まで。段ごとに箱の列の和を取り、一番高い段を
   Min・Natural・Max として申告する。割り当てられた高さは段ごとに箱へ配り、上限を
-  越えた分も箱に等しく足すので、どの段も箱の列の下の端がそろう。枠が Min より低くても
-  箱の列だけを縮め、図の枠の外には描かない(#106)。本文に収まらなければ
-  `layout-overflow`、箱の文が収まらなければ `figure-text-overflow`(path は
-  `…/data/steps/N/items/K`)。
+  越えた分も箱に等しく足すので、どの段も箱の列の下の端がそろう。
+- **枠が Min より低いとき(#107)**:箱は文の要る高さより低くしない(縮めると箱の文が
+  次の箱に重なる)。#106 の「図の枠の外に描かない」とぶつかるときは、**字どうしの重なりを
+  作らない方を選ぶ**:群の帯・山形は枠の中のまま、箱の列(と凡例)は最小の高さで描いて
+  枠の下へはみ出させ、`layout-overflow`・`subsystem-min` の警告で知らせる(他のブロックと
+  同じ。自動では直さない)。箱の文が箱に収まらないとき(幅が足りないなど)は
+  `figure-text-overflow`(path は `…/data/steps/N/items/K`)。
 - **幅**:Min の幅は `minWidth` と、どの箱・山形も一番長い語を割らずに置ける幅(段の列の
   幅を一番広く要るものにそろえた和)の大きいほう(#106)。
 
@@ -783,6 +786,8 @@ legend: {conditional: 予算が付くときだけ}      # status を使ったら
 - `phases_test.go`:例(`examples/md/phases.bx.md` ↔ `examples/ir/phases.json`。3段・群2つ・
   箱7つ)を report・light・dark で組んで警告が無い・山形と番号の形/山形の食い込み・帯の
   幅・箱の下の端がそろう・重ならない/Min が文の量で増える/はみ出しの警告/読み込みの誤り。
+  `figure_fit_test.go`:枠が Min より低くても箱は文の要る高さを保ち文の矩形が重ならない・
+  足りなければ `layout-overflow`/`subsystem-min` が出る(#107)。
 - `go test ./...`(`cycle_test.go`):Markdown と IR が同じ data・段の数と start の誤り/
   扇が5つの `blockArc` で上から72°ずつ、最初が基調色で段ごとに違う濃さ、強調の塗り、
   状態の枠線/番号が start から/題が輪の中・補足が輪の外/FixedAspect の申告/
