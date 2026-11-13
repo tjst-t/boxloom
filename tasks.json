@@ -3119,6 +3119,27 @@
       "updatedAt": "2026-11-13T08:38:42.217Z",
       "closedAt": "2026-11-13T08:38:42.217Z",
       "extra": {}
+    },
+    {
+      "id": "matrix-narrow-cliff",
+      "number": 138,
+      "kind": "bug",
+      "title": "matrix が下限にわずかに届かないと評価の列が幅 4pt に崩れる",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "再現の第7回(元の p29):左の列に pillars、右の列に matrix。両方が下限を合わせて 8pt 割るだけで、matrix の評価の列が 4.4pt になり、見出しが1字ずつ縦に並び、figure-text-overflow 23件・はみ出し 352pt。崖のように崩れる。\n直し方:matrix の中で幅が足りないときは、行の題の列を先に縮め(題は折り返す)、評価の列の最小(印と短い文が入る幅)を守る。行の題の列にも最小を持ち、両方を割るときだけ今の警告。Measure の Min もこの割り方と一致させる。架空の内容で再現して試験にする。",
+      "doneWhen": "下限を数 pt 割った幅の matrix で評価の列が最小以上の幅を保ち、figure-text-overflow が出ない試験/十分な幅の matrix の出力と golden が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T09:24:28.126Z",
+      "updatedAt": "2026-11-13T09:24:28.126Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
