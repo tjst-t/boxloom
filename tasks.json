@@ -2822,7 +2822,7 @@
       "number": 124,
       "kind": "task",
       "title": "はみ出しがあれば build を誤りにする(-allow-overflow で作る)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -2834,7 +2834,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:28:39.833Z",
-      "updatedAt": "2026-11-13T07:28:39.833Z",
+      "updatedAt": "2026-11-13T07:29:13.697Z",
       "closedAt": null,
       "extra": {}
     },
