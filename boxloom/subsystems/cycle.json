@@ -8,6 +8,7 @@
   "labelMaxWidth": 160,
   "naturalDiameter": 240,
   "minDiameter": 140,
+  "outsideMinDiameter": 96,
   "shadeRange": 0.6,
   "mutedShade": 0.7,
   "outlineWidth": 1.25,

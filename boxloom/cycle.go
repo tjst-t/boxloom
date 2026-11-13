@@ -31,19 +31,30 @@ type CycleValues struct {
 	LabelMaxWidth   float64 `json:"labelMaxWidth"`          // 補足の枠の幅の上限
 	NaturalDiameter float64 `json:"naturalDiameter"`        // 大きさの手がかりが無いときの輪の直径
 	MinDiameter     float64 `json:"minDiameter"`            // これより小さい輪は読めない
-	ShadeRange      float64 `json:"shadeRange"`             // 最後の段の淡さ(基調色を地の色に寄せる割合)
-	MutedShade      float64 `json:"mutedShade"`             // 強調があるとき、強調でない段の淡さ
-	OutlineWidth    float64 `json:"outlineWidth"`
-	LegendGap       float64 `json:"legendGap" scale:"space"`
-	LegendItemGap   float64 `json:"legendItemGap" scale:"space"`
-	LegendSwatchW   float64 `json:"legendSwatchWidth"`
-	LegendSwatchH   float64 `json:"legendSwatchHeight"`
-	LegendSwatchG   float64 `json:"legendSwatchGap" scale:"space"`
+	// OutsideMinDiameter は題を輪の外に置くときの輪の直径の下限(扇に文が無いので
+	// minDiameter より小さくできる)。
+	OutsideMinDiameter float64 `json:"outsideMinDiameter"`
+	ShadeRange         float64 `json:"shadeRange"` // 最後の段の淡さ(基調色を地の色に寄せる割合)
+	MutedShade         float64 `json:"mutedShade"` // 強調があるとき、強調でない段の淡さ
+	OutlineWidth       float64 `json:"outlineWidth"`
+	LegendGap          float64 `json:"legendGap" scale:"space"`
+	LegendItemGap      float64 `json:"legendItemGap" scale:"space"`
+	LegendSwatchW      float64 `json:"legendSwatchWidth"`
+	LegendSwatchH      float64 `json:"legendSwatchHeight"`
+	LegendSwatchG      float64 `json:"legendSwatchGap" scale:"space"`
 }
 
 func (v *CycleValues) legendValues() figureLegendValues {
 	return figureLegendValues{gap: v.LegendGap, itemGap: v.LegendItemGap, swatchW: v.LegendSwatchW, swatchH: v.LegendSwatchH,
 		swatchGap: v.LegendSwatchG, outlineW: v.OutlineWidth}
+}
+
+// minR は輪の外の半径の下限(題を外に置くときは outsideMinDiameter)。
+func (v *CycleValues) minR(outside bool) float64 {
+	if outside {
+		return math.Min(v.OutsideMinDiameter, v.MinDiameter) / 2
+	}
+	return v.MinDiameter / 2
 }
 
 func (v *CycleValues) ring() float64 { return math.Max(0.05, math.Min(v.RingFraction, 0.9)) }
@@ -126,8 +137,12 @@ func cycleAngle(i, n int) float64 {
 }
 
 // labelSizes は補足の枠の大きさ(幅の上限 cap で折り返す。補足の無い段は 0)。
-// 輪の大きさに依らない。
-func (s *CycleSubsystem) labelSizes(cap float64) []Size {
+// 輪の大きさに依らない。outside(題を輪の外に置く)なら枠は題と補足の両方を持つ
+// (outsideLabelSizes)。
+func (s *CycleSubsystem) labelSizes(cap float64, outside ...bool) []Size {
+	if len(outside) > 0 && outside[0] {
+		return s.outsideLabelSizes(cap)
+	}
 	tx := s.text()
 	out := make([]Size, len(s.Data.Steps))
 	for i, st := range s.Data.Steps {
@@ -142,6 +157,39 @@ func (s *CycleSubsystem) labelSizes(cap float64) []Size {
 		out[i] = Size{Width: w + tx.Detail, Height: h}
 	}
 	return out
+}
+
+// outsideLabelSizes は題を輪の外に置くときの枠の大きさ:題(tx.Sub)の段落と、あれば
+// 補足(tx.Detail)の段落を、幅の上限 cap で折り返して縦に重ねる。
+func (s *CycleSubsystem) outsideLabelSizes(cap float64) []Size {
+	tx := s.text()
+	out := make([]Size, len(s.Data.Steps))
+	for i := range s.Data.Steps {
+		st := &s.Data.Steps[i]
+		tr := s.titleRuns(st, "", nil)
+		nat := runsNaturalWidth(tr, tx.Sub)
+		minW := math.Max(runsMinWidth(tr, tx.Sub), runsChunkWidth(tr, tx.Sub))
+		var dr []TextRun
+		if len(st.Detail) > 0 {
+			dr = itemRuns(st.Detail, "", nil)
+			nat = math.Max(nat, runsNaturalWidth(dr, tx.Detail))
+			minW = math.Max(minW, runsMinWidth(dr, tx.Detail))
+		}
+		w := math.Max(math.Min(nat, cap), minW)
+		out[i] = Size{Width: w + tx.Sub, Height: s.outsideLabelHeight(tr, dr, w)}
+	}
+	return out
+}
+
+// outsideLabelHeight は題と補足を幅 w で折り返した高さ。
+func (s *CycleSubsystem) outsideLabelHeight(title, detail []TextRun, w float64) float64 {
+	tx := s.text()
+	_, h := runsBox(title, tx.Sub, w)
+	if len(detail) > 0 {
+		_, dh := runsBox(detail, tx.Detail, w)
+		h += dh
+	}
+	return h
 }
 
 // cycleLabel は補足の枠(中心からの相対か、置いた後の絶対の座標)と文の置き方。
@@ -160,8 +208,9 @@ type cycleShape struct {
 // 間の向き(真上・真下の段)は真ん中に揃える。
 const labelSideThreshold = 0.25
 
-func (s *CycleSubsystem) shape(r float64, sizes []Size) cycleShape {
+func (s *CycleSubsystem) shape(r float64, sizes []Size, outside ...bool) cycleShape {
 	v := s.vals()
+	out := len(outside) > 0 && outside[0]
 	n := len(s.Data.Steps)
 	e := r + v.NumberDiameter/2 // 番号の丸は外の縁に跨がる
 	sh := cycleShape{minX: -e, minY: -e, maxX: e, maxY: e, labels: make([]cycleLabel, n)}
@@ -192,6 +241,11 @@ func (s *CycleSubsystem) shape(r float64, sizes []Size) cycleShape {
 			l.box.Y, l.anchor = py-h/2, "middle"
 		}
 		l.box.Width, l.box.Height = w, h
+		if out {
+			// 題を外に置く枠は、輪と番号の丸を囲む正方形(と間 LabelGap)に掛からない
+			// ところまで、その段の向きに外へ押し出す。
+			l.box = pushOutOfSquare(l.box, c, sn, e+v.LabelGap)
+		}
 		sh.labels[i] = l
 		sh.minX = math.Min(sh.minX, l.box.X)
 		sh.minY = math.Min(sh.minY, l.box.Y)
@@ -201,10 +255,34 @@ func (s *CycleSubsystem) shape(r float64, sizes []Size) cycleShape {
 	return sh
 }
 
+// pushOutOfSquare は枠 b を向き (c, sn) に、中心が原点で半辺 half の正方形と重ならない
+// ところまで動かす(はじめから重ならなければそのまま)。
+func pushOutOfSquare(b LBox, c, sn, half float64) LBox {
+	hits := func(t float64) bool {
+		x, y := b.X+t*c, b.Y+t*sn
+		return x < half && x+b.Width > -half && y < half && y+b.Height > -half
+	}
+	if !hits(0) {
+		return b
+	}
+	lo, hi := 0.0, 2*half+b.Width+b.Height
+	for k := 0; k < 40; k++ {
+		mid := (lo + hi) / 2
+		if hits(mid) {
+			lo = mid
+		} else {
+			hi = mid
+		}
+	}
+	b.X += hi * c
+	b.Y += hi * sn
+	return b
+}
+
 // size は外の半径 r のときの図の幅と高さ(余白と凡例を含む)。
-func (s *CycleSubsystem) size(r float64, sizes []Size) (w, h float64) {
+func (s *CycleSubsystem) size(r float64, sizes []Size, outside ...bool) (w, h float64) {
 	v, tx := s.vals(), s.text()
-	sh := s.shape(r, sizes)
+	sh := s.shape(r, sizes, outside...)
 	w = sh.maxX - sh.minX + 2*v.Padding
 	h = sh.maxY - sh.minY + 2*v.Padding
 	items, _ := s.legend()
@@ -217,19 +295,25 @@ func (s *CycleSubsystem) size(r float64, sizes []Size) (w, h float64) {
 
 // labelCap は幅 limit の枠で補足を折り返す幅:上限のままで最小の輪が入ればそのまま、
 // 入らなければ下限まで狭める。
-func (s *CycleSubsystem) labelCap(limit float64) float64 {
+func (s *CycleSubsystem) labelCap(limit float64, outside ...bool) float64 {
 	v := s.vals()
-	if !s.hasDetails() {
+	out := len(outside) > 0 && outside[0]
+	if !s.hasDetails() && !out {
 		return v.LabelMaxWidth
 	}
 	fits := func(cap float64) bool {
-		w, _ := s.size(v.MinDiameter/2, s.labelSizes(cap))
+		w, _ := s.size(v.minR(out), s.labelSizes(cap, out), out)
 		return w <= limit
 	}
 	if limit <= 0 || fits(v.LabelMaxWidth) {
 		return v.LabelMaxWidth
 	}
 	lo, hi := v.LabelMinWidth, v.LabelMaxWidth
+	if out {
+		// 外の題は折れない塊(和文の4字)まで狭められる(outsideLabelSizes が塊より
+		// 狭くしない)。
+		lo = 0
+	}
 	if !fits(lo) {
 		return lo
 	}
@@ -246,10 +330,10 @@ func (s *CycleSubsystem) labelCap(limit float64) float64 {
 
 // radiusFor は図の幅(axis 0)か高さ(axis 1)が limit に収まる一番大きい外の半径
 // (最小の直径の半分を下回らない)。
-func (s *CycleSubsystem) radiusFor(limit float64, axis int, sizes []Size) float64 {
-	lo := s.vals().MinDiameter / 2
+func (s *CycleSubsystem) radiusFor(limit float64, axis int, sizes []Size, outside ...bool) float64 {
+	lo := s.vals().minR(len(outside) > 0 && outside[0])
 	at := func(r float64) float64 {
-		w, h := s.size(r, sizes)
+		w, h := s.size(r, sizes, outside...)
 		if axis == 0 {
 			return w
 		}
@@ -275,21 +359,21 @@ func (s *CycleSubsystem) radiusFor(limit float64, axis int, sizes []Size) float6
 // 下限まで折り返した補足。
 func (s *CycleSubsystem) Measure(c Constraint) Measurement {
 	v := s.vals()
-	var r float64
-	var sizes []Size
+	var lay cycleLayout
 	switch {
 	case c.Width > 0:
-		sizes = s.labelSizes(s.labelCap(c.Width))
-		r = s.radiusFor(c.Width, 0, sizes)
+		lay = s.layoutFor(c.Width, 0, 0)
 	case c.Height > 0:
-		sizes = s.labelSizes(v.LabelMaxWidth)
-		r = s.radiusFor(c.Height, 1, sizes)
+		lay = s.layoutFor(0, c.Height, 0)
 	default:
-		sizes = s.labelSizes(v.LabelMaxWidth)
-		// 題が自然の輪の扇に入らなければ、入る大きさの輪を自然の大きさにする。
-		r = math.Max(v.NaturalDiameter/2, s.titleRadius())
+		// 題が自然の輪の扇に入らなければ、入る大きさの輪を自然の大きさにする。それでも
+		// (広げる上限まで)入らなければ、題を輪の外に置いた自然の大きさの輪にする。
+		lay = cycleLayout{r: math.Max(v.NaturalDiameter/2, s.titleRadius()), sizes: s.labelSizes(v.LabelMaxWidth)}
+		if !s.titlesFit(lay.r) {
+			lay = cycleLayout{r: v.NaturalDiameter / 2, sizes: s.labelSizes(v.LabelMaxWidth, true), outside: true}
+		}
 	}
-	w, h := s.size(r, sizes)
+	w, h := s.size(lay.r, lay.sizes, lay.outside)
 	mw, mh := s.size(v.MinDiameter/2, s.labelSizes(v.LabelMinWidth))
 	return Measurement{
 		Natural:     Size{Width: w, Height: h},
@@ -298,9 +382,55 @@ func (s *CycleSubsystem) Measure(c Constraint) Measurement {
 	}
 }
 
+// cycleLayout は輪の大きさと枠の大きさ、題を輪の外に置くか。
+type cycleLayout struct {
+	r       float64
+	sizes   []Size
+	outside bool
+}
+
+// layoutFor は幅 width・高さ height(0 なら制約なし。どちらかは正)の枠での形。まず
+// 題を扇の中に置いた一番大きい輪を取り、題が扇に収まればそれにする。収まらなければ
+// 題を輪の外(番号の丸の外、その段の向き)に置き、輪を小さくして題の置き場を取る。
+// 外に置いても枠に入らなければ(最小の輪でもはみ出す)、扇の中に置いたまま(Lint が
+// 題の警告を出す)。slack は扇に収まるかを測るときの輪の半径のゆとり(Measure で測った
+// 枠に置き直すときの二分探索の誤差で、扇の中と外が入れ替わらないように)。
+func (s *CycleSubsystem) layoutFor(width, height, slack float64) cycleLayout {
+	v := s.vals()
+	radius := func(sizes []Size, out bool) float64 {
+		r := math.Inf(1)
+		if width > 0 {
+			r = s.radiusFor(width, 0, sizes, out)
+		}
+		if height > 0 {
+			r = math.Min(r, s.radiusFor(height, 1, sizes, out))
+		}
+		return r
+	}
+	capFor := func(out bool) float64 {
+		if width > 0 {
+			return s.labelCap(width, out)
+		}
+		return v.LabelMaxWidth
+	}
+	in := cycleLayout{sizes: s.labelSizes(capFor(false))}
+	in.r = radius(in.sizes, false)
+	if s.titlesFit(in.r + slack) {
+		return in
+	}
+	out := cycleLayout{sizes: s.labelSizes(capFor(true), true), outside: true}
+	out.r = radius(out.sizes, true)
+	w, h := s.size(out.r, out.sizes, true)
+	if (width > 0 && w > width+0.01) || (height > 0 && h > height+0.01) {
+		return in
+	}
+	return out
+}
+
 // cyclePlaced は box の中に置いた図(絶対の座標)。
 type cyclePlaced struct {
 	cx, cy, r float64
+	outside   bool         // 題を輪の外の枠(labels)に置いた
 	labels    []cycleLabel // 補足の無い段は幅 0
 	titles    []LBox       // 扇の中の題の枠
 	titleRoom []LBox       // 題が扇に収まらなかった段だけ、扇の中に取れた枠(幅 0 なら収まった)
@@ -311,10 +441,10 @@ type cyclePlaced struct {
 
 func (s *CycleSubsystem) place(box LBox) *cyclePlaced {
 	v, tx := s.vals(), s.text()
-	sizes := s.labelSizes(s.labelCap(box.Width))
-	r := math.Min(s.radiusFor(box.Width, 0, sizes), s.radiusFor(box.Height, 1, sizes))
-	sh := s.shape(r, sizes)
-	pl := &cyclePlaced{r: r}
+	lay := s.layoutFor(box.Width, box.Height, cyclePlaceSlack)
+	r := lay.r
+	sh := s.shape(r, lay.sizes, lay.outside)
+	pl := &cyclePlaced{r: r, outside: lay.outside}
 	pl.cx = box.X + v.Padding - sh.minX
 	pl.cy = box.Y + v.Padding - sh.minY
 	n := len(s.Data.Steps)
@@ -325,6 +455,11 @@ func (s *CycleSubsystem) place(box LBox) *cyclePlaced {
 		a := cycleAngle(i, n)
 		d := v.NumberDiameter
 		pl.numbers = append(pl.numbers, LBox{X: pl.cx + r*math.Cos(a) - d/2, Y: pl.cy + r*math.Sin(a) - d/2, Width: d, Height: d})
+		if lay.outside {
+			pl.titles = append(pl.titles, LBox{})
+			pl.titleRoom = append(pl.titleRoom, LBox{})
+			continue
+		}
 		tb, room, ok := s.titleBox(i, pl.cx, pl.cy, r)
 		pl.titles = append(pl.titles, tb)
 		if ok {
@@ -340,6 +475,9 @@ func (s *CycleSubsystem) place(box LBox) *cyclePlaced {
 	}
 	return pl
 }
+
+// cyclePlaceSlack は place が扇に題が収まるかを測るときの半径のゆとり(pt)。
+const cyclePlaceSlack = 0.25
 
 // titleBox は段 i の扇の中の題の枠(輪の中心が原点ではなく絶対の座標)。題を1行・
 // 2行…と増やしながら、中心の候補(titleCandidates)ごとに、扇(輪の内と外の縁・扇の境目から titleInset 内側)と番号の丸を
@@ -632,6 +770,19 @@ func (s *CycleSubsystem) Render(ctx RenderContext, box LBox) {
 	}
 	for i := range s.Data.Steps {
 		st := &s.Data.Steps[i]
+		if pl.outside {
+			p.AddShape(pl.numbers[i], ShapeOpts{Prst: "ellipse", Fill: ctx.Roles.Color("bg"), Outline: colors[i],
+				OutlineWidthPt: v.OutlineWidth, FontSize: tx.Sub,
+				Runs: []TextRun{{Text: s.number(i), Color: ctx.Roles.Color("text_primary"), Bold: true}}})
+			l := pl.labels[i]
+			o := ShapeOpts{Prst: "rect", FontSize: tx.Sub, Align: l.align, Anchor: l.anchor,
+				Runs: boldRuns(s.titleRuns(st, "text_primary", ctx.Roles))}
+			if len(st.Detail) > 0 {
+				o.Paras, o.ParaSizes = [][]TextRun{itemRuns(st.Detail, "text_muted", ctx.Roles)}, []float64{tx.Detail}
+			}
+			p.AddShape(l.box, o)
+			continue
+		}
 		p.AddShape(pl.titles[i], ShapeOpts{Prst: "rect", FontSize: tx.Sub,
 			Runs: s.titleRuns(st, onFillRole(colors[i], ctx.Roles), ctx.Roles)})
 		p.AddShape(pl.numbers[i], ShapeOpts{Prst: "ellipse", Fill: ctx.Roles.Color("bg"), Outline: colors[i],
@@ -651,6 +802,27 @@ func (s *CycleSubsystem) Lint(box LBox) []string {
 	tx := s.text()
 	pl := s.place(box)
 	var out []string
+	if pl.outside {
+		for i := range s.Data.Steps {
+			st := &s.Data.Steps[i]
+			l := pl.labels[i].box
+			tr := s.titleRuns(st, "", nil)
+			var dr []TextRun
+			if len(st.Detail) > 0 {
+				dr = itemRuns(st.Detail, "", nil)
+			}
+			needW := runsMinWidth(tr, tx.Sub)
+			if len(dr) > 0 {
+				needW = math.Max(needW, runsMinWidth(dr, tx.Detail))
+			}
+			needH := s.outsideLabelHeight(tr, dr, math.Max(l.Width-tx.Sub, needW))
+			if !textFits(needW, needH, l.Width, l.Height) {
+				out = append(out, overflowWarning("cycle", fmt.Sprintf("steps[%d]", i), st.Title, needW, needH, l.Width, l.Height))
+			}
+		}
+		_, missing := s.legend()
+		return append(out, legendMissingWarnings("cycle", missing)...)
+	}
 	for i := range s.Data.Steps {
 		st := &s.Data.Steps[i]
 		tb := pl.titles[i]

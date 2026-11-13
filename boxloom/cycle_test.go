@@ -182,21 +182,22 @@ func TestCycleWritesBlockArc(t *testing.T) {
 }
 
 // 形を保つ(FixedAspect):広い枠では高さで輪が決まり、横の余りは spare-width。
-// 狭い枠では幅で決まる。最小より狭いと最小を申告する。
+// 狭い枠では幅で決まる。最小より狭いと最小を申告する。高さ 360 は題が扇に入る大きさ
+// (題を輪の外に置く高さでは、その幅で測り直すと扇に入る輪になり、往復しない)。
 func TestCycleMeasure(t *testing.T) {
 	sub := figureFromIR(t, "light", "cycle", cycleData)
-	m := sub.Measure(Constraint{Height: 300})
+	m := sub.Measure(Constraint{Height: 360})
 	if !m.FixedAspect || m.Natural.Width <= 0 || m.Natural.Width >= 600 {
-		t.Fatalf("height 300: %+v", m)
+		t.Fatalf("height 360: %+v", m)
 	}
-	if h := sub.Measure(Constraint{Width: m.Natural.Width}).Natural.Height; math.Abs(h-300) > 1 {
-		t.Errorf("the width for height 300 must give back height 300, got %.1f", h)
+	if h := sub.Measure(Constraint{Width: m.Natural.Width}).Natural.Height; math.Abs(h-360) > 1 {
+		t.Errorf("the width for height 360 must give back height 360, got %.1f", h)
 	}
 	if m.Min.Width <= 0 || m.Min.Width > 400 || m.Min.Height <= 0 {
 		t.Errorf("min = %+v", m.Min)
 	}
-	w, h := fitBox(sub, LBox{Width: 880, Height: 300})
-	if math.Abs(h-300) > 1 || w > 600 {
+	w, h := fitBox(sub, LBox{Width: 880, Height: 360})
+	if math.Abs(h-360) > 1 || w > 600 {
 		t.Errorf("fit in a wide box = %.1f x %.1f; the ring is limited by the height", w, h)
 	}
 }
@@ -235,10 +236,11 @@ func TestCycleInColumns(t *testing.T) {
 	}
 }
 
-// 題が扇に収まらなければ警告(figure-text-overflow)、状態に凡例の文が無ければ figure-legend。
+// 題が扇に収まらず、輪の外に置いても枠に入らなければ警告(figure-text-overflow)、状態に
+// 凡例の文が無ければ figure-legend。
 func TestCycleWarnings(t *testing.T) {
 	long := figureFromIR(t, "light", "cycle", `{"steps": [{"title": "とても長い段の名前をここに書いてしまった例"}, {"title": "b"}, {"title": "c", "status": "danger"}]}`)
-	w := strings.Join(long.(*CycleSubsystem).Lint(LBox{Width: 300, Height: 260}), "\n")
+	w := strings.Join(long.(*CycleSubsystem).Lint(LBox{Width: 220, Height: 200}), "\n")
 	if !strings.Contains(w, "cycle: steps[0]") || !strings.Contains(w, "text does not fit") {
 		t.Errorf("long title must warn: %s", w)
 	}

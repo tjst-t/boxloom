@@ -48,7 +48,13 @@ type PhasesValues struct {
 	LegendSwatchG    float64 `json:"legendSwatchGap" scale:"space"`
 	// NumberStyle は箱の番号の形: "arabic"(1. 2. …)か "roman"(I. II. …)。
 	NumberStyle string `json:"numberStyle"`
+	// BandStyle は群の帯の見た目: "outline"(基調色の枠線と基調色の字)か
+	// "fill"(基調色の塗りに on_conditional の字)。
+	BandStyle string `json:"bandStyle"`
 }
+
+// phasesBandStyles は bandStyle に書ける見た目。
+var phasesBandStyles = []string{"outline", "fill"}
 
 // phasesNumberStyles は numberStyle に書ける形。
 var phasesNumberStyles = []string{"arabic", "roman"}
@@ -56,6 +62,9 @@ var phasesNumberStyles = []string{"arabic", "roman"}
 func (v *PhasesValues) check(at string) error {
 	if !contains(phasesNumberStyles, v.NumberStyle) {
 		return fmt.Errorf("%s.numberStyle: unknown style %q (known: %s)", at, v.NumberStyle, strings.Join(phasesNumberStyles, ", "))
+	}
+	if !contains(phasesBandStyles, v.BandStyle) {
+		return fmt.Errorf("%s.bandStyle: unknown style %q (known: %s)", at, v.BandStyle, strings.Join(phasesBandStyles, ", "))
 	}
 	return nil
 }
@@ -451,9 +460,15 @@ func (s *PhasesSubsystem) Render(ctx RenderContext, box LBox) {
 	g, pl := s.place(box)
 	p := ctx.Out
 	for i, gr := range s.Data.Groups {
-		p.AddShape(pl.bands[i], ShapeOpts{Prst: "rect", Outline: ctx.Roles.Color("accent"), OutlineWidthPt: v.BandOutlineWidth,
+		o := ShapeOpts{Prst: "rect", Outline: ctx.Roles.Color("accent"), OutlineWidthPt: v.BandOutlineWidth,
 			Runs: boldRuns(itemRuns(gr.Title, "accent", ctx.Roles)), FontSize: tx.Sub,
-			InsetX: v.BandInsetX, InsetY: v.BandInsetY, Align: "left", Anchor: "middle"})
+			InsetX: v.BandInsetX, InsetY: v.BandInsetY, Align: "left", Anchor: "middle"}
+		if v.BandStyle == "fill" {
+			o.Outline, o.OutlineWidthPt = "", 0
+			o.Fill = ctx.Roles.Color("accent")
+			o.Runs = boldRuns(itemRuns(gr.Title, "on_conditional", ctx.Roles))
+		}
+		p.AddShape(pl.bands[i], o)
 	}
 	for i := range s.Data.Steps {
 		st := &s.Data.Steps[i]

@@ -25,5 +25,6 @@
   "legendSwatchWidth": 16,
   "legendSwatchHeight": 10,
   "legendSwatchGap": 8,
-  "numberStyle": "arabic"
+  "numberStyle": "arabic",
+  "bandStyle": "outline"
 }
