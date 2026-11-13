@@ -1188,7 +1188,7 @@
       "additionalProperties": false
     },
     "columnBlock": {
-      "description": "まとまりの中に置けるブロック。columns・compare は置けない。対の並び(pairs)と画像の並び(gallery)は置ける。人物の紹介(people)は1〜2人まで。サブシステムはまとまりの幅で測れる図だけ:グラフ(chart)・循環の図(cycle)・フェーズの図(phases)・評価の格子(matrix)・組織図(orgchart)・屋根と柱の図(pillars)(図の横に読み取り・段ごとの説明・柱ごとの説明を置く形)。",
+      "description": "まとまりの中に置けるブロック。columns・compare は置けない。対の並び(pairs)と画像の並び(gallery)は置ける。人物の紹介(people)は1〜2人まで。印つきの塊の並び(topics)も置ける(縦に積む)。サブシステムはまとまりの幅で測れる図だけ:グラフ(chart)・循環の図(cycle)・フェーズの図(phases)・評価の格子(matrix)・組織図(orgchart)・屋根と柱の図(pillars)(図の横に読み取り・段ごとの説明・柱ごとの説明を置く形)。",
       "type": "object",
       "properties": {
         "type": {
@@ -1201,7 +1201,8 @@
             "gallery",
             "pairs",
             "subsystem",
-            "people"
+            "people",
+            "topics"
           ]
         }
       },
@@ -1365,6 +1366,21 @@
                 }
               }
             ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "topics"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "types/topics.schema.json"
           }
         }
       ]

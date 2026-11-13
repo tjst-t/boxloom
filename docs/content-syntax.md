@@ -253,7 +253,7 @@ closing: true
 | `quote 出どころ` | 段落1つ(引用した言葉) | 他人の言葉。見出しの文が出どころ(必須) | `quote`(`content`・`source`) |
 | `notes` | 段落・箇条 | 発表者ノート(スライドには出ない)。3.6 | スライドの `notes` |
 | `columns` | `column` だけ(2つか3つ) | 並列のまとまり(段組みの指定ではなく「並列」という意味)。属性 `flow=true`(左が右につながる)。3.9 | `columns`(`flow`) |
-| `column 題` | 段落・箇条・表・画像・画像の並び・`note`・`pairs`・```` ```chart ````・```` ```cycle ````・```` ```phases ````・```` ```matrix ````・```` ```orgchart ````・```` ```pillars ```` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
+| `column 題` | 段落・箇条・表・画像・画像の並び・`note`・`pairs`・`people`(1〜2人)・`topics`・```` ```chart ````・```` ```cycle ````・```` ```phases ````・```` ```matrix ````・```` ```orgchart ````・```` ```pillars ```` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
 | `pairs 見出し \| 見出し` | `subject`・`response` を交互に(2組以上) | 対の並び(標準でない型)。2つの側の見出しを1回だけ書く。3.10 | `pairs`(`headings`・`pairs`) |
 | `people` | `person` を1〜4個(まとまりの中は1〜2個) | 人物の紹介(標準でない型)。3.11 | `people`(`people`) |
 | `person 名前 {role=… image=… alt=…}` | 経歴の段落か箇条を1つ(無くてもよい) | 1人の紹介。名前は必須、写真には `alt` も | `people.people[]` |
@@ -908,6 +908,11 @@ GFM の表で書く。1行目が見出しの行、2行目が区切りの行、3�
   中身、塊の間に罫線。
 - はみ出しは塊ごとに測る。`layout-overflow` は、はみ出した塊を `/slides/S/body/N/topics/K`
   で指す。容量(`check -format json`)の `topics` に塊ごとの高さが出る。
+- 並列のまとまりの中にも置ける(#129。左に概要、右に A・B・C の塊)。塊は本文と同じく縦に
+  積む。コロンは外側ほど多くする(引用を持つ塊があれば `::::topic`・`:::::topics`・
+  `::::::column`・`:::::::columns`)。組み方を持たないテンプレートでは、まとまりの中でも
+  箇条で組む(`component-fallback` の場所は `…/columns/C/body/K`)。まとまりの中では
+  はみ出しを塊ごとには測らず、`columns` のブロックとして測る。
 
 
 ### 3.12 人物の紹介(people)

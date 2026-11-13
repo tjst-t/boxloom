@@ -717,8 +717,9 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 // columnSubsystems のものだけ(グラフの横に読み取り、図の横に段ごとの説明・柱ごとの説明を置く形)。
 // 対の並び(pairs)と画像の並び(gallery)も置ける(#117。対の横に抽出した一覧、写真の
 // 並びの横に説明)。人物の紹介(people)は columnPeopleMax 人まで(縦に積む。#120)。
+// 印つきの塊の並び(topics)も置ける(縦に積むだけ。#129。概要の横に話題の塊)。
 // columns・compare は置けない。
-var columnBlockTypes = []string{"paragraph", "points", "note", "table", "image", "gallery", "pairs", "subsystem", peopleType}
+var columnBlockTypes = []string{"paragraph", "points", "note", "table", "image", "gallery", "pairs", "subsystem", peopleType, topicsType}
 
 // columnSubsystems はまとまりの中に置けるサブシステム。どれもまとまりの幅で
 // 測れる(幅→高さ)図で、gantt・process・funnel・shapes のように本文の幅を

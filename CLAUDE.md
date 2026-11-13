@@ -223,7 +223,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `cycle.go` = 輪に並んだ段(cycle、#91)。段(3〜6)を上から時計回りに本物の `blockArc` の扇で
     並べ、基調色の濃淡で塗る。番号の丸は輪の外の縁、題は扇の中(扇に収まる枠を測って探す。
     入らなければ題を輪の外に置き輪を小さくする、#110)、detail は輪の外。縦横比を保つ(FixedAspect、余りは spare-width)。columns の中に置ける
-    サブシステムは chart・cycle・phases・matrix・orgchart・pillars(`ir.go` の `columnSubsystems`。ほかに pairs・gallery も置ける、#117。people は1〜2人、#120)。詳細は `docs/subsystem.md` の11節
+    サブシステムは chart・cycle・phases・matrix・orgchart・pillars(`ir.go` の `columnSubsystems`。ほかに pairs・gallery も置ける、#117。people は1〜2人、#120。topics も縦に積んで置ける、#129)。詳細は `docs/subsystem.md` の11節
   - `pillars.go` = 屋根・柱・土台の図(pillars、#121)。目指す姿の屋根(文を持つ本物の `trapezoid`)・
     2〜6本の柱(題と箇条の箱、任意の1〜2字の名前の丸)・土台(任意)を上から積む。色は基調色の系統
     (屋根は accent、柱・土台は accent を地の色に寄せた淡い色)。columns の中に置ける。`docs/subsystem.md` の11節

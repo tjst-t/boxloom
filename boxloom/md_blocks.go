@@ -630,7 +630,7 @@ func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
 		}
 		var allowed []*mdItem
 		for _, sub := range c.items {
-			ok := sub.kind == mdPara || sub.kind == mdList || sub.kind == mdTable || (sub.kind == mdFence && (sub.fence.name == "note" || sub.fence.name == pairsType || sub.fence.name == peopleType)) ||
+			ok := sub.kind == mdPara || sub.kind == mdList || sub.kind == mdTable || (sub.kind == mdFence && (sub.fence.name == "note" || sub.fence.name == pairsType || sub.fence.name == peopleType || sub.fence.name == topicsType)) ||
 				(sub.kind == mdCode && contains(columnSubsystems, codeLang(sub.info)))
 			if !ok {
 				what := "コードブロック"
