@@ -3316,7 +3316,7 @@
       "number": 147,
       "kind": "task",
       "title": "和文の幅が狭い自由な字体の候補を調べ、寸法を入れる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3328,7 +3328,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T11:31:07.667Z",
-      "updatedAt": "2026-11-13T11:31:07.667Z",
+      "updatedAt": "2026-11-13T11:32:08.055Z",
       "closedAt": null,
       "extra": {}
     },
