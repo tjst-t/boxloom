@@ -435,6 +435,7 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `columnTitle` | 並列のまとまりの題(dark / light は 16) |
 | `columnGap` | 並列のまとまりの間(32) |
 | `columnMainWeight` | 主のまとまり(`role: main`)の幅の比。ほかのまとまりは 1(2。倍率なので段階に載せない) |
+| `pairsSideMin` | 対の並び(pairs)の側の幅の下限(2つの側の幅の合計に対する割合、0.5 未満。0.2 → 各側 20〜80%)。この範囲で中身から割る(`docs/layers.md` の8.1) |
 | `tableText` | 表のセルの字(12。見出しの行は太字) |
 | `tableCellPaddingX` `tableCellPaddingY` | セルの左右・上下の余白(8・4) |
 | `tableRuleWidth` | 表の行の間の線の太さ(1。線の色は役割名 `grid`、見出しの行の塗りは `card_alt`、本体は `card`) |

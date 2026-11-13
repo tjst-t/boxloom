@@ -256,6 +256,9 @@ func heightForWidth(s *Spec, width float64) float64 {
 	if s.Height != nil {
 		return *s.Height
 	}
+	if s.pairs != nil {
+		splitPairs(s, width)
+	}
 	switch s.Kind {
 	case KindText:
 		return textHeightFor(s, width)
@@ -386,6 +389,9 @@ func naturalSize(s *Spec, axis byte) float64 {
 // box_engine.pyのcompute_layout()と同一アルゴリズム。
 func computeLayout(s *Spec, x, y, width, height float64) {
 	s.Box = LBox{X: x, Y: y, Width: width, Height: height}
+	if s.pairs != nil {
+		splitPairs(s, width)
+	}
 
 	if (s.Kind != KindRow && s.Kind != KindCol) || len(s.Children) == 0 {
 		return

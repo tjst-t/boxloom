@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"math"
 	"slices"
 	"strings"
 )
@@ -312,6 +313,11 @@ type pairsInfo struct {
 	headSubject, headResponse *Spec
 	list                      *Spec // 対の行の列
 	rows                      []pairRow
+	// sideMin は側の幅の下限の割合(値の表の pairsSideMin)。
+	sideMin float64
+	// split・splitWidth は側の幅の比を決めた箱の幅(同じ幅なら決め直さない)。
+	split      bool
+	splitWidth float64
 }
 
 // pairRow は1つの対の行と、その2つの側の箱。before は対の前に引いた罫線など、
@@ -348,7 +354,9 @@ type pairsStyle struct {
 }
 
 // pairsComponent は pairs の組み方:見出しの行の下に、対ごとに1つの行を置く。
-// 行の2つの側は同じ幅(grow 1・basis 0)で、交差軸は STRETCH なので上端がそろい、
+// 行の2つの側は basis 0 で、幅の比(grow)は配置のときに箱の幅と中身から決める
+// (splitPairs。組み立ての時点では箱はトークンのままで、幅も分からない)。
+// 交差軸は STRETCH なので上端がそろい、
 // 行の高さは高い方の側で決まる。見出しの行も同じ幅の割り方なので、側の題が側の
 // 真上に来る。見出しと複数のブロックの側は、見出しと body を素直に縦に積む。
 func pairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
@@ -390,7 +398,7 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 		}
 		return m, bt
 	}
-	info := &pairsInfo{}
+	info := &pairsInfo{sideMin: t.Values.PairsSideMin}
 	info.headSubject = grow([]*Spec{t.text(p.Subject, "columnTitle", headRole, true)})
 	info.headResponse = grow([]*Spec{t.text(p.Response, "columnTitle", headRole, true)})
 	hm, hb := marks(0)
@@ -453,6 +461,102 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 	}
 	info.list = Col(rows, tokGap("blockGap"))
 	return Col([]*Spec{info.head, info.list}, tokGap("itemGap"), measurePairRows(info)), nil
+}
+
+// pairSideStep は側の幅の割合の候補の刻み(pairsSideMin から 1 − pairsSideMin まで)。
+const pairSideStep = 0.05
+
+// pairSideTie は高さの差がこれ以下の候補を同じ高さと見なす(pt)。同じなら半々に近い方。
+const pairSideTie = 1.0
+
+// splitPairs は対の並びの箱(印 measurePairRows)の2つの側の幅の比(grow)を、箱の幅
+// width から決めて全ての行(見出しの行も)に書く。同じ比にそろえるので側の列は縦に
+// そろう。配置(computeLayout)と高さの見積もり(heightForWidth)の頭で呼ぶ。
+func splitPairs(s *Spec, width float64) {
+	info := s.pairs
+	if info.splitWidth == width && info.split {
+		return
+	}
+	info.split, info.splitWidth = true, width
+	share := pairSideShare(info, max0(width-2*s.padX()))
+	set := func(subject, response *Spec) {
+		if subject != nil {
+			subject.Grow = 2 * share
+		}
+		if response != nil {
+			response.Grow = 2 * (1 - share)
+		}
+	}
+	set(info.headSubject, info.headResponse)
+	for _, r := range info.rows {
+		set(r.subject, r.response)
+	}
+}
+
+// pairSideShare は subject の側の幅の割合(2つの側の幅の合計に対する。0〜1)。中身を
+// 縮めずに積んだ高さ(heightForWidth)の、全ての行の合計が一番小さくなる割合を
+// pairsSideMin〜1 − pairsSideMin の中から選ぶ(同じなら半々に近い方)。短い側(論点・
+// 名前)は自分が折り返さない幅まで狭くなり、長い側が広くなる。両側が同じくらいなら
+// 半々のまま。width は対の箱の中の幅。
+func pairSideShare(info *pairsInfo, width float64) float64 {
+	type pair struct{ subject, response, row *Spec }
+	var ps []pair
+	if info.head != nil {
+		ps = append(ps, pair{info.headSubject, info.headResponse, info.head})
+	}
+	for _, r := range info.rows {
+		ps = append(ps, pair{r.subject, r.response, r.row})
+	}
+	if len(ps) == 0 || info.sideMin <= 0 || info.sideMin >= 0.5 {
+		return 0.5
+	}
+	// 側の幅の合計:行の幅から、側でない子(印)と隙間を引いたもの。
+	sides := func(row *Spec) float64 {
+		w := width - 2*row.padX() - row.Gap*float64(max(0, len(row.Children)-1))
+		for _, c := range row.Children {
+			if c.Grow == 0 {
+				w -= naturalSize(c, 'w')
+			}
+		}
+		return max0(w)
+	}
+	total := func(share float64) float64 {
+		h := 0.0
+		for _, p := range ps {
+			avail := sides(p.row)
+			a := heightForWidth(p.subject, avail*share)
+			b := heightForWidth(p.response, avail*(1-share))
+			h += math.Max(a, b)
+		}
+		return h
+	}
+	best, bestH := 0.5, total(0.5)
+	type cand struct{ share, h float64 }
+	var cs []cand
+	for k := 0; ; k++ {
+		sh := info.sideMin + float64(k)*pairSideStep
+		if sh > 1-info.sideMin+1e-9 {
+			break
+		}
+		h := total(sh)
+		cs = append(cs, cand{sh, h})
+		if h < bestH {
+			bestH = h
+		}
+	}
+	// 一番低い高さから pairSideTie 以内の候補のうち、半々に一番近いもの。
+	if total(0.5) <= bestH+pairSideTie {
+		return 0.5
+	}
+	bestD := math.Inf(1)
+	for _, c := range cs {
+		if c.h <= bestH+pairSideTie {
+			if d := math.Abs(c.share - 0.5); d < bestD {
+				best, bestD = c.share, d
+			}
+		}
+	}
+	return best
 }
 
 // registerBundledComponents は同梱のテンプレート(templates/*.json。いまは dark・light・report)が

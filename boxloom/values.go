@@ -100,6 +100,10 @@ type TemplateValues struct {
 	ColumnTitle      float64 `json:"columnTitle" scale:"type"`      // 並列のまとまりの題
 	ColumnGap        float64 `json:"columnGap" scale:"space"`       // まとまりの間
 	ColumnMainWeight float64 `json:"columnMainWeight" unit:"ratio"` // 主のまとまり(role: main)の幅の比(ほかは 1)
+	// PairsSideMin は対の並び(pairs)の側の幅の下限(2つの側の幅の合計に対する割合。
+	// 0〜0.5)。どちらの側もこれより狭くしない(上限は 1 − これ)。側の幅はこの範囲で
+	// 中身から決める(pairs.go の pairSideShare)。
+	PairsSideMin float64 `json:"pairsSideMin" unit:"ratio"`
 
 	TableText      float64 `json:"tableText" scale:"type"`          // 表のセルの字
 	TableCellPadX  float64 `json:"tableCellPaddingX" scale:"space"` // セルの左右の余白
@@ -461,6 +465,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	}
 	if err := checkMarks(f.Marks); err != nil {
 		return nil, err
+	}
+	if v := f.Values.PairsSideMin; v >= 0.5 {
+		return nil, fmt.Errorf("values.pairsSideMin: %v must be below 0.5 (each of the two sides gets at least this share)", v)
 	}
 	if _, ok := orderedStyles[f.Values.OrderedStyle]; !ok {
 		return nil, fmt.Errorf("values.orderedStyle: %q is not a numbering style (known: %v)", f.Values.OrderedStyle, sortedKeys(orderedStyles))

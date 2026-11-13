@@ -76,6 +76,7 @@
     "columnTitle": 16,
     "columnGap": 32,
     "columnMainWeight": 2,
+    "pairsSideMin": 0.2,
     "tableText": 14,
     "tableCellPaddingX": 8,
     "tableCellPaddingY": 4,

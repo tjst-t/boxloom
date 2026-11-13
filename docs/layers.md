@@ -273,8 +273,12 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
    (`typeDecl.readMarkdown`。8.3)・代わりの組み方・組み方。組み方は同梱のテンプレート
    (`templates/*.json`。いまは dark・light)が読み込みのときに持ち(`registerBundledComponents`)、
    外の値の表だけのテンプレート(`ParseTemplate`、例 `examples/templates/forest.json`)は
-   持たない(代わりの `columns` で組み、`component-fallback`)。対ごとに1つの行(2つの側は
-   同じ幅・交差軸は STRETCH)にするので、2つの側の上端がそろい、行の高さは高い方になる。
+   持たない(代わりの `columns` で組み、`component-fallback`)。対ごとに1つの行(交差軸は STRETCH)にするので、2つの側の上端がそろい、行の高さは高い方になる。
+   2つの側の幅は中身で割る(#99。`splitPairs`・`pairSideShare`。配置のときに箱の幅が
+   分かってから):各側を縮めずに積んだ高さの、全ての行の合計が一番小さくなる割合を、
+   値の表の `pairsSideMin`〜1 − `pairsSideMin` から 5% 刻みで選ぶ(差が 1pt 以内なら半々に
+   近い方)。短い側(論点・名前)は狭く、長い側が広くなり、両側が同じくらいなら半々のまま。
+   全ての行(見出しの行も)を同じ割り方にそろえる。dark・light・report で同じ規則。
    はみ出しは測る単位の印 `measurePairRows` で対ごとに測る(2.1 の表)。例は
    `examples/md/pairs.bx.md`、代わりの組み方の IR は `examples/ir/pairs-fallback.json`、
    試験は `boxloom/pairs_test.go`。
