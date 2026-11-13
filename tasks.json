@@ -2633,7 +2633,7 @@
       "number": 115,
       "kind": "task",
       "title": "対の並び:左右の幅の比を粗い候補(0.2・0.3・0.5)でなく細かく探し、要る高さの合計を最小にする",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2645,7 +2645,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T06:01:51.602Z",
-      "updatedAt": "2026-11-13T06:01:51.602Z",
+      "updatedAt": "2026-11-13T06:02:00.352Z",
       "closedAt": null,
       "extra": {}
     }
