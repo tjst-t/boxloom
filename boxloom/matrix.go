@@ -294,43 +294,47 @@ func (s *MatrixSubsystem) legendItemW(li LegendItem) float64 {
 	return v.LegendDotSize + v.DotGap/2 + runWidthPt(li.Label, tx.Small, false)
 }
 
-// rowHeadWidth は内側の幅 inner のときの行の見出しの列の幅。題と説明を折り返さない
-// 幅(自然の幅)と、列(見出しの文とセルの中身。mark なら印と小さい字)の自然の幅を
-// 比べる:両方が入ればその自然の幅、入らなければ、どちらも折れない塊の幅(floor)を
-// 先に取り、残りを自然の幅と floor の差の比で配る(表の列と同じ配り方)。floor も
-// 入らなければ自然の幅の比で配る。どの場合も内側の幅の maxRowHeaderFraction まで。
-func (s *MatrixSubsystem) rowHeadWidth(inner float64) float64 {
+// matrixWidths は行の見出しの列と評価の列の幅の目安(余白を含む)。nat は折り返さない
+// 幅、floor は語の途中で折らない幅(和文は tableCJKChunk 字の塊)。評価の列の min は
+// 印(mark なら丸)と一番長い語が入る幅(これより狭いと figure-text-overflow)。行の題の
+// 列の最小は floor(これより狭いと題が1〜2字ずつに折れて行が縦に伸びる)。
+type matrixWidths struct {
+	headNat, headFloor       float64
+	colNat, colFloor, colMin float64
+}
+
+func (s *MatrixSubsystem) widths() matrixWidths {
 	v, tx := s.vals(), s.text()
 	pad := 2 * v.TextInsetX
-	headNat, headFloor := 0.0, 0.0
+	var m matrixWidths
 	for i := range s.Data.Rows {
 		r := &s.Data.Rows[i]
 		label, detail := s.rowHeadParas(r, "", "", nil)
-		headNat = math.Max(headNat, runsNaturalWidth(label, tx.RowTitle))
-		headFloor = math.Max(headFloor, runsChunkWidth(label, tx.RowTitle))
+		m.headNat = math.Max(m.headNat, runsNaturalWidth(label, tx.RowTitle))
+		m.headFloor = math.Max(m.headFloor, runsChunkWidth(label, tx.RowTitle))
 		for _, p := range detail {
-			headNat = math.Max(headNat, runsNaturalWidth(p, tx.Detail))
+			m.headNat = math.Max(m.headNat, runsNaturalWidth(p, tx.Detail))
 			markW := 0.0
 			if len(r.Points) > 0 {
 				markW = runWidthPt(tx.Point+" ", tx.Detail, true)
 				p = p[1:]
 			}
-			headFloor = math.Max(headFloor, runsChunkWidth(p, tx.Detail)+markW)
+			m.headFloor = math.Max(m.headFloor, runsChunkWidth(p, tx.Detail)+markW)
 		}
 	}
-	headNat += pad
-	headFloor = math.Min(headFloor+pad, headNat)
+	m.headNat += pad
+	m.headFloor = math.Min(m.headFloor+pad, m.headNat)
 	// 列は同じ幅なので、一番広く要る列で測る。
-	colNat, colFloor := 0.0, 0.0
 	for j := range s.Data.Columns {
 		h := s.headerRuns(j, "", nil)
-		colNat = math.Max(colNat, runsNaturalWidth(h, tx.Title))
-		colFloor = math.Max(colFloor, runsChunkWidth(h, tx.Title))
+		m.colNat = math.Max(m.colNat, runsNaturalWidth(h, tx.Title))
+		m.colFloor = math.Max(m.colFloor, runsChunkWidth(h, tx.Title))
+		m.colMin = math.Max(m.colMin, runsMinWidth(h, tx.Title))
 	}
 	lead := v.DotSize + v.DotGap // filled: 丸と空きの後に文
 	if v.mark() {
 		lead = 0
-		colNat, colFloor = math.Max(colNat, v.MarkSize), math.Max(colFloor, v.MarkSize)
+		m.colNat, m.colFloor, m.colMin = math.Max(m.colNat, v.MarkSize), math.Max(m.colFloor, v.MarkSize), math.Max(m.colMin, v.MarkSize)
 	}
 	for _, r := range s.Data.Rows {
 		for _, c := range r.Cells {
@@ -338,23 +342,52 @@ func (s *MatrixSubsystem) rowHeadWidth(inner float64) float64 {
 				continue
 			}
 			runs := itemRuns(c.Text, "", nil)
-			colNat = math.Max(colNat, lead+runsNaturalWidth(runs, s.cellTextSize()))
-			colFloor = math.Max(colFloor, lead+runsChunkWidth(runs, s.cellTextSize()))
+			m.colNat = math.Max(m.colNat, lead+runsNaturalWidth(runs, s.cellTextSize()))
+			m.colFloor = math.Max(m.colFloor, lead+runsChunkWidth(runs, s.cellTextSize()))
+			m.colMin = math.Max(m.colMin, lead+runsMinWidth(runs, s.cellTextSize()))
 		}
 	}
-	colNat += pad
-	colFloor = math.Min(colFloor+pad, colNat)
+	m.colNat += pad
+	m.colFloor = math.Min(m.colFloor+pad, m.colNat)
+	m.colMin = math.Min(m.colMin+pad, m.colFloor)
+	return m
+}
+
+// minWidth は行の見出しの列と評価の列がどちらも最小(行の題は floor、評価は min)を
+// 保てる一番狭い幅(余白とセルの間を含む)。これより狭いと評価の列の文が横に
+// はみ出す(figure-text-overflow)。Measure の Min の幅(rowHeadWidth の段 4 の境)。
+func (m matrixWidths) minWidth(v *MatrixValues, cols int) float64 {
+	C := float64(cols)
+	return 2*v.Padding + C*v.CellGap + m.headFloor + C*m.colMin
+}
+
+// rowHeadWidth は内側の幅 inner のときの行の見出しの列の幅。幅が減るにつれて次の
+// 順に譲る(どの段の境でも幅はつながる、#138):
+//  1. 両方が自然の幅で入れば行の見出しは自然の幅。
+//  2. 両方の floor が入れば、floor を先に取り、残りを自然の幅と floor の差の比で配る
+//     (表の列と同じ配り方)。
+//     行の見出しは自然の幅と floor の差が大きいので先に縮む(題は折り返す)。
+//  3. 行の見出しの列は最小(floor)のまま、評価の列を min(印と短い文が入る幅)まで
+//     縮める。以前はここで自然の幅の比で配っていて、評価の列が数 pt に崩れた。
+//  4. 両方の最小が入らなければ最小の比で配る(文が横にはみ出し、figure-text-overflow)。
+//
+// どの場合も内側の幅の maxRowHeaderFraction まで。
+func (s *MatrixSubsystem) rowHeadWidth(inner float64) float64 {
+	v := s.vals()
+	m := s.widths()
 	C := float64(len(s.Data.Columns))
 	avail := inner - C*v.CellGap
 	var w float64
 	switch {
-	case headNat+C*colNat <= avail:
-		w = headNat
-	case headFloor+C*colFloor <= avail:
-		span := (headNat - headFloor) + C*(colNat-colFloor)
-		w = headFloor + (avail-headFloor-C*colFloor)*(headNat-headFloor)/span
+	case m.headNat+C*m.colNat <= avail:
+		w = m.headNat
+	case m.headFloor+C*m.colFloor <= avail:
+		span := (m.headNat - m.headFloor) + C*(m.colNat-m.colFloor)
+		w = m.headFloor + (avail-m.headFloor-C*m.colFloor)*(m.headNat-m.headFloor)/span
+	case m.headFloor+C*m.colMin <= avail:
+		w = m.headFloor
 	default:
-		w = math.Max(0, avail) * headNat / (headNat + C*colNat)
+		w = math.Max(0, avail) * m.headFloor / (m.headFloor + C*m.colMin)
 	}
 	return math.Min(w, inner*v.RowHeaderFrac)
 }
@@ -427,7 +460,7 @@ func (s *MatrixSubsystem) Measure(c Constraint) Measurement {
 	min, nat, max := flexTotals(s.geom(w).parts)
 	return Measurement{
 		Natural: Size{Width: w, Height: nat},
-		Min:     Size{Width: v.MinWidth, Height: min},
+		Min:     Size{Width: math.Max(v.MinWidth, s.widths().minWidth(v, len(s.Data.Columns))), Height: min},
 		Max:     Size{Height: max},
 	}
 }
