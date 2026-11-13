@@ -2051,7 +2051,7 @@
       "number": 88,
       "kind": "task",
       "title": "report の表・結論・引用の組み方(見出しの行は罫線、群は濃い面、結論は丸い矢印つき、引用は吹き出しと人の印)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -2065,7 +2065,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:28:26.162Z",
-      "updatedAt": "2026-11-13T02:51:08.273Z",
+      "updatedAt": "2026-11-13T03:24:48.856Z",
       "closedAt": null,
       "extra": {}
     },
