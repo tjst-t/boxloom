@@ -22,13 +22,12 @@ var columnsMoreBodies = map[string]string{
 :::response
 返却箱を2つに増やす
 :::
-::::subject
-:::quote 利用者 B
+:::subject
 返したのに延滞の知らせが来た
 :::
-::::
 :::response
-開館と同時に読み取る
+- 開館と同時に読み取る
+- 前の晩の日付で記録する
 :::
 :::::
 `,
@@ -42,7 +41,9 @@ var columnsMoreBodies = map[string]string{
 }
 
 // columnsMoreMD は figure の列と role=main の箇条の列を並べた1枚の deck。pairs は
-// 中に3段の囲みを持つので、外の囲みのコロンを増やす。
+// 中に囲みを持つので、外の囲みのコロンを増やす(引用を持つ側の入れ子は例
+// examples/md/columns-figures.bx.md が見せる。主でない狭い列の report の引用は、人の
+// 印が幅の 1/4 に入らず subsystem-min の警告になる:狭すぎるときの既存の警告)。
 func columnsMoreMD(tmpl, typ string) string {
 	cols, col := "::::", ":::"
 	if typ == "pairs" {
