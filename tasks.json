@@ -3054,6 +3054,27 @@
       "updatedAt": "2026-11-13T07:35:22.177Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "pairs-ratio-report",
+      "number": 135,
+      "kind": "bug",
+      "title": "report の pairs で左右の幅の比が段にそろったまま(#115 が効いていない?)",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "#115 で pairs の比は spacingUnit の刻みで探すようにしたが、再現の第6回では report で 0.2・0.3・0.5 にそろって見え、対ごとの左右の高さが釣り合わない(p35 の対1が左 200pt 級・右 124pt 級、p36 は左が狭い)。原因を調べる:report の pairs の override が #115 の探索を通らない、ラベル(#118)や dense(#116)の道で比の探索が抜ける、など。架空の内容の例で再現し、直して試験にする。",
+      "doneWhen": "report・dense・ラベル付きの pairs でも、比が刻みで探され、対の高い側の合計が段の比より小さくなる試験/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:35:27.239Z",
+      "updatedAt": "2026-11-13T07:35:27.239Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
