@@ -44,7 +44,7 @@ func deckPages(d *IRDeck) []int {
 	if toc && at >= len(d.Slides) {
 		pages = append(pages, tocSlide)
 	}
-	if d.Meta != nil && d.Meta.Closing {
+	if d.Meta != nil && d.Meta.Closing.On {
 		pages = append(pages, closingSlide)
 	}
 	return pages

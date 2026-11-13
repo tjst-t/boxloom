@@ -394,7 +394,7 @@ IR の Schema はテンプレートに依らず1つ。型の語彙(名前・意�
   | `footer` | 頁番号・機密区分 | 左に作者(`ftr`)と機密区分、右に「n / 全部」(`sldNum`) |
   | `source` | 出典の行 | 出典の印つきの小さな字。出典の無いスライドでは nil |
   | `toc` | 目次のスライド(`meta.toc`。#86) | 題(`marks.toc`。`title`)と level 1・2 の区切りの一覧(節は `tocIndent` で字下げ、頁番号は右寄せ。印 `frameMain`)・`footer` |
-  | `closing` | 終わりのスライド(`meta.closing`。#92) | 地の色だけ。`meta.coverImage` があれば全面に敷く(`ctx.withCoverImage`) |
+  | `closing` | 終わりのスライド(`meta.closing`。#92) | 地の色だけ。`meta.coverImage` があれば全面に敷く(`ctx.withCoverImage`)。`meta.closing` の文があれば左下に置く(#104) |
 
   区切りの `level`(#86)は `section` の部品が `ctx.slide.Level` で読む(標準は階層によらず
   同じ見た目)。目次のスライドは IR に無く、組み立てで表紙の直後に足す(`toc.go` の

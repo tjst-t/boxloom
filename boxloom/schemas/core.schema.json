@@ -286,8 +286,11 @@
           "$ref": "#/$defs/imageSrc"
         },
         "closing": {
-          "description": "最後に終わりのスライドを置くか(既定 false)。終わりのスライドは IR に書かず、組み立てで作る(coverImage があればその写真を敷く)。",
-          "type": "boolean"
+          "description": "最後に終わりのスライドを置くか(既定 false)。文を書けば終わりのスライドを置き、その文をテンプレートが終わりのスライドに置く(例「ご清聴ありがとうございました」・問い合わせ先)。終わりのスライドは IR に書かず、組み立てで作る(coverImage があればその写真を敷く)。",
+          "oneOf": [
+            {"type": "boolean"},
+            {"$ref": "#/$defs/inline"}
+          ]
         }
       },
       "required": [

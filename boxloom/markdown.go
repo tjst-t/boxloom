@@ -1250,14 +1250,19 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 				meta.set("toc", true)
 			}
 		case "closing":
-			b, ok := yBool(v)
-			if !ok {
-				p.fail(line, v.col, path, codeInvalidValue, "closing は true か false で書いてください", []string{"true", "false"}, "")
+			// true / false か、終わりのスライドに置く1行の文(#104)。YAML 1.1 の真偽の
+			// 綴り(yes・no・on・off)は真偽の書き違いと見なして断る。
+			if b, ok := yBool(v); ok {
+				if b {
+					meta.set("closing", true)
+				}
 				continue
 			}
-			if b {
-				meta.set("closing", true)
+			if v.kind != 's' || v.str == "" || (!v.quoted && yamlBoolLike(v.str)) {
+				p.fail(line, v.col, path, codeInvalidValue, "closing は true か false、または終わりのスライドに置く1行の文で書いてください", []string{"true", "false"}, "例 closing: ご清聴ありがとうございました")
+				continue
 			}
+			meta.set("closing", p.parseInline(scalarText(v), path))
 		case "coverImage":
 			if v.kind != 's' || v.str == "" {
 				p.fail(line, v.col, path, codeInvalidValue, "coverImage は画像のパス(文書からの相対パス)で書いてください", nil, "例 coverImage: images/cover.jpg")
@@ -1300,6 +1305,15 @@ func yBool(v *yNode) (bool, bool) {
 		return false, true
 	}
 	return false, false
+}
+
+// yamlBoolLike は YAML 1.1 なら真偽に読まれる綴り(true・false 以外)か。
+func yamlBoolLike(s string) bool {
+	switch strings.ToLower(s) {
+	case "yes", "no", "on", "off", "y", "n", "true", "false":
+		return true
+	}
+	return false
 }
 
 // scalarText は YAML の値を、文中の記法として読むための mdText にする。

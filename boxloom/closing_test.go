@@ -46,7 +46,7 @@ func TestCoverImageMarkdown(t *testing.T) {
 	if err != nil || len(issues) > 0 {
 		t.Fatalf("parse: %v %v", err, issues)
 	}
-	if d.Meta.CoverImage != "img/cover.png" || !d.Meta.Closing {
+	if d.Meta.CoverImage != "img/cover.png" || !d.Meta.Closing.On {
 		t.Fatalf("meta = %+v", d.Meta)
 	}
 	for _, c := range []struct{ line, code string }{
@@ -72,7 +72,7 @@ func TestCoverImageIRAndSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.Meta.CoverImage != "img/cover.png" || !d.Meta.Closing {
+	if d.Meta.CoverImage != "img/cover.png" || !d.Meta.Closing.On {
 		t.Fatalf("meta = %+v", d.Meta)
 	}
 	out, err := Schema("report")

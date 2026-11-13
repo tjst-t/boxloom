@@ -19,7 +19,8 @@
 //     節 16pt で字下げ、頁番号は右寄せ。
 //   - cover・closing(Backlog #92):表紙は全面の写真(meta.coverImage)の上に、左上から
 //     幅 0.53・高さ 0.45 の基調色の箱を置き、白い字で題・副題を書く。作者・日付・機密区分・
-//     免責は箱の下に置く。終わりのスライドは同じ写真に基調色の箱だけ。
+//     免責は箱の下に置く。終わりのスライドは同じ写真に基調色の箱(meta.closing の文が
+//     あれば箱の中に)。箱の高さは 0.45 を下限に、中身が要るだけ伸ばす(#104)。
 //   - pairs(Backlog #87):標準の組み方(pairsStyled)の見た目を差し替える。対ごとに
 //     A・B・C… の四角い印(基調色・白い字)を subject の頭に、2つの側の間に丸い山形の印を
 //     置き、対の間に罫線(grid)を引く。側の見出し(title)は薄い面(card)の帯の上に字の色で書く。
@@ -206,24 +207,53 @@ func reportToc(ctx skeletonContext) (*Spec, error) {
 }
 
 // report の表紙・終わりのスライドの基調色の箱の大きさ(ページの幅・高さに対する比)。
-// 読む資料のサンプルを測った値。
+// 読む資料のサンプルを測った値。高さは下限で、中身(題の折り返した行・副題)が要れば
+// 箱を下へ伸ばす(#104。reportCoverShare)。
 const (
 	reportCoverBoxW = 0.53
 	reportCoverBoxH = 0.45
 )
 
 // reportCoverBand は表紙・終わりのスライドの上の帯:左に基調色の箱(幅 reportCoverBoxW)、
-// 右は写真が見える空き。高さは呼ぶ側が grow で決める。
-func reportCoverBand(box *Spec) *Spec {
+// 右は写真が見える空き。高さはページの高さの share。
+func reportCoverBand(box *Spec, share float64) *Spec {
 	return Row([]*Spec{
 		apply(box, []SpecOpt{tokBackground("accent"), WithGrow(reportCoverBoxW), WithBasis(0)}),
 		Col(nil, WithGrow(1-reportCoverBoxW), WithBasis(0)),
-	}, WithGrow(reportCoverBoxH), WithBasis(0))
+	}, WithGrow(share), WithBasis(0))
+}
+
+// reportCoverShare は表紙・終わりのスライドの帯の高さ(ページの高さに対する比)を、箱の
+// 中身 box(幅はページの reportCoverBoxW)と箱の下の中身 below(幅はページ全体。nil なら
+// 無し)の要る高さから決める(#104)。箱は reportCoverBoxH を下限に、中身が要るだけ伸ばす。
+// 箱の下の中身の要る高さは残す(両方が入らなければ箱を優先する)。どちらも組み立ての
+// 途中で値の表を引いて測る(解決は何度してもよい)。
+func reportCoverShare(t *Template, box, below *Spec) (float64, error) {
+	if t.Fonts != nil {
+		defer useFonts(t.Fonts)()
+	}
+	W, H := t.Values.PageW, t.Values.PageH
+	if err := resolveSpec(t, box); err != nil {
+		return 0, err
+	}
+	need := heightForWidth(box, W*reportCoverBoxW) / H
+	foot := 0.0
+	if below != nil {
+		if err := resolveSpec(t, below); err != nil {
+			return 0, err
+		}
+		foot = heightForWidth(below, W) / H
+	}
+	share := math.Max(reportCoverBoxH, math.Min(1, need))
+	if share > 1-foot {
+		share = math.Max(math.Max(reportCoverBoxH, 1-foot), math.Min(1, need))
+	}
+	return share, nil
 }
 
 // reportCover は report の表紙:全面に写真(meta.coverImage)を敷き、左上の基調色の箱
-// (幅 0.53・高さ 0.45)の下寄せに白い字で題・副題を書く。作者・日付・機密区分・免責は
-// 箱の下に置く。写真が無ければ地の色の上に同じ形。
+// (幅 0.53・高さは 0.45 を下限に題・副題が要るだけ)の下寄せに白い字で題・副題を書く。
+// 作者・日付・機密区分・免責は箱の下に置く。写真が無ければ地の色の上に同じ形。
 func reportCover(ctx skeletonContext) (*Spec, error) {
 	t, d, s := ctx.t, ctx.deck, ctx.slide
 	title, subtitle, author := s.Title, s.Subtitle, s.Author
@@ -261,14 +291,30 @@ func reportCover(ctx skeletonContext) (*Spec, error) {
 	if d.Meta != nil && d.Meta.Disclaimer != nil {
 		foot = append(foot, t.text(d.Meta.Disclaimer, "small", "text_muted", false, fromIR("/meta/disclaimer")))
 	}
-	below := Col(foot, tokGap("itemGap"), tokPadXY("coverPadding", "pagePaddingY"), WithGrow(1-reportCoverBoxH), WithBasis(0))
-	return ctx.withCoverImage(Col([]*Spec{reportCoverBand(box), below}, tokBackground("bg")))
+	below := Col(foot, tokGap("itemGap"), tokPadXY("coverPadding", "pagePaddingY"))
+	share, err := reportCoverShare(t, box, below)
+	if err != nil {
+		return nil, err
+	}
+	apply(below, []SpecOpt{WithGrow(1 - share), WithBasis(0)})
+	return ctx.withCoverImage(Col([]*Spec{reportCoverBand(box, share), below}, tokBackground("bg")))
 }
 
-// reportClosing は report の終わりのスライド:表紙と同じ写真に、同じ位置の基調色の箱だけ。
+// reportClosing は report の終わりのスライド:表紙と同じ写真に、同じ位置の基調色の箱。
+// 文(meta.closing の文)があれば箱の下寄せに表紙の題と同じ白い太字で置き、箱は文が
+// 要るだけ伸ばす(#104)。文が無ければ箱だけ。
 func reportClosing(ctx skeletonContext) (*Spec, error) {
-	band := reportCoverBand(Col(nil))
-	return ctx.withCoverImage(Col([]*Spec{band, Col(nil, WithGrow(1-reportCoverBoxH), WithBasis(0))}, tokBackground("bg")))
+	t, d := ctx.t, ctx.deck
+	inBox := []*Spec{Col(nil, WithGrow(1))}
+	if d.Meta != nil && d.Meta.Closing.Text != nil {
+		inBox = append(inBox, t.text(d.Meta.Closing.Text, "coverTitle", "bg", true, fromIR("/meta/closing")))
+	}
+	box := Col(inBox, tokPad("coverPadding"))
+	share, err := reportCoverShare(t, box, nil)
+	if err != nil {
+		return nil, err
+	}
+	return ctx.withCoverImage(Col([]*Spec{reportCoverBand(box, share), Col(nil, WithGrow(1-share), WithBasis(0))}, tokBackground("bg")))
 }
 
 // reportContentHeader は report の本文のスライドの頭:上にリード文(上の見出し)、

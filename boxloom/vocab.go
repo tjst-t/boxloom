@@ -207,7 +207,7 @@ func frontMatterKeys() []frontMatterKey {
 		{"cover", "表紙を出すか(true / false、既定 true)", false, "先頭の {type: cover} のスライド"},
 		{"toc", "表紙の直後に目次を置くか(true / false、既定 false)。level 1・2 の区切りを頁番号つきで並べる(目次のスライドは組み立てで作る)", false, "meta.toc"},
 		{"coverImage", "表紙の写真(PNG / JPEG。文書からの相対パス。飾りなので代わりの文は要らない)。テンプレートが表紙の全面に敷く(closing なら終わりのスライドにも)", false, "meta.coverImage"},
-		{"closing", "最後に終わりのスライドを置くか(true / false、既定 false。終わりのスライドは組み立てで作り、coverImage があればその写真を敷く)", false, "meta.closing"},
+		{"closing", "最後に終わりのスライドを置くか(true / false、既定 false)。1行の文を書けば終わりのスライドを置き、その文を終わりのスライドに置く(例 closing: ご清聴ありがとうございました)。終わりのスライドは組み立てで作り、coverImage があればその写真を敷く", false, "meta.closing"},
 	}
 }
 

@@ -44,9 +44,32 @@ type IRMeta struct {
 	// CoverImage は表紙の写真(飾り。代わりの文は持たない)。文書からの相対パスで、
 	// 決まりは画像の src と同じ。テンプレートが表紙(と終わりのスライド)の全面に敷く。
 	CoverImage string `json:"coverImage,omitempty"`
-	// Closing は最後に終わりのスライドを置くか(既定 false)。終わりのスライドは IR に
-	// 書かず、組み立てで作る(closing.go)。
-	Closing bool `json:"closing,omitempty"`
+	// Closing は最後に終わりのスライドを置くか(既定 false)と、置くならその箱の中の文
+	// (IR は true / false か文。文を書けば置く)。終わりのスライドは IR に書かず、
+	// 組み立てで作る(closing.go)。
+	Closing IRClosing `json:"closing,omitempty"`
+}
+
+// IRClosing は文書の頭の closing:真偽か文(#104)。文を書けば終わりのスライドを置き、
+// その文をテンプレートが終わりのスライドに置く。
+type IRClosing struct {
+	On   bool   // 終わりのスライドを置くか
+	Text Inline // 終わりのスライドの文(無ければ nil)
+}
+
+func (c *IRClosing) UnmarshalJSON(b []byte) error {
+	b = bytes.TrimSpace(b)
+	switch string(b) {
+	case "true", "false":
+		*c = IRClosing{On: string(b) == "true"}
+		return nil
+	}
+	var in Inline
+	if err := in.UnmarshalJSON(b); err != nil {
+		return fmt.Errorf("closing must be true, false or an inline text: %w", err)
+	}
+	*c = IRClosing{On: true, Text: in}
+	return nil
 }
 
 // IRSlide はスライド。Type で cover / content / section / statement を選ぶ。

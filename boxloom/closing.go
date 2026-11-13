@@ -5,8 +5,8 @@
 // (p:bg の a:blipFill)として全面に敷き、縦横比が違えば長い方の両端を切る
 // (引き伸ばさない。coverCropXML)。
 //
-// 終わりのスライドは IR に書かない。文書の頭の closing が true なら、組み立てで最後に
-// 1枚足す(deckPages)。組み方は骨組みの部品 closing(標準は closingFrame。テンプレートは
+// 終わりのスライドは IR に書かない。文書の頭の closing が true か文なら、組み立てで最後に
+// 1枚足す(deckPages)。文は終わりのスライドに置く(#104)。組み方は骨組みの部品 closing(標準は closingFrame。テンプレートは
 // 名前で差し替える)。
 
 package boxloom
@@ -62,7 +62,14 @@ func (t *Template) closingContext(d *IRDeck, pages []int) skeletonContext {
 }
 
 // closingFrame は標準の終わりのスライド(骨組みの closing):地の色だけ。表紙の写真が
-// あれば全面に敷く。
+// あれば全面に敷く。文(meta.closing の文。#104)があれば、ページの余白の内側の下寄せに
+// 表紙の題の大きさで置く(文の無い文書の出力は変わらない)。
 func closingFrame(ctx skeletonContext) (*Spec, error) {
-	return ctx.withCoverImage(Col(nil, tokBackground("bg")))
+	d := ctx.deck
+	if d.Meta == nil || d.Meta.Closing.Text == nil {
+		return ctx.withCoverImage(Col(nil, tokBackground("bg")))
+	}
+	text := ctx.t.text(d.Meta.Closing.Text, "coverTitle", "text_primary", true, fromIR("/meta/closing"))
+	return ctx.withCoverImage(Col([]*Spec{Col(nil, WithGrow(1)), text},
+		tokPadXY("pagePadding", "pagePaddingY"), tokBackground("bg")))
 }
