@@ -2837,6 +2837,27 @@
       "updatedAt": "2026-11-13T07:28:39.833Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "auto-fit",
+      "number": 125,
+      "kind": "story",
+      "title": "自動の収め(-fit):はみ出すスライドは字と間を段で詰め、薄いスライドは段で広げる",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "## なぜ\n「自動で縮めない」は原則だが、実際の資料ではページごとに少し詰めたり広げたりしたい場面が多い(人の要望)。原則は既定のまま残し、**作る側が明示したときだけ**(opt-in)テンプレートの段の中で字の大きさと間合いを調整する。\n\n## 決め(案)\n- IR は変えない(見た目の調整で意味ではない)。`BuildOptions.Fit`/`CheckOptions.Fit` と CLI `build -fit`・`check -fit`。\n- 調整は**テンプレートの値の表の梯子だけ**:`fit.shrink`(詰める段の並び)と `fit.grow`(広げる段の並び)。各段は dense と同じ「values の一部を重ねる組」で、値は scale の段にあるものだけ。下限・上限は梯子の端(テンプレートが持つ)。任意の倍率で縮めない。\n- 詰め:はみ出すスライドは、今の密度から梯子を1段ずつ下り、最初に収まった段で組む。最後の段でも収まらなければ layout-overflow(build は誤り)。\n- 広げ:fill-ratio が下回る本文のスライドは、梯子を上り、はみ出さない最も上の段で組む(本文の下の余りをブロックの間に配る段もここに入れてよい。既定の組み方は #1300437 のまま)。\n- 調整したスライドごとに info の Issue `fit-applied`(どの段か・残り pt)を出し、capacity にも `fit` を出す。作者が手で直す手がかりにする。\n- 揃い:同じデッキの中で本文の字がばらばらになりすぎないよう、まずは梯子を短く(詰め2段・広げ2段程度)。\n\n## 子\nfit-values → fit-shrink・fit-grow",
+      "doneWhen": "",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:28:44.192Z",
+      "updatedAt": "2026-11-13T07:28:44.192Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
