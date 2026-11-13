@@ -3440,6 +3440,27 @@
       "updatedAt": "2026-11-13T12:33:51.348Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "orgchart-compact",
+      "number": 153,
+      "kind": "task",
+      "title": "組織図:縦に積む前に孫の字を小さくして横に並べるかを試し、fit の段で箱の下限も下げる",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "再現の第9回(元の p33):列の中の組織図の最小(374pt)が本文の高さ(339pt)を超える。#134 で狭い列では孫の段を縦に積むが、縦に積むと高くなる。元の資料は孫3つを横に並べ、字 10.4pt・箱の余白ほぼ0。\n直し方:(1) 幅が足りないとき、縦に積む前に、孫の段の字を値の表の段で1〜2段小さくして横に並ぶかを試し、並ぶならその形の自然・最小を申告する(どちらの形でも Measure と描画を一致)。高さが小さい方を選ぶ。(2) report・dark・light の fit.shrink・fit.emergency の段に組織図の箱の最小の高さ・段の間・箱の内側の余白の値を入れ、詰めたときに下がるようにする(#139 で入っていない分)。",
+      "doneWhen": "狭い列の3段の組織図で、横に並べる形の方が低ければそれが選ばれる試験/-fit の段で組織図の Min が下がる試験/広い幅の組織図の golden が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T12:33:56.547Z",
+      "updatedAt": "2026-11-13T12:33:56.547Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
