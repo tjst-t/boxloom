@@ -3331,6 +3331,27 @@
       "updatedAt": "2026-11-13T11:31:07.667Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "fit-split",
+      "number": 148,
+      "kind": "story",
+      "title": "-fit で入りきらないスライドを続きのスライドに分け、分けられないものは非常用の段で詰める",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "人が決めた(案1)。-fit を付けたときだけの動き。順:梯子(fit.shrink)で詰める → 入らなければ分けられるブロックで続きのスライドに分ける → 分けられないものは非常用の段(fit.emergency)→ それでもだめなら誤り。「入った」は #145 の判定(図の崩れが無いことも含む)。IR は変えない(出力のスライドが増える)。\n子:fit-split-slides(分ける)、fit-emergency(非常用の段)。",
+      "doneWhen": "",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T11:31:13.401Z",
+      "updatedAt": "2026-11-13T11:31:13.401Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
