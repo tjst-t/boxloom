@@ -2759,7 +2759,7 @@
       "number": 121,
       "kind": "task",
       "title": "屋根・柱・土台の図(pillars サブシステム)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2771,7 +2771,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T06:10:07.478Z",
-      "updatedAt": "2026-11-13T06:10:07.478Z",
+      "updatedAt": "2026-11-13T06:31:47.251Z",
       "closedAt": null,
       "extra": {}
     },
