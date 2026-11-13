@@ -3081,7 +3081,7 @@
       "number": 136,
       "kind": "task",
       "title": "dense の組に表のセルの余白・pairs の対の間・matrix の行の題の字を足す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [
         "fit-values"
@@ -3095,7 +3095,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:35:32.458Z",
-      "updatedAt": "2026-11-13T07:35:32.458Z",
+      "updatedAt": "2026-11-13T08:26:42.329Z",
       "closedAt": null,
       "extra": {}
     },
