@@ -12,13 +12,13 @@
 //     隙間の真ん中に縦の罫線(grid)を引く。flow(左が右につながる)のときは、縦の
 //     罫線の縦の真ん中に基調色の丸(直径 24pt、隙間より広ければ隙間の幅)と、
 //     地の色(bg)の山形(>)を置く。
-//   - section(Backlog #86):level 1・2 は frame(全面の基調色に白い枠、54pt の白い字)、
-//     level 3 は agenda(左の帯 1/3 に親の節の題、右に兄弟の項目の一覧 24pt。今の項目に
-//     丸い矢印の印、ほかは薄い字)。
+//   - section(Backlog #86・#137):level 1・2 は frame(全面の基調色に白い枠、54pt の白い字)。
+//     直下に level 3 の項目があれば題の下にその題の一覧(20pt・白)を並べる。level 3 は
+//     題だけの簡素な扉(地の色に短い基調色の罫線と 28pt の基調色の題)。
 //   - toc(Backlog #86):全面の基調色に白い字。題 28pt の下に白い罫線、章 20pt、
 //     節 16pt で字下げ、頁番号は右寄せ。
 //   - cover・closing(Backlog #92):表紙は全面の写真(meta.coverImage)の上に、左の縦の
-//     中ほどに幅 0.53・高さ 0.45 の基調色の箱を置き(上下に写真が見える。#109)、白い字で
+//     中ほど(左の縁から pagePadding 離す。#137)に幅 0.53・高さ 0.45 の基調色の箱を置き(上下に写真が見える。#109)、白い字で
 //     題・副題・作者・日付・機密区分・免責を箱の中に書く。終わりのスライドは同じ写真に基調色の箱(meta.closing の文が
 //     あれば箱の中に)。箱の高さは 0.45 を下限に、中身が要るだけ伸ばす(#104)。
 //   - pairs(Backlog #87):標準の組み方(pairsStyled)の見た目を差し替える。対ごとに
@@ -136,66 +136,54 @@ func registerReportParts(t *Template) error {
 	}))
 }
 
-// reportSection は report の区切り:level 1・2 は frame、level 3 は agenda。
+// reportSection は report の区切り(#137):level 1・2 は frame(下に level 3 の項目が
+// あれば、その題の一覧を題の下に並べる)、level 3 は題だけの簡素な扉(door)。
 func reportSection(ctx skeletonContext) (*Spec, error) {
 	if sectionLevel(ctx.slide) >= 3 {
-		return reportAgenda(ctx), nil
+		return reportDoor(ctx), nil
 	}
 	return reportFrame(ctx), nil
 }
 
 // reportFrame は章・節の区切り:全面の基調色の上に白い枠(細い白の地の内側に基調色)を
-// 置き、その中に 54pt の白い太字で題を置く(上の余白 3 : 下の余白 2)。
+// 置き、その中に 54pt の白い太字で題を置く(上の余白 3 : 下の余白 2)。直下に level 3 の
+// 区切り(項目)があれば、題の下に白い縦の罫線と項目の題の一覧(20pt・白)を並べる
+// (#137。数は組み立てで数える。IR には書かない)。
 func reportFrame(ctx skeletonContext) *Spec {
-	t := ctx.t
+	t, d := ctx.t, ctx.deck
+	head := []*Spec{t.text(ctx.slide.Title, typeStep(54), "bg", true, WithPlaceholder("title"), fromIR("title"))}
+	if kids := sectionChildren(d, ctx.index); len(kids) > 0 {
+		var items []*Spec
+		for _, j := range kids {
+			items = append(items, t.text(d.Slides[j].Title, typeStep(20), "bg", false, fromIR(fmt.Sprintf("/slides/%d/title", j))))
+		}
+		list := Row([]*Spec{
+			Col(nil, tokWidth(spaceStep(1)), tokBackground("bg")),
+			Col(items, tokGap("itemGap"), WithGrow(1), WithBasis(0)),
+		}, tokGap("blockGap"))
+		head = append(head, list)
+	}
 	inner := Col([]*Spec{
 		Col(nil, WithGrow(3)),
-		t.text(ctx.slide.Title, typeStep(54), "bg", true, WithPlaceholder("title"), fromIR("title")),
+		Col(head, tokGap("sectionGap")),
 		Col(nil, WithGrow(2)),
 	}, tokPad("coverPadding"), tokBackground("accent"), WithGrow(1))
 	frame := Col([]*Spec{inner}, tokPad(spaceStep(1)), tokBackground("bg"), WithGrow(1), markFrame(frameMain))
 	return Col([]*Spec{frame}, tokPad("pagePaddingY"), tokBackground("accent"))
 }
 
-// reportAgenda は節の中の項目の区切り:左の帯(幅 1/3、基調色)に親の節の題を白い字で、
-// 右に同じ節の項目(兄弟)の一覧を 24pt で並べる。今の項目は丸い矢印の印と字の色、
-// ほかは薄い字。
-func reportAgenda(ctx skeletonContext) *Spec {
-	t, d := ctx.t, ctx.deck
-	parent, siblings := sectionFamily(d, ctx.index)
-	var band []*Spec
-	band = append(band, Col(nil, WithGrow(3)))
-	if parent >= 0 {
-		band = append(band, t.text(d.Slides[parent].Title, typeStep(28), "bg", true, fromIR(fmt.Sprintf("/slides/%d/title", parent))))
-	}
-	band = append(band, Col(nil, WithGrow(2)))
-	var items []*Spec
-	for _, j := range siblings {
-		var item *Spec
-		if j == ctx.index {
-			item = t.text(d.Slides[j].Title, typeStep(24), "text_primary", true, WithPlaceholder("title"), fromIR("title"), WithGrow(1), WithBasis(0))
-		} else {
-			item = t.text(d.Slides[j].Title, typeStep(24), "text_muted", false, fromIR(fmt.Sprintf("/slides/%d/title", j)), WithGrow(1), WithBasis(0))
-		}
-		items = append(items, Row([]*Spec{reportAgendaMark(j == ctx.index), item}, tokGap("blockGap")))
-	}
-	list := Col(append(append([]*Spec{Col(nil, WithGrow(1))}, items...), Col(nil, WithGrow(1))), tokGap("blockGap"), WithGrow(1))
-	row := Row([]*Spec{
-		Col(band, tokPad("pagePadding"), tokBackground("accent"), WithGrow(1), WithBasis(0)),
-		Col([]*Spec{list}, tokPad("pagePadding"), WithGrow(2), WithBasis(0)),
-	}, WithGrow(1))
-	main := Col([]*Spec{row}, WithGrow(1), markFrame(frameMain))
-	return Col([]*Spec{main}, tokBackground("bg"))
-}
-
-// reportAgendaMark は agenda の項目の頭の印:今の項目は基調色の丸に白い矢印(直径 24pt)、
-// ほかは同じ幅の空き(項目の頭をそろえる)。
-func reportAgendaMark(current bool) *Spec {
-	if !current {
-		return Col(nil, tokWidth(spaceStep(12)), tokHeight(spaceStep(12)))
-	}
-	arrow := TextNode("→", tokSize(typeStep(14)), tokColor("bg"), WithAlign("center"), WithAnchor("middle"), WithGrow(1))
-	return Col([]*Spec{arrow}, tokWidth(spaceStep(12)), tokHeight(spaceStep(12)), tokRadius(spaceStep(6)), tokBackground("accent"))
+// reportDoor は節の中の項目(level 3)の扉(#137):地の色のページの縦の中ほどに、短い
+// 基調色の罫線とその下に 28pt の基調色の太字の題だけを置く(左は本文と同じ外周)。
+func reportDoor(ctx skeletonContext) *Spec {
+	t := ctx.t
+	rule := Row([]*Spec{Col(nil, tokWidth(spaceStep(24)), tokHeight(spaceStep(2)), tokBackground("accent"))})
+	title := t.text(ctx.slide.Title, typeStep(28), "accent", true, WithPlaceholder("title"), fromIR("title"))
+	main := Col([]*Spec{
+		Col(nil, WithGrow(1)),
+		Col([]*Spec{rule, title}, tokGap("itemGap")),
+		Col(nil, WithGrow(1)),
+	}, WithGrow(1), markFrame(frameMain))
+	return Col([]*Spec{main}, tokPadXY("pagePadding", "pagePaddingY"), tokBackground("bg"))
 }
 
 // reportToc は report の目次:全面の基調色に白い字。題(28pt)の下に白い罫線、章は 20pt の
@@ -233,14 +221,18 @@ const (
 	reportCoverMinGap = 0.1
 )
 
-// reportCoverPage は表紙・終わりのスライドの根:縦の中ほどに帯(左に基調色の箱。幅
-// reportCoverBoxW、右は写真が見える空き)を置き、上下は写真が見える空き。帯の高さは
+// reportCoverPage は表紙・終わりのスライドの根:縦の中ほどに帯(左の外周 pagePadding の
+// 右に基調色の箱。幅 reportCoverBoxW、右は写真が見える空き)を置き、上下は写真が見える空き。帯の高さは
 // ページの高さの share。
 func reportCoverPage(ctx skeletonContext, box *Spec, share float64) (*Spec, error) {
 	gap := (1 - share) / 2
+	// 箱は左の縁に付けず、本文と同じ外周(pagePadding)だけ離す(#137)。幅はページの
+	// reportCoverBoxW のまま(右の空きの伸びる比から外周の分を引く)。
+	pad := ctx.t.Values.PagePadding / ctx.t.Values.PageW
 	band := Row([]*Spec{
+		Col(nil, tokWidth("pagePadding")),
 		apply(box, []SpecOpt{tokBackground("accent"), WithGrow(reportCoverBoxW), WithBasis(0)}),
-		Col(nil, WithGrow(1-reportCoverBoxW), WithBasis(0)),
+		Col(nil, WithGrow(1-reportCoverBoxW-pad), WithBasis(0)),
 	}, WithGrow(share), WithBasis(0))
 	return ctx.withCoverImage(Col([]*Spec{
 		Col(nil, WithGrow(gap), WithBasis(0)), band, Col(nil, WithGrow(gap), WithBasis(0)),

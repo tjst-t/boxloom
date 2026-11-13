@@ -102,7 +102,7 @@ func buildCover(t *testing.T, template, extra string) map[string]string {
 	return zipFiles(t, buf.Bytes())
 }
 
-// report の表紙は写真の上に基調色の箱(左の縦の中ほど、幅 0.53・高さ 0.45 以上)、箱の中に
+// report の表紙は写真の上に基調色の箱(左の外周 pagePadding の右・縦の中ほど、幅 0.53・高さ 0.45 以上)、箱の中に
 // 白い字の題・副題・日付(#109)。終わりのスライドは同じ写真に同じ位置の箱だけ。
 func TestReportCoverAndClosing(t *testing.T) {
 	files := buildCover(t, "report", `, "coverImage": "img/cover.png", "closing": true`)
@@ -115,7 +115,7 @@ func TestReportCoverAndClosing(t *testing.T) {
 		t.Fatal("unexpected slide4")
 	}
 	accent, bg := hexColor(tm.Theme["accent"]), hexColor(tm.Theme["bg"])
-	reBox := regexp.MustCompile(fmt.Sprintf(`<a:off x="0" y="(\d+)"/><a:ext cx="%d" cy="(\d+)"/>`, ptToEMU(W*reportCoverBoxW)))
+	reBox := regexp.MustCompile(fmt.Sprintf(`<a:off x="%d" y="(\d+)"/><a:ext cx="%d" cy="(\d+)"/>`, ptToEMU(tm.Values.PagePadding), ptToEMU(W*reportCoverBoxW)))
 	boxes := map[int][2]float64{}
 	media := ""
 	for _, n := range []int{1, 3} {
@@ -167,7 +167,7 @@ func TestReportCoverAndClosing(t *testing.T) {
 	dump := coverLayout(t, "report", `, "coverImage": "img/cover.png", "closing": true`)
 	date := findPath(dump.Slides[0].Root, "/meta/date")
 	b := boxes[1]
-	if date == nil || date.Box.Y < b[0]-0.1 || date.Box.Y+date.Box.Height > b[0]+b[1]+0.1 || date.Box.X+date.Box.Width > W*reportCoverBoxW+0.1 {
+	if date == nil || date.Box.Y < b[0]-0.1 || date.Box.Y+date.Box.Height > b[0]+b[1]+0.1 || date.Box.X+date.Box.Width > tm.Values.PagePadding+W*reportCoverBoxW+0.1 {
 		t.Errorf("date is not in the box %v: %+v", b, date)
 	}
 	if got := dump.Slides[2]; got.Path != "/meta/closing" || got.Type != "closing" {

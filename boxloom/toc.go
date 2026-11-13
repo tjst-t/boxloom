@@ -82,31 +82,21 @@ func tocEntries(d *IRDeck, pages []int) []tocEntry {
 	return out
 }
 
-// sectionFamily は level 3 の区切り cur の親(手前で最も近い level 1・2 の区切り。
-// 無ければ -1)と、同じ親の下の level 3 の区切り(兄弟。cur を含む)。
-func sectionFamily(d *IRDeck, cur int) (parent int, siblings []int) {
-	parent = -1
-	start := 0
-	for j := cur - 1; j >= 0; j-- {
-		if d.Slides[j].Type == "section" && sectionLevel(&d.Slides[j]) < 3 {
-			parent, start = j, j+1
-			break
-		}
-	}
-	for j := start; j < len(d.Slides); j++ {
+// sectionChildren は level 1・2 の区切り i の直下の項目:i の後ろ、次の level 1・2 の
+// 区切りの手前までにある level 3 の区切り(#137。report の節の扉が題を並べる)。
+func sectionChildren(d *IRDeck, i int) []int {
+	var out []int
+	for j := i + 1; j < len(d.Slides); j++ {
 		s := &d.Slides[j]
 		if s.Type != "section" {
 			continue
 		}
 		if sectionLevel(s) < 3 {
-			if j > cur {
-				break
-			}
-			continue
+			break
 		}
-		siblings = append(siblings, j)
+		out = append(out, j)
 	}
-	return parent, siblings
+	return out
 }
 
 // tocContext は目次のスライドを組むときの文脈(題は値の表の marks.toc)。

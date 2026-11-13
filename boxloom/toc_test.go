@@ -229,52 +229,86 @@ func findSpecIn(root, s *Spec) bool {
 	return findSpec(root, func(x *Spec) bool { return x == s }) != nil
 }
 
-// report の level 3 は agenda:左の帯に親の節の題、右に兄弟の項目の一覧(24pt)、
-// 今の項目に丸い矢印の印、ほかは薄い字。
-func TestReportSectionAgenda(t *testing.T) {
+// report の節(level 2)の扉は、題の下にその節の項目(level 3)の題を順に並べる(#137)。
+// ほかの節の項目は並べず、項目を持たない章(level 1)は題だけ。
+func TestReportSectionLists(t *testing.T) {
+	d := parseTocDeck(t)
+	tm, err := LookupTemplate("report")
+	if err != nil {
+		t.Fatal(err)
+	}
+	white := tm.Theme["bg"]
+	b, err := tm.BuildSlide(d, 3) // 返却の流れ(level 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	computeLayout(b.Root, 0, 0, tm.Values.PageW, tm.Values.PageH)
+	if fmt.Sprint(sectionChildren(d, 3)) != "[4 6]" {
+		t.Fatalf("children = %v", sectionChildren(d, 3))
+	}
+	title := placeholderLeaf(b.Root, "title")
+	a, c := leafWithPlain(b.Main, "夜間の返却"), leafWithPlain(b.Main, "案内の見直し")
+	if a == nil || c == nil {
+		t.Fatal("the section door does not list its items")
+	}
+	for _, it := range []*Spec{a, c} {
+		if it.FontSize != 20 || runColor(it) != white || it.Placeholder != "" {
+			t.Errorf("item %+v", it)
+		}
+	}
+	if !(title.Box.Y+title.Box.Height <= a.Box.Y+0.01 && a.Box.Y+a.Box.Height <= c.Box.Y+0.01) {
+		t.Errorf("items are not below the title in order: title %+v, %+v, %+v", title.Box, a.Box, c.Box)
+	}
+	if a.irPath != "/slides/4/title" || c.irPath != "/slides/6/title" {
+		t.Errorf("item paths %q %q", a.irPath, c.irPath)
+	}
+	if leafWithPlain(b.Root, "利用の今") != nil || leafWithPlain(b.Root, "次の打ち手") != nil {
+		t.Error("other sections are listed")
+	}
+	for _, i := range []int{1, 8} { // 章(level 1。直下に項目が無い)
+		b, err := tm.BuildSlide(d, i)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n := len(specTexts(b.Root)); n != 1 {
+			t.Errorf("slide %d: %d texts, want the title only: %v", i, n, specTexts(b.Root))
+		}
+	}
+}
+
+// report の項目(level 3)の扉は簡素:地の色のページに、短い基調色の罫線と 28pt の基調色の
+// 題だけ(親の節の題・兄弟の一覧・全面の基調色は置かない。#137)。
+func TestReportSectionDoor(t *testing.T) {
 	d := parseTocDeck(t)
 	tm, err := LookupTemplate("report")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, c := range []struct {
-		slide          int
-		current, other string
-	}{{4, "夜間の返却", "案内の見直し"}, {6, "案内の見直し", "夜間の返却"}} {
+		slide int
+		title string
+	}{{4, "夜間の返却"}, {6, "案内の見直し"}} {
 		b, err := tm.BuildSlide(d, c.slide)
 		if err != nil {
 			t.Fatal(err)
 		}
-		band := findSpec(b.Root, func(s *Spec) bool { return s.Background == tm.Theme["accent"] && len(s.Children) > 0 })
-		if band == nil || leafWithPlain(band, "返却の流れ") == nil {
-			t.Fatalf("slide %d: no band with the parent's title", c.slide)
+		computeLayout(b.Root, 0, 0, tm.Values.PageW, tm.Values.PageH)
+		if b.Root.Background != tm.Theme["bg"] {
+			t.Errorf("slide %d: page background %q, want bg", c.slide, b.Root.Background)
 		}
-		cur, other := leafWithPlain(b.Root, c.current), leafWithPlain(b.Root, c.other)
-		if cur == nil || other == nil || cur.FontSize != 24 || other.FontSize != 24 {
-			t.Fatalf("slide %d: siblings %+v %+v", c.slide, cur, other)
+		if got := specTexts(b.Root); fmt.Sprint(got) != "["+c.title+"]" {
+			t.Errorf("slide %d: texts %v, want the title only", c.slide, got)
 		}
-		if cur.Placeholder != "title" || runColor(other) != tm.Theme["text_muted"] || runColor(cur) == runColor(other) {
-			t.Errorf("slide %d: current %q / other %q colors", c.slide, runColor(cur), runColor(other))
+		title := placeholderLeaf(b.Root, "title")
+		if title == nil || title.FontSize != 28 || runColor(title) != tm.Theme["accent"] || !findSpecIn(b.Main, title) {
+			t.Fatalf("slide %d: title %+v", c.slide, title)
 		}
-		// 印は今の項目の行にだけある(基調色の丸に矢印)。
-		marks := 0
-		var mark *Spec
-		findSpec(b.Root, func(s *Spec) bool {
-			if s.HasRadius && s.Background == tm.Theme["accent"] && leafWithPlain(s, "→") != nil {
-				marks++
-				mark = s
-			}
-			return false
-		})
-		if marks != 1 {
-			t.Fatalf("slide %d: %d current marks", c.slide, marks)
+		if title.Box.X < tm.Values.PagePadding-0.01 {
+			t.Errorf("slide %d: title at x %.1f inside the page padding", c.slide, title.Box.X)
 		}
-		row := findSpec(b.Root, func(s *Spec) bool { return s.Kind == KindRow && len(s.Children) == 2 && s.Children[0] == mark })
-		if row == nil || row.Children[1] != cur {
-			t.Errorf("slide %d: the mark is not on the current item's row", c.slide)
-		}
-		if leafWithPlain(b.Root, "利用の今") != nil || leafWithPlain(b.Root, "次の打ち手") != nil {
-			t.Errorf("slide %d: items from other sections are listed", c.slide)
+		rule := findSpec(b.Main, func(s *Spec) bool { return s.Kind != KindText && s.Background == tm.Theme["accent"] })
+		if rule == nil || rule.Box.Y+rule.Box.Height > title.Box.Y+0.01 || rule.Box.Width >= title.Box.Width+200 {
+			t.Errorf("slide %d: no short accent rule above the title: %+v", c.slide, rule)
 		}
 	}
 }

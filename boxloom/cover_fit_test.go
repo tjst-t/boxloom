@@ -28,9 +28,13 @@ func fitDeck(t *testing.T, tm *Template, title, closing string) []*BuiltSlide {
 // accentBox は根の縦の中ほどの帯の左の基調色の箱。
 func accentBox(t *testing.T, tm *Template, root *Spec) *Spec {
 	t.Helper()
-	box := root.Children[1].Children[0]
+	box := root.Children[1].Children[1]
 	if box.Background != tm.Theme["accent"] {
-		t.Fatalf("the first box is not the accent box: %q", box.Background)
+		t.Fatalf("the box after the left margin is not the accent box: %q", box.Background)
+	}
+	// 箱は左の縁に付かず、本文と同じ外周(pagePadding)だけ離れる(#137)。
+	if d := box.Box.X - tm.Values.PagePadding; d > 0.01 || d < -0.01 {
+		t.Errorf("the accent box starts at x %.1f, want the page padding %.1f", box.Box.X, tm.Values.PagePadding)
 	}
 	return box
 }
