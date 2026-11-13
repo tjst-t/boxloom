@@ -2120,7 +2120,7 @@
       "number": 91,
       "kind": "task",
       "title": "循環の図(cycle):輪に並んだ段(番号・題・強調)。columns の中にも置ける",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -2134,7 +2134,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:31:17.139Z",
-      "updatedAt": "2026-11-13T02:51:57.932Z",
+      "updatedAt": "2026-11-13T03:38:28.427Z",
       "closedAt": null,
       "extra": {}
     },
