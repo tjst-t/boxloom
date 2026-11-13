@@ -305,11 +305,12 @@ groups: …
   段)だけ。`x+w` が 1 を超える・テーマに無い役割名・無い id へのコネクタは
   `boxloom check` が、図形やキーの行と code(`shape-bounds`・`role-exists`・
   `target-exists`)で返す。例は `examples/md/shapes.bx.md`(↔ `examples/ir/shapes.json`)。
-- **```process**・**```orgchart**・**```matrix**・**```funnel**(箱と線の図。
+- **```process**・**```orgchart**・**```matrix**・**```funnel**・**```phases**(箱と線の図。
   `docs/subsystem.md` の11節)も同じ作り。中身は IR の `data` と同じキーで、書けるのは
   文と状態(`status`)と強調(`emphasis`)と、状態の意味の凡例(`legend`)だけ(座標・色・
   字の大きさは書けない)。matrix の推す列は `emphasis: <列の見出しの文>`。funnel の
-  `value` は引用しない数なら数、それ以外は文字列。
+  `value` は引用しない数なら数、それ以外は文字列。phases の箱の `detail` は1行なら文、
+  YAML の列なら文の列(各行が箇条。process と違って改行でつながない)。
 
   ````
   ```process
@@ -874,7 +875,7 @@ go run ./cmd/boxloom build ../examples/md/demo-deck.bx.md            # .md も�
   前の表と列の数や groups・points が違う・前のスライドに続ける表が無い)・`image-path`(画像の path が URL・
   絶対パス・文書のフォルダの外)・`image-alt`(画像の代わりの文が無い)・
   `schema`(できた IR が通らない。ふつうは起きない)。
-- shapes と図(process・orgchart・matrix・funnel)と chart のコードブロックは、YAML の形の検査
+- shapes と図(process・orgchart・matrix・funnel・phases)と chart のコードブロックは、YAML の形の検査
   だけをする(サブシステム自身には読ませない。意味の誤りは `boxloom check` が行つきで返す)。
 - Gantt のコードブロックは、YAML の検査が通ったあと Gantt サブシステム自身にも
   読ませる。Schema では書けない誤り(`target` の行き先が無い・id の重複・範囲の

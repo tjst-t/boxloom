@@ -1621,6 +1621,7 @@ var mdSubsystems = map[string]func(p *mdParser, n *yNode, path string) any{
 	"orgchart": orgChartDataFromYAML,
 	"matrix":   matrixDataFromYAML,
 	"funnel":   funnelDataFromYAML,
+	"phases":   phasesDataFromYAML,
 	"chart":    chartDataFromYAML,
 }
 

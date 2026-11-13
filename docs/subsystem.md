@@ -468,12 +468,12 @@ Gantt の出力は変わらない。report は `monthGrid`・`chevron`・`fillHe
 確かめ方:`gantt_month_grid_test.go`(架空の8か月:月の列の数と幅・年の境目・山形の帯・
 report で本文の高さを使い切ること・注記の行の高さ・dark/light が従来どおり・長い span)。
 
-## 11. 図のサブシステム(process・orgchart・matrix・funnel)
+## 11. 図のサブシステム(process・orgchart・matrix・funnel・phases)
 
-`docs/patterns.md` の語彙の第3層のうち、**箱と線で描く4つの図**(Backlog #24〜#27)。
+`docs/patterns.md` の語彙の第3層のうち、**箱と線で描く図**(Backlog #24〜#27、phases は #90)。
 shapes で手で置いていた形(箱を矢印で並べる・親と子の箱・格子に評価・減っていく帯)を、
 意味だけのデータから描く。実装は `boxloom/process.go`・`orgchart.go`・`matrix.go`・
-`funnel.go`(共通の部分は `figures.go`、Markdown は `md_figures.go`)、Schema は
+`funnel.go`・`phases.go`(共通の部分は `figures.go`、Markdown は `md_figures.go`)、Schema は
 `schema/subsystems/<名前>.schema.json`、寸法は `boxloom/subsystems/<名前>.json`。例は
 `examples/md/figures.bx.md`(↔ `examples/ir/figures.json`)と、
 `examples/md/subsystems-showcase.bx.md` の4〜7枚目。
@@ -643,8 +643,52 @@ legend: {conditional: 人手で詰まる段}          # status を使ったら�
 - 数の値が前の段より増えたら警告 `funnel-increase`(funnel は減っていく段階に使う。
   減らない手順は `process`)。
 
+### phases(段ごとに箱を積む事業の全体像)
+
+```yaml
+steps:                                         # 2〜5段。左から右へ
+  - id: s1                                     # groups が指す名前(任意)
+    title: Step1 現状を知る
+    period: 4月〜6月                           # 任意。山形の中、題の下
+    items:                                     # 段の下に縦に積む箱(1つ以上)
+      - title: 乗降の調べ
+        detail: [全 42 路線を数える, 時間帯ごとに分ける]   # 文の列は箇条
+      - {title: 他の町の事例, detail: 3 つの町を訪ねる, status: conditional}
+  - …
+groups:                                        # 任意。段をまたぐ帯(左から順に、重ねない)
+  - {title: ① 調べと案づくり, from: s1, to: s2}
+legend: {conditional: 追加の検討}               # status を使ったら書く
+```
+
+- **段の見出しは山形**:左端の段は五角形の矢印(`homePlate`)、2つ目からは山形
+  (`chevron`)。塗りは `accent`、文字は `on_conditional`(題は `body` の太字、期間は
+  `figureDetail`)。山形の先は次の段の列に食い込み、次の山形の切り欠きに `chevronGap`
+  あけて収まる(先の深さ `chevronDepth` は preset の `adj` に書く。文字の枠は preset の
+  il〜ir で、測りも同じ幅 `chevronTextWidth`)。
+- **群の帯**:山形の上に、`from` の段の列の左端から `to` の段の列の右端まで。塗らない
+  `accent` の枠と、`accent` の太字(`subPoint`)。id の無い段・前後の逆・重なる帯は
+  読み込みの誤り。
+- **箱**:段の列の幅いっぱいの角丸の箱に、通しの番号と題(太字、番号は `accent`)・
+  補足(`figureDetail`)を1つの図形の段落で書く。補足が文の列なら段落の箇条の印
+  (`a:buChar`。印はテンプレートの `marks.point`)。番号は段をまたいで通しで、形は
+  値の表の `numberStyle`(`arabic` → 1. 2.、`roman` → I. II.。report は roman)。
+  状態・強調の色は共通の決まりのとおり。
+- **detail の読み分け**:IR では1つの文(inline)か、文の列(各項目が inline)。列の項目に
+  文中の要素(`em` などの object)が直に並ぶなら1つの文、文字列と列だけなら文の列と読む。
+  Markdown では YAML の1行が文、YAML の列が文の列(process の detail と違って改行で
+  つながない)。
+- **高さ**:箱の最小は「列の幅で文を折り返して収まる高さ」、自然・上限は
+  `naturalItemHeight`・`maxItemHeight` まで。段ごとに箱の列の和を取り、一番高い段を
+  Min・Natural・Max として申告する。割り当てられた高さは段ごとに箱へ配り、上限を
+  越えた分も箱に等しく足すので、どの段も箱の列の下の端がそろう。本文に収まらなければ
+  `layout-overflow`、箱の文が収まらなければ `figure-text-overflow`(path は
+  `…/data/steps/N/items/K`)。
+
 ### 確かめ方
 
+- `phases_test.go`:例(`examples/md/phases.bx.md` ↔ `examples/ir/phases.json`。3段・群2つ・
+  箱7つ)を report・light・dark で組んで警告が無い・山形と番号の形/山形の食い込み・帯の
+  幅・箱の下の端がそろう・重ならない/Min が文の量で増える/はみ出しの警告/読み込みの誤り。
 - `go test ./...`(`figures_test.go`):例を dark・light で組んで警告が無い・コネクタの
   数と接続・凡例の文・見出しの揃え/組織図が全幅と 60% の列で枠に収まり重ならない/
   process が 500pt の幅で 4+3 に折り返し、曲がるコネクタが補足の下で曲がる/
@@ -671,6 +715,8 @@ legend: {conditional: 人手で詰まる段}          # status を使ったら�
   描くアプリが決めるので、測り(幅の余裕 `widthMargin` 込み)とずれることがある。
 - matrix の状態は色の丸だけで見分ける(形や印での区別は無い)。推す列は1つだけ(行の強調は無い)。
 - funnel の転換率は前の段に対する割合だけ(最初の段に対する累計の割合は出さない)。
+- phases は横に並べる形だけ。6段以上は読み込みの誤り(折り返さない)。箱が多すぎるときに
+  段の列を分けない(はみ出しの警告だけ)。山形の高さは全部の段で同じ(一番長い題に合わせる)。
 - 図の寸法の数(箱の高さの最小・自然・上限など)は目安で決めた値。
 
 ## 12. 数値のグラフ(chart)

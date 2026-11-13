@@ -323,6 +323,7 @@ type templateSubsystems struct {
 	OrgChart *OrgChartValues `json:"orgchart,omitempty"`
 	Matrix   *MatrixValues   `json:"matrix,omitempty"`
 	Funnel   *FunnelValues   `json:"funnel,omitempty"`
+	Phases   *PhasesValues   `json:"phases,omitempty"`
 	// 数値のグラフ(chart.go)
 	Chart *ChartValues `json:"chart,omitempty"`
 }

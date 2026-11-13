@@ -18,6 +18,7 @@
             "orgchart",
             "matrix",
             "funnel",
+            "phases",
             "chart"
           ]
         }
@@ -114,6 +115,21 @@
           },
           "then": {
             "$ref": "subsystems/funnel.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subsystem": {
+                "const": "phases"
+              }
+            },
+            "required": [
+              "subsystem"
+            ]
+          },
+          "then": {
+            "$ref": "subsystems/phases.schema.json"
           }
         },
         {

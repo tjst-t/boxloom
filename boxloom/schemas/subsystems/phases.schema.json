@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/phases.schema.json",
+  "title": "Boxloom IR: phases subsystem (0.1)",
+  "description": "段(フェーズ)ごとに箱を積む事業の全体像(docs/patterns.md の R7a)。段は山形で左から右へ並び、各段の下に番号つきの箱(題と補足)を縦に積む。番号は段をまたいで通しでサブシステムが振り、形(算用数字・ローマ数字)はテンプレートが決める。段をまたぐ群の帯は山形の上に出る。置き場所・大きさ・色・字の大きさは書けない。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "subsystem"
+    },
+    "subsystem": {
+      "const": "phases"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "data": {
+      "$ref": "#/$defs/phases"
+    }
+  },
+  "required": [
+    "type",
+    "subsystem",
+    "data"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "inline": {
+      "$ref": "../core.schema.json#/$defs/inline"
+    },
+    "id": {
+      "$ref": "../core.schema.json#/$defs/id"
+    },
+    "status": {
+      "description": "状態の意味の名前。色はテンプレートが決める(16進の色・役割名は書けない)。",
+      "enum": [
+        "support",
+        "conditional",
+        "none",
+        "danger"
+      ]
+    },
+    "item": {
+      "description": "段の中の箱。題の前の番号はサブシステムが付ける。",
+      "type": "object",
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "detail": {
+          "description": "補足。1つの文(inline)か、文の列(各項目が箇条の1つ)。列の項目に文中の要素(em など)が直に並ぶ列は1つの文として読む。",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/inline"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/inline"
+              }
+            }
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "emphasis": {
+          "description": "目立たせる(塗りがアクセントの色になる)。既定 false。",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "step": {
+      "description": "段。title と period は山形の中、items は山形の下に縦に積む。",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "群の帯(groups)の from・to が指す名前。",
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "period": {
+          "description": "期間(山形の中、題の下)。",
+          "$ref": "#/$defs/inline"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/item"
+          }
+        }
+      },
+      "required": [
+        "title",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "group": {
+      "description": "段 from〜to をまたぐ群の帯(山形の上)。",
+      "type": "object",
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "from": {
+          "$ref": "#/$defs/id"
+        },
+        "to": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "title",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false
+    },
+    "phases": {
+      "type": "object",
+      "properties": {
+        "steps": {
+          "description": "段。書いた順に左から右へ並ぶ。",
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "groups": {
+          "description": "段をまたぐ群の帯。左から順に、重ねずに書く(from・to は段の id)。",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/group"
+          }
+        },
+        "legend": {
+          "description": "凡例の文(状態の名前 → 文)。箱の枠線の色の意味を作者の言葉で書く。status を使ったのに文が無い状態は boxloom check が figure-legend で警告する。",
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "support",
+              "conditional",
+              "none",
+              "danger"
+            ]
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/inline"
+          }
+        }
+      },
+      "required": [
+        "steps"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

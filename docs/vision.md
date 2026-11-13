@@ -106,7 +106,7 @@ AI が作る PowerPoint の質の悪さは、原因の違う3つに分けられ�
 - 2層目:サブシステムの差し込み口(大きさの自己申告、役割名、テンプレートによる
   差し替え、Schema の名乗り)がある。
 - 3層目:Gantt と、生の図形への逃げ道 `shapes`(キャンバスの中だけ、座標は 0〜1、
-  色は役割名、重なりは警告)。箱と線の図 `process`・`orgchart`・`matrix`・`funnel`
+  色は役割名、重なりは警告)。箱と線の図 `process`・`orgchart`・`matrix`・`funnel`・`phases`
   (意味だけを書き、置き場所と色はサブシステムが決める。`docs/subsystem.md` の11節)。
   数値のグラフ `chart`(PowerPoint の本物のグラフ。比べ方を書けば形はサブシステムが
   選ぶ。`docs/subsystem.md` の12節)。

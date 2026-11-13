@@ -33,6 +33,7 @@ type FigureText struct {
 	Sub    float64 // 2段目の文字・セルの文字(values.subPoint)
 	Detail float64 // 箱の補足・段階の下の補足・図の説明(values.figureDetail)
 	Small  float64 // 凡例(values.small)
+	Point  string  // 箇条の印(marks.point。phases の箱の箇条)
 }
 
 func figureTextFrom(v TemplateValues) FigureText {
@@ -40,7 +41,12 @@ func figureTextFrom(v TemplateValues) FigureText {
 }
 
 // defaultFigureText は既定のテンプレート(light)の段。
-func defaultFigureText() FigureText { return figureTextFrom(mustTemplate("light").Values) }
+func defaultFigureText() FigureText {
+	t := mustTemplate("light")
+	ft := figureTextFrom(t.Values)
+	ft.Point = t.Marks.Point
+	return ft
+}
 
 // FigureNode は図の1つの箱(process の段階・組織図の人や組織・funnel の段)。
 type FigureNode struct {
@@ -310,6 +316,8 @@ func derefValue(v any) any {
 		return *x
 	case *ChartValues:
 		return *x
+	case *PhasesValues:
+		return *x
 	}
 	return v
 }
@@ -321,6 +329,7 @@ var (
 	matrixDefaults     MatrixValues
 	funnelDefaults     FunnelValues
 	chartDefaults      ChartValues
+	phasesDefaults     PhasesValues
 )
 
 func loadFigureDefaults() {
@@ -330,6 +339,10 @@ func loadFigureDefaults() {
 		loadFigureValues("matrix", &matrixDefaults)
 		loadFigureValues("funnel", &funnelDefaults)
 		loadFigureValues("chart", &chartDefaults)
+		loadFigureValues("phases", &phasesDefaults)
+		if err := phasesDefaults.check("subsystems/phases.json"); err != nil {
+			panic(err)
+		}
 	})
 }
 
@@ -357,6 +370,12 @@ func defaultFunnelValues() *FunnelValues {
 	return &v
 }
 
+func defaultPhasesValues() *PhasesValues {
+	loadFigureDefaults()
+	v := phasesDefaults
+	return &v
+}
+
 func defaultChartValues() *ChartValues {
 	loadFigureDefaults()
 	v := chartDefaults
@@ -375,24 +394,33 @@ func registerFigures(r *SubsystemRegistry) {
 	must(r.Declare("matrix", matrixDecl()))
 	must(r.Register("funnel", NewFunnelSubsystem))
 	must(r.Declare("funnel", funnelDecl()))
+	must(r.Register("phases", NewPhasesSubsystem))
+	must(r.Declare("phases", phasesDecl()))
 	must(r.Register("chart", NewChartSubsystem))
 	must(r.Declare("chart", chartDecl()))
 }
 
 // figureKinds は図のサブシステム(と chart)の名前。
-var figureKinds = []string{"process", "orgchart", "matrix", "funnel", "chart"}
+var figureKinds = []string{"process", "orgchart", "matrix", "funnel", "phases", "chart"}
 
 // templateFigures はテンプレートの values と subsystems の差し替えを、図の
 // サブシステムの Factory に入れる(parseTemplateFile から呼ぶ)。
 func templateFigures(t *Template, f *templateFile) error {
 	text := figureTextFrom(f.Values)
+	text.Point = f.Marks.Point
 	var pv *ProcessValues
 	var ov *OrgChartValues
 	var mv *MatrixValues
 	var fv *FunnelValues
 	var cv *ChartValues
+	var phv *PhasesValues
 	if s := f.Subsystems; s != nil {
-		pv, ov, mv, fv, cv = s.Process, s.OrgChart, s.Matrix, s.Funnel, s.Chart
+		pv, ov, mv, fv, cv, phv = s.Process, s.OrgChart, s.Matrix, s.Funnel, s.Chart, s.Phases
+	}
+	if phv != nil {
+		if err := phv.check("subsystems.phases"); err != nil {
+			return err
+		}
 	}
 	check := func(name string, override any, def any) error {
 		if override == nil || isNilPtr(override) {
@@ -413,6 +441,7 @@ func templateFigures(t *Template, f *templateFile) error {
 		{"matrix", mv, defaultMatrixValues()},
 		{"funnel", fv, defaultFunnelValues()},
 		{"chart", cv, defaultChartValues()},
+		{"phases", phv, defaultPhasesValues()},
 	} {
 		if err := check(c.name, c.override, c.def); err != nil {
 			return err
@@ -450,6 +479,14 @@ func templateFigures(t *Template, f *templateFile) error {
 		s.(*FunnelSubsystem).V, s.(*FunnelSubsystem).Text = fv, &text
 		return s, nil
 	}))
+	must(t.Subsystems.Override("phases", func(data any) (Subsystem, error) {
+		s, err := NewPhasesSubsystem(data)
+		if err != nil {
+			return nil, err
+		}
+		s.(*PhasesSubsystem).V, s.(*PhasesSubsystem).Text = phv, &text
+		return s, nil
+	}))
 	must(t.Subsystems.Override("chart", func(data any) (Subsystem, error) {
 		s, err := NewChartSubsystem(data)
 		if err != nil {
@@ -472,6 +509,8 @@ func isNilPtr(v any) bool {
 	case *FunnelValues:
 		return x == nil
 	case *ChartValues:
+		return x == nil
+	case *PhasesValues:
 		return x == nil
 	}
 	return false

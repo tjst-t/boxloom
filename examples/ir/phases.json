@@ -1,0 +1,104 @@
+{
+  "boxloom": "0.1",
+  "template": "light",
+  "meta": {
+    "title": "フェーズの図の例",
+    "subtitle": "段ごとに箱を積む事業の全体像",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "路線バスの再編の進め方",
+      "body": [
+        {
+          "type": "subsystem",
+          "subsystem": "phases",
+          "data": {
+            "steps": [
+              {
+                "id": "s1",
+                "title": "Step1 現状を知る",
+                "period": "4月〜6月",
+                "items": [
+                  {
+                    "title": "乗降の調べ",
+                    "detail": [
+                      "全 42 路線の乗降を1週間数える",
+                      "曜日と時間帯ごとに分ける"
+                    ]
+                  },
+                  {
+                    "title": "住民への聞き取り",
+                    "detail": "沿線の 6 地区で 1 回ずつ"
+                  },
+                  {
+                    "title": "他の町の事例",
+                    "detail": "再編した 3 つの町を訪ねる",
+                    "status": "conditional"
+                  }
+                ]
+              },
+              {
+                "id": "s2",
+                "title": "Step2 案を作る",
+                "period": "7月〜9月",
+                "items": [
+                  {
+                    "title": "路線の案",
+                    "detail": [
+                      "幹線と支線に分ける",
+                      "乗り継ぎの拠点を 2 つ置く"
+                    ]
+                  },
+                  {
+                    "title": "費用の見積もり",
+                    "detail": "3 年分の運行費を案ごとに",
+                    "status": "conditional"
+                  }
+                ]
+              },
+              {
+                "id": "s3",
+                "title": "Step3 まとめる",
+                "period": "10月〜12月",
+                "items": [
+                  {
+                    "title": "報告書",
+                    "detail": [
+                      "案の比べと推す案",
+                      "住民への説明の資料"
+                    ],
+                    "emphasis": true
+                  },
+                  {
+                    "title": "説明会",
+                    "detail": "沿線の 6 地区で開く"
+                  }
+                ]
+              }
+            ],
+            "groups": [
+              {
+                "title": "① 調べと案づくり",
+                "from": "s1",
+                "to": "s2"
+              },
+              {
+                "title": "② 報告書",
+                "from": "s3",
+                "to": "s3"
+              }
+            ],
+            "legend": {
+              "conditional": "追加の検討"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

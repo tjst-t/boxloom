@@ -496,28 +496,30 @@ dark / light / report は `{n}/{m}`)。目次のスライド(`meta.toc`)の題(`
 ### subsystems.shapes(任意)
 
 `subsystems.gantt` と同じく、書くとこのテンプレートの shapes だけがその寸法になる。
-形は下の「subsystems/shapes.json の形」で、全部のキーが要る。dark / light は書いていない。
+形は下の「subsystems/shapes.json の形」で、全部のキーが要る。dark / light は書いていない(report は phases だけ書き、番号をローマ数字にする)。
 
 shapes の文字の大きさは、作者が `textStyle` に書く段の名前で values から引く:
 `small`・`subPoint`・`optionItem`・`body`・`optionLabel`(`docs/subsystem.md` の8節)。
 テーマに無い役割名を shapes が使うと、このテンプレートの組み立てが断る。
 
-### subsystems.process・orgchart・matrix・funnel(任意)
+### subsystems.process・orgchart・matrix・funnel・phases(任意)
 
 同じく、書くとこのテンプレートのその図だけがその寸法になる。全部のキーが要り、`padding`・
 間隔・文字の余白(Go の json タグに `scale:"space"` の付いたもの)は段階の刻みに載って
 いなければ誤り。差し替えないときは既定のファイルの値を、そのテンプレートの段階で見る。
 dark / light は書いていない。図の字の大きさはファイルに持たず、values の `body`(題)・
 `subPoint`(2段目・セル・注記)・`small`(補足・説明・凡例)から引く。キーの意味は
-各ファイルと Go の型(`ProcessValues`・`OrgChartValues`・`MatrixValues`・`FunnelValues`)の
+各ファイルと Go の型(`ProcessValues`・`OrgChartValues`・`MatrixValues`・`FunnelValues`・`PhasesValues`)の
 注釈に書いた。最小・自然・上限の3つ組(`minBoxHeight`・`naturalBoxHeight`・
 `maxBoxHeight` など)は Measure の Min・Natural・Max になる。
 
-process・orgchart・funnel の状態の凡例(`docs/subsystem.md` の11節)の寸法も各ファイルに
+process・orgchart・funnel・phases の状態の凡例(`docs/subsystem.md` の11節)の寸法も各ファイルに
 ある:`legendGap`(図と凡例の間)・`legendItemGap`(項目の間)・`legendSwatchWidth`・
 `legendSwatchHeight`(見本の箱)・`legendSwatchGap`(見本と文の間)。funnel の `rateGap` は
 帯の列と転換率の列の間。matrix の `emphasisLineWidth` は推す列の枠線の太さで、
 `naturalRowHeight` 36・`maxRowHeight` 44 は1行の文のセルが間延びしない高さ。
+phases の `numberStyle` は数でなく箱の番号の形で、`arabic`(1. 2.)か `roman`(I. II.)。
+ほかの形は誤り。`chevronDepth` は山形の先の深さ、`chevronGap` は山形と山形の間。
 
 ### subsystems.chart(任意)
 

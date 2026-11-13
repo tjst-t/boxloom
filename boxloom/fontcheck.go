@@ -150,7 +150,7 @@ func measurePages(pages []*PPTXBuilder, alt *FontSet) fontStats {
 				lines = p.textLines(s)
 			case s.kind == skShape && len(s.runs) > 0:
 				// 図形の中の文字(shapes のキャンバス):文字の枠の幅で折り返している。
-				tr := shapeTextRect(s.prst, s.box)
+				tr := shapeTextRect(s.prst, s.box, s.depth)
 				box = LBox{X: tr.X + s.insetX, Y: tr.Y, Width: tr.Width - 2*s.insetX, Height: tr.Height}
 				restore := useFonts(p.Fonts)
 				lines = wrapRuns(s.runs, s.fontSize, box.Width)

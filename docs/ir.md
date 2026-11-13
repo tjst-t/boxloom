@@ -16,7 +16,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `schema/core.schema.json` | コア:文書・スライド・ブロック・インライン・サブシステムの差し込み口 |
 | `schema/subsystems/gantt.schema.json` | Gantt サブシステムのブロック |
 | `schema/subsystems/shapes.schema.json` | shapes サブシステム(生の図形への逃げ道。`docs/subsystem.md` の8節)のブロック |
-| `schema/subsystems/process.schema.json`・`orgchart`・`matrix`・`funnel` | 箱と線の図のサブシステム(`docs/subsystem.md` の11節)のブロック |
+| `schema/subsystems/process.schema.json`・`orgchart`・`matrix`・`funnel`・`phases` | 箱と線の図のサブシステム(`docs/subsystem.md` の11節)のブロック |
 | `schema/subsystems/chart.schema.json` | 数値のグラフ(`docs/subsystem.md` の12節)のブロック。比べ方 `compare`・項目・系列・単位・強調だけを持つ |
 | `schema/boxloom-ir.schema.json` | 検査の入口。コアに同梱のサブシステムを差し込んだもの |
 | `examples/ir/demo-deck.json` | お題3枚を IR で書いた例 |
@@ -25,6 +25,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `examples/ir/shapes.json` | shapes で描いた架空のシステム構成図の例 |
 | `examples/ir/text-patterns.json` | 文字のパターン(区切り・主張・結論・統計強調・引用)の例(`examples/md/text-patterns.bx.md` の IR) |
 | `examples/ir/figures.json` | process・orgchart・matrix・funnel の例(`examples/md/figures.bx.md` と同じ IR) |
+| `examples/ir/phases.json` | phases の例。3段・群2つ・箱7つ(`examples/md/phases.bx.md` と同じ IR) |
 | `examples/ir/blocks.json` | 並列のまとまり・表・画像・画像の並びの例(画像は `examples/ir/images/`。`tools/gen_example_images.go` で作った架空の図) |
 | `examples/ir/charts.json` | chart の例。比べ方の5分類ごと(`examples/md/charts.bx.md` と同じ IR) |
 | `examples/yaml/charts.yaml` | `examples/ir/charts.json` を YAML の deck(IR の写し。`docs/content-syntax.md` の1章)で書いたもの。同じ IR・同じ PPTX になる |
@@ -71,7 +72,7 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc? }   
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 箇条     { type: "points", ordered?: true, items: [インライン | { content, items?, ordered? }] }  (ordered は番号つき。入れ子の項目の ordered はその items に効く)
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
-サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel" | "chart", variant?, data: {…} }
+サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel" | "phases" | "chart", variant?, data: {…} }
 ```
 
 `notes` は発表者ノート。文字だけの文字列で、改行(`\n`)が段落の区切り。PPTX では
@@ -508,9 +509,9 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `shapes-overlap` | shapes の図形どうしが重なった。path は後から置いた図形(`…/data/items/N`) |
 | `shapes-text-overflow` | shapes の図形の文が、割り当てられた大きさに収まらない。path はその図形 |
 | `shapes-connector-angle` | shapes のコネクタが、どの辺の組でも辺と 30°未満の浅い角度でしか繋げない(角で終わったように見える)。path はそのコネクタ |
-| `figure-text-overflow` | process・orgchart・matrix・funnel の箱・セル・注記の文が収まらない(折り返せない語が箱より広い・高さが足りない)。path はその要素(`…/data/steps/2` など) |
+| `figure-text-overflow` | process・orgchart・matrix・funnel・phases の箱・セル・注記の文が収まらない(折り返せない語が箱より広い・高さが足りない)。path はその要素(`…/data/steps/2` など) |
 | `funnel-increase` | funnel の数の値が前の段より増えた。path はその段の `value` |
-| `figure-legend` | process・orgchart・funnel で `status` を使ったのに、その状態の文が `legend` に無い(読み手は枠線の色の意味が分からない)。path は `…/data/legend` |
+| `figure-legend` | process・orgchart・funnel・phases で `status` を使ったのに、その状態の文が `legend` に無い(読み手は枠線の色の意味が分からない)。path は `…/data/legend` |
 | `chart-labels` | chart の項目の名前が、アプリが置く場所(縦の形は1項目の幅、横棒は枠の幅の30%)に2行で収まらない(アプリが斜めにする・間引く)。path は最初の項目(`…/data/categories/N`)、文に残りの数 |
 | `theme-role` | テーマに値の無い役割名をサブシステムが使った |
 

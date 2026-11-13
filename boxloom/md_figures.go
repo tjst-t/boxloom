@@ -1,4 +1,4 @@
-// ```process・```orgchart・```matrix・```funnel のコードブロックの中身(YAML の
+// ```process・```orgchart・```matrix・```funnel・```phases のコードブロックの中身(YAML の
 // 部分集合)を、IR の data(schema/subsystems/<名前>.schema.json)にする。
 //
 // キーは IR と同じ。文の値は本文と同じ文中の記法で読み、YAML の列で書くと各行を
@@ -109,4 +109,31 @@ func gStatusLegend(p *mdParser, n *yNode, path string) any {
 		}
 	}
 	return out
+}
+
+// phasesDataFromYAML は ```phases の中身。箱の detail は文か文の列(列は箇条)。
+func phasesDataFromYAML(p *mdParser, n *yNode, path string) any {
+	status := gEnum(figureStatuses)
+	item := []gField{
+		{"title", gInline, true}, {"detail", gPhaseDetail, false},
+		{"status", status, false}, {"emphasis", gBool, false},
+	}
+	step := []gField{
+		{"id", gID, false}, {"title", gInline, true}, {"period", gInline, false},
+		{"items", gSeq(gObject(item), 1), true},
+	}
+	group := []gField{{"title", gInline, true}, {"from", gID, true}, {"to", gID, true}}
+	return gObject([]gField{
+		{"steps", gSeq(gObject(step), 2), true},
+		{"groups", gSeq(gObject(group), 1), false},
+		{"legend", gStatusLegend, false},
+	})(p, n, path)
+}
+
+// gPhaseDetail は1つの文か、文の列(各項目が箇条の1つ。gInline と違って改行でつながない)。
+func gPhaseDetail(p *mdParser, n *yNode, path string) any {
+	if n.kind == 'q' {
+		return gSeq(gInline, 1)(p, n, path)
+	}
+	return gInline(p, n, path)
 }

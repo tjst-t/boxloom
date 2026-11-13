@@ -241,7 +241,7 @@ func (s *ShapesSubsystem) textNeed(it *ShapeItem, b LBox) (needW, needH, haveW, 
 	if it.Kind == "text" {
 		haveW, haveH = b.Width, b.Height
 	} else {
-		tr := shapeTextRect(it.Kind, b)
+		tr := shapeTextRect(it.Kind, b, 0)
 		haveW, haveH = tr.Width-2*v.TextInsetX, tr.Height-2*v.TextInsetY
 	}
 	lines := wrapRuns(runs, size, math.Max(haveW, 0))

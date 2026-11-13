@@ -63,7 +63,8 @@ type shape struct {
 	dash           string // "" | "dash"
 
 	// skShape
-	prst      string  // rect | roundRect | ellipse
+	prst      string  // rect | roundRect | ellipse | chevron | homePlate
+	depth     float64 // chevron・homePlate の先の深さ(0 なら既定)
 	fillAlpha float64 // 0 か 1 なら不透明。0〜1 の間なら塗りをその不透明度で書く(a:alpha)
 	insetX    float64 // 文字の枠の内側の余白
 	insetY    float64
@@ -264,6 +265,7 @@ type ShapeOpts struct {
 	OutlineDash    string // "" | "dash"
 	OutlineWidthPt float64
 	Radius         float64 // roundRect の角
+	Depth          float64 // chevron・homePlate の先の深さ(0 なら既定の形)
 	Runs           []TextRun
 	FontSize       float64
 	InsetX, InsetY float64 // 文字の枠(楕円なら内接する矩形)の内側の余白
@@ -290,7 +292,7 @@ func (p *PPTXBuilder) AddShape(box LBox, o ShapeOpts) int {
 		text += "\n" + runsText(r)
 	}
 	p.Shapes = append(p.Shapes, shape{
-		id: id, kind: skShape, box: box, prst: o.Prst, fill: o.Fill, fillAlpha: o.FillAlpha, radius: o.Radius,
+		id: id, kind: skShape, box: box, prst: o.Prst, fill: o.Fill, fillAlpha: o.FillAlpha, radius: o.Radius, depth: o.Depth,
 		hasOutline: o.Outline != "", outlineColor: o.Outline, outlineDash: o.OutlineDash, outlineWidthPt: o.OutlineWidthPt,
 		runs: o.Runs, text: text, fontSize: o.FontSize, insetX: o.InsetX, insetY: o.InsetY,
 		align: align, anchor: anchor, paras: o.Paras, paraSizes: o.ParaSizes,
@@ -822,8 +824,19 @@ func footerPhStyle(sz float64, algn string) string {
 }
 
 // shapeTextRect は図形の文字の枠(prstGeom の文字の矩形)。楕円は内接する矩形。
-func shapeTextRect(prst string, box LBox) LBox {
-	if prst != "ellipse" {
+func shapeTextRect(prst string, box LBox, depth float64) LBox {
+	switch prst {
+	case "chevron", "homePlate":
+		if depth <= 0 {
+			depth = math.Min(box.Width, box.Height) / 2
+		}
+		l := 0.0
+		if prst == "chevron" {
+			l = depth
+		}
+		return LBox{X: box.X + l, Y: box.Y, Width: chevronTextWidth(prst, box.Width, depth), Height: box.Height}
+	case "ellipse":
+	default:
 		return box
 	}
 	const k = 0.70710678 // cos 45°
@@ -848,6 +861,12 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 		}
 		adj = fmt.Sprintf(`<a:avLst><a:gd name="adj" fmla="val %d"/></a:avLst>`, int(ratio*100000))
 	}
+	if (s.prst == "chevron" || s.prst == "homePlate") && s.depth > 0 {
+		// 先の深さは短い辺に対する割合(OOXML の preset の adj)。
+		if ss := math.Min(s.box.Width, s.box.Height); ss > 0 {
+			adj = fmt.Sprintf(`<a:avLst><a:gd name="adj" fmla="val %d"/></a:avLst>`, int(s.depth/ss*100000))
+		}
+	}
 	fillXML := "<a:noFill/>"
 	if s.fill != "" {
 		fillXML = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, hexColor(s.fill))
@@ -869,7 +888,7 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 	if len(s.list) > 0 {
 		paras = p.listXML(s)
 	} else if len(s.runs) > 0 {
-		tr := shapeTextRect(s.prst, s.box)
+		tr := shapeTextRect(s.prst, s.box, s.depth)
 		restore := func() {}
 		if p.Fonts != nil {
 			restore = useFonts(p.Fonts)

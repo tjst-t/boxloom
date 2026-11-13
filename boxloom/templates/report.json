@@ -202,6 +202,35 @@
       "gridYearFormat": "YYYY年",
       "gridMonthFormat": "M月",
       "chevronFillOpacity": 0.3
+    },
+    "phases": {
+      "padding": 16,
+      "columnGap": 12,
+      "bandGap": 8,
+      "bandInsetX": 8,
+      "bandInsetY": 4,
+      "bandOutlineWidth": 1,
+      "chevronDepth": 14,
+      "chevronGap": 4,
+      "headerInsetX": 8,
+      "headerInsetY": 4,
+      "minHeaderHeight": 36,
+      "headerGap": 12,
+      "itemGap": 8,
+      "naturalItemHeight": 64,
+      "maxItemHeight": 140,
+      "textInsetX": 8,
+      "textInsetY": 8,
+      "outlineWidth": 1.25,
+      "cornerRadius": 2,
+      "naturalWidth": 760,
+      "minWidth": 320,
+      "legendGap": 12,
+      "legendItemGap": 20,
+      "legendSwatchWidth": 16,
+      "legendSwatchHeight": 10,
+      "legendSwatchGap": 8,
+      "numberStyle": "roman"
     }
   }
 }
