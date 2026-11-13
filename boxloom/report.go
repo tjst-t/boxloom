@@ -137,8 +137,12 @@ func registerReportParts(t *Template) error {
 }
 
 // reportSection は report の区切り(#137):level 1・2 は frame(下に level 3 の項目が
-// あれば、その題の一覧を題の下に並べる)、level 3 は題だけの簡素な扉(door)。
+// あれば、その題の一覧を題の下に並べる)、level 3 は題だけの簡素な扉(door)。agenda の
+// level 2・3 は親の題の frame に同じ親の下の区切りの一覧を並べ、今の区切りを強調する(#142)。
 func reportSection(ctx skeletonContext) (*Spec, error) {
+	if sectionAgenda(ctx.deck, ctx.index) {
+		return reportAgenda(ctx), nil
+	}
 	if sectionLevel(ctx.slide) >= 3 {
 		return reportDoor(ctx), nil
 	}
@@ -151,12 +155,39 @@ func reportSection(ctx skeletonContext) (*Spec, error) {
 // (#137。数は組み立てで数える。IR には書かない)。
 func reportFrame(ctx skeletonContext) *Spec {
 	t, d := ctx.t, ctx.deck
-	head := []*Spec{t.text(ctx.slide.Title, typeStep(54), "bg", true, WithPlaceholder("title"), fromIR("title"))}
-	if kids := sectionChildren(d, ctx.index); len(kids) > 0 {
-		var items []*Spec
-		for _, j := range kids {
-			items = append(items, t.text(d.Slides[j].Title, typeStep(20), "bg", false, fromIR(fmt.Sprintf("/slides/%d/title", j))))
+	head := t.text(ctx.slide.Title, typeStep(54), "bg", true, WithPlaceholder("title"), fromIR("title"))
+	var items []*Spec
+	for _, j := range sectionChildren(d, ctx.index) {
+		items = append(items, t.text(d.Slides[j].Title, typeStep(20), "bg", false, fromIR(fmt.Sprintf("/slides/%d/title", j))))
+	}
+	return reportFramePage(head, items)
+}
+
+// reportAgenda は agenda の区切り(#142):親の区切りの扉と同じ frame・同じ一覧(同じ親の
+// 下の区切りの題、20pt)。題の場所には親の題を置き、一覧の中の今の区切りを白の太字
+// (題のプレースホルダー)に、ほかを淡い色(risk)にする。親が無ければ自分の題を置く。
+func reportAgenda(ctx skeletonContext) *Spec {
+	t, d := ctx.t, ctx.deck
+	headTitle, headFrom := ctx.slide.Title, "title"
+	if p := sectionParent(d, ctx.index); p >= 0 {
+		headTitle, headFrom = d.Slides[p].Title, fmt.Sprintf("/slides/%d/title", p)
+	}
+	head := t.text(headTitle, typeStep(54), "bg", true, fromIR(headFrom))
+	var items []*Spec
+	for _, j := range sectionSiblings(d, ctx.index) {
+		if j == ctx.index {
+			items = append(items, t.text(ctx.slide.Title, typeStep(20), "bg", true, WithPlaceholder("title"), fromIR("title")))
+			continue
 		}
+		items = append(items, t.text(d.Slides[j].Title, typeStep(20), "risk", false, fromIR(fmt.Sprintf("/slides/%d/title", j))))
+	}
+	return reportFramePage(head, items)
+}
+
+// reportFramePage は frame の頁:題 head の下に、items があれば白い縦の罫線と一覧を並べる。
+func reportFramePage(title *Spec, items []*Spec) *Spec {
+	head := []*Spec{title}
+	if len(items) > 0 {
 		list := Row([]*Spec{
 			Col(nil, tokWidth(spaceStep(1)), tokBackground("bg")),
 			Col(items, tokGap("itemGap"), WithGrow(1), WithBasis(0)),

@@ -383,14 +383,19 @@ func (t *Template) accentRule() *Spec {
 // 流れの外のページ)。
 //
 // 文書に区切りが2つ以上あり、値の表の sectionTracker が true なら、題の下に
-// 章の一覧と現在地(sectionTracker)を置く。作者は何も書かない。
+// 章の一覧と現在地(sectionTracker)を置く。作者は何も書かない。level 2・3 の区切りが
+// agenda なら、代わりに同じ親の下の区切りの一覧と現在地を置く(#142)。
 func (t *Template) section(d *IRDeck, i int, s *IRSlide) *Spec {
 	kids := []*Spec{
 		Col(nil, WithGrow(3)),
 		t.accentRule(),
 		t.text(s.Title, "sectionTitle", "text_primary", true, WithPlaceholder("title"), fromIR("title")),
 	}
-	if tr := t.sectionTracker(d, i); tr != nil {
+	if sectionAgenda(d, i) {
+		// agenda(#142):同じ親の下の区切りの一覧と今の区切り。作者が頼んだので
+		// sectionTracker の値・数に関わらず置く。
+		kids = append(kids, Col(nil, tokHeight("sectionGap")), t.sectionList(sectionSiblings(d, i), d, i))
+	} else if tr := t.sectionTracker(d, i); tr != nil {
 		kids = append(kids, Col(nil, tokHeight("sectionGap")), tr)
 	}
 	kids = append(kids, Col(nil, WithGrow(2)))
@@ -416,6 +421,13 @@ func (t *Template) sectionTracker(d *IRDeck, cur int) *Spec {
 	if len(secs) < 2 {
 		return nil
 	}
+	return t.sectionList(secs, d, cur)
+}
+
+// sectionList は区切り secs の題を縦に並べた一覧(sectionTracker と agenda の共通の形)。
+// cur の区切りは帯をアクセントの色・題を text_primary の太字に、ほかは帯を grid・題を
+// text_muted にする。
+func (t *Template) sectionList(secs []int, d *IRDeck, cur int) *Spec {
 	var items []*Spec
 	for _, j := range secs {
 		bar, color, bold := "grid", "text_muted", false

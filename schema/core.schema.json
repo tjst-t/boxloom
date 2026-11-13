@@ -481,6 +481,10 @@
           "minimum": 1,
           "maximum": 3
         },
+        "agenda": {
+          "description": "level 2・3 だけ: この扉で同じ親の下の区切り(同じ level)の一覧を見せ、今の区切りを強調するか(既定 false)。一覧の中身は組み立てで数える(IR には書かない)。level 1 に書くのは boxloom check の誤り(invalid-value)。",
+          "type": "boolean"
+        },
         "notes": {
           "$ref": "#/$defs/notes"
         }

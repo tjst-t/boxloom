@@ -163,7 +163,14 @@ closing: true
     `# 返却の流れ {type=section level=2}`。親の無い階層(1 より前の 2、章を変えた後の 3 など)は
     `boxloom check` の `section-level`。1〜3 のほかは `invalid-value`、区切りでないスライドに
     書けば `misplaced-content`。見た目はテンプレートが決める(標準の区切りは階層によらず同じ。
-    report は 1・2 を全面の基調色の枠、3 を親の節の題と兄弟の項目の一覧にする)。
+    report は 1・2 を全面の基調色の枠(節の扉は下の level 3 の題を並べる)、3 を題だけの簡素な扉にする)。
+  - **扉の一覧**は `agenda`(level 2・3 の区切りだけ。`true`・`false`、既定 false、#142):
+    `# 案内の見直し {type=section level=3 agenda=true}`。意味は「この扉で、同じ親の下の区切り
+    (同じ level)の一覧を見せ、今の位置を示す」。一覧の中身は組み立てで数える(IR には書かない)。
+    level 1 に書けば `boxloom check` の `invalid-value`、true・false のほかも `invalid-value`、
+    区切りでないスライドに書けば `misplaced-content`。report は親の節の扉と同じ枠と一覧を描き
+    (題の場所には親の題)今の項目を白の太字に、ほかを淡い色にする。dark・light は題の下に
+    同じ親の下の区切りだけの一覧(章の一覧の代わり)を置き、今の区切りを太字・アクセントの帯にする。
   - **隅の印**は `marker`(本文のスライドだけ。空白を含まない2字までの短い文):
     `# 返却箱の使われ方 {marker=A}`。詳細のページで、いまどのパターン・どの要因の話かを示す
     (1・2・A・B)。IR はスライドの欄 `marker`。3字以上・空は `invalid-value`(場所

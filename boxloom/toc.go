@@ -126,3 +126,43 @@ func tocFrame(ctx skeletonContext) (*Spec, error) {
 	main := Col(rows, tokGap("itemGap"), WithGrow(1), markFrame(frameMain))
 	return t.pageFrame(ctx, []*Spec{title, main})
 }
+
+// sectionSiblings は level 2・3 の区切り i と同じ親の下の、同じ level の区切り(i を含む。
+// 頁の順。#142 の agenda が並べる一覧)。親は i より前の最も近い浅い区切り、範囲は次の
+// 浅い区切りの手前まで。level 1 なら nil。
+func sectionSiblings(d *IRDeck, i int) []int {
+	lv := sectionLevel(&d.Slides[i])
+	if lv < 2 {
+		return nil
+	}
+	var out []int
+	for j := sectionParent(d, i) + 1; j < len(d.Slides); j++ {
+		s := &d.Slides[j]
+		if s.Type != "section" {
+			continue
+		}
+		if l := sectionLevel(s); l < lv && j > i {
+			break
+		} else if l == lv {
+			out = append(out, j)
+		}
+	}
+	return out
+}
+
+// sectionParent は区切り i の親(i より前の最も近い浅い区切り)。無ければ -1。
+func sectionParent(d *IRDeck, i int) int {
+	lv := sectionLevel(&d.Slides[i])
+	for j := i - 1; j >= 0; j-- {
+		if s := &d.Slides[j]; s.Type == "section" && sectionLevel(s) < lv {
+			return j
+		}
+	}
+	return -1
+}
+
+// sectionAgenda は区切り i が一覧(agenda)を描くか:agenda が true の level 2・3。
+func sectionAgenda(d *IRDeck, i int) bool {
+	s := &d.Slides[i]
+	return s.Type == "section" && s.Agenda && sectionLevel(s) >= 2
+}

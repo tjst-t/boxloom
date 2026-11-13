@@ -92,8 +92,11 @@ type IRSlide struct {
 	// Level は section だけ: 区切りの階層(1 章・2 節・3 節の中の項目)。書かなければ 0
 	// (1 と同じ。sectionLevel で読む)。
 	Level int
-	Body  []IRBlock
-	Notes string
+	// Agenda は section の level 2・3 だけ: この扉で同じ親の下の区切りの一覧を見せ、今の
+	// 位置を示す(#142)。一覧の中身は組み立てで数える(IR には書かない)。
+	Agenda bool
+	Body   []IRBlock
+	Notes  string
 	// fit は IR に無い、組み立ての中だけの印(-fit。fit_shrink.go の fitDeckCopy が写しに入れる):
 	// ゼロなら印なし、そうでなければ本文を値の表の fit.shrink か fit.grow の段の組で組む。
 	fit fitRef
@@ -472,6 +475,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 			Variant string `json:"variant"`
 			Title   Inline `json:"title"`
 			Level   int    `json:"level"`
+			Agenda  bool   `json:"agenda"`
 			Notes   string `json:"notes"`
 		}
 		if err := strictUnmarshal(b, &v); err != nil {
@@ -483,7 +487,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 		if v.Level != 0 && (v.Level < 1 || v.Level > 3) {
 			return fmt.Errorf("level: section level must be 1, 2 or 3 (got %d)", v.Level)
 		}
-		*s = IRSlide{Type: v.Type, Variant: v.Variant, Title: v.Title, Level: v.Level, Notes: v.Notes}
+		*s = IRSlide{Type: v.Type, Variant: v.Variant, Title: v.Title, Level: v.Level, Agenda: v.Agenda, Notes: v.Notes}
 		return nil
 	case "statement":
 		var v struct {

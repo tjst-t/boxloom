@@ -1111,6 +1111,7 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 			sl.set("variant", v)
 		}
 		level, hasLevel := p.sectionLevel(attrs, s, path, typ)
+		agenda := p.sectionAgenda(attrs, s, path, typ)
 		marker, hasMarker := p.slideMarker(attrs, s, path, typ)
 		density, hasDensity := p.slideDensity(attrs, s, path, typ)
 		body, notes := splitNotes(s.items)
@@ -1133,6 +1134,9 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 			sl.set("title", p.parseInline(s.title, path+"/title"))
 			if hasLevel {
 				sl.set("level", level)
+			}
+			if agenda {
+				sl.set("agenda", true)
 			}
 			p.noSlideBody(body, path, typ)
 		case "statement":
@@ -1171,7 +1175,7 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 }
 
 // slideAttributeNames は「# 題 {…}」に書ける属性。
-var slideAttributeNames = []string{"type", "variant", "level", "marker", "density"}
+var slideAttributeNames = []string{"type", "variant", "level", "agenda", "marker", "density"}
 
 // slideType は「# 題 {type=…}」のスライドの種類(省けば content)。表紙は文書の頭から
 // 作るので type=cover は誤り。
@@ -1248,6 +1252,28 @@ func (p *mdParser) sectionLevel(attrs map[string]string, s *mdSlide, path, typ s
 	}
 	p.fail(s.line, s.attrsCol, path+"/level", codeInvalidValue, fmt.Sprintf("区切りの階層 %q はありません", v), []string{"1", "2", "3"}, "1 が章、2 が節、3 が節の中の項目です")
 	return 0, false
+}
+
+// sectionAgenda は「# 題 {type=section level=3 agenda=true}」の一覧の印(#142)。true・false
+// のほかは誤り。区切りのほかのスライドに書いたら誤り。level 1 に書いたら check の誤り
+// (invalid-value。IR にはそのまま写す)。
+func (p *mdParser) sectionAgenda(attrs map[string]string, s *mdSlide, path, typ string) bool {
+	v, ok := attrs["agenda"]
+	if !ok {
+		return false
+	}
+	if typ != "section" {
+		p.fail(s.line, s.attrsCol, path, codeMisplaced, fmt.Sprintf("agenda は区切りのスライド(type=section)にだけ書けます(このスライドは type=%s)", typ), nil, "{type=section level=3 agenda=true} のように書きます")
+		return false
+	}
+	switch v {
+	case "true":
+		return true
+	case "false":
+		return false
+	}
+	p.fail(s.line, s.attrsCol, path+"/agenda", codeInvalidValue, fmt.Sprintf("agenda の値 %q は書けません", v), []string{"true", "false"}, "同じ親の下の区切りの一覧を扉に出すなら agenda=true")
+	return false
 }
 
 // noSlideBody は本文を持たないスライド(区切り・主張)に本文を書いた誤りを出す。

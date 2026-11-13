@@ -402,6 +402,10 @@ func (c *checker) checkSectionLevels(slides []any) {
 		if lv < 1 || lv > 3 {
 			continue // 範囲の誤りは Schema が出す
 		}
+		if a, _ := sm["agenda"].(bool); a && lv == 1 {
+			c.add(fmt.Sprintf("/slides/%d/agenda", si),
+				"agenda is only for section level 2 or 3: a level 1 section has no parent whose sections it could list", codeInvalidValue)
+		}
 		if lv > 1 && !have[lv-1] {
 			c.add(fmt.Sprintf("/slides/%d/level", si),
 				fmt.Sprintf("section level %d has no parent: no level %d section comes before it (since the last shallower section)", lv, lv-1), "section-level")
