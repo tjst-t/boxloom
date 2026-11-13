@@ -3104,7 +3104,7 @@
       "number": 137,
       "kind": "task",
       "title": "report の区切りの扉:節(level 2)は下の項目の一覧を出し、項目(level 3)は簡素な扉にする",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3116,7 +3116,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:35:54.518Z",
-      "updatedAt": "2026-11-13T07:35:54.518Z",
+      "updatedAt": "2026-11-13T08:07:44.724Z",
       "closedAt": null,
       "extra": {}
     }
