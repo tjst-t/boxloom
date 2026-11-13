@@ -3295,7 +3295,7 @@
       "number": 146,
       "kind": "task",
       "title": "report の値を元の資料の詰め方に寄せる(題と箇条の間・項目の間・フッター・dense 11pt・一覧の行送り)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3307,7 +3307,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T11:31:02.859Z",
-      "updatedAt": "2026-11-13T11:31:02.859Z",
+      "updatedAt": "2026-11-13T11:32:06.522Z",
       "closedAt": null,
       "extra": {}
     },
