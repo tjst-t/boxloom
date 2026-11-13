@@ -48,8 +48,8 @@ func findSubsystem(n *LayoutNode, name string) *LayoutNode {
 }
 
 // columns の狭い列に 20 字前後の題5つの cycle、横に role=main の箇条:題は扇に
-// 入らないので輪の外に置く。列の幅は題を外に置くのに要る幅(Min)まで広がり、題どうし・
-// 題と輪(番号の丸を含む正方形)は重ならず、警告も出ない。列がさらに狭くて外にも
+// 入らないので輪の外に置く。列の幅は題を外に置くのに要る幅(Min)まで広がる。その幅では
+// 外の題の枠が潰れるので、題は輪の下に並べる(#154)。題どうし・題と輪は重ならず、警告も出ない。列がさらに狭くて外にも
 // 入らなければ、警告(figure-text-overflow か subsystem-min)が出る。
 func TestCycleTitlesOutsideInNarrowColumn(t *testing.T) {
 	for _, tmpl := range []string{"report", "dark", "light"} {
@@ -88,8 +88,10 @@ func TestCycleTitlesOutsideInNarrowColumn(t *testing.T) {
 			overlap := cycleTitlesOverlap(sub, pl)
 			if extra == 0 {
 				// 2つの列:列が広がり、題は輪の外に重ならずに入る。
-				if !pl.outside {
-					t.Errorf("%s: titles must go outside the ring (box %+v)", name, box)
+				// 列は Min の幅(題を外に置く最小の輪の幅)なので、外の題の枠は潰れる。
+				// 題は輪の下に並べる(#154)。
+				if !pl.below {
+					t.Errorf("%s: titles must go below the ring (box %+v)", name, box)
 				}
 				if overlap != "" || warned || len(lint) > 0 {
 					t.Errorf("%s: box %+v overlap=%q warns=%+v lint=%v", name, box, overlap, warns, lint)
@@ -107,6 +109,10 @@ func TestCycleTitlesOutsideInNarrowColumn(t *testing.T) {
 // cycleTitlesOverlap は置いた題どうし・題と輪が重なるかを書く(重ならなければ "")。
 // 題を扇の中に置いたときは、扇に入らなかった題があれば重なりとみなす。
 func cycleTitlesOverlap(sub *CycleSubsystem, pl *cyclePlaced) string {
+	if pl.below {
+		// 図形どうしの重なりだけを見る(枠からのはみ出しは見ない)。
+		return cycleShapesOverlap(pl, LBox{X: -1e6, Y: -1e6, Width: 2e6, Height: 2e6})
+	}
 	if !pl.outside {
 		for i, r := range pl.titleRoom {
 			if r.Width > 0 || r.Height > 0 {

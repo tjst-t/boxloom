@@ -34,6 +34,12 @@ type CycleValues struct {
 	// OutsideMinDiameter は題を輪の外に置くときの輪の直径の下限(扇に文が無いので
 	// minDiameter より小さくできる)。
 	OutsideMinDiameter float64 `json:"outsideMinDiameter"`
+	// 輪の下に題を並べる置き方(below、#154)の寸法:輪と並びの間、並びの項目の間、
+	// 並びの番号の丸の直径、番号の丸と題の間。
+	ListGap            float64 `json:"listGap" scale:"space"`
+	ListItemGap        float64 `json:"listItemGap" scale:"space"`
+	ListNumberDiameter float64 `json:"listNumberDiameter"`
+	ListNumberGap      float64 `json:"listNumberGap" scale:"space"`
 	ShadeRange         float64 `json:"shadeRange"` // 最後の段の淡さ(基調色を地の色に寄せる割合)
 	MutedShade         float64 `json:"mutedShade"` // 強調があるとき、強調でない段の淡さ
 	OutlineWidth       float64 `json:"outlineWidth"`
@@ -373,7 +379,7 @@ func (s *CycleSubsystem) Measure(c Constraint) Measurement {
 			lay = cycleLayout{r: v.NaturalDiameter / 2, sizes: s.labelSizes(v.LabelMaxWidth, true), outside: true}
 		}
 	}
-	w, h := s.size(lay.r, lay.sizes, lay.outside)
+	w, h := s.laySize(lay)
 	mw, mh := s.minSize(c.Width)
 	return Measurement{
 		Natural:     Size{Width: w, Height: h},
@@ -404,7 +410,8 @@ func (s *CycleSubsystem) minLayout() cycleLayout {
 }
 
 // minSize は Min:幅は minLayout の幅。高さは題が読める形のうち一番低いもの(幅
-// width を受けたらその幅で折り返す。題を外に置く形は、折り返しを広くするほど低い)。
+// width を受けたらその幅で折り返す。題を外に置く形は、折り返しを広くするほど低い。
+// 輪の下に題を並べる形も含む)。
 // 幅と高さで別の形を取る(狭い列では幅、低い列では高さが効く)。
 func (s *CycleSubsystem) minSize(width float64) (w, h float64) {
 	v := s.vals()
@@ -420,6 +427,19 @@ func (s *CycleSubsystem) minSize(width float64) (w, h float64) {
 	if _, oh := s.size(v.minR(true), s.labelSizes(cap, true), true); oh < h {
 		h = oh
 	}
+	// 輪の下に題を並べる置き方(below)は、並びの字を一番下の段まで下げた最小の輪の高さ
+	// まで低くできる(幅 width で組めるときだけ。幅は Min の幅の形のまま)。
+	if width > 0 {
+		W := math.Max(width, w) - 2*v.Padding
+		for k := s.belowSteps(); k >= 0; k-- {
+			if b := s.belowList(W, k); b != nil {
+				if _, bh := s.belowSize(v.minR(true), b); bh < h {
+					h = bh
+				}
+				break
+			}
+		}
+	}
 	return w, h
 }
 
@@ -431,18 +451,138 @@ func (s *CycleSubsystem) columnMinWidth() float64 {
 	return w
 }
 
-// cycleLayout は輪の大きさと枠の大きさ、題を輪の外に置くか。
+// cycleLayout は輪の大きさと枠の大きさ、題を輪の外に置くか、輪の下に並べるか。
 type cycleLayout struct {
 	r       float64
 	sizes   []Size
 	outside bool
+	below   *cycleBelow // nil でなければ題を輪の下に並べる(sizes・outside は使わない)
+}
+
+// laySize は形 lay の図の幅と高さ(余白と凡例を含む)。
+func (s *CycleSubsystem) laySize(lay cycleLayout) (w, h float64) {
+	if lay.below != nil {
+		return s.belowSize(lay.r, lay.below)
+	}
+	return s.size(lay.r, lay.sizes, lay.outside)
+}
+
+// --- 輪の下に題を並べる置き方(below、#154) ---
+//
+// 縦長の狭い枠では、題を輪の外(段の向き)に置くと題の枠が輪の左右に張り出すので、
+// 輪も題も幅で縛られて潰れる。below は輪を上に置き(番号の丸は扇の中。扇に題は
+// 書かない)、その下に「番号の丸+題(と補足)」を番号の順に縦に並べる。題は並びの
+// 幅いっぱいで折り返す。輪が最小の直径(minDiameter)に届かないときは、並びの字を
+// 値の表の段で1段ずつ下げる(下限は小さい字 tx.Small)。
+
+// cycleBelow は輪の下の並び。
+type cycleBelow struct {
+	width       float64 // 並びの幅(枠の幅−余白)
+	sub, detail float64 // 題・補足の字の大きさ
+	items       []Size  // 段ごとの題(と補足)の枠の大きさ(番号の丸を除く)
+	itemH       []float64
+	listH       float64 // 並びの高さ
+}
+
+// belowList は幅 width の並びを、題と補足の字を k 段下げて組む。題の折れない塊が
+// 並びに入らなければ nil。
+func (s *CycleSubsystem) belowList(width float64, k int) *cycleBelow {
+	v, tx := s.vals(), s.text()
+	b := &cycleBelow{width: width, sub: typeStepDown(tx.Sizes, tx.Sub, k), detail: typeStepDown(tx.Sizes, tx.Detail, k)}
+	// 題の枠の幅は tw。折り返しは1字ぶん狭い幅で測る(アプリの字の幅が測った値より
+	// 広くても、行の数が増えないように。outsideLabelSizes と同じ)。
+	tw := width - v.ListNumberDiameter - v.ListNumberGap
+	ww := tw - b.sub
+	for i := range s.Data.Steps {
+		st := &s.Data.Steps[i]
+		tr := s.titleRuns(st, "", nil)
+		need := math.Max(runsMinWidth(tr, b.sub), runsChunkWidth(tr, b.sub))
+		_, h := runsBox(tr, b.sub, ww)
+		if len(st.Detail) > 0 {
+			dr := itemRuns(st.Detail, "", nil)
+			need = math.Max(need, runsMinWidth(dr, b.detail))
+			_, dh := runsBox(dr, b.detail, ww)
+			h += dh
+		}
+		if ww <= 0 || need > ww+0.01 {
+			return nil
+		}
+		b.items = append(b.items, Size{Width: tw, Height: h})
+		ih := math.Max(h, v.ListNumberDiameter)
+		b.itemH = append(b.itemH, ih)
+		b.listH += ih
+		if i > 0 {
+			b.listH += v.ListItemGap
+		}
+	}
+	return b
+}
+
+// belowSize は外の半径 r・並び b の図の幅と高さ(余白と凡例を含む)。
+func (s *CycleSubsystem) belowSize(r float64, b *cycleBelow) (w, h float64) {
+	v, tx := s.vals(), s.text()
+	inner := math.Max(2*r, b.width)
+	w = inner + 2*v.Padding
+	h = 2*r + v.ListGap + b.listH + 2*v.Padding
+	items, _ := s.legend()
+	l := layoutFigureLegend(items, inner, tx.Small, v.legendValues())
+	for _, p := range l.part(v.legendValues()) {
+		h += p.nat
+	}
+	return w, h
+}
+
+// belowSteps は並びの字を下げられる段の数(題の字が小さい字 tx.Small に届くまで)。
+func (s *CycleSubsystem) belowSteps() int {
+	tx := s.text()
+	k := 0
+	for typeStepDown(tx.Sizes, tx.Sub, k+1) < typeStepDown(tx.Sizes, tx.Sub, k) &&
+		typeStepDown(tx.Sizes, tx.Sub, k+1) >= tx.Small-scaleEps {
+		k++
+	}
+	return k
+}
+
+// belowLayout は幅 width・高さ height(0 なら制約なし)の枠での below の形。輪は並びの
+// 幅と、高さから並びを引いた残りの両方に収まる一番大きい直径(自然の直径が上限)。
+// 輪が最小の直径に届かなければ並びの字を1段ずつ下げ、届いた段(届かなければ一番
+// 下の段)にする。輪が outsideMinDiameter を下回るか、題が並びの幅に入らなければ ok が false。
+func (s *CycleSubsystem) belowLayout(width, height float64) (cycleLayout, bool) {
+	v := s.vals()
+	W := width - 2*v.Padding
+	if width <= 0 || W <= 0 {
+		return cycleLayout{}, false
+	}
+	var got cycleLayout
+	ok := false
+	for k := 0; k <= s.belowSteps(); k++ {
+		b := s.belowList(W, k)
+		if b == nil {
+			break
+		}
+		r := math.Min(v.NaturalDiameter, W) / 2
+		if height > 0 {
+			// 凡例の高さは並びの幅で決まる(輪は並びより広くならない)。
+			_, h0 := s.belowSize(0, b)
+			r = math.Min(r, (height-h0)/2)
+		}
+		if r < v.minR(true)-scaleEps {
+			continue
+		}
+		got, ok = cycleLayout{r: r, below: b}, true
+		if height <= 0 || 2*r >= v.MinDiameter-scaleEps {
+			break
+		}
+	}
+	return got, ok
 }
 
 // layoutFor は幅 width・高さ height(0 なら制約なし。どちらかは正)の枠での形。まず
 // 題を扇の中に置いた一番大きい輪を取り、題が扇に収まればそれにする。収まらなければ
 // 題を輪の外(番号の丸の外、その段の向き)に置き、輪を小さくして題の置き場を取る。
-// 外に置いても枠に入らなければ(最小の輪でもはみ出す)、扇の中に置いたまま(Lint が
-// 題の警告を出す)。slack は扇に収まるかを測るときの輪の半径のゆとり(Measure で測った
+// 外の置き方が枠に入らないか題の枠が潰れるときは、輪の下に題を並べる置き方(below)
+// の輪が大きければそれにする。どれも入らなければ(最小の輪でもはみ出す)、扇の中に
+// 置いたまま(Lint が題の警告を出す)。slack は扇に収まるかを測るときの輪の半径のゆとり(Measure で測った
 // 枠に置き直すときの二分探索の誤差で、扇の中と外が入れ替わらないように)。
 func (s *CycleSubsystem) layoutFor(width, height, slack float64) cycleLayout {
 	v := s.vals()
@@ -467,14 +607,28 @@ func (s *CycleSubsystem) layoutFor(width, height, slack float64) cycleLayout {
 	if s.titlesFit(in.r + slack) {
 		return in
 	}
-	out := cycleLayout{sizes: s.labelSizes(capFor(true), true), outside: true}
+	outCap := capFor(true)
+	out := cycleLayout{sizes: s.labelSizes(outCap, true), outside: true}
 	out.r = radius(out.sizes, true)
 	w, h := s.size(out.r, out.sizes, true)
-	if (width > 0 && w > width+0.01) || (height > 0 && h > height+0.01) {
-		return in
+	outFits := !((width > 0 && w > width+0.01) || (height > 0 && h > height+0.01))
+	// 外の置き方が枠に入らないか、題の枠が補足の幅の下限より狭く潰れるときは、輪の下に
+	// 題を並べる置き方(below)も測り、輪が大きいほうにする(同じくらいなら外)。
+	if outFits && outCap >= v.LabelMinWidth {
+		return out
 	}
-	return out
+	if bl, ok := s.belowLayout(width, height); ok && (!outFits || bl.r > out.r+cycleBelowMargin) {
+		return bl
+	}
+	if outFits {
+		return out
+	}
+	return in
 }
+
+// cycleBelowMargin は below を外の置き方より選ぶのに要る輪の半径の差(pt)。輪の大きさが
+// 同じくらいなら、図の形が崩れない外の置き方にする。
+const cycleBelowMargin = 4.0
 
 // cyclePlaced は box の中に置いた図(絶対の座標)。
 type cyclePlaced struct {
@@ -486,11 +640,19 @@ type cyclePlaced struct {
 	numbers   []LBox       // 番号の丸
 	legend    LBox
 	legendL   figureLegendLayout
+	// below(題を輪の下に並べた)のときの並び:番号の丸(listNums)と題・補足の枠
+	// (labels)、字の大きさ。番号の丸(numbers)は扇の中。
+	below            bool
+	listNums         []LBox
+	listSub, listDet float64
 }
 
 func (s *CycleSubsystem) place(box LBox) *cyclePlaced {
 	v, tx := s.vals(), s.text()
 	lay := s.layoutFor(box.Width, box.Height, cyclePlaceSlack)
+	if lay.below != nil {
+		return s.placeBelow(box, lay)
+	}
 	r := lay.r
 	sh := s.shape(r, lay.sizes, lay.outside)
 	pl := &cyclePlaced{r: r, outside: lay.outside}
@@ -521,6 +683,44 @@ func (s *CycleSubsystem) place(box LBox) *cyclePlaced {
 	pl.legendL = layoutFigureLegend(items, w, tx.Small, v.legendValues())
 	if pl.legendL.h > 0 {
 		pl.legend = LBox{X: box.X + v.Padding, Y: pl.cy + sh.maxY + v.LegendGap, Width: w, Height: pl.legendL.h}
+	}
+	return pl
+}
+
+// placeBelow は輪を上に(並びの幅の真ん中に)、その下に番号の丸と題の並びを置く。
+// 輪の番号の丸は扇の真ん中(輪の太さの真ん中)に置く。
+func (s *CycleSubsystem) placeBelow(box LBox, lay cycleLayout) *cyclePlaced {
+	v, tx := s.vals(), s.text()
+	b, r := lay.below, lay.r
+	x0 := box.X + v.Padding
+	inner := math.Max(2*r, b.width)
+	pl := &cyclePlaced{r: r, below: true, listSub: b.sub, listDet: b.detail}
+	pl.cx = x0 + inner/2
+	pl.cy = box.Y + v.Padding + r
+	n := len(s.Data.Steps)
+	rm := r * (1 - v.ring()/2)
+	y := box.Y + v.Padding + 2*r + v.ListGap
+	tx0 := x0 + v.ListNumberDiameter + v.ListNumberGap
+	for i := 0; i < n; i++ {
+		a := cycleAngle(i, n)
+		d := v.NumberDiameter
+		pl.numbers = append(pl.numbers, LBox{X: pl.cx + rm*math.Cos(a) - d/2, Y: pl.cy + rm*math.Sin(a) - d/2, Width: d, Height: d})
+		pl.titles = append(pl.titles, LBox{})
+		pl.titleRoom = append(pl.titleRoom, LBox{})
+		ih := b.itemH[i]
+		ld := v.ListNumberDiameter
+		pl.listNums = append(pl.listNums, LBox{X: x0, Y: y, Width: ld, Height: ld})
+		anchor := "top"
+		if b.items[i].Height < ld {
+			anchor = "middle" // 1行の題は番号の丸の真ん中の高さに
+		}
+		pl.labels = append(pl.labels, cycleLabel{box: LBox{X: tx0, Y: y, Width: b.items[i].Width, Height: ih}, align: "left", anchor: anchor})
+		y += ih + v.ListItemGap
+	}
+	items, _ := s.legend()
+	pl.legendL = layoutFigureLegend(items, inner, tx.Small, v.legendValues())
+	if pl.legendL.h > 0 {
+		pl.legend = LBox{X: x0, Y: y - v.ListItemGap + v.LegendGap, Width: inner, Height: pl.legendL.h}
 	}
 	return pl
 }
@@ -819,6 +1019,21 @@ func (s *CycleSubsystem) Render(ctx RenderContext, box LBox) {
 	}
 	for i := range s.Data.Steps {
 		st := &s.Data.Steps[i]
+		if pl.below {
+			num := []TextRun{{Text: s.number(i), Color: ctx.Roles.Color("text_primary"), Bold: true}}
+			p.AddShape(pl.numbers[i], ShapeOpts{Prst: "ellipse", Fill: ctx.Roles.Color("bg"), Outline: colors[i],
+				OutlineWidthPt: v.OutlineWidth, FontSize: tx.Sub, Runs: num})
+			p.AddShape(pl.listNums[i], ShapeOpts{Prst: "ellipse", Fill: ctx.Roles.Color("bg"), Outline: colors[i],
+				OutlineWidthPt: v.OutlineWidth, FontSize: pl.listSub, Runs: num})
+			l := pl.labels[i]
+			o := ShapeOpts{Prst: "rect", FontSize: pl.listSub, Align: l.align, Anchor: l.anchor,
+				Runs: boldRuns(s.titleRuns(st, "text_primary", ctx.Roles))}
+			if len(st.Detail) > 0 {
+				o.Paras, o.ParaSizes = [][]TextRun{itemRuns(st.Detail, "text_muted", ctx.Roles)}, []float64{pl.listDet}
+			}
+			p.AddShape(l.box, o)
+			continue
+		}
 		if pl.outside {
 			p.AddShape(pl.numbers[i], ShapeOpts{Prst: "ellipse", Fill: ctx.Roles.Color("bg"), Outline: colors[i],
 				OutlineWidthPt: v.OutlineWidth, FontSize: tx.Sub,
@@ -851,6 +1066,27 @@ func (s *CycleSubsystem) Lint(box LBox) []string {
 	tx := s.text()
 	pl := s.place(box)
 	var out []string
+	if pl.below {
+		for i := range s.Data.Steps {
+			st := &s.Data.Steps[i]
+			l := pl.labels[i].box
+			tr := s.titleRuns(st, "", nil)
+			needW := runsChunkWidth(tr, pl.listSub)
+			ww := math.Max(l.Width-pl.listSub, needW)
+			_, needH := runsBox(tr, pl.listSub, ww)
+			if len(st.Detail) > 0 {
+				dr := itemRuns(st.Detail, "", nil)
+				needW = math.Max(needW, runsMinWidth(dr, pl.listDet))
+				_, dh := runsBox(dr, pl.listDet, ww)
+				needH += dh
+			}
+			if !textFits(needW, needH, l.Width, l.Height) {
+				out = append(out, overflowWarning("cycle", fmt.Sprintf("steps[%d]", i), st.Title, needW, needH, l.Width, l.Height))
+			}
+		}
+		_, missing := s.legend()
+		return append(out, legendMissingWarnings("cycle", missing)...)
+	}
 	if pl.outside {
 		for i := range s.Data.Steps {
 			st := &s.Data.Steps[i]
