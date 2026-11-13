@@ -3,8 +3,9 @@
 // 三層の分け方(CLAUDE.md)のうち「テンプレート=方針」にあたる。
 //   - 値の表(Theme の色・TemplateValues の大きさ・TemplateMarks の印)は
 //     データ(templates/<名前>.json。読み込みは values.go)。
-//   - スライドの骨組み(表紙・本文)とブロックの部品(箇条・比較・注記)は
-//     ここのコード。
+//   - スライドの骨組み(表紙・本文・区切り・主張・フッター・出典)とブロックの部品
+//     (箇条・比較・注記)はここのコード。どちらも登録簿(skeleton.go・component.go)に
+//     載せ、テンプレートは名前ごとに差し替えられる。
 //   - サブシステムは登録簿(Subsystems)から引く。テンプレートは Override で
 //     描き方を差し替えられる。
 //
@@ -32,6 +33,9 @@ type Template struct {
 	// components は部品の登録簿(IR のブロック → 箱の木。component.go)。
 	// 標準の部品の写しで、組み方は override で差し替えられる。
 	components *componentRegistry
+	// skeleton は骨組みの部品の表(表紙・本文の頭と並べ方・区切り・主張・フッター・
+	// 出典。skeleton.go)。標準の骨組みの写しで、override で名前ごとに差し替えられる。
+	skeleton *skeletonRegistry
 	// Variants はこのテンプレートが用意した変種の名前(IR の variant)。
 	// いまのデモのテンプレートは1つも持たない。
 	Variants map[string]bool
@@ -130,23 +134,13 @@ func (t *Template) buildSlide(d *IRDeck, i int) (*BuiltSlide, error) {
 	return b, nil
 }
 
-// buildSlideTokens は i 枚目をトークンのまま組む(解決はしない)。
+// buildSlideTokens は i 枚目をトークンのまま組む(解決はしない)。組むのは骨組みの
+// 部品の表(skeleton.go)。
 func (t *Template) buildSlideTokens(d *IRDeck, i int) (*BuiltSlide, error) {
-	s := &d.Slides[i]
-	if err := t.checkVariant(s.Variant); err != nil {
+	if err := t.checkVariant(d.Slides[i].Variant); err != nil {
 		return nil, err
 	}
-	switch s.Type {
-	case "cover":
-		return t.buildCover(d, s), nil
-	case "content":
-		return t.buildContent(d, i, s)
-	case "section":
-		return t.buildSection(d, i, s), nil
-	case "statement":
-		return t.buildStatement(d, i, s), nil
-	}
-	return nil, fmt.Errorf("unknown slide type %q", s.Type)
+	return t.buildSkeleton(d, i)
 }
 
 // --- 文字の装飾: 意味(em など)を見た目に変える ---
@@ -204,8 +198,12 @@ func (t *Template) prose(in Inline, size, role string, bold bool, opts ...SpecOp
 func plainInline(s string) Inline { return Inline{{Text: s}} }
 
 // --- 骨組み: 表紙 ---
+//
+// 骨組みの標準の部品(defaultSkeleton。skeleton.go)の組み方。テンプレートが
+// 差し替えるときにも部品を作る手として使える。
 
-func (t *Template) buildCover(d *IRDeck, s *IRSlide) *BuiltSlide {
+// cover は表紙のスライド全体(標準の骨組みの cover)。
+func (t *Template) cover(d *IRDeck, s *IRSlide) *Spec {
 	title, subtitle, author := s.Title, s.Subtitle, s.Author
 	titleAt, subtitleAt, authorAt := "title", "subtitle", "author"
 	if d.Meta != nil {
@@ -250,39 +248,63 @@ func (t *Template) buildCover(d *IRDeck, s *IRSlide) *BuiltSlide {
 	default:
 		kids = append(kids, Col(foot, tokGap("itemGap")))
 	}
-	root := Col(kids, tokGap("sectionGap"), tokPad("coverPadding"), tokBackground("bg"))
-	return &BuiltSlide{Root: root, Notes: s.Notes}
+	return Col(kids, tokGap("sectionGap"), tokPad("coverPadding"), tokBackground("bg"))
 }
 
 // --- 骨組み: 本文のスライド(題 / 本文 / フッター) ---
 
-func (t *Template) buildContent(d *IRDeck, i int, s *IRSlide) (*BuiltSlide, error) {
-	var blocks []*Spec
-	var warns []string
-	ctx := componentContext{t: t, warn: func(w string) { warns = append(warns, w) }}
-	for bi := range s.Body {
-		b, err := t.buildBlockIn(ctx.within(fmt.Sprintf("body[%d]", bi)), &s.Body[bi])
-		if err != nil {
-			return nil, fmt.Errorf("body[%d]: %w", bi, err)
-		}
-		blocks = append(blocks, b)
+// contentFrame は本文のスライドの並べ方(標準の骨組みの contentFrame):頭
+// (contentHeader)・本文・出典(source)・フッター(footer)を縦に並べる。本文の箱に
+// 印(frameBody)を付け、容量・はみ出し・埋まり具合はこの箱で測る。
+func contentFrame(ctx skeletonContext) (*Spec, error) {
+	blocks, err := ctx.blocks()
+	if err != nil {
+		return nil, err
 	}
 	// 本文の図が自然な大きさのままだとページに入らないとき、題・リード文・出典・
 	// フッターを縮めず、先に本文の図のゆとり(自然〜最小)から返させる。
-	body := Col(blocks, tokGap("blockGap"), WithGrow(1), nestedSlack())
-
-	title := t.text(s.Title, "slideTitle", "text_primary", true, WithPlaceholder("title"), fromIR("title"))
-	head := title
-	if s.Lead != nil {
-		head = Col([]*Spec{head, t.prose(s.Lead, "leadText", "text_primary", false, fromIR("lead"))}, tokGap("headerGap"))
+	body := Col(blocks, tokGap("blockGap"), WithGrow(1), nestedSlack(), markFrame(frameBody))
+	head, err := ctx.part(skelContentHeader)
+	if err != nil {
+		return nil, err
 	}
 	kids := []*Spec{head, body}
-	if s.Source != nil {
-		kids = append(kids, apply(t.slideSource(s.Source), []SpecOpt{fromIR("source")}))
+	return ctx.t.pageFrame(ctx, kids)
+}
+
+// pageFrame は本文のスライドと主張のスライドの外枠:kids の下に出典(source)と
+// フッター(footer)を足し、ページの余白と地の色の縦の箱にする。
+func (t *Template) pageFrame(ctx skeletonContext, kids []*Spec) (*Spec, error) {
+	src, err := ctx.part(skelSource)
+	if err != nil {
+		return nil, err
 	}
-	kids = append(kids, t.footer(d, i))
-	root := Col(kids, tokGap("sectionGap"), tokPadXY("pagePadding", "pagePaddingY"), tokBackground("bg"))
-	return &BuiltSlide{Root: root, Body: body, Notes: s.Notes, Title: title, Warnings: warns}, nil
+	if src != nil {
+		kids = append(kids, src)
+	}
+	foot, err := ctx.part(skelFooter)
+	if err != nil {
+		return nil, err
+	}
+	if foot != nil {
+		kids = append(kids, foot)
+	}
+	return Col(kids, tokGap("sectionGap"), tokPadXY("pagePadding", "pagePaddingY"), tokBackground("bg")), nil
+}
+
+// contentHeader は本文のスライドの頭(標準の骨組みの contentHeader):題(title の
+// プレースホルダー)と、あればその下にリード文。
+func (t *Template) contentHeader(s *IRSlide) *Spec {
+	title := t.text(s.Title, "slideTitle", "text_primary", true, WithPlaceholder("title"), fromIR("title"))
+	if s.Lead == nil {
+		return title
+	}
+	return Col([]*Spec{title, t.leadText(s.Lead)}, tokGap("headerGap"))
+}
+
+// leadText はリード文の葉。
+func (t *Template) leadText(in Inline) *Spec {
+	return t.prose(in, "leadText", "text_primary", false, fromIR("lead"))
 }
 
 // footer は本文のスライドの下の行(左に作者と機密区分、右に「何枚目 / 全部」)。
@@ -335,14 +357,14 @@ func (t *Template) accentRule() *Spec {
 
 // --- 骨組み: 区切り(章の変わり目) ---
 
-// buildSection は章の題だけのスライド。背景を一段違う色(card_alt)にして本文の
+// section は章の題だけのスライド(標準の骨組みの section)。背景を一段違う色(card_alt)にして本文の
 // スライドと見分け、アクセントの線の下に大きな太字の章の題を左に寄せて置く。
 // 題は中ほどより少し下(上の余白 3 : 下の余白 2)。フッターは置かない(表紙と同じく
 // 流れの外のページ)。
 //
 // 文書に区切りが2つ以上あり、値の表の sectionTracker が true なら、題の下に
 // 章の一覧と現在地(sectionTracker)を置く。作者は何も書かない。
-func (t *Template) buildSection(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
+func (t *Template) section(d *IRDeck, i int, s *IRSlide) *Spec {
 	kids := []*Spec{
 		Col(nil, WithGrow(3)),
 		t.accentRule(),
@@ -352,9 +374,8 @@ func (t *Template) buildSection(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
 		kids = append(kids, Col(nil, tokHeight("sectionGap")), tr)
 	}
 	kids = append(kids, Col(nil, WithGrow(2)))
-	main := Col(kids, tokGap("sectionGap"), WithGrow(1))
-	root := Col([]*Spec{main}, tokPad("coverPadding"), tokBackground("card_alt"))
-	return &BuiltSlide{Root: root, Main: main, MainWhat: "section title", Notes: s.Notes}
+	main := Col(kids, tokGap("sectionGap"), WithGrow(1), markFrame(frameMain))
+	return Col([]*Spec{main}, tokPad("coverPadding"), tokBackground("card_alt"))
 }
 
 // sectionTracker は区切りのスライドに置く章の一覧。文書の区切り(type: section)の
@@ -392,24 +413,19 @@ func (t *Template) sectionTracker(d *IRDeck, cur int) *Spec {
 
 // --- 骨組み: 主張(言うことが1文だけ) ---
 
-// buildStatement は1文だけのスライド。本文のスライドと同じ背景とフッターを持ち、
-// 文は本文の外周よりさらに内側(statementInset)に、アクセントの線の下に大きな字で
-// 左に寄せた太字で置く(強調の部分はアクセントの色)。
+// statementFrame は1文だけのスライド(標準の骨組みの statement)。本文のスライドと
+// 同じ背景・出典・フッターを持ち、文は本文の外周よりさらに内側(statementInset)に、
+// アクセントの線の下に大きな字で左に寄せた太字で置く(強調の部分はアクセントの色)。
 // 文は中ほどより少し上(上の余白 2 : 下の余白 3)。
-func (t *Template) buildStatement(d *IRDeck, i int, s *IRSlide) *BuiltSlide {
+func statementFrame(ctx skeletonContext) (*Spec, error) {
+	t := ctx.t
 	main := Col([]*Spec{
 		Col(nil, WithGrow(2)),
 		t.accentRule(),
-		t.prose(s.Content, "statementText", "text_primary", true, WithPlaceholder("title"), fromIR("content")),
+		t.prose(ctx.slide.Content, "statementText", "text_primary", true, WithPlaceholder("title"), fromIR("content")),
 		Col(nil, WithGrow(3)),
-	}, tokGap("sectionGap"), tokPad("statementInset"), WithGrow(1))
-	kids := []*Spec{main}
-	if s.Source != nil {
-		kids = append(kids, apply(t.slideSource(s.Source), []SpecOpt{fromIR("source")}))
-	}
-	kids = append(kids, t.footer(d, i))
-	root := Col(kids, tokGap("sectionGap"), tokPadXY("pagePadding", "pagePaddingY"), tokBackground("bg"))
-	return &BuiltSlide{Root: root, Main: main, MainWhat: "statement", Notes: s.Notes}
+	}, tokGap("sectionGap"), tokPad("statementInset"), WithGrow(1), markFrame(frameMain))
+	return t.pageFrame(ctx, []*Spec{main})
 }
 
 // --- 部品: ブロック ---

@@ -74,6 +74,7 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
 | ファイル | 役目 |
 |---|---|
 | `ir.go` | IR を読む。知らないキーは断る(Schema と同じ方針)。インライン・行の配列・箇条の入れ子を Go の型にする |
+| `skeleton.go` | 骨組みの部品の表(表紙・本文の頭・本文の並べ方・区切り・主張・フッター・出典)。テンプレートが名前ごとに差し替える(`docs/layers.md` の8.4) |
 | `template.go` | テンプレート(骨組み・部品。値の表は `templates/<名前>.json` を `values.go` が読む。`docs/template-values.md`)。表紙・本文・区切り・主張のスライド、ブロック(段落・箇条・比較・注記・結論・統計強調・引用・サブシステム)を Spec に組む |
 | `gantt_ir.go` | Gantt の `data` から `GanttChart` を組む(軸の圧縮・目盛りの文字・注釈の指す先) |
 | `gantt.go` | 注釈の置き場所と箱の大きさを決める(`planAnnotations`)。置けない注釈は警告(`Lint`)。確定していない区間を破線で描く |

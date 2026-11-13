@@ -430,6 +430,7 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 		Fonts:      fonts,
 		Subsystems: DefaultSubsystems().Clone(),
 		components: standardComponents.clone(),
+		skeleton:   standardSkeleton.clone(),
 		Variants:   variants,
 		// 囲みは型の語彙が名乗る(テンプレートは型を隠さない)。
 		Blocks: blockTypes.fences(),

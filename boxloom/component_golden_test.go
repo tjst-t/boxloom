@@ -85,7 +85,7 @@ func goldenOutputs(t *testing.T) map[string]string {
 		}
 		name := strings.TrimPrefix(f, "../examples/")
 		assets := os.DirFS(filepath.Dir(f))
-		for _, tmpl := range []string{"", "dark", "light"} {
+		for _, tmpl := range []string{"", "dark", "light", "report"} {
 			key := name + "@" + tmpl
 			// check -format json と同じ書き方。
 			r := Check(f, data, CheckOptions{Template: tmpl, Assets: assets})
