@@ -2,7 +2,7 @@
 // 入口(docs/library.md)だけを使い、ここではフラグ・ファイルの読み書き・
 // 終了コードを受け持つ。
 //
-//	boxloom build [-o out.pptx] [-template dark|light|report|./my.json] deck.json|deck.yaml|deck.bx.md
+//	boxloom build [-o out.pptx] [-template dark|light|report|./my.json] [-allow-overflow] deck.json|deck.yaml|deck.bx.md
 //	boxloom check [-format text|json] [-capacity] [-template dark|light|report|./my.json] [-strict] deck.json|deck.yaml|deck.bx.md ...
 //	boxloom parse [-format text|json] deck.bx.md|deck.yaml
 //	boxloom schema [-template NAME]
@@ -146,11 +146,12 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	out := fs.String("o", "", "書き出す pptx(省くと out/<IR の名前>.pptx)")
 	tmpl := fs.String("template", "", "テンプレートの名前か値の表のファイル(./my.json。省くと IR の template)")
+	allowOverflow := fs.Bool("allow-overflow", false, "はみ出し(layout-overflow)があっても pptx を書く(警告は出す)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(stderr, "usage: boxloom build [-o out.pptx] [-template dark|light|report|./my.json] deck.json|deck.yaml|deck.bx.md")
+		fmt.Fprintln(stderr, "usage: boxloom build [-o out.pptx] [-template dark|light|report|./my.json] [-allow-overflow] deck.json|deck.yaml|deck.bx.md")
 		return 2
 	}
 	in := fs.Arg(0)
@@ -165,9 +166,19 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	var buf bytes.Buffer
-	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: tname, Values: tvalues, Assets: deckAssets(in)})
+	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: tname, Values: tvalues, Assets: deckAssets(in), AllowOverflow: *allowOverflow})
 	if errors.Is(err, boxloom.ErrUnknownTemplate) {
 		fmt.Fprintln(stderr, "error:", err)
+		return 1
+	}
+	var oe *boxloom.OverflowError
+	if errors.As(err, &oe) {
+		// はみ出しは書かずに止める。場所(行)と hint は check でも同じものが出る。
+		for _, is := range oe.Issues {
+			is.File = in
+			fmt.Fprintln(stderr, "error:", is.String())
+		}
+		fmt.Fprintf(stderr, "error: %s: %d block(s) overflow; pptx not written. Fix them as the hints say (boxloom check %s shows the lines), or build with -allow-overflow\n", in, len(oe.Issues), in)
 		return 1
 	}
 	if *out == "" {
@@ -245,7 +256,12 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 				fmt.Fprintln(stdout, c.String())
 			}
 		}
-		fmt.Fprintf(stdout, "%d error(s), %d warning(s)\n", len(res.Errors), len(res.Warnings))
+		fmt.Fprintf(stdout, "%d error(s), %d warning(s)", len(res.Errors), len(res.Warnings))
+		if n := boxloom.BuildBlocking(res.Warnings); n > 0 {
+			// check は作らないので警告のまま。build はこれで止まる。
+			fmt.Fprintf(stdout, "; %d layout-overflow warning(s) stop build (use build -allow-overflow to build anyway)", n)
+		}
+		fmt.Fprintln(stdout)
 	}
 	if !res.OK {
 		return 1

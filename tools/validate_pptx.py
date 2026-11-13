@@ -516,7 +516,8 @@ def build_examples(outdir):
     for src in srcs:
         for tpl in ("dark", "light", "report"):
             dst = outdir / f"{src.parent.name}-{src.name}-{tpl}.pptx"
-            r = subprocess.run([go, "run", "./cmd/boxloom", "build", "-template", tpl, "-o", str(dst), str(src)], cwd=gdir, capture_output=True, text=True)
+            # はみ出す例(warnings・check-warnings)も OOXML としては検査するので -allow-overflow で作る
+            r = subprocess.run([go, "run", "./cmd/boxloom", "build", "-allow-overflow", "-template", tpl, "-o", str(dst), str(src)], cwd=gdir, capture_output=True, text=True)
             if r.returncode != 0:
                 sys.exit(f"build failed for {src} ({tpl}):\n{r.stderr}")
             out.append(dst)

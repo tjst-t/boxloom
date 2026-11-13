@@ -215,6 +215,23 @@ func checkIRCapacity(file string, b []byte, templateOverride string, values *Tem
 	// テンプレートを指さなければ(-template も値の表も IR の template も無い)、型の語彙
 	// だけで検査する:組み方の無い型を代わりで組んだこと(component-fallback)は言わない。
 	designated := values != nil || templateOverride != "" || getPath(doc, "template") != nil
+	warns, err := tm.layoutIssues(file, deck, warnings, caps, designated)
+	if err != nil {
+		c.add(locationToPointer(err.Error()), err.Error(), "build")
+		return c.errs, nil, nil
+	}
+	for i := range caps {
+		caps[i].File = file
+	}
+	return c.errs, warns, caps
+}
+
+// layoutIssues は組み立ての警告(RenderPages の文)を Issue にし、代わりの組み方の
+// 場所を元の IR の場所に写し、hint を足す(check と build が同じものを出す)。
+// caps は同じ組み立ての容量で、dense の残りを書き足す。designated が false なら
+// component-fallback は言わない。
+func (tm *Template) layoutIssues(file string, deck *IRDeck, warnings []string, caps []SlideCapacity, designated bool) ([]Issue, error) {
+	var warns []Issue
 	for _, w := range warnings {
 		is := warningIssue(file, w)
 		if is.Code == "component-fallback" && !designated {
@@ -232,14 +249,26 @@ func checkIRCapacity(file string, b []byte, templateOverride string, values *Tem
 	}
 	// normal の本文のスライドは dense にしたときの残りも測る(hint の「dense で収まるか」)。
 	if err := tm.addDenseRemaining(deck, caps); err != nil {
-		c.add(locationToPointer(err.Error()), err.Error(), "build")
-		return c.errs, nil, nil
+		return nil, err
 	}
 	addLayoutHints(warns, caps)
-	for i := range caps {
-		caps[i].File = file
+	return warns, nil
+}
+
+// codeLayoutOverflow は本文(またはページ)がはみ出したときの警告の code。
+const codeLayoutOverflow = "layout-overflow"
+
+// BuildBlocking は警告のうち build を止めるもの(layout-overflow)の数。
+// check は組み立てないので警告のままだが、build はこれが1件でもあれば
+// PPTX を書かずに誤りになる(BuildOptions.AllowOverflow で作れる)。
+func BuildBlocking(warns []Issue) int {
+	n := 0
+	for _, w := range warns {
+		if w.Code == codeLayoutOverflow {
+			n++
+		}
 	}
-	return c.errs, warns, caps
+	return n
 }
 
 type checker struct {

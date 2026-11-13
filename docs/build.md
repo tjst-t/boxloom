@@ -24,8 +24,18 @@ go run ./cmd/boxloom                                                      # 従�
 - 表(`table`)は本物の表(`p:graphicFrame` の `a:tbl`)になり、PowerPoint・LibreOffice で
   表として編集できる。セルの文は折り返さずに書き、折り返しはアプリに任せる(測った幅には
   字体の余裕が入っている)。
-- 警告(本文の埋まり具合・本文のはみ出し・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名)は
-  標準出力にだけ書く。スライドのノートには入れない(ノートは作者の文だけ)。
+- **はみ出し(`layout-overflow`)は build の誤り**(#124)。本文が本文の領域に収まらない
+  (区切り・主張がページに収まらない)ブロックが1件でもあれば、PPTX を書かずに終了コード 1 で
+  止まり、はみ出しを全件 stderr に書く(`error: deck.bx.md /slides/S/body/N: layout-overflow: … — hint`。
+  path・文・hint は `check` の警告と同じで、dense で収まるかの案・表の分け方の案もそのまま。
+  build は IR から組むので行の番号は付かない。行は `check` で見る)。直すのは作者で、
+  check の hint に従う。`-allow-overflow` を付けると今までどおり作り、はみ出しは警告として
+  標準出力に書く(できる PPTX は付けないときに収まる文書と同じ作り方で、バイト列も変わらない)。
+- ほかの警告(本文の埋まり具合・サブシステムの最小の大きさ・サブシステム自身の検査・テーマに無い役割名・
+  題の折り返しなど)は止めず、標準出力にだけ書く。スライドのノートには入れない(ノートは作者の文だけ)。
+- `check` は作らないので、はみ出しは警告のまま(終了コードは変わらない)。text の出し方の
+  要約の行に「`N layout-overflow warning(s) stop build`」と build を止める件数を添える
+  (JSON は warnings の `code` が `layout-overflow` のもの)。
 - 題はスライドのレイアウトのプレースホルダーとして書く。表紙の題と副題は
   `ctrTitle`・`subTitle`(レイアウト「Title Slide」)、本文のスライドの題は `title`
   (レイアウト「Title Only」)。区切りの章の題と主張の1文も `title`(「Title Only」)。
@@ -288,6 +298,6 @@ sudo apt-get install -y libreoffice-impress fonts-noto-cjk   # readers のとき
 ## まだやっていないこと
 
 - 押せるリンク、`code` の等幅の字体。
-- 本文の高さがページに収まらないときの自動の扱い(いまは比例で縮むだけ)。
-  はみ出しは `layout-overflow` の警告で知らせ、直すのは作者(`docs/ir.md` の
-  「はみ出しの測り方」)。
+- 本文の高さがページに収まらないときの自動の扱い(縮めない・送らない)。
+  はみ出しは `check` の `layout-overflow` の警告と build の誤りで知らせ、直すのは作者
+  (`docs/ir.md` の「はみ出しの測り方」)。`-allow-overflow` で作ったときは比例で縮むだけ。

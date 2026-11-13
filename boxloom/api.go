@@ -98,7 +98,35 @@ type BuildOptions struct {
 	// Values は外から読んだテンプレートの値の表(ParseTemplate)。nil でなければ
 	// Template と IR の template より優先する。
 	Values *Template
+	// AllowOverflow は、はみ出し(layout-overflow)があっても PPTX を書く
+	// (警告は Warnings に残る)。false なら、はみ出しが1件でもあれば書かずに
+	// *OverflowError を返す。
+	AllowOverflow bool
 }
+
+// ErrLayoutOverflow は、はみ出しがあって Build が PPTX を書かなかったことを表す
+// (errors.Is で見る。中身は *OverflowError)。
+var ErrLayoutOverflow = errors.New("layout-overflow: the deck does not fit")
+
+// OverflowError は Build がはみ出しで止まったときの誤り。Issues は
+// layout-overflow の全件(check の警告と同じ path・message・hint。File と行は
+// 空なので、呼ぶ側が文書の名前を添える)、Warnings はそれ以外も含めた組み立ての
+// 警告の全部(BuildResult.Warnings と同じ形)。
+type OverflowError struct {
+	Issues   []Issue
+	Warnings []string
+}
+
+func (e *OverflowError) Error() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "layout-overflow: %d block(s) do not fit the slide; PPTX not written (follow each hint, or build with AllowOverflow / -allow-overflow)", len(e.Issues))
+	for _, is := range e.Issues {
+		b.WriteString("\n  " + is.String())
+	}
+	return b.String()
+}
+
+func (e *OverflowError) Unwrap() error { return ErrLayoutOverflow }
 
 // BuildResult は Build の結果。
 type BuildResult struct {
@@ -107,13 +135,15 @@ type BuildResult struct {
 	// Slides は書いたスライドの枚数。
 	Slides int
 	// Warnings は組み立ての警告("slide 2: [FILL-RATIO WARNING] ..." の形)。
-	// 書き出しは止めない。Issue の形で欲しいときは Check を使う。
+	// はみ出し(layout-overflow)のほかは書き出しを止めない(はみ出しは
+	// AllowOverflow のときだけここに残る)。Issue の形で欲しいときは Check を使う。
 	Warnings []string
 }
 
 // Build は deck をテンプレートで組み、PPTX を w に書く。テンプレートが無ければ
 // ErrUnknownTemplate を包んだ誤りを、組めなければ IR の中の場所を添えた誤りを
-// 返す(どちらも w には何も書かない)。
+// 返す(どちらも w には何も書かない)。はみ出し(layout-overflow)が1件でもあれば、
+// AllowOverflow でない限り書かずに *OverflowError(ErrLayoutOverflow)を返す。
 func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 	defer useFonts(activeFonts)() // 組み立てが替えた字体を、終わったら戻す
 	t := opt.Values
@@ -128,9 +158,23 @@ func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 		}
 	}
 	t.SetAssets(opt.Assets)
-	pages, warnings, err := t.RenderPages(deck)
+	pages, warnings, caps, err := t.renderPages(deck)
 	if err != nil {
 		return nil, err
+	}
+	if !opt.AllowOverflow && hasOverflowWarning(warnings) {
+		designated := opt.Values != nil || opt.Template != "" || deck.Template != ""
+		issues, err := t.layoutIssues("", deck, warnings, caps, designated)
+		if err != nil {
+			return nil, err
+		}
+		oe := &OverflowError{Warnings: warnings}
+		for _, is := range issues {
+			if is.Code == codeLayoutOverflow {
+				oe.Issues = append(oe.Issues, is)
+			}
+		}
+		return nil, oe
 	}
 	title := ""
 	if deck.Meta != nil {
@@ -140,6 +184,16 @@ func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 		return nil, err
 	}
 	return &BuildResult{Template: t.Name, Slides: len(pages), Warnings: warnings}, nil
+}
+
+// hasOverflowWarning は組み立ての警告にはみ出しがあるか。
+func hasOverflowWarning(warnings []string) bool {
+	for _, w := range warnings {
+		if strings.Contains(w, "[LAYOUT-OVERFLOW WARNING]") {
+			return true
+		}
+	}
+	return false
 }
 
 // Schema は `boxloom schema` の JSON(AI に渡す一覧。docs/schema-command.md)を

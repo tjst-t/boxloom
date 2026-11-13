@@ -753,6 +753,12 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 積み、ページの内側(主張はフッターと gap を引いた残り)を越えたら
 `statement overflows the slide by …pt` の形で1件出す(`examples/ir/check-warnings/statement-overflow.json`)。
 
+**check では警告、build では誤り**(#124)。check は作らないので警告のまま(要約の行に
+build を止める件数を出す)。build(ライブラリの `Build`)は1件でもあれば PPTX を書かずに
+止まり、この節の警告と同じ path・文・hint(dense の案・表の分け方の案を含む)を Issue の形
+(code `layout-overflow`)で全件返す。`build -allow-overflow`(`BuildOptions.AllowOverflow`)
+なら今までどおり作って警告を出す。ほかの警告(fill-ratio・title-wrap など)は build を止めない。
+
 例:`examples/ir/check-warnings/layout-overflow.json`(と同じ中身の
 `examples/md/warnings/layout-overflow.bx.md`)は誤り0件で、2つのブロックに
 `layout-overflow` が出る(`boxloom/overflow_test.go`)。

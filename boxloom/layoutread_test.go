@@ -61,7 +61,7 @@ func TestLayoutRoundTrip(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, tmpl := range []string{"", "dark", "light"} {
-			dump, err := Layout(f, data, BuildOptions{Template: tmpl, Assets: assets})
+			dump, err := Layout(f, data, BuildOptions{Template: tmpl, Assets: assets, AllowOverflow: true})
 			if err != nil {
 				t.Fatalf("%s@%s: %v", f, tmpl, err)
 			}
@@ -70,7 +70,7 @@ func TestLayoutRoundTrip(t *testing.T) {
 				t.Fatal(err)
 			}
 			var want, got, stub bytes.Buffer
-			if _, err := Build(&want, deck, BuildOptions{Template: tmpl, Assets: assets}); err != nil {
+			if _, err := Build(&want, deck, BuildOptions{Template: tmpl, Assets: assets, AllowOverflow: true}); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := BuildLayout(&got, "tree.json", src, LayoutReadOptions{Deck: deck, Assets: assets}); err != nil {

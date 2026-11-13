@@ -104,7 +104,7 @@ func goldenOutputs(t *testing.T) map[string]string {
 				continue
 			}
 			var pptx bytes.Buffer
-			res, err := Build(&pptx, deck, BuildOptions{Template: tmpl, Assets: assets})
+			res, err := Build(&pptx, deck, BuildOptions{Template: tmpl, Assets: assets, AllowOverflow: true})
 			if err != nil {
 				out["build "+key] = "error: " + err.Error()
 				continue

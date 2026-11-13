@@ -170,3 +170,43 @@ func TestTemplatesCommand(t *testing.T) {
 		t.Errorf("extra argument: exit %d", c)
 	}
 }
+
+// はみ出す文書の build は誤り(終了コード 1・pptx を作らない)で、hint を stderr に出す。
+// -allow-overflow なら今までどおり作り、警告を出す。check は警告のままで、要約の行に
+// build を止める件数を出す(#124)。
+func TestBuildOverflow(t *testing.T) {
+	const deck = "../../../examples/md/warnings/layout-overflow.bx.md"
+	out := t.TempDir() + "/x.pptx"
+	var stdout, stderr bytes.Buffer
+	if c := run([]string{"build", "-o", out, deck}, &stdout, &stderr); c != 1 {
+		t.Fatalf("overflow: exit %d, want 1", c)
+	}
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Errorf("overflow: %s was written (err %v)", out, err)
+	}
+	if s := stderr.String(); !strings.Contains(s, "error: "+deck) || !strings.Contains(s, "layout-overflow") || !strings.Contains(s, "-allow-overflow") {
+		t.Errorf("stderr = %q", s)
+	}
+	stdout.Reset()
+	if c := run([]string{"build", "-allow-overflow", "-o", out, deck}, &stdout, io.Discard); c != 0 {
+		t.Fatalf("-allow-overflow: exit %d", c)
+	}
+	if _, err := os.Stat(out); err != nil {
+		t.Errorf("-allow-overflow: %v", err)
+	}
+	if !strings.Contains(stdout.String(), "[LAYOUT-OVERFLOW WARNING]") {
+		t.Errorf("-allow-overflow: no warning in %q", stdout.String())
+	}
+	stdout.Reset()
+	if c := run([]string{"check", deck}, &stdout, io.Discard); c != 0 {
+		t.Errorf("check: exit %d, want 0 (overflow stays a warning)", c)
+	}
+	if !strings.Contains(stdout.String(), "layout-overflow warning(s) stop build") {
+		t.Errorf("check summary = %q", stdout.String())
+	}
+	stdout.Reset()
+	run([]string{"check", demoDeckPath}, &stdout, io.Discard)
+	if strings.Contains(stdout.String(), "stop build") {
+		t.Errorf("check of a deck that fits mentions stop build: %q", stdout.String())
+	}
+}

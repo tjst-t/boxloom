@@ -113,7 +113,7 @@ func TestLayoutBoxesMatchPPTX(t *testing.T) {
 		}
 		assets := os.DirFS(filepath.Dir(f))
 		for _, tmpl := range []string{"", "dark", "light"} {
-			dump, err := Layout(f, data, BuildOptions{Template: tmpl, Assets: assets})
+			dump, err := Layout(f, data, BuildOptions{Template: tmpl, Assets: assets, AllowOverflow: true})
 			if err != nil {
 				t.Fatalf("%s@%s: %v", f, tmpl, err)
 			}
@@ -125,7 +125,7 @@ func TestLayoutBoxesMatchPPTX(t *testing.T) {
 				t.Fatal(err)
 			}
 			var pptx bytes.Buffer
-			if _, err := Build(&pptx, deck, BuildOptions{Template: tmpl, Assets: assets}); err != nil {
+			if _, err := Build(&pptx, deck, BuildOptions{Template: tmpl, Assets: assets, AllowOverflow: true}); err != nil {
 				t.Fatalf("%s@%s: %v", f, tmpl, err)
 			}
 			shapes := slideXfrms(t, pptx.Bytes())

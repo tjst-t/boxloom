@@ -39,6 +39,7 @@ MCP(Model Context Protocol)サーバで、道具を3つ出す。
 | `template` | 3つとも | テンプレートの名前(`dark`・`light`)か値の表のファイル(`./my.json`)。省くと文書の `template`、それも無ければ light |
 | `strict` | check | 警告も誤りにする(`ok` が false になる) |
 | `output` | build | 書く PPTX。省くとサーバの作業フォルダの `out/<文書の名前>.pptx`。返す `output` は絶対パス |
+| `allowOverflow` | build | はみ出し(`layout-overflow`)があっても書く。省くと(false)はみ出しは誤り:書かずに isError で、はみ出しを hint つきで全件返す(`boxloom build` と同じ、`docs/build.md`) |
 
 相対パスはサーバの作業フォルダから解く。Claude Code はサーバをプロジェクトのフォルダで
 起こすので、プロジェクトからの相対パスで書けばよい。知らない引数は誤り。

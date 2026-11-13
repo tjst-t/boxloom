@@ -242,9 +242,10 @@ func mcpTools() []map[string]any {
 		},
 		{
 			"name":        "build",
-			"description": "Build a native, editable PPTX from a deck and write it to output. Returns the written path, slide count, template and layout warnings. Same as `boxloom build -o`. Give either path or source. A deck with errors is not written; run check first.",
+			"description": "Build a native, editable PPTX from a deck and write it to output. Returns the written path, slide count, template and layout warnings. Same as `boxloom build -o`. Give either path or source. A deck with errors is not written; run check first. A deck whose body overflows a slide (layout-overflow) is not written either: the error lists each overflow with its hint; fix them, or pass allowOverflow to build anyway.",
 			"inputSchema": map[string]any{"type": "object", "properties": with(mcpDeckProps, map[string]any{
-				"output": map[string]any{"type": "string", "description": "PPTX file to write. Default: out/<deck name>.pptx under the server's working directory."},
+				"output":        map[string]any{"type": "string", "description": "PPTX file to write. Default: out/<deck name>.pptx under the server's working directory."},
+				"allowOverflow": map[string]any{"type": "boolean", "description": "Write the PPTX even if a slide overflows (layout-overflow stays in warnings). Default false: overflow is an error."},
 			}), "additionalProperties": false},
 		},
 	}
@@ -336,7 +337,8 @@ type mcpBuildResult struct {
 func mcpBuild(args json.RawMessage) (any, error) {
 	var a struct {
 		mcpDeckArgs
-		Output string `json:"output"`
+		Output        string `json:"output"`
+		AllowOverflow bool   `json:"allowOverflow"`
 	}
 	if err := decodeArgs(args, &a); err != nil {
 		return nil, err
@@ -354,7 +356,14 @@ func mcpBuild(args json.RawMessage) (any, error) {
 		return nil, err
 	}
 	var buf bytes.Buffer
-	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: tname, Values: tvalues, Assets: assets})
+	res, err := boxloom.Build(&buf, deck, boxloom.BuildOptions{Template: tname, Values: tvalues, Assets: assets, AllowOverflow: a.AllowOverflow})
+	var oe *boxloom.OverflowError
+	if errors.As(err, &oe) {
+		for i := range oe.Issues {
+			oe.Issues[i].File = file
+		}
+		return nil, oe
+	}
 	if err != nil {
 		return nil, err
 	}

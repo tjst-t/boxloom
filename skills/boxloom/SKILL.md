@@ -16,7 +16,11 @@ The loop is always:
 2. Write `deck.bx.md`.
 3. `boxloom check -format json deck.bx.md` — fix every error, then every warning you can.
 4. Repeat 3 until `"ok": true` and no `layout-overflow` warning.
-5. `boxloom build -o deck.pptx deck.bx.md` (flags before the file).
+5. `boxloom build -o deck.pptx deck.bx.md` (flags before the file). `build` refuses a deck
+   with any `layout-overflow`: it exits 1, writes no PPTX and prints each overflow with its
+   hint. When that happens, go back to 3 and follow the `check` hints (split the slide, cut
+   text, or `{density=dense}` only for reference pages). Do not reach for
+   `build -allow-overflow` to get a file out: it only exists for inspecting a broken deck.
 
 Commands run from the `boxloom/` directory of the repository:
 `go run ./cmd/boxloom <schema|check|build|parse> …` (Go 1.24+, no other dependency).
@@ -443,7 +447,8 @@ returns
 - `line`/`column` point into your Markdown; `path` points into the IR
   (`/slides/S/body/N` = slide S counting the cover as 0, block N). `build` prints the
   same warnings with 1-based slide numbers (`/slides/1` is "slide 2" when there is a
-  cover) and still exits 0; only errors stop `build`.
+  cover) and still exits 0, except `layout-overflow`: check keeps it a warning (its
+  summary line says how many stop build) but `build` stops on it (exit 1, no PPTX).
 - Branch on `code`. Use `expected` and `hint` when present.
 - Exit code: 1 if errors, 0 if only warnings.
 
