@@ -2143,7 +2143,7 @@
       "number": 92,
       "kind": "task",
       "title": "表紙の写真と終わりのスライド(report の表紙は写真の上に基調色の箱)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -2157,7 +2157,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:31:17.139Z",
-      "updatedAt": "2026-11-13T02:52:02.142Z",
+      "updatedAt": "2026-11-13T03:50:47.410Z",
       "closedAt": null,
       "extra": {}
     },
