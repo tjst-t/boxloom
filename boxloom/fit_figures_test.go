@@ -77,12 +77,13 @@ func TestFitShrinkLowersFigureMin(t *testing.T) {
 			}
 			var rem, min []float64
 			for _, set := range steps {
-				m, err := tm.measureFitStep(deck, 1, set)
+				dd := fitDeckCopy(deck, []int{1}, set)
+				m, err := tm.measureFitStep(dd, 1)
 				if err != nil || !m.ok {
 					t.Fatalf("%s %s: %v %+v", tn, name, err, m)
 				}
 				rem = append(rem, m.remaining)
-				b, err := tm.buildSlide(fitDeckCopy(deck, 1, set), 1)
+				b, err := tm.buildSlide(dd, 1)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -123,7 +124,7 @@ func TestFitStepFigureSizesReachFigures(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			b, err := tm.buildSlide(fitDeckCopy(deck, 1, set), 1)
+			b, err := tm.buildSlide(fitDeckCopy(deck, []int{1}, set), 1)
 			if err != nil {
 				t.Fatal(err)
 			}
