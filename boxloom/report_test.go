@@ -203,3 +203,72 @@ func TestReportOverrideIsOnlyReport(t *testing.T) {
 		}
 	}
 }
+
+// reportColumnsDeck は列の見出しのある並列のまとまりと、対の並びの2枚。
+const reportColumnsDeck = `---
+title: 見出しの試し
+---
+
+# 二つの案
+
+::::columns
+:::column 今の窓口
+- 午前に混む
+:::
+:::column 新しい窓口
+- 予約で分ける
+:::
+::::
+
+# 窓口の見直し
+
+:::::pairs 分かったこと | 打ち手
+:::subject
+午前に混む
+:::
+:::response
+- 予約の枠を広げる
+:::
+:::subject
+書類が足りない
+:::
+:::response
+- 一覧を前もって送る
+:::
+:::::
+`
+
+// report の列の見出し(まとまりの題・対の側の見出し)は 16pt・基調色。dark・light は
+// 標準のまま字の色(text_primary)。
+func TestReportColumnHeadings(t *testing.T) {
+	deck, issues, err := ParseMarkdown("c.bx.md", []byte(reportColumnsDeck))
+	if err != nil || len(issues) > 0 || deck == nil {
+		t.Fatalf("%v %+v", err, issues)
+	}
+	for _, c := range []struct{ name, role string }{{"report", "accent"}, {"light", "text_primary"}, {"dark", "text_primary"}} {
+		tm, err := LookupTemplate(c.name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		built, err := tm.BuildDeck(deck)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := tm.Theme[c.role]
+		for _, h := range []struct {
+			slide int
+			text  string
+		}{{1, "今の窓口"}, {1, "新しい窓口"}, {2, "分かったこと"}, {2, "打ち手"}} {
+			leaf := leafWithPlain(built[h.slide].Root, h.text)
+			if leaf == nil {
+				t.Fatalf("%s: heading %q not found", c.name, h.text)
+			}
+			if got := runColor(leaf); got != want || leaf.FontSize != tm.Values.ColumnTitle {
+				t.Errorf("%s: heading %q = %vpt %s, want %vpt %s (%s)", c.name, h.text, leaf.FontSize, got, tm.Values.ColumnTitle, want, c.role)
+			}
+		}
+		if c.name == "report" && (tm.Values.ColumnTitle != 16 || want != "29BA74") {
+			t.Errorf("report: columnTitle %v / accent %s, want 16 / 29BA74", tm.Values.ColumnTitle, want)
+		}
+	}
+}

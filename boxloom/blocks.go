@@ -649,8 +649,14 @@ type columnInfo struct {
 }
 
 // columns は並列のまとまりを横に並べる。幅の比は意味(role: main)から決める:
-// 主のまとまりは columnMainWeight、ほかは 1。題は本文の上に置く。
+// 主のまとまりは columnMainWeight、ほかは 1。題は本文の上に置き、字の色は text_primary。
 func (t *Template) columns(ctx componentContext, b *IRBlock) (*Spec, error) {
+	return t.columnsHeaded(ctx, b, "text_primary")
+}
+
+// columnsHeaded は columns の題の色の役割名を headRole にしたもの(テンプレートが
+// 部品を差し替えるときの手。report.go)。
+func (t *Template) columnsHeaded(ctx componentContext, b *IRBlock, headRole string) (*Spec, error) {
 	v := t.Values
 	info := &columnsInfo{}
 	var cols []*Spec
@@ -668,7 +674,7 @@ func (t *Template) columns(ctx componentContext, b *IRBlock) (*Spec, error) {
 		col := columnInfo{body: body}
 		kids := []*Spec{body}
 		if c.Title != nil {
-			col.title = t.text(c.Title, "columnTitle", "text_primary", true)
+			col.title = t.text(c.Title, "columnTitle", headRole, true)
 			kids = []*Spec{col.title, body}
 		}
 		weight := 1.0

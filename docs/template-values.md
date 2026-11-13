@@ -41,7 +41,12 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
   レイアウトの title のプレースホルダー(位置だけが下になる)。
 - リードの無いスライドは、題を上の見出しの位置と大きさ(24pt・基調色・太字)で置く。
   題の折り返しの警告(`title-wrap`)は今のまま(その大きさで1行)。
-- 試験は `TestReportContentHeader`・`TestReportOverrideIsOnlyReport`。
+- 列の見出し(`columns` のまとまりの題、`pairs` の側の見出し)を `columnTitle`(16pt)・
+  基調色(`accent`)にする。部品 `columns` を override し、`pairs` は自分の組み方を登録する
+  (同梱の組み方 `registerBundledComponents` は、テンプレートがすでに登録した型には足さない)。
+  組み方は標準のもの(`columnsHeaded`・`pairsHeaded`)で、見出しの色の役割名だけを渡す。
+  dark・light は標準のまま字の色(`text_primary`)。
+- 試験は `TestReportContentHeader`・`TestReportOverrideIsOnlyReport`・`TestReportColumnHeadings`。
 
 **色(theme)**:測った色を、コアの役割名に当てた(役割名は増やしていない)。
 
@@ -79,7 +84,7 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 | `subPoint`(入れ子の箇条) | 14 | 12 |
 | `tableText` | 14 | 11 |
 | `small`(注・フッター・頁番号) | 10 | 10 |
-| `columnTitle`(列の見出し。基調色は次の波) | 16 | 16 |
+| `columnTitle`(列の見出し。report は基調色) | 16 | 16 |
 | `optionLabel` / `optionItem` | 16 / 12 | 16 / 12 |
 | `figureDetail` / `captionText` | 12 / 12 | 12 / 11 |
 | `takeawayText` / `quoteText` | 16 / 16 | 16 / 16 |
@@ -90,9 +95,9 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 | `cardPadding` / `columnGap` | 20 / 32 | 12 / 24 |
 | `tableCellPaddingX` / `tableCellPaddingY` / `tableRuleWidth` | 8 / 4 / 1 | 6 / 4 / 0.75 |
 
-頁番号は標準のフッターのまま右下に `small`(10pt)・`text_muted`(7F7F7F)で置く。列の見出しの
-基調色と罫線・列の間の流れの矢印・区切りのスライドの見た目(全面の基調色・54pt の白い字)は、
-親のストーリーの次のタスクで足す(段の 54 はそのため)。
+頁番号は標準のフッターのまま右下に `small`(10pt)・`text_muted`(7F7F7F)で置く。列の見出しは
+16pt・基調色(上の「組み方」)。列の見出しの下の罫線・列の間の流れの矢印・区切りのスライドの
+見た目(全面の基調色・54pt の白い字)は、親のストーリーの次のタスクで足す(段の 54 はそのため)。
 
 **Gantt(`subsystems.gantt`)**:#78 のまま(字は `labelText`・`annotationText` 10、
 `smallText` 8。余白と行を詰めた寸法)。

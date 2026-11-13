@@ -10,7 +10,8 @@
 //     とその読み方、代わりの組み方(左右2つのまとまりの columns)。
 //   - 組み方(pairsComponent):同梱のテンプレート(dark・light・report)が持つ。対ごとに
 //     1つの行にし、2つの側を同じ上端から置いて、行の高さを高い方に合わせる。
-//     はみ出しは対ごとに測る(測る単位の印 measurePairRows)。
+//     はみ出しは対ごとに測る(測る単位の印 measurePairRows)。report は側の見出しを基調色に
+//     した同じ組み方(pairsHeaded)を自分で登録する(report.go)。
 
 package boxloom
 
@@ -222,6 +223,12 @@ type pairRow struct {
 // 行の高さは高い方の側で決まる。見出しの行も同じ幅の割り方なので、側の題が側の
 // 真上に来る。
 func pairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
+	return pairsHeaded(ctx, b, "text_primary")
+}
+
+// pairsHeaded は pairsComponent の側の見出しの色の役割名を headRole にしたもの
+// (テンプレートが部品を差し替えるときの手。report.go)。
+func pairsHeaded(ctx componentContext, b *IRBlock, headRole string) (*Spec, error) {
 	t := ctx.t
 	p, err := readPairs(b.Raw)
 	if err != nil {
@@ -231,8 +238,8 @@ func pairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
 	row := func(a, b *Spec) *Spec { return Row([]*Spec{a, b}, tokGap("columnGap")) }
 	info := &pairsInfo{}
 	info.head = row(
-		side(t.text(p.Subject, "columnTitle", "text_primary", true)),
-		side(t.text(p.Response, "columnTitle", "text_primary", true)))
+		side(t.text(p.Subject, "columnTitle", headRole, true)),
+		side(t.text(p.Response, "columnTitle", headRole, true)))
 	var rows []*Spec
 	for k := range p.Pairs {
 		pr := &p.Pairs[k]
@@ -255,9 +262,12 @@ func pairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
 
 // registerBundledComponents は同梱のテンプレート(templates/*.json。いまは dark・light・report)が
 // 持つ、標準でない型の組み方を r に足す。外の値の表だけのテンプレート(ParseTemplate)は
-// 持たず、代わりの組み方で組む。
+// 持たず、代わりの組み方で組む。テンプレートが自分の組み方をすでに登録した型
+// (report.go)はそのままにする。
 func registerBundledComponents(r *componentRegistry) {
-	must(r.register(pairsType, componentFunc(pairsComponent)))
+	if !r.has(pairsType) {
+		must(r.register(pairsType, componentFunc(pairsComponent)))
+	}
 }
 
 // --- はみ出しと容量 ---

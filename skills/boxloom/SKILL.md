@@ -43,7 +43,7 @@ truth; if this file and the schema disagree, **the schema wins**.
   `-template dark`). `dark` and `light` are for **presenting** (16 pt body). For a
   document people **read** (a report handed out or read on screen, with much more
   text per slide) use `template: report`: white page with a green accent, 14 pt body,
-  12 pt sub-points, 11 pt tables, 10 pt notes. On report the **lead is the heading**: the
+  12 pt sub-points, 11 pt tables, 10 pt notes, 16 pt accent-colored column headings. On report the **lead is the heading**: the
   `:::lead` sentence (the conclusion) goes at the top in 24 pt accent color, at most two
   lines, and the `#` title (the topic) sits under it in 16 pt — so give every report
   content slide a lead that states the conclusion and keep the title a short topic. A
