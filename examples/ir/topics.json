@@ -1,0 +1,65 @@
+{
+  "boxloom": "0.1",
+  "template": "report",
+  "meta": {
+    "title": "印つきの塊の例",
+    "subtitle": "観点ごとに題と説明を並べる",
+    "author": "Boxloom デモ"
+  },
+  "slides": [
+    {
+      "type": "cover"
+    },
+    {
+      "type": "content",
+      "title": "市民農園の区画を割り振る3つの観点",
+      "lead": "抽選の不満を聞き取り、割り振りで見る観点を3つに絞った",
+      "body": [
+        {
+          "type": "topics",
+          "topics": [
+            {
+              "title": "通いやすさ",
+              "label": "A",
+              "body": [
+                {
+                  "type": "points",
+                  "items": [
+                    "徒歩 15 分より遠い人には、近くの空き区画を先に案内する",
+                    "車で来る人には、駐車場に近い区画を回す"
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "続けやすさ",
+              "label": "B",
+              "body": [
+                {
+                  "type": "paragraph",
+                  "content": "初めての人には、相談役の区画の隣を割り振る。去年途中でやめた人の多くが、聞ける相手がいなかったと答えた"
+                }
+              ]
+            },
+            {
+              "title": "公平さ",
+              "label": "C",
+              "body": [
+                {
+                  "type": "paragraph",
+                  "content": "抽選の結果と理由を、掲示板と便りの両方で知らせる"
+                },
+                {
+                  "type": "quote",
+                  "content": "外れた理由が分かれば来年も申し込める",
+                  "source": "利用者 D、聞き取りにて"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "source": "架空の聞き取り(利用者 20 人)"
+    }
+  ]
+}

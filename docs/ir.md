@@ -64,12 +64,13 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc?, cov
          { type: "content",   variant?, title, lead?, marker?, density?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead、marker は隅の印(2字まで)、density は本文の密度(normal・dense)
          { type: "section",   variant?, title, level?, notes? }  章の区切り(本文なし。level は 1 章・2 節・3 項目、既定 1)
          { type: "statement", variant?, content, source?, notes? }        言うことが1文だけ(本文なし)
-ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem | pairs   (どれも type で選ぶ。pairs は標準でない型)
+ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem | pairs | topics   (どれも type で選ぶ。pairs・topics は標準でない型)
          takeaway { content }                                     本文の中の結論の1文
          stat     { items: [{ value: "3 → 12", unit?: "機種", label }] }   1〜4個
          quote    { content, source }                             出どころは必須
 並列     { type: "columns", flow?: true, columns: [{ title?, role?: "main", body: [paragraph|points|note|table|image] }] }  (2〜3個)
 対の並び  { type: "pairs", headings: { subject, response }, pairs: [{ label?, subject: 側, response: 側 }] }  (2組以上。側は paragraph|points|quote か { title?, body: [paragraph|points|quote|image|table 1〜4個] })
+印つきの塊 { type: "topics", topics: [{ title, label?, body: [paragraph|points|quote 1〜3個] }] }  (2〜6個。label は2字までで、全てに付けるか全てに付けない)
 表       { type: "table", header: [セル], rows: [[セル]], total?: [セル], caption? }   (セルはインライン。どの行も見出しと同じ数。total は合計の行)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 箇条     { type: "points", ordered?: true, items: [インライン | { content, items?, ordered? }] }  (ordered は番号つき。入れ子の項目の ordered はその items に効く)
@@ -379,6 +380,36 @@ Schema では書けないので `boxloom check` が見る。
   要る高さのまま積み、はみ出しは `layout-overflow` で知らせる。先に縮むのは画像など縮められる
   サブシステムの分だけ(`nestedSlack`)。report の引用の人の印も縮めず、出どころの文と重ねない。
 
+### 10.2 印つきの塊の並び(topics。標準でない型、#119)
+
+いくつかの観点を、それぞれ題と説明で上から順に並べる(例:割り振りで見る3つの観点、
+A・B・C)。左右の対応(`pairs`)でも横の並び(`columns`)でもない。標準の型にはしない
+(`pairs` と同じ足し方。`docs/layers.md` の8.1)。Schema は `schema/types/topics.schema.json`。
+
+```json
+{ "type": "topics",
+  "topics": [
+    { "title": "通いやすさ", "label": "A",
+      "body": [{ "type": "points", "items": ["徒歩 15 分より遠い人には近くの区画を案内する", "…"] }] },
+    { "title": "続けやすさ", "label": "B",
+      "body": [{ "type": "paragraph", "content": "初めての人には相談役の区画の隣を割り振る" }] } ] }
+```
+
+- 塊は2〜6個。各塊は題(`title`。インライン。必須)・印(`label`。空白を含まない2字まで。
+  任意)・中身(`body`。段落・箇条・引用の1〜3個)。印は**全ての塊に付けるか、全てに
+  付けない**(混ぜると Go の読み込みが `…/topics/K/label` を指して断る。Schema では
+  書けない決まり)。印の形・色・塊の間の罫線は書けない(テンプレートが決める)。
+- 1個・7個以上・表や注記を中身に置いたものは断る(`examples/ir/invalid/topics-one.json`・
+  `topics-table.json`)。
+- 題と中のブロックも本文のブロックと同じ意味の検査を通る(`…/topics/K/title`・
+  `…/topics/K/body/I/content` など)。
+- 組み方:dark・light は題を太字にし、印を題の頭に書く(「A 通いやすさ」)。report は左に
+  丸い印(基調色の円に白い字、直径 24pt)、右に基調色の題と中身を置き、塊の間に罫線を引く。
+- **組み方を持たないテンプレート**は、代わりの組み方で `points` に書き換えて組み、警告
+  `component-fallback` を1件出す。塊の題(印があれば頭に)が親の項目、中身が子の項目
+  (段落はその文、箇条はその項目、引用は言葉と出どころの2項目)。
+- **はみ出しは塊ごとに測る**(下の「はみ出しの測り方」と容量の `topics`)。
+
 ### 11. 根拠の置き場所:出典・日付・機密区分・免責・合計の行(#47)
 
 資料の根拠(どこから来た数か・いつの時点か・誰に見せてよいか)を、注記(`note`)に
@@ -635,6 +666,10 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
   `examples/ir/check-warnings/pairs-overflow.json`)。見出しの行だけが越えたときは
   ブロックの警告になる。対の側の中の警告(折り返しなど)の path は `…/pairs/K/subject`
   (`response`)。
+- **印つきの塊の並び(topics)**は、塊(と report の罫線)を gap を挟んで積む。はみ出しの
+  警告は下端を越えた塊ごとに1件で、path は `/slides/S/body/N/topics/K`、文に塊の高さを書く
+  (例 `examples/ir/check-warnings/topics-overflow.json`)。塊の中のブロックの警告の path は
+  `…/topics/K/body/I`。
 - ブロックを上から gap を挟んで積み、領域の下端を越えたブロックごとに1件出す。
   越えた高さは、下端をまたぐブロックなら下端より下の分、丸ごと下に落ちたブロックなら
   要る高さ全部。0.5pt 未満は丸めの誤差として見ない。
@@ -713,6 +748,8 @@ check でも断られるもの。
   `need`・`lines`・`top`・`bottom`・`overflow`・側ごとの高さ `subject`・`response` と、
   対の高さを決める側 `tallest`(`"subject"` か `"response"`))。低い方の側に文を足しても
   対の高さは増えない。ブロックの `need` は見出しの行と対の行を gap を挟んで積んだ高さ。
+- **印つきの塊の並び**(`topics`)のブロックには `topics` が付く(塊ごとに `path`
+  (`…/topics/K`)・`need`・`lines`・`top`・`bottom`・`overflow`)。
 - 表の `lines` は行ごとの一番多いセルの行の数の和(と説明の文の行)、画像は説明の文の行。
 - **はみ出した本文の表**には `split` が付く(はみ出さなければ省く)。表を何枚に分けると
   どの枚にも収まるかの案で、`tables`(枚数)・`splitBefore`(2枚目からの表が始まる本体の

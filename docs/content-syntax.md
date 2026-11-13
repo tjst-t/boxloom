@@ -254,6 +254,8 @@ closing: true
 | `column 題` | 段落・箇条・表・画像・画像の並び・`note`・`pairs`・```` ```chart ````・```` ```cycle ````・```` ```phases ````・```` ```matrix ````・```` ```orgchart ```` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
 | `pairs 見出し \| 見出し` | `subject`・`response` を交互に(2組以上) | 対の並び(標準でない型)。2つの側の見出しを1回だけ書く。3.10 | `pairs`(`headings`・`pairs`) |
 | `subject 見出し` / `response 見出し` | 段落・箇条・`quote` のどれか1つ、または見出しの文と段落・箇条・`quote`・画像・表の1〜4個 | 対の何についての側 / それに応える側(見出しの文は任意) | `pairs.pairs[].subject` / `.response`(1つのブロックか `{title, body}`) |
+| `topics` | `topic` を2〜6個 | 印つきの塊の並び(標準でない型)。3.11 | `topics` |
+| `topic 題` | 段落・箇条・`quote` の1〜3個。属性 `label`(2字まで。全てに付けるか全てに付けない) | 塊の1つ。3.11 | `topics.topics[]`(`title`・`label`・`body`) |
 
 ```
 :::takeaway
@@ -825,6 +827,45 @@ GFM の表で書く。1行目が見出しの行、2行目が区切りの行、3�
   対を `/slides/S/body/N/pairs/K` で指す。容量(`check -format json`)の `pairs` に
   対ごと・側ごとの高さが出る。見出しと複数のブロックの側の高さは、見出しと body の
   ブロックを積んだ高さ。
+
+### 3.11 印つきの塊の並び(topics)
+
+いくつかの観点を、それぞれ題と説明で上から順に並べる。塊ごとに短い印(A・B・C)を
+付けられる。標準でない型で、組み方を持たないテンプレートでは箇条(題を親、中身を子)で
+組まれる(警告 `component-fallback`。`docs/ir.md` の設計判断10.2)。例は
+`examples/md/topics.bx.md`。
+
+```
+:::::topics
+:::topic 通いやすさ {label=A}
+- 徒歩 15 分より遠い人には、近くの空き区画を先に案内する
+:::
+:::topic 続けやすさ {label=B}
+初めての人には、相談役の区画の隣を割り振る
+:::
+::::topic 公平さ {label=C}
+抽選の結果と理由を、掲示板と便りの両方で知らせる
+
+:::quote 利用者 D、聞き取りにて
+外れた理由が分かれば来年も申し込める
+:::
+::::
+:::::
+```
+
+- 中は `:::topic 題の文` を2〜6個(数が外れると `misplaced-content`)。題の文は必須
+  (無ければ `missing-key`)。`:::topic` を `topics` の外に書くのも誤り。
+- `{label=A}` は塊の短い印(空白を含まない2字まで。外れると `invalid-value`)。全ての
+  `:::topic` に付けるか、全てに付けない(混ぜると `invalid-value`)。
+- 塊の中身は段落・箇条・`:::quote` の1〜3個。4個目・表・画像・`:::note`・コードブロックは
+  `misplaced-content`。引用を入れる塊はコロンを1つ増やし(`::::topic`)、`topics` はさらに
+  1つ増やす(`:::::topics`)。
+- `::::topics` の属性は `variant` だけ、`:::topic` の属性は `label` だけ(ほかは
+  `unknown-attribute`)。
+- dark・light は題を太字にして印を題の頭に書く。report は左に丸い印、右に基調色の題と
+  中身、塊の間に罫線。
+- はみ出しは塊ごとに測る。`layout-overflow` は、はみ出した塊を `/slides/S/body/N/topics/K`
+  で指す。容量(`check -format json`)の `topics` に塊ごとの高さが出る。
 
 ## 4. 例(比較文書の3枚)
 

@@ -79,6 +79,7 @@
         "cardRow": {"description": "横に同じ幅のカードを並べる行。IR の並びの名前(options・items)。", "type": "string"},
         "columnGroups": {"description": "並列のまとまりの行。まとまりの数。", "type": "integer", "minimum": 1},
         "pairRows": {"description": "対の並び(pairs)の箱。対の数(対ごとにはみ出しを測る)。", "type": "integer", "minimum": 1},
+        "topicRows": {"description": "印つきの塊の並び(topics)の箱。塊の数(塊ごとにはみ出しを測る)。", "type": "integer", "minimum": 1},
         "keepLine": {"description": "1行に収めたい文字の葉(警告の文に使う名前)。", "type": "string"},
         "nestedSlack": {"description": "列の中で足りないとき、中の図を文字より先に縮める。", "const": true},
         "noShrink": {"description": "親の主軸が足りないとき縮めない(骨組みの頭・出典・フッター)。足りない分は印の無い兄弟が受け持つ。", "const": true},

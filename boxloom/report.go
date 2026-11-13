@@ -26,6 +26,9 @@
 //     置き、対の間に罫線(grid)を引く。側の見出し(title)は薄い面(card)の帯の上に字の色で書く。
 //     対の名前(label。#118)が全て2字までなら A・B・C の代わりに印の中に、3字以上が
 //     あれば印の代わりに行の左の見出しの列(幅 80pt・基調色の太字)に書く。
+//   - topics(#119):標準の組み方(topicsStyled)の見た目を差し替える。塊の左に丸い印
+//     (基調色の円に白い字の label。直径 24pt)、右に基調色の太字の題と中身、塊の間に
+//     罫線(grid)。印の無い塊の並びは、題と中身だけを罫線で区切る。
 //   - table(#88):見出しの行は面を塗らず基調色の字にし、下に基調色の罫線
 //     (tableHeaderRuleWidth)を引く。行の間は灰色(grid)の細い罫線で、本体の行も
 //     面を塗らない。行の群の名前のセルは濃い基調色(support)の面に白い字(bg)。
@@ -50,6 +53,7 @@ package boxloom
 import (
 	"fmt"
 	"math"
+	"unicode/utf8"
 )
 
 // bundledTemplateParts は同梱のテンプレートのうち、自分の組み方を持つものの登録
@@ -72,6 +76,11 @@ func registerReportParts(t *Template) error {
 	// pairs は標準でない型なので、同梱の組み方(registerBundledComponents)の代わりに登録する。
 	if err := t.components.register(pairsType, componentFunc(func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		return pairsStyled(ctx, b, reportPairsStyle)
+	})); err != nil {
+		return err
+	}
+	if err := t.components.register(topicsType, componentFunc(func(ctx componentContext, b *IRBlock) (*Spec, error) {
+		return topicsStyled(ctx, b, reportTopicsStyle)
 	})); err != nil {
 		return err
 	}
@@ -422,6 +431,24 @@ var reportPairsStyle = pairsStyle{
 	},
 }
 
+// reportTopicsStyle は report の topics の見た目:左に丸い印、基調色の題、塊の間の罫線。
+// 空きは対の並びと同じ(罫線の上と下に 4pt)。
+var reportTopicsStyle = topicsStyle{
+	titleRole: "accent",
+	mark: func(t *Template, label string) *Spec {
+		size := t.Values.Body
+		if utf8.RuneCountInString(label) > 1 {
+			size = t.Values.Small
+		}
+		return SubsystemNode(&pairMark{kind: pairMarkRound, letter: label, fontSize: size},
+			tokWidth(reportPairMarkSize), tokHeight(reportPairMarkSize))
+	},
+	rule: func(t *Template) *Spec {
+		return Col(nil, tokHeight("tableRuleWidth"), tokBackground("grid"))
+	},
+	rowGap: reportPairRowGap,
+}
+
 // pairLetter は k 番目(0 から)の対の印の文字(A・B…Z・AA・AB…)。
 func pairLetter(k int) string {
 	s := ""
@@ -439,6 +466,7 @@ type pairMarkKind int
 const (
 	pairMarkLetter  pairMarkKind = iota // 四角い地(基調色)に白い字の A・B・C
 	pairMarkChevron                     // 丸い地(基調色)に白い山形(側の間の流れ)
+	pairMarkRound                       // 丸い地(基調色)に白い字の印(topics の塊の印)
 )
 
 // pairMark は report の対の印の葉。大きさは箱の幅・高さ(トークン)で決まり、
@@ -452,8 +480,11 @@ type pairMark struct {
 }
 
 func (m *pairMark) Name() string {
-	if m.kind == pairMarkLetter {
+	switch m.kind {
+	case pairMarkLetter:
 		return "pairLetter"
+	case pairMarkRound:
+		return "topicLabel"
 	}
 	return "pairArrow"
 }
@@ -471,6 +502,11 @@ func (m *pairMark) Render(ctx RenderContext, box LBox) {
 		}
 		ctx.Out.AddShape(box, ShapeOpts{Prst: "rect", Fill: fill,
 			Runs: []TextRun{{Text: m.letter, Color: on, Bold: true}}, FontSize: size})
+		return
+	}
+	if m.kind == pairMarkRound {
+		ctx.Out.AddShape(box, ShapeOpts{Prst: "ellipse", Fill: fill,
+			Runs: []TextRun{{Text: m.letter, Color: on, Bold: true}}, FontSize: m.fontSize})
 		return
 	}
 	ctx.Out.AddShape(box, ShapeOpts{Prst: "ellipse", Fill: fill})

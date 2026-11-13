@@ -88,6 +88,7 @@ type LayoutMarks struct {
 	CardRow      string `json:"cardRow,omitempty"`      // カードの並びの IR の名前(options・items)
 	ColumnGroups int    `json:"columnGroups,omitempty"` // 並列のまとまりの数
 	PairRows     int    `json:"pairRows,omitempty"`     // 対の並びの対の数
+	TopicRows    int    `json:"topicRows,omitempty"`    // 印つきの塊の並びの塊の数
 	KeepLine     string `json:"keepLine,omitempty"`
 	NestedSlack  bool   `json:"nestedSlack,omitempty"`
 	NoShrink     bool   `json:"noShrink,omitempty"`
@@ -321,6 +322,9 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 	if s.pairs != nil {
 		m.PairRows = len(s.pairs.rows)
 	}
+	if s.topics != nil {
+		m.TopicRows = len(s.topics.rows)
+	}
 	if m != (LayoutMarks{}) {
 		n.Marks = &m
 	}
@@ -379,6 +383,16 @@ func (d *layoutDumper) childPath(s *Spec, i int, c *Spec, path string) string {
 				for i, b := range sd.parts.body {
 					d.pairPaths[b] = fmt.Sprintf("%s/body/%d", sp, i)
 				}
+			}
+		}
+	}
+	if s.topics != nil {
+		for k, r := range s.topics.rows {
+			tp := fmt.Sprintf("%s/topics/%d", path, k)
+			d.pairPaths[r.row] = tp
+			d.pairPaths[r.title] = tp + "/title"
+			for i, b := range r.body {
+				d.pairPaths[b] = fmt.Sprintf("%s/body/%d", tp, i)
 			}
 		}
 	}

@@ -520,7 +520,7 @@
       "type": "string"
     },
     "block": {
-      "description": "スライドの本文に並べるブロック。type で種類を選ぶ。subsystem は差し込み口。標準でない型(pairs)は schema/types/ の型ごとの Schema で検査する。",
+      "description": "スライドの本文に並べるブロック。type で種類を選ぶ。subsystem は差し込み口。標準でない型(pairs・topics)は schema/types/ の型ごとの Schema で検査する。",
       "type": "object",
       "properties": {
         "type": {
@@ -537,7 +537,8 @@
             "table",
             "image",
             "gallery",
-            "pairs"
+            "pairs",
+            "topics"
           ]
         }
       },
@@ -738,6 +739,21 @@
           },
           "then": {
             "$ref": "types/pairs.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "topics"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "$ref": "types/topics.schema.json"
           }
         }
       ]

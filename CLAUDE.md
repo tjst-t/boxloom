@@ -244,6 +244,11 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     `:::subject`・`:::response` を交互に。側は1つのブロックか、見出しと1〜4個のブロック `{title, body}`、Markdown は `:::subject 見出し`)。対ごとの短い名前 `label`(`:::subject {label=…}`、12字まで、全ての対に書くか書かないか。混ざれば check の `pairs-label`)。report は A・B・C の印(label が2字までなら印の中に label、3字以上なら行の左の見出しの列)・側の間の山形・対の間の罫線を足し、dark・light は label を subject の頭に太字で。組み方は同梱のテンプレート(dark・light)が持ち、
     対ごとに2つの側の行をそろえる。側の幅は中身で割り(全ての側の形で同じ計算)、並べた後に図の側の余りをもう片側へ回す(`layoutPairs`。回せない余りは側ごとの spare-width)。はみ出しは対ごと(印 `measurePairRows`)。組み方を
     持たないテンプレートは `columns` で組んで `component-fallback`。`docs/layers.md` の8.1・8.3
+  - `topics.go` = 印つきの塊の並び(`topics`、#119)。2つ目の標準でない型(Schema は
+    `schema/types/topics.schema.json`、Markdown は `::::topics` の中に `:::topic 題 {label=A}` を2〜6個、
+    中身は段落・箇条・引用の1〜3個。label は2字までで全てに付けるか全てに付けない)。dark・light は
+    題を太字にして印を題の頭に、report は左に丸い印・基調色の題・塊の間の罫線。代わりの組み方は
+    箇条(題を親、中身を子)。はみ出しは塊ごと(印 `measureTopicRows`)
   - `skeleton.go` = 骨組みの部品の表(`cover`・`contentHeader`・`contentFrame`・`section`・
     `statement`・`footer`・`source`・`toc`・`closing`。標準は `defaultSkeleton`、テンプレートは写しを名前ごとに
     override)。コアは本文の箱の印(`frameBody`)で容量・はみ出しを、`title` のプレースホルダーの

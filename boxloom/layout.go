@@ -96,6 +96,8 @@ type Spec struct {
 	cards string
 	// pairs は対の並び(pairs)の箱が持つ、対ごとの部品(はみ出しを対ごとに測る。pairs.go)。
 	pairs *pairsInfo
+	// topics は印つきの塊の並び(topics)の箱が持つ、塊ごとの部品(はみ出しを塊ごとに測る。topics.go)。
+	topics *topicsInfo
 	// nestedSlack は、この箱が列の中で足りないとき、中のサブシステムの縮められる
 	// 分を Phase3a で先に返すか(並列のまとまりで、画像を文字より先に縮めるため)。
 	nestedSlack bool
@@ -188,6 +190,9 @@ func measureCardRow(name string) SpecOpt { return func(s *Spec) { s.cards = name
 
 // measurePairRows は測る単位の印: 対の並び(pairs)の箱で、対(行)ごとにはみ出しを測る。
 func measurePairRows(info *pairsInfo) SpecOpt { return func(s *Spec) { s.pairs = info } }
+
+// measureTopicRows は測る単位の印: 印つきの塊の並び(topics)の箱で、塊ごとにはみ出しを測る。
+func measureTopicRows(info *topicsInfo) SpecOpt { return func(s *Spec) { s.topics = info } }
 
 // keepLine は文字の葉の属性: 1行に収めたい文字。name は警告の文に使う名前。
 func keepLine(name string) SpecOpt { return func(s *Spec) { s.keepLine = name } }

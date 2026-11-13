@@ -93,6 +93,7 @@ em の名前 `pointIndentEm` を空きの箱の字の大きさ(`body`・`subPoin
 | `columns` | まとまりごとにはみ出しを測る | 「測る単位」の印 |
 | `cards` | カードごとの高さを容量に出す | 「測る単位」の印(並びの名前つき) |
 | `pairs` | 対(行)ごとにはみ出しを測り、容量に側ごとの高さを出す(#65 で足した) | 「測る単位」の印(`measurePairRows`) |
+| `topics` | 塊ごとにはみ出しを測り、容量に塊ごとの高さを出す(#119 で足した) | 「測る単位」の印(`measureTopicRows`) |
 | `keepLine` | 1行に収めたい文字 | 文字の葉の属性 |
 | `nestedSlack` | 中の図を文字より先に縮める | 箱の属性 |
 | `noShrink` | 親の主軸が足りなくても縮めない(骨組みの頭・出典・フッター。#96) | 箱の属性 |
@@ -314,6 +315,14 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
    `templates[].types` に型ごとの組み方(`template`・`fallback`)が出る。型ごとの
    Schema は `schema/types/<名前>.schema.json`。公開 API は増やしていない。
    試験用の標準でない型で確かめる(`component_test.go`)。
+   **2つ目の標準でない型 `topics`(印つきの塊の並び)も同じ足し方で済み(#119)。**
+   `boxloom/topics.go`:型の宣言(Schema は `schema/types/topics.schema.json`)、IR を読むときの
+   形の検査(数・印の混在)、Markdown の囲み(`::::topics` と `:::topic 題 {label=A}`)、
+   代わりの組み方(題を親、中身を子にした `points`。場所の表は親の項目を `/topics/K`、
+   その文を `/topics/K/title` に写す)、同梱のテンプレートの組み方(dark・light は題を太字に
+   して印を題の頭に。report は `topicsStyled` に見た目を渡し、左に丸い印・基調色の題・
+   塊の間の罫線)。はみ出しは測る単位の印 `measureTopicRows` で塊ごとに測る。例は
+   `examples/md/topics.bx.md`、試験は `boxloom/topics_test.go`。
 4. 配置の段をトークンのまま持つ形(値を後で解決する)に替える。Backlog の
    `token-spec`(#68)。**済み**(2.1。`boxloom/token.go`)。木を入力として読む口(`layout-input`、#69。
    開発者・試験用、4章)も**済み**(`boxloom layout-build`。`boxloom/layoutread.go`)。木を出す口(`layout-dump`、#67)は**済み**(`boxloom layout`。箱・印・値・決まった座標を

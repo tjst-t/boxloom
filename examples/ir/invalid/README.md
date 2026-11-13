@@ -37,3 +37,5 @@
 | `pairs-left-right.json` | 対の並び(pairs)の見出しを位置の名前(`left`・`right`)で書いた(側の名前は意味の `subject`・`response`) |
 | `pairs-side-table.json` | 対の1つの側に表を置いた(側は段落・箇条・引用のどれか) |
 | `pairs-label-long.json` | `../pairs-label.json` の表紙と1枚目だけを取り出し、1つ目の対の名前(`label`)を13字にした(12字まで) |
+| `topics-one.json` | `../topics.json` の印つきの塊を1つにした(2〜6個) |
+| `topics-table.json` | `../topics.json` の塊の中身に表を置いた(段落・箇条・引用だけ) |

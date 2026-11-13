@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/types/topics.schema.json",
+  "title": "Boxloom IR: topics block (0.1)",
+  "description": "印つきの塊の並び(標準でない型。docs/layers.md の8.1)。いくつかの観点を、それぞれ題と説明で上から順に並べる。塊は題(必須)・短い印(label。任意で、全ての塊に付けるか全てに付けないか)・中身(段落・箇条・引用の1〜3個)。印の形・色・塊の間の罫線はテンプレートが決める。組み方を持たないテンプレートは箇条(題を親、中身を子)で組む(component-fallback)。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "topics"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "topics": {
+      "description": "塊の並び(2〜6個)。上から順に読む。label は全ての塊に付けるか、全てに付けない(Go の検査が見る)。",
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/topic"
+      }
+    }
+  },
+  "required": [
+    "type",
+    "topics"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "topic": {
+      "description": "1つの塊:題・印・中身。",
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "塊の題(観点の短い文。文中の記法を読む)。",
+          "$ref": "../core.schema.json#/$defs/inline"
+        },
+        "label": {
+          "description": "塊の短い印(空白を含まない2字まで。A・B・1・2)。",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2,
+          "pattern": "^\\S+$"
+        },
+        "body": {
+          "description": "塊の中身(1〜3個。上から順に積む)。",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/topicBlock"
+          }
+        }
+      },
+      "required": [
+        "title",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "topicBlock": {
+      "description": "塊の中に置けるブロック:段落・箇条・引用。",
+      "oneOf": [
+        {
+          "$ref": "../core.schema.json#/$defs/paragraph"
+        },
+        {
+          "$ref": "../core.schema.json#/$defs/points"
+        },
+        {
+          "$ref": "../core.schema.json#/$defs/quote"
+        }
+      ]
+    }
+  }
+}

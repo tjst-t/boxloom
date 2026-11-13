@@ -308,6 +308,9 @@ func remapFallbackCapacity(caps []SlideCapacity, fb map[string]fallbackPaths) {
 		for i := range b.Pairs {
 			b.Pairs[i].Path = remapFallbackPath(b.Pairs[i].Path, fb)
 		}
+		for i := range b.Topics {
+			b.Topics[i].Path = remapFallbackPath(b.Topics[i].Path, fb)
+		}
 		for i := range b.Columns {
 			c := &b.Columns[i]
 			c.Path = remapFallbackPath(c.Path, fb)

@@ -140,6 +140,9 @@ func addCapacityLines(caps []SlideCapacity, lines interface{ Line(string) int })
 			for k := range bc.Pairs {
 				bc.Pairs[k].Line = lines.Line(bc.Pairs[k].Path)
 			}
+			for k := range bc.Topics {
+				bc.Topics[k].Line = lines.Line(bc.Topics[k].Path)
+			}
 			for k := range bc.Columns {
 				cc := &bc.Columns[k]
 				cc.Line = lines.Line(cc.Path)
@@ -900,6 +903,9 @@ var warnColumnRe = regexp.MustCompile(`^columns\[([0-9]+)\]: body\[([0-9]+)\]: (
 // ブロックの側の pairs[K]: subject: body[I]: )。
 var warnPairRe = regexp.MustCompile(`^pairs\[([0-9]+)\]: (?:(subject|response): (?:body\[([0-9]+)\]: )?)?(.*)$`)
 
+// warnTopicRe は印つきの塊の並びの中の場所(topics[K]: か topics[K]: body[I]: )。
+var warnTopicRe = regexp.MustCompile(`^topics\[([0-9]+)\]: (?:body\[([0-9]+)\]: )?(.*)$`)
+
 var warnShapeItemRe = regexp.MustCompile(`^shapes: items\[([0-9]+)\]`)
 
 var warnGanttMilestoneRe = regexp.MustCompile(`^gantt: milestones\[([0-9]+)\]`)
@@ -1014,6 +1020,13 @@ func warningIssue(file, w string) Issue {
 			}
 			if pm[3] != "" {
 				path += "/body/" + pm[3]
+			}
+		}
+		// 印つきの塊の並びの中(topics[K]: … か topics[K]: body[I]: …)。
+		if tm := warnTopicRe.FindStringSubmatch(msg); tm != nil {
+			path, msg = path+"/topics/"+tm[1], tm[3]
+			if tm[2] != "" {
+				path += "/body/" + tm[2]
 			}
 		}
 		// shapes の警告は、最初に名指しした図形まで指す。

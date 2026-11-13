@@ -173,10 +173,11 @@ func defaultTypes() *typeVocabulary {
 // blockTypes はプロセスに1つの型の語彙。
 var blockTypes = defaultTypes()
 
-// コアが持つ標準でない型(pairs.go)。Markdown の読み方がパーサーを指すので、
+// コアが持つ標準でない型(pairs.go・topics.go)。Markdown の読み方がパーサーを指すので、
 // 変数の初期化の後(init)で足す。
 func init() {
 	must(registerType(pairsType, pairsTypeDecl()))
+	must(registerType(topicsType, topicsTypeDecl()))
 }
 
 // fences は語彙のすべての型の囲み(名前の順)。テンプレートは型を隠さないので、

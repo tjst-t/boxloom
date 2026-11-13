@@ -63,6 +63,8 @@ type BlockCapacity struct {
 	Cards []CardCapacity `json:"cards,omitempty"`
 	// Pairs は対の並び(pairs)のときだけ、対ごとの測り値。
 	Pairs []PairCapacity `json:"pairs,omitempty"`
+	// Topics は印つきの塊の並び(topics)のときだけ、塊ごとの測り値。
+	Topics []TopicCapacity `json:"topics,omitempty"`
 	// Split は本文の表がはみ出したときだけ、表を何枚に分けられるかの案。
 	Split *TableSplitCapacity `json:"split,omitempty"`
 }
@@ -149,6 +151,9 @@ func blockCapacity(b BlockMeasure, path, typ string) BlockCapacity {
 	for _, p := range b.Pairs {
 		bc.Pairs = append(bc.Pairs, pairCapacity(p, path))
 	}
+	for _, m := range b.Topics {
+		bc.Topics = append(bc.Topics, topicCapacity(m, path))
+	}
 	if s := b.TableSplit; s != nil {
 		bc.Split = &TableSplitCapacity{Tables: s.Tables, SplitBefore: s.SplitBefore, Rows: s.Rows}
 	}
@@ -198,6 +203,12 @@ func (c SlideCapacity) String() string {
 			out += fmt.Sprintf("\n    %s: %d lines, %.1fpt (subject %.1fpt, response %.1fpt)", p.Path, p.Lines, p.Need, p.Subject, p.Response)
 			if p.Overflow > 0 {
 				out += fmt.Sprintf(", overflows by %.1fpt", p.Overflow)
+			}
+		}
+		for _, c := range b.Topics {
+			out += fmt.Sprintf("\n    %s: %d lines, %.1fpt", c.Path, c.Lines, c.Need)
+			if c.Overflow > 0 {
+				out += fmt.Sprintf(", overflows by %.1fpt", c.Overflow)
 			}
 		}
 		for _, c := range b.Columns {

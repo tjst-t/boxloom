@@ -53,6 +53,8 @@ type BlockMeasure struct {
 	// Pairs は対の並び(pairs)のときだけ、対ごとの測り値。ブロックの Need は
 	// 見出しの行と対の行を積んだ高さ。
 	Pairs []pairMeasure
+	// Topics は印つきの塊の並び(topics)のときだけ、塊ごとの測り値。
+	Topics []topicMeasure
 
 	// TableSplit は本文の表がはみ出したときだけ、何枚に分けられるかの案
 	// (続きの枚は本文が表だけで、題・出典・フッターは同じと見込む。tablechain.go)。
@@ -126,6 +128,9 @@ func measureBody(root, body *Spec) (blocks []BlockMeasure, capacity, need float6
 		}
 		if b.pairs != nil {
 			m.Pairs = measurePairs(b, b.pairs, start, max0(widths[b]-2*b.padX()), capacity)
+		}
+		if b.topics != nil {
+			m.Topics = measureTopics(b, b.topics, start, max0(widths[b]-2*b.padX()), capacity)
 		}
 		if tl, ok := b.Subsystem.(*tableLeaf); ok && b.Kind == KindSubsystem && m.Overflow > 0 {
 			m.TableSplit = tl.split(widths[b], capacity-start, capacity)
@@ -247,6 +252,11 @@ func overflowWarnings(blocks []BlockMeasure, capacity, need float64, kinds []str
 						o.Index, c.Index, ib.Index, ib.Type, c.Index, ib.Overflow, ib.Need, c.Need, capacity, need))
 				}
 			}
+			continue
+		}
+		if ws := topicOverflowWarnings(o, capacity, need); len(ws) > 0 {
+			// 印つきの塊の並びは、はみ出した塊ごとに出す。
+			out = append(out, ws...)
 			continue
 		}
 		if ws := pairOverflowWarnings(o, capacity, need); len(ws) > 0 {
