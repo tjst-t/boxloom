@@ -3425,7 +3425,7 @@
       "number": 152,
       "kind": "task",
       "title": "-fit:非常用の段でも入らない columns は列ごとに続きのスライドに分ける",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3437,7 +3437,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T12:33:51.348Z",
-      "updatedAt": "2026-11-13T12:33:51.348Z",
+      "updatedAt": "2026-11-13T12:34:05.516Z",
       "closedAt": null,
       "extra": {}
     },
