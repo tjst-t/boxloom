@@ -1233,7 +1233,8 @@ func (c *checker) checkTableGroups(groups []any, grouped bool, groupCols []any, 
 }
 
 // checkTablePoints は表のセルの中の箇条({"points": [...]})の決まりを見る
-// (table-points): 項目は2つ以上(1つならただの文字列のセル)、空の項目は無い。
+// (table-points): 段落(項目とその子の項目)は合わせて2つ以上(1つならただの文字列の
+// セル)、空の項目は無い。子を持つ項目は {text, children}(children は1つ以上)。
 func (c *checker) checkTablePoints(cell any, at string) {
 	m, ok := cell.(map[string]any)
 	if !ok {
@@ -1243,13 +1244,33 @@ func (c *checker) checkTablePoints(cell any, at string) {
 	if !ok {
 		return
 	}
-	if len(items) < 2 {
-		c.add(at+"/points", fmt.Sprintf("the cell list has %d item (a cell list needs at least 2 items; write a single item as a plain cell)", len(items)), "table-points")
-	}
+	paras := 0
 	for i, it := range items {
-		if strings.TrimSpace(inlinePlainAny(it)) == "" {
-			c.add(fmt.Sprintf("%s/points/%d", at, i), "the item of the cell list is empty", "table-points")
+		ip := fmt.Sprintf("%s/points/%d", at, i)
+		paras++
+		om, isObj := it.(map[string]any)
+		if !isObj {
+			if strings.TrimSpace(inlinePlainAny(it)) == "" {
+				c.add(ip, "the item of the cell list is empty", "table-points")
+			}
+			continue
 		}
+		if strings.TrimSpace(inlinePlainAny(om["text"])) == "" {
+			c.add(ip+"/text", "the item of the cell list is empty", "table-points")
+		}
+		kids, _ := om["children"].([]any)
+		if len(kids) == 0 {
+			c.add(ip+"/children", "an item object of the cell list needs at least one child item (write an item without children as a plain item)", "table-points")
+		}
+		for j, k := range kids {
+			paras++
+			if strings.TrimSpace(inlinePlainAny(k)) == "" {
+				c.add(fmt.Sprintf("%s/children/%d", ip, j), "the child item of the cell list is empty", "table-points")
+			}
+		}
+	}
+	if paras < 2 {
+		c.add(at+"/points", fmt.Sprintf("the cell list has %d item (a cell list needs at least 2 items; write a single item as a plain cell)", paras), "table-points")
 	}
 }
 

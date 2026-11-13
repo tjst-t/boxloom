@@ -162,6 +162,18 @@ type IRPointItem struct {
 	Ordered bool `json:"ordered,omitempty"`
 }
 
+// pointMaxDepth は箇条の入れ子の段の数の上限(Schema の pointItem・pointItem2・pointItem3)。
+const pointMaxDepth = 3
+
+// pointDepth は箇条の段の数(入れ子の無い箇条は 1)。
+func pointDepth(items []IRPointItem) int {
+	d := 0
+	for _, it := range items {
+		d = max(d, 1+pointDepth(it.Items))
+	}
+	return d
+}
+
 // IRStatItem は stat の1つの数。Value は書いたとおりの文字(計算はしない)。
 type IRStatItem struct {
 	Value string `json:"value"`
@@ -523,6 +535,9 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		}
 		if len(v.Items) == 0 {
 			return fmt.Errorf("points needs at least one item")
+		}
+		if d := pointDepth(v.Items); d > pointMaxDepth {
+			return fmt.Errorf("points nest at most %d levels (got %d)", pointMaxDepth, d)
 		}
 		*k = IRBlock{Type: v.Type, Variant: v.Variant, Items: v.Items, Ordered: v.Ordered}
 	case "compare":
@@ -1049,10 +1064,45 @@ func tableRowWant(header int, groupCols int) string {
 }
 
 // IRTableCell は表の本体・合計の行のセル1つ。文(インライン)か、セルの中の箇条
-// ({"points": [...]}、2項目以上)。Points が nil なら Text のセル。
+// ({"points": [...]}、段落は合わせて2つ以上)。Points が nil なら Text のセル。
 type IRTableCell struct {
 	Text   Inline
-	Points []Inline
+	Points []IRCellPoint
+}
+
+// IRCellPoint はセルの中の箇条の1項目。文(インライン)か {text, children}
+// (Children は2段目の項目。セルの中の箇条は2段まで)。
+type IRCellPoint struct {
+	Text     Inline
+	Children []Inline
+}
+
+func (p *IRCellPoint) UnmarshalJSON(b []byte) error {
+	b = bytes.TrimSpace(b)
+	if len(b) == 0 || b[0] != '{' {
+		return p.Text.UnmarshalJSON(b)
+	}
+	var v struct {
+		Text     Inline   `json:"text"`
+		Children []Inline `json:"children"`
+	}
+	if err := strictUnmarshal(b, &v); err != nil {
+		return err
+	}
+	if v.Text == nil || len(v.Children) == 0 {
+		return fmt.Errorf("a cell list item object needs \"text\" and at least one item in \"children\"")
+	}
+	*p = IRCellPoint{Text: v.Text, Children: v.Children}
+	return nil
+}
+
+// cellParaCount はセルの中の箇条の段落の数(項目とその子の項目の和)。
+func cellParaCount(items []IRCellPoint) int {
+	n := 0
+	for _, it := range items {
+		n += 1 + len(it.Children)
+	}
+	return n
 }
 
 func (c *IRTableCell) UnmarshalJSON(b []byte) error {
@@ -1061,17 +1111,22 @@ func (c *IRTableCell) UnmarshalJSON(b []byte) error {
 		return c.Text.UnmarshalJSON(b)
 	}
 	var v struct {
-		Points []Inline `json:"points"`
+		Points []IRCellPoint `json:"points"`
 	}
 	if err := strictUnmarshal(b, &v); err != nil {
 		return err
 	}
-	if len(v.Points) < 2 {
+	if cellParaCount(v.Points) < 2 {
 		return fmt.Errorf("points: a cell list needs at least 2 items (write a single item as a plain cell)")
 	}
 	for i, p := range v.Points {
-		if strings.TrimSpace(p.Plain()) == "" {
+		if strings.TrimSpace(p.Text.Plain()) == "" {
 			return fmt.Errorf("points[%d]: the item is empty", i)
+		}
+		for j, ch := range p.Children {
+			if strings.TrimSpace(ch.Plain()) == "" {
+				return fmt.Errorf("points[%d].children[%d]: the item is empty", i, j)
+			}
 		}
 	}
 	*c = IRTableCell{Points: v.Points}
@@ -1085,7 +1140,10 @@ func (c IRTableCell) Plain() string {
 	}
 	var parts []string
 	for _, p := range c.Points {
-		parts = append(parts, p.Plain())
+		parts = append(parts, p.Text.Plain())
+		for _, ch := range p.Children {
+			parts = append(parts, ch.Plain())
+		}
 	}
 	return strings.Join(parts, "\n")
 }

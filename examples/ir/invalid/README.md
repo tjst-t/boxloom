@@ -30,6 +30,8 @@
 | `columns-two-mains.json` | 並列のまとまりの2つに `role: main` を付けた |
 | `column-gantt.json` | 並列のまとまりの中に Gantt を置いた(まとまりの中に置けるサブシステムは chart・cycle・phases・matrix・orgchart だけ) |
 | `columns-nested.json` | まとまりの中に `columns` を入れ子にした |
+| `points-depth-four.json` | `../nested-points.json` の箇条の3段目の項目に4段目の項目(`items`)を足した |
+| `table-cell-grandchild.json` | `../nested-points.json` の表のセルの子の項目に子(`children`)を足した(セルの中の箇条は2段まで) |
 | `image-url.json` | 画像の `src` を URL にした(`boxloom check` は `image-path`) |
 | `image-empty-alt.json` | 画像の代わりの文を空にした(`boxloom check` は `image-alt`。このフォルダに画像は無いので `image-missing` も出る) |
 | `chart-color-on-series.json` | chart の系列に色(color)を足した(色はテーマの役割名からサブシステムが決める) |

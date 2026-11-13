@@ -38,6 +38,9 @@ type TableCell struct {
 	// Items はセルの中の箇条(項目ごとの塊。先頭は印の塊 Mark)。nil でなければ
 	// Runs の代わりに項目を段落にし、印は段落の箇条の印(a:buChar)で書く。
 	Items [][]TextRun
+	// Levels は Items の項目ごとの段(0 が1段目、1 が子の項目。nil なら全部 0)。
+	// PPTX では段落の lvl と、親の印の幅の字下げ。
+	Levels []int
 	// RowSpan は縦に結合する行の数(2 以上で結合の始まり。a:tc の rowSpan)。
 	// VMerge は上のセルに結合された続きのセル(a:tc の vMerge。文字は持たない)。
 	RowSpan int
@@ -241,18 +244,21 @@ func (p *PPTXBuilder) cellListXML(c TableCell, size float64) string {
 	}
 	defer restore()
 	var b strings.Builder
-	for _, it := range c.Items {
+	for i, it := range c.Items {
 		mark, rest := splitMark(it)
-		var props, indent string
+		var props, indent, lvl string
 		if p.Fonts != nil && p.Fonts.FixedLineSpacing {
 			props = fmt.Sprintf(`<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(size*p.Fonts.lineHeight()*100)))
 		}
 		if mark != nil {
 			var bullet string
-			bullet, indent = p.bulletXML(mark, size, 0)
+			bullet, indent = p.bulletXML(mark, size, c.indent(i, size))
 			props += bullet
 		}
-		fmt.Fprintf(&b, `<a:p><a:pPr%s algn="%s">%s</a:pPr>`, indent, alignAttr(c.Align), props)
+		if i < len(c.Levels) && c.Levels[i] > 0 {
+			lvl = fmt.Sprintf(` lvl="%d"`, c.Levels[i])
+		}
+		fmt.Fprintf(&b, `<a:p><a:pPr%s%s algn="%s">%s</a:pPr>`, indent, lvl, alignAttr(c.Align), props)
 		for _, r := range rest {
 			for i, part := range strings.Split(r.Text, "\n") {
 				if i > 0 {

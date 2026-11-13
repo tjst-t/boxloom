@@ -183,7 +183,7 @@ func TestMarkdownErrors(t *testing.T) {
 		{"column columns", "# A\n:::::columns\n::::column 一\n:::columns\n:::\n::::\n::::column 二\ny\n::::\n:::::\n", codeMisplaced, 4},
 		{"column code", "# A\n::::columns\n:::column 一\n```gantt\nspan: 2026-01 .. 2027-01\n```\n:::\n:::column 二\ny\n:::\n::::\n", codeMisplaced, 4},
 		{"star bullet", "# A\n* x\n", codeUnsupportedSyntax, 2},
-		{"deep list", "# A\n- a\n  - b\n    - c\n", codeMisplaced, 4},
+		{"deep list", "# A\n- a\n  - b\n    - c\n      - d\n", codeMisplaced, 5},
 		{"unclosed fence", "# A\n:::note\nx\n", codeUnclosedBlock, 2},
 		{"colon mismatch", "# A\n:::note\nx\n::::\n", codeUnclosedBlock, 4},
 		{"inner colons", "# A\n:::compare\n:::option a\n", codeUnclosedBlock, 3},

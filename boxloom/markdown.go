@@ -686,8 +686,8 @@ func lastListEnt(items []*mdListEnt) *mdListEnt {
 	return e
 }
 
-// placeListEnt は字下げで項目の段を決める。1段目より深ければ2段目。
-// 3段目は誤り(仕様は2段まで)。
+// placeListEnt は字下げで項目の段を決める。1段目より深ければ2段目、2段目より
+// 深ければ3段目。4段目は誤り(仕様は3段まで)。
 func (p *mdParser) placeListEnt(list *mdItem, ent *mdListEnt) {
 	if len(list.items) == 0 || ent.indent <= list.items[0].indent {
 		ent.indent = 0
@@ -696,8 +696,13 @@ func (p *mdParser) placeListEnt(list *mdItem, ent *mdListEnt) {
 	}
 	parent := list.items[len(list.items)-1]
 	if len(parent.children) > 0 && ent.indent > parent.children[0].indent {
-		p.fail(ent.line, ent.indent+1, "", codeMisplaced, "箇条の入れ子は2段までです", nil, "")
-		parent.children = append(parent.children, ent)
+		mid := parent.children[len(parent.children)-1]
+		if len(mid.children) > 0 && ent.indent > mid.children[0].indent {
+			p.fail(ent.line, ent.indent+1, "", codeMisplaced, "箇条の入れ子は3段までです", nil, "")
+			mid.children = append(mid.children, ent)
+			return
+		}
+		mid.children = append(mid.children, ent)
 		return
 	}
 	if ent.indent < 2 {
@@ -1417,7 +1422,7 @@ func (p *mdParser) blocks(items []*mdItem, path string) []any {
 				out = append(out, b)
 			}
 		case mdList:
-			pts := obj("type", "points", "items", p.listItems(it.items, bp+"/items", true))
+			pts := obj("type", "points", "items", p.listItems(it.items, bp+"/items", 0, pointMaxDepth))
 			if p.listOrdered(it.items, bp+"/items") {
 				pts.set("ordered", true)
 			}
@@ -1457,7 +1462,9 @@ func (p *mdParser) listOrdered(ents []*mdListEnt, path string) bool {
 	return first.ordered
 }
 
-func (p *mdParser) listItems(ents []*mdListEnt, path string, allowNest bool) []any {
+// listItems は箇条の項目を IR にする。depth は今の段(0 が1段目)、nest は置ける段の
+// 数(本文の箇条は pointMaxDepth、入れ子にできないところ(compare の側など)は 1)。
+func (p *mdParser) listItems(ents []*mdListEnt, path string, depth, nest int) []any {
 	var out []any
 	for k, e := range ents {
 		ip := fmt.Sprintf("%s/%d", path, k)
@@ -1467,12 +1474,12 @@ func (p *mdParser) listItems(ents []*mdListEnt, path string, allowNest bool) []a
 			out = append(out, content)
 			continue
 		}
-		if !allowNest {
+		if depth+1 >= nest {
 			p.fail(e.children[0].line, e.children[0].indent+1, ip, codeMisplaced, "ここでは箇条を入れ子にできません", nil, "")
 			out = append(out, content)
 			continue
 		}
-		item := obj("content", p.parseInlineAt(e.text.trimBR(), ip+"/content"), "items", p.listItems(e.children, ip+"/items", false))
+		item := obj("content", p.parseInlineAt(e.text.trimBR(), ip+"/content"), "items", p.listItems(e.children, ip+"/items", depth+1, nest))
 		if p.listOrdered(e.children, ip+"/items") {
 			item.set("ordered", true)
 		}
@@ -1716,7 +1723,7 @@ func (p *mdParser) compareBlock(f *mdFenceBlk, path string) any {
 				if len(li.items) > 0 && li.items[0].ordered {
 					p.fail(li.items[0].line, li.items[0].indent+1, sp, codeInvalidValue, fmt.Sprintf(":::%s の箇条に番号は付けられません", sf.name), []string{"-"}, "「- 」で書いてください")
 				}
-				items = append(items, p.listItems(li.items, sp, false)...)
+				items = append(items, p.listItems(li.items, sp, 0, 1)...)
 			}
 			if len(items) == 0 {
 				p.fail(sf.line, 1, sp, codeMisplaced, fmt.Sprintf(":::%s の中に箇条がありません", sf.name), nil, "")

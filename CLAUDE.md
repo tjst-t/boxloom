@@ -285,7 +285,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `subsystem.go` = サブシステムの差し込み口(`Subsystem` interface・
     `SubsystemRegistry`・役割名の解決器 `Roles`・最小の大きさの検査)
   - `blocks.go` / `image.go` / `pptx_blocks.go` / `md_blocks.go` = 第1層のブロックの
-    並列のまとまり(`columns`)・表(`table`、本物の `a:tbl`。行の群 `groups` は先頭の列の `rowSpan`・`vMerge`(2列目以降は `groupColumns`、Markdown は `{groups=列名,…}`。右の群は左の群の境を越えない、#123)、セルの中の箇条 `{points: [...]}`(Markdown は `{points=列名}` と `;`)はセルの段落の `a:buChar`。長い表は作者が分け、続きの表に `continues`(Markdown は `{continues}`)を書く。`tablechain.go` がひと続きをつなぎ、各枚に見出しの行と「n/m」の印(`marks.tableContinued`)を付けて列の幅をそろえ、はみ出した表には check が分け方の案(容量の `split` と hint)を出す)・画像(`image`・`gallery`、
+    並列のまとまり(`columns`)・表(`table`、本物の `a:tbl`。行の群 `groups` は先頭の列の `rowSpan`・`vMerge`(2列目以降は `groupColumns`、Markdown は `{groups=列名,…}`。右の群は左の群の境を越えない、#123)、セルの中の箇条 `{points: [...]}`(Markdown は `{points=列名}` と `;`。`- ` で始まる項目は直前の項目の子で、IR は `{text, children}`。2段まで)はセルの段落の `a:buChar`(子は `lvl="1"`)。本文の箇条は3段まで(3段目は `lvl="2"`、印と字は入れ子と同じ `marks.subPoint`・`subPoint`)。長い表は作者が分け、続きの表に `continues`(Markdown は `{continues}`)を書く。`tablechain.go` がひと続きをつなぎ、各枚に見出しの行と「n/m」の印(`marks.tableContinued`)を付けて列の幅をそろえ、はみ出した表には check が分け方の案(容量の `split` と hint)を出す)・画像(`image`・`gallery`、
     本物の `p:pic`)。表と画像は Subsystem の約束で測って描く葉(登録簿には載せない)。
     画像はライブラリに渡す `fs.FS`(`BuildOptions.Assets`)から読む(`docs/library.md`)
   - `fit.go` = 図と枠の橋渡し。`FixedAspect` の図・Max を越える枠は図の大きさまで

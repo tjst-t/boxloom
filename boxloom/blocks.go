@@ -217,11 +217,27 @@ func (c TableCell) paras() [][]TextRun {
 	return [][]TextRun{c.Runs}
 }
 
-// lines はセルの文の行の数(箇条のセルは項目ごとに折り返した行の和)。
+// indent はセルの段落 i の字下げ(子の項目は、親の項目の印の幅だけ右に寄せて、
+// 印を親の文の頭にそろえる。PPTX の a:pPr の marL と同じ)。
+func (c TableCell) indent(i int, size float64) float64 {
+	if i >= len(c.Levels) || c.Levels[i] == 0 {
+		return 0
+	}
+	for k := i - 1; k >= 0; k-- {
+		if c.Levels[k] == 0 {
+			mark, _ := splitMark(c.Items[k])
+			return naturalRunsWidth(mark, size)
+		}
+	}
+	return 0
+}
+
+// lines はセルの文の行の数(箇条のセルは項目ごとに折り返した行の和。子の項目は
+// 字下げの分だけ狭い幅で折り返す)。
 func (c TableCell) lines(size, width float64) int {
 	n := 0
-	for _, runs := range c.paras() {
-		n += runsLines(runs, size, width)
+	for i, runs := range c.paras() {
+		n += runsLines(runs, size, width-c.indent(i, size))
 	}
 	return n
 }
@@ -513,10 +529,11 @@ func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 					}
 					continue
 				}
-				for _, runs := range cell.paras() {
-					natural := maxLineWidth(runs, leaf.size) + 2*leaf.padX
-					minimum := minRunsWidth(runs, leaf.size) + 2*leaf.padX
-					floor := math.Max(minimum, cjkChunkWidth(runs, leaf.size)+2*leaf.padX)
+				for k, runs := range cell.paras() {
+					ind := cell.indent(k, leaf.size)
+					natural := ind + maxLineWidth(runs, leaf.size) + 2*leaf.padX
+					minimum := ind + minRunsWidth(runs, leaf.size) + 2*leaf.padX
+					floor := math.Max(minimum, ind+cjkChunkWidth(runs, leaf.size)+2*leaf.padX)
 					if r == 0 {
 						// 見出しの行は文字列を折らない幅を守る(1行目は見出し)。
 						floor = natural
@@ -590,10 +607,17 @@ func (t *Template) tableCells(b *IRBlock, header []Inline, numeric []bool, look 
 		}
 		// セルの中の箇条: 項目ごとに1つの段落。印は本文の箇条と同じ marks.point
 		// (先頭の塊の Mark。PPTX では a:buChar)。
+		// 子の項目(2段目)の印は本文の入れ子の箇条と同じ marks.subPoint で、段は Levels。
 		out := TableCell{Align: "left"}
 		for _, it := range in.Points {
 			mark := TextRun{Text: t.Marks.Point, Color: th.c("accent"), Bold: true, Mark: true}
-			out.Items = append(out.Items, append([]TextRun{mark}, t.leafRuns(it, role, bold)...))
+			out.Items = append(out.Items, append([]TextRun{mark}, t.leafRuns(it.Text, role, bold)...))
+			out.Levels = append(out.Levels, 0)
+			for _, ch := range it.Children {
+				sub := TextRun{Text: t.Marks.SubPoint, Color: th.c("accent"), Bold: true, Mark: true}
+				out.Items = append(out.Items, append([]TextRun{sub}, t.leafRuns(ch, role, bold)...))
+				out.Levels = append(out.Levels, 1)
+			}
 		}
 		return out
 	}

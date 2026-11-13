@@ -1119,7 +1119,7 @@ func (p *mdParser) pairSide(f *mdFenceBlk, path string) any {
 				return obj("type", "paragraph", "content", p.parseInline(it.text.trimBR(), path+"/content"))
 			}
 		case it.kind == mdList:
-			pts := obj("type", "points", "items", p.listItems(it.items, path+"/items", true))
+			pts := obj("type", "points", "items", p.listItems(it.items, path+"/items", 0, pointMaxDepth))
 			if p.listOrdered(it.items, path+"/items") {
 				pts.set("ordered", true)
 			}

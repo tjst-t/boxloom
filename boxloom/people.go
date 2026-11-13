@@ -438,7 +438,7 @@ func (p *mdParser) peopleBlock(f *mdFenceBlk, path string) any {
 			if body.kind == mdPara {
 				person.set("body", obj("type", "paragraph", "content", p.parseInline(body.text.trimBR(), bp+"/content")))
 			} else {
-				pts := obj("type", "points", "items", p.listItems(body.items, bp+"/items", true))
+				pts := obj("type", "points", "items", p.listItems(body.items, bp+"/items", 0, pointMaxDepth))
 				if p.listOrdered(body.items, bp+"/items") {
 					pts.set("ordered", true)
 				}

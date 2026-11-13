@@ -73,9 +73,9 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc?, cov
 対の並び  { type: "pairs", headings: { subject, response }, pairs: [{ label?, subject: 側, response: 側 }] }  (2組以上。側は paragraph|points|quote か { title?, body: [paragraph|points|quote|image|table 1〜4個] })
 印つきの塊 { type: "topics", topics: [{ title, label?, body: [paragraph|points|quote 1〜3個] }] }  (2〜6個。label は2字までで、全てに付けるか全てに付けない)
 人物の紹介  { type: "people", people: [{ name, role?, image?, alt?, body? }] }  (1〜4人。image を書いたら alt も。body は paragraph|points。まとまりの中は1〜2人)
-表       { type: "table", header: [セル], rows: [[セル]], total?: [セル], caption? }   (セルはインライン。どの行も見出しと同じ数。total は合計の行)
+表       { type: "table", header: [セル], rows: [[セル]], total?: [セル], caption? }   (セルはインラインか { points: [インライン | { text, children: [インライン] }] }。どの行も見出しと同じ数。total は合計の行)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
-箇条     { type: "points", ordered?: true, items: [インライン | { content, items?, ordered? }] }  (ordered は番号つき。入れ子の項目の ordered はその items に効く)
+箇条     { type: "points", ordered?: true, items: [インライン | { content, items?, ordered? }] }  (ordered は番号つき。入れ子の項目の ordered はその items に効く。入れ子は3段まで)
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
 サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel" | "phases" | "cycle" | "pillars" | "chart", variant?, data: {…} }
 ```
@@ -532,6 +532,12 @@ Schema は `schema/types/people.schema.json`、例は `examples/ir/people.json`
    "rows": [["承認が遅い", {"points": ["100 万円未満は2段", "承認の期限を3日に"]}]]}
   ```
 
+- **セルの中の2段の箇条(#122)**:項目は、子の項目(2段目)を持つ `{"text": インライン,
+  "children": [インライン, …]}` でもよい(children は1つ以上。子の子は無い)。段落(項目と
+  子の項目)は合わせて2つ以上で、`{"points": [{"text": "親", "children": ["子"]}]}` も書ける。
+  PPTX では子の段落を `lvl="1"` にし、印はテンプレートの `marks.subPoint`、字下げは親の
+  印の幅(子の印が親の文の頭にそろう)。
+
 - 列ごとに「この列は箇条」と宣言する欄は IR に持たない:箇条かどうかはセルの意味で、
   同じ列に箇条のセルと文のセルが混ざってよい(項目が1つのセルは文)。列の宣言
   (`{points=列名}`)は Markdown の記法の都合で、`;` を区切りと読む範囲を決めるだけ
@@ -539,9 +545,11 @@ Schema は `schema/types/people.schema.json`、例は `examples/ir/people.json`
 - 印・字下げは見た目なのでテンプレートが決める。dark / light は本文の箇条と同じ印
   (`marks.point`)を、本物の `a:tbl` のセルの段落の箇条の印(`a:buChar`)で書く。項目ごとに
   1つの段落で、折り返しはアプリに任せる。箇条のセルは数の列として右に揃えない。
-- はみ出しと容量は、セルの中の箇条の行(項目ごとに折り返した行の和)で行の高さを測る。
-- 誤りは `boxloom check` の `table-points`:項目が1つ以下(path は `…/rows/R/C/points`)、
-  空の項目(path は `…/points/I`)。
+- はみ出しと容量は、セルの中の箇条の行(項目ごとに折り返した行の和。子の項目は字下げの分
+  狭い幅で折り返す)で行の高さを測る。
+- 誤りは `boxloom check` の `table-points`:段落が1つ以下(path は `…/rows/R/C/points`)、
+  空の項目(path は `…/points/I`・`…/points/I/text`・`…/points/I/children/J`)、子の無い
+  `{text, children}`(path は `…/points/I/children`)。
 
 ### 14. 長い表を次のスライドへ続ける(continues。#81)
 
@@ -654,7 +662,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `matrix-emphasis` | matrix の `emphasis`(推す列)が `columns` の見出しのどれか(文中の記法を除いた文字)と同じ(path は `…/data/emphasis`) |
 | `matrix-column-groups` | matrix の `columnGroups`(列の群)の `span` の合計が `columns` の数と同じ(path は `…/data/columnGroups`) |
 | `table-shape` | 表の行・合計の行のセルの数が、見出しの行と同じ(path は違う行 `…/rows/R` か `…/total`)。`groups`・`groupColumns` があると本体の行は見出しより群の列の数だけ少ない |
-| `table-points` | 表のセルの中の箇条(`{"points": [...]}`)の項目が2つ以上で(path は `…/rows/R/C/points` か `…/total/C/points`)、空の項目が無い(path は `…/points/I`) |
+| `table-points` | 表のセルの中の箇条(`{"points": [...]}`)の段落(項目と子の項目)が2つ以上で(path は `…/rows/R/C/points` か `…/total/C/points`)、空の項目が無い(path は `…/points/I`・`…/points/I/children/J`) |
 | `table-continues` | 続きの表(`continues`)が、すぐ前のスライドの本文の最後の表に続く(前のスライドに表が無い・間にスライドを挟む・そのスライドの2つ目の表・並列のまとまりの中は path `…/continues`)。`header` を書かない(path `…/header`)。`groups` の有無が最初の表と同じ(path `…/groups`)。`groupColumns` の列が最初の表と同じ(path `…/groupColumns`)。合計の行はひと続きの最後の表だけ(path は続きのある表の `…/total`)。`continues` は `true` だけ |
 | `pairs-label` | `pairs` の対の名前(`label`)が、全ての対にあるか、どれにも無い(path は名前の有無が1つ目の対と違う対:名前があれば `…/pairs/K/label`、無ければ `…/pairs/K`) |
 | `table-groups` | 表の `groups`・`groupColumns` の名前が空でなく(path は `…/groups/G/label`・`…/groupColumns/K/groups/G/label`)、`rows` の和が本体の行の数で、群の列のほかに列がある(path は `…/groups`・`…/groupColumns`)。`groupColumns` の `column` は 1〜列の数−1 で左から(path は `…/groupColumns/K/column`)、群は左の群の列の境を越えない(path は `…/groupColumns/K/groups`) |

@@ -388,7 +388,8 @@ func (p *mdParser) tablePointColumns(attrs map[string]string, header []mdText, g
 }
 
 // tablePointsCell は箇条の列のセルを半角の ; で区切った箇条にする(\; は文の ;)。
-// 項目が1つならただの文字列のセル、空の項目は誤り(table-points)。
+// 「- 」で始まる項目は直前の項目の子(2段目。{text, children})。項目が1つなら
+// ただの文字列のセル、空の項目・「- 」で始まる最初の項目は誤り(table-points)。
 func (p *mdParser) tablePointsCell(cell mdText, path, col string) any {
 	var parts []mdText
 	start := 0
@@ -403,22 +404,57 @@ func (p *mdParser) tablePointsCell(cell mdText, path, col string) any {
 		}
 	}
 	parts = append(parts, trimText(mdText{r: cell.r[start:], pos: cell.pos[start:]}))
-	if len(parts) == 1 {
+	// 「-」だけのセル(該当なしの印)はただの文字のセル。
+	if len(parts) == 1 && (len(parts[0].r) == 1 || !isCellChild(parts[0])) {
 		return p.parseInline(parts[0], path)
 	}
-	items := []any{}
+	// 「- 」で始まる項目は直前の項目の子(2段目)。文字の - で始めるときは \-。
+	type cellItem struct {
+		text     any
+		children []any
+	}
+	var items []*cellItem
 	for i, it := range parts {
+		line, c := 0, 0
+		if len(it.pos) > 0 {
+			line, c = it.pos[0].line, it.pos[0].col
+		} else if len(cell.pos) > 0 {
+			line, c = cell.pos[0].line, cell.pos[0].col
+		}
+		child := isCellChild(it)
+		if child {
+			it = trimText(mdText{r: it.r[1:], pos: it.pos[1:]})
+		}
 		if len(it.r) == 0 {
-			line, c := 0, 0
-			if len(cell.pos) > 0 {
-				line, c = cell.pos[0].line, cell.pos[0].col
-			}
 			p.fail(line, c, fmt.Sprintf("%s/points/%d", path, i), codeTablePoints, fmt.Sprintf("列 %q のセルの %d 番目の項目が空です", col, i+1), nil, "箇条の項目は半角の ; で区切ります(a;;b や末尾の ; は書きません)。文の ; は \\; と書きます")
 			return nil
 		}
-		items = append(items, p.parseInline(it, fmt.Sprintf("%s/points/%d", path, i)))
+		if child && len(items) == 0 {
+			p.fail(line, c, fmt.Sprintf("%s/points/%d", path, i), codeTablePoints, fmt.Sprintf("列 %q のセルの最初の項目が「- 」で始まっています", col), nil, "「- 」で始まる項目は直前の項目の子(2段目)です。最初の項目は親の項目にします。文字の - で始めるときは \\- と書きます")
+			return nil
+		}
+		if child {
+			last := items[len(items)-1]
+			last.children = append(last.children, p.parseInline(it, fmt.Sprintf("%s/points/%d/children/%d", path, len(items)-1, len(last.children))))
+			continue
+		}
+		items = append(items, &cellItem{text: p.parseInline(it, fmt.Sprintf("%s/points/%d", path, len(items)))})
 	}
-	return obj("points", items)
+	out := []any{}
+	for _, it := range items {
+		if it.children == nil {
+			out = append(out, it.text)
+			continue
+		}
+		out = append(out, obj("text", it.text, "children", it.children))
+	}
+	return obj("points", out)
+}
+
+// isCellChild はセルの箇条の項目(前後の空白を除いたもの)が「- 」で始まる子の項目か
+// (「-」だけの項目は空の子の項目)。
+func isCellChild(it mdText) bool {
+	return len(it.r) >= 1 && it.r[0] == '-' && (len(it.r) == 1 || it.r[1] == ' ' || it.r[1] == '\t')
 }
 
 func isDelimRow(cells []mdText) bool {
