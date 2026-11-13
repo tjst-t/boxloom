@@ -2528,7 +2528,7 @@
       "number": 110,
       "kind": "task",
       "title": "report の段階の図と循環の図:群の帯を塗る・輪が小さいときも題を扇の外に出して収める",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2540,7 +2540,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T05:08:29.681Z",
-      "updatedAt": "2026-11-13T05:08:29.681Z",
+      "updatedAt": "2026-11-13T05:12:43.462Z",
       "closedAt": null,
       "extra": {}
     }
