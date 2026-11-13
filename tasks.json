@@ -3404,7 +3404,7 @@
       "number": 151,
       "kind": "bug",
       "title": "matrix の評価の列の最小が列の見出しの字幅で決まり、題と要約の列が狭くなる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3416,7 +3416,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T12:33:46.062Z",
-      "updatedAt": "2026-11-13T12:33:46.062Z",
+      "updatedAt": "2026-11-13T12:34:04.002Z",
       "closedAt": null,
       "extra": {}
     },
