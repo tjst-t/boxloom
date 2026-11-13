@@ -326,6 +326,8 @@ type templateSubsystems struct {
 	Phases   *PhasesValues   `json:"phases,omitempty"`
 	// 数値のグラフ(chart.go)
 	Chart *ChartValues `json:"chart,omitempty"`
+	// 輪に並んだ段(cycle.go)
+	Cycle *CycleValues `json:"cycle,omitempty"`
 }
 
 // themeRoles はテーマが持たなければならない役割名(コア・デモのテンプレートの

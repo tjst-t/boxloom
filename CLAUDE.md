@@ -75,7 +75,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
    check の警告(`shapes-overlap`)。詳細は `docs/subsystem.md` の8節。
    箱を矢印で並べる・親と子の箱・格子に評価・減っていく帯は、shapes ではなく
    **process・orgchart・matrix・funnel** のサブシステムで書く(段ごとに箱を積む事業の全体像は
-   **phases**。意味だけを書く。
+   **phases**、繰り返す段の輪は **cycle**。意味だけを書く。
    `docs/subsystem.md` の11節)。数の系列は **chart**(PowerPoint の本物のグラフ+
    値を持つ埋め込みの xlsx)。作者は比べ方(Zelazny の5分類 `compare`)と項目・系列・
    値・単位・強調だけを書き、グラフの形・色・大きさはサブシステムが選ぶ。軸・ラベルの
@@ -217,6 +217,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     Markdown は `md_figures.go`)= 箱と線の図のサブシステム。作者は文・状態・強調だけを
     書き、置き場所・色はサブシステムが決める。線は箱に繋がった本物のコネクタ(組織図は
     曲がる線)。check の誤り `matrix-cells`・`matrix-emphasis`、警告 `figure-text-overflow`・`funnel-increase`・`figure-legend`。状態の凡例(legend)は4つの図すべて、funnel は段の間の転換率を描き、matrix は推す列(emphasis)を持つ。
+  - `cycle.go` = 輪に並んだ段(cycle、#91)。段(3〜6)を上から時計回りに本物の `blockArc` の扇で
+    並べ、基調色の濃淡で塗る。番号の丸は輪の外の縁、題は扇の中(扇に収まる枠を測って探す)、
+    detail は輪の外。縦横比を保つ(FixedAspect、余りは spare-width)。columns の中に置ける
+    サブシステムは chart と cycle(`ir.go` の `columnSubsystems`)。`docs/subsystem.md` の11節
     詳細は `docs/subsystem.md` の11節
   - `phases.go` = フェーズの図(phases)。段の山形(左端は homePlate、続きは chevron。先の深さは
     `ShapeOpts.Depth`)・段をまたぐ群の帯・段ごとに縦に積む番号つきの箱(題と補足。補足の列は

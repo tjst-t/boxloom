@@ -16,7 +16,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `schema/core.schema.json` | コア:文書・スライド・ブロック・インライン・サブシステムの差し込み口 |
 | `schema/subsystems/gantt.schema.json` | Gantt サブシステムのブロック |
 | `schema/subsystems/shapes.schema.json` | shapes サブシステム(生の図形への逃げ道。`docs/subsystem.md` の8節)のブロック |
-| `schema/subsystems/process.schema.json`・`orgchart`・`matrix`・`funnel`・`phases` | 箱と線の図のサブシステム(`docs/subsystem.md` の11節)のブロック |
+| `schema/subsystems/process.schema.json`・`orgchart`・`matrix`・`funnel`・`phases`・`cycle` | 箱と線の図・循環の図のサブシステム(`docs/subsystem.md` の11節)のブロック |
 | `schema/subsystems/chart.schema.json` | 数値のグラフ(`docs/subsystem.md` の12節)のブロック。比べ方 `compare`・項目・系列・単位・強調だけを持つ |
 | `schema/boxloom-ir.schema.json` | 検査の入口。コアに同梱のサブシステムを差し込んだもの |
 | `examples/ir/demo-deck.json` | お題3枚を IR で書いた例 |
@@ -26,6 +26,7 @@ Boxloom のコンテンツは、どの記法で書いても最後は **IR(意味
 | `examples/ir/text-patterns.json` | 文字のパターン(区切り・主張・結論・統計強調・引用)の例(`examples/md/text-patterns.bx.md` の IR) |
 | `examples/ir/figures.json` | process・orgchart・matrix・funnel の例(`examples/md/figures.bx.md` と同じ IR) |
 | `examples/ir/phases.json` | phases の例。3段・群2つ・箱7つ(`examples/md/phases.bx.md` と同じ IR) |
+| `examples/ir/cycle.json` | cycle の例(単独と columns の中。`examples/md/cycle.bx.md` と同じ IR) |
 | `examples/ir/blocks.json` | 並列のまとまり・表・画像・画像の並びの例(画像は `examples/ir/images/`。`tools/gen_example_images.go` で作った架空の図) |
 | `examples/ir/charts.json` | chart の例。比べ方の5分類ごと(`examples/md/charts.bx.md` と同じ IR) |
 | `examples/yaml/charts.yaml` | `examples/ir/charts.json` を YAML の deck(IR の写し。`docs/content-syntax.md` の1章)で書いたもの。同じ IR・同じ PPTX になる |
@@ -72,7 +73,7 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc? }   
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
 箇条     { type: "points", ordered?: true, items: [インライン | { content, items?, ordered? }] }  (ordered は番号つき。入れ子の項目の ordered はその items に効く)
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
-サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel" | "phases" | "chart", variant?, data: {…} }
+サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel" | "phases" | "cycle" | "chart", variant?, data: {…} }
 ```
 
 `notes` は発表者ノート。文字だけの文字列で、改行(`\n`)が段落の区切り。PPTX では
@@ -498,7 +499,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 |---|---|
 | `title-wrap` | 本文のスライドの題が、題の幅で2行以上に折り返す。題は短い見出しにして1行に収め、言いたいことの文は `lead` に書く。path は題(`/slides/S/title`、.md なら「# 題」の行)、文に行の数と幅 |
 | `fill-ratio` | 本文の箱のうち 65% より少なくしか使っていない(テンプレートの方針)。本文を持たない表紙・区切り・主張には出さない。`hint` に直し方(隣の薄いスライドとまとめる・根拠を足す・主張のスライドにする)を書き、隣り合うスライドも薄く、2枚の本文を1枚にまとめると本文の領域に収まるときは、その相手と見込みの割合も書く(下の「薄いスライドの hint」) |
-| `spare-width` | 本文のブロックの中の図・画像が、縦横比(または横の上限)を保ったために、ブロックの幅の 20% 以上を横に空けた。path はそのブロック、文に空いた幅(pt と %)。容量の `remainingWidth` と同じ数字。並列のまとまり(columns)の中のグラフ・画像は、まとまりの幅に対して同じく測り、path は `/slides/S/body/N/columns/C/body/K` |
+| `spare-width` | 本文のブロックの中の図・画像が、縦横比(または横の上限)を保ったために、ブロックの幅の 20% 以上を横に空けた。path はそのブロック、文に空いた幅(pt と %)。容量の `remainingWidth` と同じ数字。並列のまとまり(columns)の中のグラフ・循環の図・画像は、まとまりの幅に対して同じく測り、path は `/slides/S/body/N/columns/C/body/K` |
 | `stat-value` | `stat` の数と単位が、カードの幅に1行で入らない。数と単位はそれぞれ途中で折らない(「億ド / ル」「12,345, / 678」と折れると読み違えるため)ので、入らなければ単位が次の行に落ち、数そのものが入らなければ1行のままカードからはみ出す。path はその数(`/slides/S/body/N/items/K`、.md なら `:::value` の行)、文に要る幅と有る幅(pt)。字は縮めない |
 | `layout-overflow` | 本文のブロックが本文の領域に収まらない。はみ出したブロックごとに1件で、`path` はそのブロック(`/slides/S/body/N`)、文にはみ出した高さ(pt)を書く(下の節)。区切りの題・主張の1文がページに収まらないときも出し、`path` はそのスライド(`/slides/S`)。並列のまとまりは、まとまりの中のはみ出したブロック(`/slides/S/body/N/columns/C/body/K`) |
 | `component-fallback` | テンプレートが組み方を持たない標準でない型のブロックを、型の代わりの組み方(標準の型への書き換え)で組んだ。path はそのブロック(`/slides/S/body/N`)。テンプレートを指したとき(`-template`・値の表・IR の `template`)だけ出し、指さなければ型の語彙だけで検査する(`docs/layers.md` の8.2) |
@@ -509,9 +510,9 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `shapes-overlap` | shapes の図形どうしが重なった。path は後から置いた図形(`…/data/items/N`) |
 | `shapes-text-overflow` | shapes の図形の文が、割り当てられた大きさに収まらない。path はその図形 |
 | `shapes-connector-angle` | shapes のコネクタが、どの辺の組でも辺と 30°未満の浅い角度でしか繋げない(角で終わったように見える)。path はそのコネクタ |
-| `figure-text-overflow` | process・orgchart・matrix・funnel・phases の箱・セル・注記の文が収まらない(折り返せない語が箱より広い・高さが足りない)。path はその要素(`…/data/steps/2` など) |
+| `figure-text-overflow` | process・orgchart・matrix・funnel・phases・cycle の箱・セル・注記の文が収まらない(折り返せない語が箱より広い・高さが足りない)。path はその要素(`…/data/steps/2` など) |
 | `funnel-increase` | funnel の数の値が前の段より増えた。path はその段の `value` |
-| `figure-legend` | process・orgchart・funnel・phases で `status` を使ったのに、その状態の文が `legend` に無い(読み手は枠線の色の意味が分からない)。path は `…/data/legend` |
+| `figure-legend` | process・orgchart・funnel・phases・cycle で `status` を使ったのに、その状態の文が `legend` に無い(読み手は枠線の色の意味が分からない)。path は `…/data/legend` |
 | `chart-labels` | chart の項目の名前が、アプリが置く場所(縦の形は1項目の幅、横棒は枠の幅の30%)に2行で収まらない(アプリが斜めにする・間引く)。path は最初の項目(`…/data/categories/N`)、文に残りの数 |
 | `theme-role` | テーマに値の無い役割名をサブシステムが使った |
 
@@ -638,7 +639,7 @@ check でも断られるもの。
   決まり、横の上限(Max)を持つ図は上限で止まるので、ブロックの幅より細く描かれる。
   余りは図の置き方(Place)の側に白く残り、縦の埋まり(`fill-ratio`)では見えない。
   ブロックの幅の 20% 以上なら `spare-width` の警告にもする。埋めるのは作者で、
-  `columns` に入れて図の横に文を置くか(画像とグラフはまとまりの中に置ける)、同じ
+  `columns` に入れて図の横に文を置くか(画像・グラフ・循環の図はまとまりの中に置ける)、同じ
   スライドの文を減らして図に高さを渡す。円グラフは高さで直径が決まるので、横の上限
   (その高さで要る幅)を申告する。並列のまとまりの中のブロックにも、まとまりの幅に対する
   `remainingWidth` を付ける(`columns[].blocks[]`)。図の地(カード)は図が使う矩形に

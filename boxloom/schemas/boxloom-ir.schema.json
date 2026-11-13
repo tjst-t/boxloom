@@ -19,7 +19,8 @@
             "matrix",
             "funnel",
             "phases",
-            "chart"
+            "chart",
+            "cycle"
           ]
         }
       },
@@ -145,6 +146,21 @@
           },
           "then": {
             "$ref": "subsystems/chart.schema.json"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subsystem": {
+                "const": "cycle"
+              }
+            },
+            "required": [
+              "subsystem"
+            ]
+          },
+          "then": {
+            "$ref": "subsystems/cycle.schema.json"
           }
         }
       ]

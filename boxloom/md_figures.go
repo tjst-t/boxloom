@@ -1,4 +1,4 @@
-// ```process・```orgchart・```matrix・```funnel・```phases のコードブロックの中身(YAML の
+// ```process・```orgchart・```matrix・```funnel・```phases・```cycle のコードブロックの中身(YAML の
 // 部分集合)を、IR の data(schema/subsystems/<名前>.schema.json)にする。
 //
 // キーは IR と同じ。文の値は本文と同じ文中の記法で読み、YAML の列で書くと各行を
@@ -64,6 +64,37 @@ func matrixDataFromYAML(p *mdParser, n *yNode, path string) any {
 		{"legend", gStatusLegend, false},
 		{"emphasis", gString, false},
 	})(p, n, path)
+}
+
+func cycleDataFromYAML(p *mdParser, n *yNode, path string) any {
+	return gObject([]gField{
+		{"steps", gSeqMax(gSeq(gObject(figureNodeFields), cycleMinSteps), cycleMaxSteps), true},
+		{"start", gCycleStart, false},
+		{"legend", gStatusLegend, false},
+	})(p, n, path)
+}
+
+// gSeqMax は列の項目が max を越えたら誤りにする(項目の読み方は seq)。
+func gSeqMax(seq ganttConv, max int) ganttConv {
+	return func(p *mdParser, n *yNode, path string) any {
+		if n.kind == 'q' && len(n.items) > max {
+			gFail(p, n, path, codeInvalidValue, fmt.Sprintf("項目は %d つまでです(%d つ書かれています)", max, len(n.items)), nil, "")
+		}
+		return seq(p, n, path)
+	}
+}
+
+// gCycleStart は cycle の番号の始まり(0 か 1)。
+func gCycleStart(p *mdParser, n *yNode, path string) any {
+	s, ok := gScalar(p, n, path, "値")
+	if !ok {
+		return nil
+	}
+	if !n.quoted && (s == "0" || s == "1") {
+		return float64(s[0] - '0')
+	}
+	gFail(p, n, path, codeInvalidValue, fmt.Sprintf("start %q は 0 か 1 で書いてください", s), []string{"0", "1"}, "")
+	return nil
 }
 
 func funnelDataFromYAML(p *mdParser, n *yNode, path string) any {

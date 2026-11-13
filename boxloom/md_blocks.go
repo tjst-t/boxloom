@@ -528,7 +528,7 @@ func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
 				} else if l := codeLang(sub.info); l != "" {
 					what = "```" + l
 				}
-				p.fail(sub.line, 1, cp, codeMisplaced, fmt.Sprintf(":::column の中に %s は書けません", what), []string{"段落", "箇条", "表", "画像", "note", "```chart"}, "")
+				p.fail(sub.line, 1, cp, codeMisplaced, fmt.Sprintf(":::column の中に %s は書けません", what), []string{"段落", "箇条", "表", "画像", "note", "```chart", "```cycle"}, "")
 				continue
 			}
 			allowed = append(allowed, sub)

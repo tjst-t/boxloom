@@ -103,7 +103,7 @@ func hasWarn(ws []Issue, code, path string) bool {
 	return false
 }
 
-// まとまりの中に置けるサブシステムは chart だけ(Markdown・IR の両方)。
+// まとまりの中に置けるサブシステムは chart と cycle だけ(Markdown・IR の両方)。
 func TestOnlyChartInColumns(t *testing.T) {
 	src := "# A\n\n::::columns\n:::column\n```process\nsteps:\n  - label: a\n  - label: b\n```\n:::\n:::column\nb\n:::\n::::\n"
 	_, errs := mdToAny(t, src)

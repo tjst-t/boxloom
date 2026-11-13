@@ -641,11 +641,11 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 }
 
 // columnBlockTypes はまとまり(column)の中に置けるブロックの種類。サブシステムは
-// columnSubsystems のものだけ(グラフの横に読み取りを置く形)。
+// columnSubsystems のものだけ(グラフの横に読み取り、循環の図の横に段ごとの説明を置く形)。
 var columnBlockTypes = []string{"paragraph", "points", "note", "table", "image", "subsystem"}
 
 // columnSubsystems はまとまりの中に置けるサブシステム。
-var columnSubsystems = []string{"chart"}
+var columnSubsystems = []string{"chart", "cycle"}
 
 func (c *IRColumn) UnmarshalJSON(b []byte) error {
 	var v struct {

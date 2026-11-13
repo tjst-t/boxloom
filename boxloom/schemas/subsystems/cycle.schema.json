@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/cycle.schema.json",
+  "title": "Boxloom IR: cycle subsystem (0.1)",
+  "description": "輪に並んだ段(繰り返す過程)。段は3〜6つで、上から時計回りにドーナツの扇形で並び、扇の塗りは基調色の濃淡。各段の番号の丸は輪の上、題と detail は輪の外に置く。縦横比を保つ図で、余った幅は spare-width で知らせる。並列のまとまり(columns)の中にも置ける(左に図・右に段ごとの説明)。座標・色・角度は書けない。",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "subsystem"
+    },
+    "subsystem": {
+      "const": "cycle"
+    },
+    "variant": {
+      "$ref": "../core.schema.json#/$defs/variant"
+    },
+    "data": {
+      "$ref": "#/$defs/cycle"
+    }
+  },
+  "required": [
+    "type",
+    "subsystem",
+    "data"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "inline": {
+      "$ref": "../core.schema.json#/$defs/inline"
+    },
+    "status": {
+      "description": "状態の意味の名前。扇の枠線の色になる。色はテンプレートが決める(16進の色・役割名は書けない)。",
+      "enum": [
+        "support",
+        "conditional",
+        "none",
+        "danger"
+      ]
+    },
+    "step": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/inline"
+        },
+        "detail": {
+          "$ref": "#/$defs/inline"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "emphasis": {
+          "description": "目立たせる(この段だけが基調色で、ほかの段は淡くなる)。既定 false。",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "cycle": {
+      "type": "object",
+      "properties": {
+        "steps": {
+          "description": "段。上から時計回りに。3〜6つ。",
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "start": {
+          "description": "最初の段の番号(0 か 1)。既定 1。",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "legend": {
+          "description": "凡例の文(状態の名前 → 文)。扇の枠線の色の意味を作者の言葉で書く。使った状態のうち文のあるものだけが図の下に出る。status を使ったのに文が無い状態は boxloom check が figure-legend で警告する。",
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "support",
+              "conditional",
+              "none",
+              "danger"
+            ]
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/inline"
+          }
+        }
+      },
+      "required": [
+        "steps"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

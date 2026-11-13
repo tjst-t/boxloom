@@ -107,7 +107,7 @@ CSS の min-content / max-content と同じ考え方を、PPT のスライドの
 ## 4. テンプレートによる差し替え(SubsystemRegistry)
 
 - コアは既定の表(`DefaultSubsystems()`:いまは `gantt`・`shapes` と、11節の図
-  `process`・`orgchart`・`matrix`・`funnel`、12節の数値のグラフ `chart`)を持ちます。
+  `process`・`orgchart`・`matrix`・`funnel`・`cycle`、12節の数値のグラフ `chart`)を持ちます。
 - テンプレートは `Clone()` した表に `Override` で自分の描き方を入れます。
   コンテンツのデータ(`GanttChart`)は変わらず、描き方だけが変わります。
 - 種類は `Declare(kind, SubsystemDecl{Schema, Markdown})` で、作者に見せるもの
@@ -684,11 +684,57 @@ legend: {conditional: 追加の検討}               # status を使ったら書
   `layout-overflow`、箱の文が収まらなければ `figure-text-overflow`(path は
   `…/data/steps/N/items/K`)。
 
+### cycle(輪に並んだ段、#91)
+
+```yaml
+start: 0                                       # 任意。番号の始まり(0 か 1、既定 1)
+steps:                                         # 3〜6つ。上から時計回り
+  - {title: 場を知る, detail: 住民の声を集める}
+  - {title: 仲間を集める}
+  - {title: 小さく試す, emphasis: true}
+  - {title: 形にする, status: conditional}
+  - {title: ふり返る}
+legend: {conditional: 予算が付くときだけ}      # status を使ったら書く
+```
+
+最後の段が最初の段に戻る、繰り返す段階(`docs/patterns.md` の R7b)。実装は
+`boxloom/cycle.go`、寸法は `boxloom/subsystems/cycle.json`、例は `examples/md/cycle.bx.md`
+(↔ `examples/ir/cycle.json`。単独と columns の中)。
+
+- **扇は本物の図形**:段ごとに `blockArc`(ドーナツの扇)を1つ。調整値 `adj1`・`adj2` が
+  始まりと終わりの角度(上から時計回りに等しく分け、境目に `gapAngle` の隙間)、`adj3` が
+  輪の太さ(外の半径の `ringFraction`)。どの扇も輪の外接の正方形を枠に持つ。
+- **色**:扇の塗りは基調色(`accent`)の濃淡。最初の段が `accent`、後の段ほど地の色
+  (`bg`)に寄り、最後の段は `shadeRange`(60%)寄せた色(役割名から混ぜて作るので、
+  16進の色はテーマにしか無い)。`emphasis` の段があるときは、強調の段だけ `accent`、ほかは
+  `mutedShade`(70%)寄せた同じ淡い色。`status` は扇の枠線の色。扇の中の題の色は、
+  `on_conditional` と `text_primary` のうち塗りとのコントラスト比が大きいほう。
+- **番号と題**:番号の丸(`numberDiameter`、地の色に扇の色の枠線、`subPoint` の太字)は
+  扇の真ん中の角度で外の縁に跨がらせる。題(`subPoint`、強調の段は太字)は扇の中に置く:
+  1行・2行…と増やしながら、中心の候補(輪の太さの真ん中から内へ寄せる・扇の向きに回す)
+  ごとに、扇の縁・境目・番号の丸から `titleInset` 離れて置ける一番広い横長の枠を測り、
+  題がその行の数に収まって最後の行が1〜2字にならない最初の枠を使う。
+- **補足**:`detail` は輪の外の、その段の向きに置く(右の段は左揃え・左の段は右揃え・
+  真上と真下は真ん中。上の段は枠の下端、下の段は上端を輪に向ける)。幅は `labelMaxWidth` まで
+  で、枠が狭いと `labelMinWidth` まで折り返す。段ごとの長い説明は図に詰めず、`columns` で
+  輪の横のまとまりに書く。
+- **大きさ**:形は輪で決まるので縦横比を保つ(`FixedAspect`)。幅を受けたらその幅に収まる
+  一番大きい輪の高さ、高さを受けたらその高さでの幅を申告し、最小は直径 `minDiameter` の輪。
+  枠が図より広ければ、コアが図の幅まで切り詰め、余りを `spare-width`・`remainingWidth` で
+  知らせる(9節)。
+- **並列のまとまり(columns)の中に置ける**(chart と cycle だけ。左に輪・右に段ごとの説明)。
+- 警告:題が扇の枠に・補足が枠に収まらない(`figure-text-overflow`、path は
+  `…/data/steps/N`)、状態に凡例の文が無い(`figure-legend`)。
+
 ### 確かめ方
 
 - `phases_test.go`:例(`examples/md/phases.bx.md` ↔ `examples/ir/phases.json`。3段・群2つ・
   箱7つ)を report・light・dark で組んで警告が無い・山形と番号の形/山形の食い込み・帯の
   幅・箱の下の端がそろう・重ならない/Min が文の量で増える/はみ出しの警告/読み込みの誤り。
+- `go test ./...`(`cycle_test.go`):Markdown と IR が同じ data・段の数と start の誤り/
+  扇が5つの `blockArc` で上から72°ずつ、最初が基調色で段ごとに違う濃さ、強調の塗り、
+  状態の枠線/番号が start から/題が輪の中・補足が輪の外/FixedAspect の申告/
+  columns の中で light・report ともに最小・はみ出しの警告が無く、単独だと `spare-width`。
 - `go test ./...`(`figures_test.go`):例を dark・light で組んで警告が無い・コネクタの
   数と接続・凡例の文・見出しの揃え/組織図が全幅と 60% の列で枠に収まり重ならない/
   process が 500pt の幅で 4+3 に折り返し、曲がるコネクタが補足の下で曲がる/
@@ -801,8 +847,8 @@ series:
   直径が決まり、それより広い枠は横が空くだけなので、コアは枠を円の幅まで切り詰めて
   描き(余りは Place の側、既定は左)、余りを `spare-width`・容量の `remainingWidth` で
   知らせる(9節)。図の地(カード)も円の幅に合わせる。ほかは上限なし(大きくして困らない)。
-- **並列のまとまり(columns)の中に置ける。** グラフはサブシステムで唯一、`columns` の
-  まとまりの中に置ける(左にグラフ・右に読み取り)。まとまりの幅を使い切らないとき
+- **並列のまとまり(columns)の中に置ける。** グラフは循環の図(11節の cycle)と並んで、
+  `columns` のまとまりの中に置けるサブシステム(左にグラフ・右に読み取り)。まとまりの幅を使い切らないとき
   (円をまとまりの `role=main` に入れたときなど)は、そのブロックを指して `spare-width`。
 - この Min を使って、本文の `layout-overflow`・容量(`check -capacity`)・`subsystem-min`
   が、ほかのブロックと同じに働く(グラフだけ特別扱いしない)。グラフを縮めて文字を

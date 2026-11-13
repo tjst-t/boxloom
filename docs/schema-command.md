@@ -54,7 +54,7 @@ go run ./cmd/boxloom schema -template ./my.json  # 外の値の表(docs/template
          "schema": "/irSchema/$defs/gantt",         // 下の irSchema の中の場所(JSON Pointer)
          "schemaId": "https://boxloom.invalid/schema/ir/0.1/subsystems/gantt.schema.json"},
         {"name": "shapes", "fence": "```shapes", …},  // 生の図形への逃げ道(最後の手段)
-        {"name": "process", "fence": "```process", …}  // ほかに orgchart・matrix・funnel・phases(docs/subsystem.md の11節)
+        {"name": "process", "fence": "```process", …}  // ほかに orgchart・matrix・funnel・phases・cycle(docs/subsystem.md の11節)
       ],
       "types": [                    // 型の語彙の全部(IR の type。テンプレートで隠さない)
         {"name": "columns", "build": "template", "standard": true},

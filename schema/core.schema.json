@@ -1070,7 +1070,7 @@
       "additionalProperties": false
     },
     "columnBlock": {
-      "description": "まとまりの中に置けるブロック。columns・compare・gallery は置けない。サブシステムはグラフ(chart)だけ(グラフの横に読み取りを置く形)。",
+      "description": "まとまりの中に置けるブロック。columns・compare・gallery は置けない。サブシステムはグラフ(chart)と循環の図(cycle)だけ(グラフの横に読み取り、輪の横に段ごとの説明を置く形)。",
       "type": "object",
       "properties": {
         "type": {
@@ -1179,7 +1179,8 @@
             "properties": {
               "subsystem": {
                 "enum": [
-                  "chart"
+                  "chart",
+                  "cycle"
                 ]
               }
             }

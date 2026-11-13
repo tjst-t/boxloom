@@ -44,7 +44,7 @@ you build your own agent and need a deterministic PPTX backend.
 - **Measured density.** `check` reports how much room is left on each slide
   (`capacity`) and which block overflows by how many points.
 - **Subsystems for complex figures.** A Gantt chart, box-and-line figures (process, org
-  chart, rating matrix, funnel, phases), numeric charts and a constrained raw-shape canvas are
+  chart, rating matrix, funnel, phases, cycle), numeric charts and a constrained raw-shape canvas are
   included. Numeric charts are real PowerPoint charts with an embedded workbook, so the
   values stay editable; the author states only what is compared and the numbers. Subsystems declare their natural, minimum and maximum size, and the layout
   engine negotiates with them.
@@ -156,7 +156,7 @@ Design documents are written in Japanese.
 | [`docs/patterns.md`](docs/patterns.md) | The pattern vocabulary and the rules for choosing one |
 | [`docs/content-syntax.md`](docs/content-syntax.md) | The Markdown dialect |
 | [`docs/ir.md`](docs/ir.md), [`schema/`](schema) | The JSON IR and its JSON Schema |
-| [`docs/subsystem.md`](docs/subsystem.md) | The subsystem interface (Gantt, shapes, process, orgchart, matrix, funnel, phases, chart) |
+| [`docs/subsystem.md`](docs/subsystem.md) | The subsystem interface (Gantt, shapes, process, orgchart, matrix, funnel, phases, cycle, chart) |
 | [`docs/template-values.md`](docs/template-values.md), [`docs/fonts.md`](docs/fonts.md) | Templates, scales, fonts and metrics |
 | [`docs/build.md`](docs/build.md), [`docs/library.md`](docs/library.md) | Building PPTX, the Go API |
 | [`docs/mcp.md`](docs/mcp.md) | `boxloom mcp`: the MCP server (tools `schema`, `check`, `build`) for AI agents such as Claude Code |

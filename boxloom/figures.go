@@ -318,6 +318,8 @@ func derefValue(v any) any {
 		return *x
 	case *PhasesValues:
 		return *x
+	case *CycleValues:
+		return *x
 	}
 	return v
 }
@@ -330,6 +332,7 @@ var (
 	funnelDefaults     FunnelValues
 	chartDefaults      ChartValues
 	phasesDefaults     PhasesValues
+	cycleDefaults      CycleValues
 )
 
 func loadFigureDefaults() {
@@ -343,6 +346,7 @@ func loadFigureDefaults() {
 		if err := phasesDefaults.check("subsystems/phases.json"); err != nil {
 			panic(err)
 		}
+		loadFigureValues("cycle", &cycleDefaults)
 	})
 }
 
@@ -376,6 +380,12 @@ func defaultPhasesValues() *PhasesValues {
 	return &v
 }
 
+func defaultCycleValues() *CycleValues {
+	loadFigureDefaults()
+	v := cycleDefaults
+	return &v
+}
+
 func defaultChartValues() *ChartValues {
 	loadFigureDefaults()
 	v := chartDefaults
@@ -398,10 +408,12 @@ func registerFigures(r *SubsystemRegistry) {
 	must(r.Declare("phases", phasesDecl()))
 	must(r.Register("chart", NewChartSubsystem))
 	must(r.Declare("chart", chartDecl()))
+	must(r.Register("cycle", NewCycleSubsystem))
+	must(r.Declare("cycle", cycleDecl()))
 }
 
 // figureKinds は図のサブシステム(と chart)の名前。
-var figureKinds = []string{"process", "orgchart", "matrix", "funnel", "phases", "chart"}
+var figureKinds = []string{"process", "orgchart", "matrix", "funnel", "phases", "chart", "cycle"}
 
 // templateFigures はテンプレートの values と subsystems の差し替えを、図の
 // サブシステムの Factory に入れる(parseTemplateFile から呼ぶ)。
@@ -414,8 +426,9 @@ func templateFigures(t *Template, f *templateFile) error {
 	var fv *FunnelValues
 	var cv *ChartValues
 	var phv *PhasesValues
+	var yv *CycleValues
 	if s := f.Subsystems; s != nil {
-		pv, ov, mv, fv, cv, phv = s.Process, s.OrgChart, s.Matrix, s.Funnel, s.Chart, s.Phases
+		pv, ov, mv, fv, cv, phv, yv = s.Process, s.OrgChart, s.Matrix, s.Funnel, s.Chart, s.Phases, s.Cycle
 	}
 	if phv != nil {
 		if err := phv.check("subsystems.phases"); err != nil {
@@ -442,6 +455,7 @@ func templateFigures(t *Template, f *templateFile) error {
 		{"funnel", fv, defaultFunnelValues()},
 		{"chart", cv, defaultChartValues()},
 		{"phases", phv, defaultPhasesValues()},
+		{"cycle", yv, defaultCycleValues()},
 	} {
 		if err := check(c.name, c.override, c.def); err != nil {
 			return err
@@ -495,6 +509,14 @@ func templateFigures(t *Template, f *templateFile) error {
 		s.(*ChartSubsystem).V, s.(*ChartSubsystem).Text = cv, &text
 		return s, nil
 	}))
+	must(t.Subsystems.Override("cycle", func(data any) (Subsystem, error) {
+		s, err := NewCycleSubsystem(data)
+		if err != nil {
+			return nil, err
+		}
+		s.(*CycleSubsystem).V, s.(*CycleSubsystem).Text = yv, &text
+		return s, nil
+	}))
 	return nil
 }
 
@@ -511,6 +533,8 @@ func isNilPtr(v any) bool {
 	case *ChartValues:
 		return x == nil
 	case *PhasesValues:
+		return x == nil
+	case *CycleValues:
 		return x == nil
 	}
 	return false

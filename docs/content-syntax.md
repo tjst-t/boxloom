@@ -204,7 +204,7 @@ IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭�
 | `quote 出どころ` | 段落1つ(引用した言葉) | 他人の言葉。見出しの文が出どころ(必須) | `quote`(`content`・`source`) |
 | `notes` | 段落・箇条 | 発表者ノート(スライドには出ない)。3.6 | スライドの `notes` |
 | `columns` | `column` だけ(2つか3つ) | 並列のまとまり(段組みの指定ではなく「並列」という意味)。属性 `flow=true`(左が右につながる)。3.9 | `columns`(`flow`) |
-| `column 題` | 段落・箇条・表・画像(1枚)・`note`・```` ```chart ```` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
+| `column 題` | 段落・箇条・表・画像(1枚)・`note`・```` ```chart ````・```` ```cycle ```` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
 | `pairs 見出し \| 見出し` | `subject`・`response` を交互に(2組以上) | 対の並び(標準でない型)。2つの側の見出しを1回だけ書く。3.10 | `pairs`(`headings`・`pairs`) |
 | `subject 見出し` / `response 見出し` | 段落・箇条・`quote` のどれか1つ、または見出しの文と段落・箇条・`quote`・画像・表の1〜4個 | 対の何についての側 / それに応える側(見出しの文は任意) | `pairs.pairs[].subject` / `.response`(1つのブロックか `{title, body}`) |
 
@@ -305,12 +305,13 @@ groups: …
   段)だけ。`x+w` が 1 を超える・テーマに無い役割名・無い id へのコネクタは
   `boxloom check` が、図形やキーの行と code(`shape-bounds`・`role-exists`・
   `target-exists`)で返す。例は `examples/md/shapes.bx.md`(↔ `examples/ir/shapes.json`)。
-- **```process**・**```orgchart**・**```matrix**・**```funnel**・**```phases**(箱と線の図。
+- **```process**・**```orgchart**・**```matrix**・**```funnel**・**```phases**・**```cycle**(箱と線の図・輪の図。
   `docs/subsystem.md` の11節)も同じ作り。中身は IR の `data` と同じキーで、書けるのは
   文と状態(`status`)と強調(`emphasis`)と、状態の意味の凡例(`legend`)だけ(座標・色・
   字の大きさは書けない)。matrix の推す列は `emphasis: <列の見出しの文>`。funnel の
   `value` は引用しない数なら数、それ以外は文字列。phases の箱の `detail` は1行なら文、
-  YAML の列なら文の列(各行が箇条。process と違って改行でつながない)。
+  YAML の列なら文の列(各行が箇条。process と違って改行でつながない)。cycle の段は3〜6つ、
+  `start` は 0 か 1(引用しない数)。
 
   ````
   ```process
@@ -619,11 +620,12 @@ GFM の表で書く。1行目が見出しの行、2行目が区切りの行、3�
   (1つの `columns` に1つまで)。どれだけ広くするかはテンプレートが決める
   (dark / light は値の表の `columnMainWeight` = 2、ほかは 1)。付けなければ同じ幅。
   `width` などの属性は無い(`unknown-attribute`)。
-- 中に書けるのは段落・箇条・表・画像(1枚)・`:::note`・グラフ(```` ```chart ````)。
-  `columns` の入れ子・`compare`・画像の並び・グラフ以外のサブシステムは書けない
-  (`misplaced-content`)。グラフの横に読み取りの文を置く(左にグラフ・右に読み取り)のが
-  この形の主な使い道。円グラフは高さで直径が決まるので、まとまりの幅を使い切らないと
-  `spare-width` になる(グラフのまとまりに `role=main` を付けない・文を足して縦を使う)。
+- 中に書けるのは段落・箇条・表・画像(1枚)・`:::note`・グラフ(```` ```chart ````)・
+  循環の図(```` ```cycle ````)。`columns` の入れ子・`compare`・画像の並び・ほかの
+  サブシステムは書けない(`misplaced-content`)。グラフの横に読み取りの文を置く(左にグラフ・
+  右に読み取り)、輪の横に段ごとの説明を置く(左に輪・右に説明)のがこの形の主な使い道。
+  円グラフと輪は高さで大きさが決まるので、まとまりの幅を使い切らないと `spare-width` に
+  なる(図のまとまりに `role=main` を付けない・文を足して縦を使う)。
 - はみ出しはまとまりごとに測る(一番高いまとまりがブロックの高さを決める)。
   `layout-overflow` は、まとまりの中のはみ出したブロックを
   `/slides/S/body/N/columns/C/body/K` で指す。
@@ -875,7 +877,7 @@ go run ./cmd/boxloom build ../examples/md/demo-deck.bx.md            # .md も�
   前の表と列の数や groups・points が違う・前のスライドに続ける表が無い)・`image-path`(画像の path が URL・
   絶対パス・文書のフォルダの外)・`image-alt`(画像の代わりの文が無い)・
   `schema`(できた IR が通らない。ふつうは起きない)。
-- shapes と図(process・orgchart・matrix・funnel・phases)と chart のコードブロックは、YAML の形の検査
+- shapes と図(process・orgchart・matrix・funnel・phases・cycle)と chart のコードブロックは、YAML の形の検査
   だけをする(サブシステム自身には読ませない。意味の誤りは `boxloom check` が行つきで返す)。
 - Gantt のコードブロックは、YAML の検査が通ったあと Gantt サブシステム自身にも
   読ませる。Schema では書けない誤り(`target` の行き先が無い・id の重複・範囲の

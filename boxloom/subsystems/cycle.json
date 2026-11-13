@@ -1,0 +1,19 @@
+{
+  "padding": 16,
+  "ringFraction": 0.6,
+  "gapAngle": 2,
+  "numberDiameter": 26,
+  "labelGap": 8,
+  "labelMinWidth": 72,
+  "labelMaxWidth": 160,
+  "naturalDiameter": 240,
+  "minDiameter": 140,
+  "shadeRange": 0.6,
+  "mutedShade": 0.7,
+  "outlineWidth": 1.25,
+  "legendGap": 12,
+  "legendItemGap": 20,
+  "legendSwatchWidth": 16,
+  "legendSwatchHeight": 10,
+  "legendSwatchGap": 8
+}

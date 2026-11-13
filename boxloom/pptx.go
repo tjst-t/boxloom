@@ -63,7 +63,8 @@ type shape struct {
 	dash           string // "" | "dash"
 
 	// skShape
-	prst      string  // rect | roundRect | ellipse | chevron | homePlate
+	prst      string // rect | roundRect | ellipse | chevron | homePlate
+	adj       []ShapeGuide
 	depth     float64 // chevron・homePlate の先の深さ(0 なら既定)
 	fillAlpha float64 // 0 か 1 なら不透明。0〜1 の間なら塗りをその不透明度で書く(a:alpha)
 	insetX    float64 // 文字の枠の内側の余白
@@ -274,6 +275,14 @@ type ShapeOpts struct {
 	// Paras は Runs の後ろに続ける段落で、ParaSizes はその字の大きさ。
 	Paras     [][]TextRun
 	ParaSizes []float64
+	// Adj は形の調整値(a:avLst の a:gd。blockArc の角度・太さなど)。roundRect の角は Radius で書く。
+	Adj []ShapeGuide
+}
+
+// ShapeGuide は形の調整値1つ(a:gd name="…" fmla="val …")。
+type ShapeGuide struct {
+	Name string
+	Val  int
 }
 
 // AddShape は図形を足し、その id(コネクタの接続に使う)を返す。中の文字は
@@ -292,7 +301,7 @@ func (p *PPTXBuilder) AddShape(box LBox, o ShapeOpts) int {
 		text += "\n" + runsText(r)
 	}
 	p.Shapes = append(p.Shapes, shape{
-		id: id, kind: skShape, box: box, prst: o.Prst, fill: o.Fill, fillAlpha: o.FillAlpha, radius: o.Radius, depth: o.Depth,
+		id: id, kind: skShape, box: box, prst: o.Prst, adj: o.Adj, fill: o.Fill, fillAlpha: o.FillAlpha, radius: o.Radius, depth: o.Depth,
 		hasOutline: o.Outline != "", outlineColor: o.Outline, outlineDash: o.OutlineDash, outlineWidthPt: o.OutlineWidthPt,
 		runs: o.Runs, text: text, fontSize: o.FontSize, insetX: o.InsetX, insetY: o.InsetY,
 		align: align, anchor: anchor, paras: o.Paras, paraSizes: o.ParaSizes,
@@ -860,6 +869,14 @@ func (p *PPTXBuilder) shapeWithTextXML(s *shape) string {
 			}
 		}
 		adj = fmt.Sprintf(`<a:avLst><a:gd name="adj" fmla="val %d"/></a:avLst>`, int(ratio*100000))
+	} else if len(s.adj) > 0 {
+		var b strings.Builder
+		b.WriteString("<a:avLst>")
+		for _, g := range s.adj {
+			fmt.Fprintf(&b, `<a:gd name="%s" fmla="val %d"/>`, g.Name, g.Val)
+		}
+		b.WriteString("</a:avLst>")
+		adj = b.String()
 	}
 	if (s.prst == "chevron" || s.prst == "homePlate") && s.depth > 0 {
 		// 先の深さは短い辺に対する割合(OOXML の preset の adj)。

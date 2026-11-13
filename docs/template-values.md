@@ -11,7 +11,7 @@ JSON のファイルに移した。方針(CLAUDE.md)の「値の表・スタイ�
 | `boxloom/templates/<名前>.json` | テンプレート1つ(`dark.json`・`light.json`・`report.json`)。名前はファイル名 |
 | `boxloom/subsystems/gantt.json` | Gantt の既定の寸法。テンプレートが差し替えなければこれ |
 | `boxloom/subsystems/shapes.json` | shapes(生の図形への逃げ道)の既定の寸法 |
-| `boxloom/subsystems/process.json`・`orgchart.json`・`matrix.json`・`funnel.json` | 箱と線の図(`docs/subsystem.md` の11節)の既定の寸法 |
+| `boxloom/subsystems/process.json`・`orgchart.json`・`matrix.json`・`funnel.json`・`cycle.json` | 箱と線の図・循環の図(`docs/subsystem.md` の11節)の既定の寸法 |
 | `boxloom/subsystems/chart.json` | 数値のグラフ(`docs/subsystem.md` の12節)の既定の寸法 |
 | `boxloom/values.go` | 読み込みと検査 |
 
@@ -502,14 +502,14 @@ shapes の文字の大きさは、作者が `textStyle` に書く段の名前で
 `small`・`subPoint`・`optionItem`・`body`・`optionLabel`(`docs/subsystem.md` の8節)。
 テーマに無い役割名を shapes が使うと、このテンプレートの組み立てが断る。
 
-### subsystems.process・orgchart・matrix・funnel・phases(任意)
+### subsystems.process・orgchart・matrix・funnel・phases・cycle(任意)
 
 同じく、書くとこのテンプレートのその図だけがその寸法になる。全部のキーが要り、`padding`・
 間隔・文字の余白(Go の json タグに `scale:"space"` の付いたもの)は段階の刻みに載って
 いなければ誤り。差し替えないときは既定のファイルの値を、そのテンプレートの段階で見る。
 dark / light は書いていない。図の字の大きさはファイルに持たず、values の `body`(題)・
 `subPoint`(2段目・セル・注記)・`small`(補足・説明・凡例)から引く。キーの意味は
-各ファイルと Go の型(`ProcessValues`・`OrgChartValues`・`MatrixValues`・`FunnelValues`・`PhasesValues`)の
+各ファイルと Go の型(`ProcessValues`・`OrgChartValues`・`MatrixValues`・`FunnelValues`・`PhasesValues`・`CycleValues`)の
 注釈に書いた。最小・自然・上限の3つ組(`minBoxHeight`・`naturalBoxHeight`・
 `maxBoxHeight` など)は Measure の Min・Natural・Max になる。
 
@@ -520,6 +520,10 @@ process・orgchart・funnel・phases の状態の凡例(`docs/subsystem.md` の1
 `naturalRowHeight` 36・`maxRowHeight` 44 は1行の文のセルが間延びしない高さ。
 phases の `numberStyle` は数でなく箱の番号の形で、`arabic`(1. 2.)か `roman`(I. II.)。
 ほかの形は誤り。`chevronDepth` は山形の先の深さ、`chevronGap` は山形と山形の間。
+cycle は輪の太さ `ringFraction`(外の半径に対する割合)・扇の間 `gapAngle`(度)・番号の丸
+`numberDiameter`・補足の幅 `labelMinWidth`〜`labelMaxWidth`・輪の直径 `naturalDiameter`・
+`minDiameter`・濃淡 `shadeRange`(最後の段を地の色に寄せる割合)・`mutedShade`(強調が
+あるとき、強調でない段を寄せる割合)を持つ。凡例の寸法は上と同じ。
 
 ### subsystems.chart(任意)
 
