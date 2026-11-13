@@ -3247,6 +3247,27 @@
       "updatedAt": "2026-11-13T10:35:36.351Z",
       "closedAt": "2026-11-13T10:35:36.351Z",
       "extra": {}
+    },
+    {
+      "id": "matrix-detail-widths",
+      "number": 144,
+      "kind": "bug",
+      "title": "detailColumn の matrix で評価の列が広く取られ、題と要約の列が潰れる",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "再現の第8回(元の p28・29):列の中(幅 500〜555pt)の matrix に detailColumn を付けると、評価の列が1つ 47〜57pt を取り(印と短い文には 24pt で足りる)、題の列は約 68pt・要約の列は約 83pt(全角5〜7字)に潰れ、はみ出しが 655→1,078pt・352→1,188pt に増えた。全幅でも p28 は要約を題の下に置く形より悪い(240pt 対 111pt)。\n直し方:detailColumn のとき、評価の列は中身の自然な幅(印・短い文・列の見出しの折り返し後)の最小にとどめ、残りの幅を題の列と要約の列に、それぞれの文の量の比で配る(行の高さの合計が最小になる比を spacingUnit の刻みで探してもよい。pairs の #115 と同じ考え)。Measure の Natural・Min もこの配り方と一致させる。架空の内容で、列の中と全幅の両方で試験にする。",
+      "doneWhen": "detailColumn の matrix で評価の列が自然な最小幅になり、同じ内容で detail を題の下に置く形より Min の高さが小さくなる試験(列の中・全幅)/detailColumn なしの出力と golden が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T10:44:08.814Z",
+      "updatedAt": "2026-11-13T10:44:08.814Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
