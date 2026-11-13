@@ -2528,7 +2528,7 @@
       "number": 110,
       "kind": "task",
       "title": "report の段階の図と循環の図:群の帯を塗る・輪が小さいときも題を扇の外に出して収める",
-      "status": "in-progress",
+      "status": "done",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2536,12 +2536,12 @@
       "labels": [],
       "body": "## なぜ\n#82 の3回目の比較で:\n- phases の群の帯が枠線だけ(元は基調系の塗りに白字)。\n- cycle を列の中に置いて輪が小さいとき、短い題も扇に入らずあふれた(23ページ相当)。元の文の長い題(15〜30字)は5段ともあふれ、作者は題を短く書き換えている。\n\n## やること\n- report の phases の組み方:群の帯を塗り(役割名の色)に白字。\n- cycle:題が扇に入らないとき、題を輪の外(番号の丸の外側、放射の向き)に置く配置に切り替える。外に置くときは輪を小さくして題の置き場を取る。それでも入らなければ警告(今の figure-text-overflow)。元の資料も題は輪の外にある。\n\n## 確かめ方\n- 試験(架空の文):report の phases の群の帯が塗り/列の中の cycle に 20 字前後の題5つで、題どうし・題と輪の矩形が重ならず、図の矩形の中。",
       "doneWhen": "2点を試験で確かめる/golden の差は理由を書く/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/report-phases-cycle-looks）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T05:08:29.681Z",
-      "updatedAt": "2026-11-13T05:12:43.462Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T05:26:54.302Z",
+      "closedAt": "2026-11-13T05:26:54.302Z",
       "extra": {}
     }
   ]
