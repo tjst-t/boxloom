@@ -1002,6 +1002,10 @@
         "variant": {
           "$ref": "#/$defs/variant"
         },
+        "flow": {
+          "description": "左のまとまりが右のまとまりにつながる(前提→結論、発見→対応)という意味。既定は false。つながりの印(矢印など)の形はテンプレートが決める。",
+          "type": "boolean"
+        },
         "columns": {
           "type": "array",
           "minItems": 2,

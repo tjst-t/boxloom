@@ -478,7 +478,18 @@ func (p *mdParser) imageParagraph(it *mdItem, path string) (any, bool) {
 // --- 並列のまとまり ---
 
 func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
-	attrs := p.fenceAttrs(f, path, []string{"variant"})
+	attrs := p.fenceAttrs(f, path, []string{"variant", "flow"})
+	flow := false
+	if v, ok := attrs["flow"]; ok {
+		switch v {
+		case "true":
+			flow = true
+		case "false":
+		default:
+			p.fail(f.line, f.attrsCol, path+"/flow", codeInvalidValue, fmt.Sprintf("flow %q は true か false で書いてください", v), []string{"true", "false"},
+				"左のまとまりが右のまとまりにつながる(前提→結論、発見→対応)ときに {flow=true} を付けます")
+		}
+	}
 	p.noLabel(f, path)
 	var cols []any
 	mains := 0
@@ -542,6 +553,9 @@ func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
 	b := obj("type", "columns")
 	if v, ok := attrs["variant"]; ok {
 		b.set("variant", v)
+	}
+	if flow {
+		b.set("flow", true)
 	}
 	b.set("columns", cols)
 	return b

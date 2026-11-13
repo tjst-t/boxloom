@@ -190,7 +190,7 @@ IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭�
 | `value 数` | 段落1つ(数の説明) | `stat` の1つの数。見出しの文が数、属性 `unit` が単位 | `stat.items[]`(`value`・`unit`・`label`) |
 | `quote 出どころ` | 段落1つ(引用した言葉) | 他人の言葉。見出しの文が出どころ(必須) | `quote`(`content`・`source`) |
 | `notes` | 段落・箇条 | 発表者ノート(スライドには出ない)。3.6 | スライドの `notes` |
-| `columns` | `column` だけ(2つか3つ) | 並列のまとまり(段組みの指定ではなく「並列」という意味)。3.9 | `columns` |
+| `columns` | `column` だけ(2つか3つ) | 並列のまとまり(段組みの指定ではなく「並列」という意味)。属性 `flow=true`(左が右につながる)。3.9 | `columns`(`flow`) |
 | `column 題` | 段落・箇条・表・画像(1枚)・`note`・```` ```chart ```` | 並列のまとまりの1つ。題は省ける。属性 `role=main` | `columns.columns[]`(`title`・`role`・`body`) |
 | `pairs 見出し \| 見出し` | `subject`・`response` を交互に(2組以上) | 対の並び(標準でない型)。2つの側の見出しを1回だけ書く。3.10 | `pairs`(`headings`・`pairs`) |
 | `subject` / `response` | 段落・箇条・`quote` のどれか1つ | 対の何についての側 / それに応える側 | `pairs.pairs[].subject` / `.response` |
@@ -613,6 +613,23 @@ GFM の表で書く。1行目が見出しの行、2行目が区切りの行、3�
 - はみ出しはまとまりごとに測る(一番高いまとまりがブロックの高さを決める)。
   `layout-overflow` は、まとまりの中のはみ出したブロックを
   `/slides/S/body/N/columns/C/body/K` で指す。
+- **流れ(`{flow=true}`)**:左のまとまりが右のまとまりにつながる(背景→ゴール、
+  発見→対応、前提→結論)ときは、`columns` の囲みに `{flow=true}` を付ける(IR の
+  `flow: true`。既定は `false` で、書かなければ並列で対等)。値は `true` か `false` だけ
+  (ほかは `invalid-value`)。つながりの印はテンプレートが描く(dark / light はまとまりの間の
+  隙間の真ん中に基調色の小さい矢印、report は列の間の縦の罫線の真ん中に丸い矢印)。
+  それぞれのまとまりが1行の手順なら `process`(箱を矢印で並べる図)にする。
+
+  ```
+  :::::columns {flow=true}
+  :::column 分かったこと
+  - 返却の半分は閉館後に集まる
+  :::
+  :::column 打ち手
+  - 返却箱を2つに増やす
+  :::
+  :::::
+  ```
 
 ### 3.10 対の並び(pairs)
 

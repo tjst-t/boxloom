@@ -65,7 +65,7 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer? }   日付
          takeaway { content }                                     本文の中の結論の1文
          stat     { items: [{ value: "3 → 12", unit?: "機種", label }] }   1〜4個
          quote    { content, source }                             出どころは必須
-並列     { type: "columns", columns: [{ title?, role?: "main", body: [paragraph|points|note|table|image] }] }  (2〜3個)
+並列     { type: "columns", flow?: true, columns: [{ title?, role?: "main", body: [paragraph|points|note|table|image] }] }  (2〜3個)
 対の並び  { type: "pairs", headings: { subject, response }, pairs: [{ subject: 側, response: 側 }] }  (2組以上。側は paragraph|points|quote)
 表       { type: "table", header: [セル], rows: [[セル]], total?: [セル], caption? }   (セルはインライン。どの行も見出しと同じ数。total は合計の行)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
@@ -233,6 +233,11 @@ Schema では書けないので `boxloom check` が見る。
 - **並列のまとまり**の幅の比は数で持たない。主のまとまりに `role: "main"` を付ける
   (意味)と、テンプレートが広く取る。2個以上の `main` は Schema(`maxContains`)と
   Go の読み込みが断る。中のブロックの種類は `columnBlock` に限る(`columns` の入れ子は断る)。
+- **並列のまとまりの流れ**(#84)は `flow`(真偽、既定 `false`)。左のまとまりが右の
+  まとまりにつながる(前提→結論、発見→対応)という意味だけを持ち、印の形(矢印・丸)・
+  色・大きさは書けない。標準の組み方はまとまりの間の隙間の縦の真ん中に基調色の小さい
+  矢印を置き、report は列の間の縦の罫線の真ん中に直径 24pt の丸と山形を置く
+  (`flow` の無い文書の dark・light の出力は変わらない)。
 - **表**は見出しの行(`header`)を必須にした(GFM の表がいつも持つため)。列の配置・幅は
   持たない。行のセルの数が見出しと違うのは Schema では書けないので `boxloom check` の
   `table-shape`。

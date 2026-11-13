@@ -650,13 +650,37 @@ type columnInfo struct {
 
 // columns は並列のまとまりを横に並べる。幅の比は意味(role: main)から決める:
 // 主のまとまりは columnMainWeight、ほかは 1。題は本文の上に置き、字の色は text_primary。
+// flow(左が右につながる)のときだけ、まとまりの間の隙間の縦の真ん中に小さい矢印
+// (基調色)を置く。flow の無い columns の組み方はこれまでと同じ。
 func (t *Template) columns(ctx componentContext, b *IRBlock) (*Spec, error) {
 	return t.columnsHeaded(ctx, b, "text_primary")
 }
 
-// columnsHeaded は columns の題の色の役割名を headRole にしたもの(テンプレートが
-// 部品を差し替えるときの手。report.go)。
+// columnsHeaded は columns の題の色の役割名を headRole にしたもの(flow の印は標準の
+// 矢印)。
 func (t *Template) columnsHeaded(ctx componentContext, b *IRBlock, headRole string) (*Spec, error) {
+	style := columnsStyle{headRole: headRole}
+	if b.Flow {
+		style.gapMark = func() Subsystem { return flowArrowMark{} }
+	}
+	return t.columnsStyled(ctx, b, style)
+}
+
+// columnsStyle は columns の組み方のうち、テンプレートが部品を差し替えるときに
+// 選べるところ(report.go)。
+type columnsStyle struct {
+	// headRole はまとまりの題の字の色の役割名。
+	headRole string
+	// headRule が nil でなければ、題の下に置く葉(罫線など)を作る。題と葉の
+	// 間は itemGap。題の無いまとまりには置かない。
+	headRule func() Subsystem
+	// gapMark が nil でなければ、まとまりの間の隙間(幅 columnGap)に置く葉を
+	// 作る(縦は行の高さいっぱい)。nil なら隙間は行の間隔のまま(何も置かない)。
+	gapMark func() Subsystem
+}
+
+// columnsStyled は columns を style の見た目で組む。
+func (t *Template) columnsStyled(ctx componentContext, b *IRBlock, style columnsStyle) (*Spec, error) {
 	v := t.Values
 	info := &columnsInfo{}
 	var cols []*Spec
@@ -674,7 +698,10 @@ func (t *Template) columnsHeaded(ctx componentContext, b *IRBlock, headRole stri
 		col := columnInfo{body: body}
 		kids := []*Spec{body}
 		if c.Title != nil {
-			col.title = t.text(c.Title, "columnTitle", headRole, true)
+			col.title = t.text(c.Title, "columnTitle", style.headRole, true)
+			if style.headRule != nil {
+				col.title = Col([]*Spec{col.title, SubsystemNode(style.headRule())}, tokGap("itemGap"))
+			}
 			kids = []*Spec{col.title, body}
 		}
 		weight := 1.0
@@ -685,5 +712,32 @@ func (t *Template) columnsHeaded(ctx componentContext, b *IRBlock, headRole stri
 		info.cols = append(info.cols, col)
 		cols = append(cols, col.spec)
 	}
-	return Row(cols, tokGap("columnGap"), measureColumnGroups(info), nestedSlack()), nil
+	if style.gapMark == nil {
+		return Row(cols, tokGap("columnGap"), measureColumnGroups(info), nestedSlack()), nil
+	}
+	// 隙間を葉にする(幅は columnGap のまま。まとまりの幅は変わらない)。
+	var kids []*Spec
+	for i, c := range cols {
+		if i > 0 {
+			kids = append(kids, SubsystemNode(style.gapMark(), tokWidth("columnGap")))
+		}
+		kids = append(kids, c)
+	}
+	return Row(kids, measureColumnGroups(info), nestedSlack()), nil
+}
+
+// flowArrowMark は標準の columns の flow の印:隙間の真ん中に置く小さい右向きの
+// 矢印(基調色)。大きさは隙間の幅の半分まで(12pt を上限)。
+type flowArrowMark struct{}
+
+func (flowArrowMark) Name() string                   { return "columnsFlow" }
+func (flowArrowMark) Measure(Constraint) Measurement { return Measurement{} }
+func (flowArrowMark) Render(ctx RenderContext, box LBox) {
+	w := math.Min(12, box.Width/2)
+	h := w * 0.8
+	if w <= 0 || box.Height < h {
+		return
+	}
+	ctx.Out.AddShape(LBox{X: box.X + (box.Width-w)/2, Y: box.Y + (box.Height-h)/2, Width: w, Height: h},
+		ShapeOpts{Prst: "rightArrow", Fill: ctx.Roles.Color("accent")})
 }

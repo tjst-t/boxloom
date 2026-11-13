@@ -237,7 +237,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     印の葉で題の1行を測る。`docs/layers.md` の8.4
   - `report.go` = report(読む資料のテンプレート)が自分で持つ組み方。骨組みの `contentHeader` を
     差し替え、リード文を上の見出し(24pt・基調色)、題(title のプレースホルダー)をその下(16pt)に
-    置く。列の見出し(columns・pairs)は基調色。値は読む資料のサンプルを測ったもの(本文 14pt。`docs/template-values.md` の report の節)
+    置く。列の見出し(columns・pairs)は基調色。columns は見出しの下の罫線・列の間の縦の罫線と、`flow`(左が右につながる。Markdown は `{flow=true}`)のときの丸い矢印を描く(標準の組み方は flow のときだけ隙間に小さい矢印)。値は読む資料のサンプルを測ったもの(本文 14pt。`docs/template-values.md` の report の節)
   - `token.go` = 配置の段のトークン。部品と骨組みは Spec に数・色を書かず、値の表の名前・
     段の刻み(`space(n)`・`type(n)`)・役割名を書き、`BuildSlide` の中の `resolveSpec`(組み立ての
     直後・計測の前の1か所)で数と色に直す。トークンの無い数・色・段に無い刻み・知らない名前は

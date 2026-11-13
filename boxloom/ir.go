@@ -68,6 +68,9 @@ type IRBlock struct {
 	Data      json.RawMessage // subsystem: 中身(サブシステムが読む)
 
 	Columns []IRColumn // columns: 並列のまとまり(2〜3個)
+	// Flow は columns の左のまとまりが右のまとまりにつながる(前提→結論、発見→対応)
+	// という意味。印の形はテンプレートが決める。
+	Flow bool
 
 	Header  []Inline        // table: 見出しの行
 	Rows    [][]IRTableCell // table: 本体の行(どの行もセルの数は見出しと同じ)
@@ -513,6 +516,7 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		var v struct {
 			Type    string            `json:"type"`
 			Variant string            `json:"variant"`
+			Flow    bool              `json:"flow"`
 			Columns []json.RawMessage `json:"columns"`
 		}
 		if err := strictUnmarshal(b, &v); err != nil {
@@ -521,7 +525,7 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		if len(v.Columns) < 2 || len(v.Columns) > 3 {
 			return fmt.Errorf("columns needs two or three columns (got %d)", len(v.Columns))
 		}
-		out := IRBlock{Type: v.Type, Variant: v.Variant}
+		out := IRBlock{Type: v.Type, Variant: v.Variant, Flow: v.Flow}
 		mains := 0
 		for i, r := range v.Columns {
 			var c IRColumn
