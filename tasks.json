@@ -2864,7 +2864,7 @@
       "number": 126,
       "kind": "task",
       "title": "値の表に収めの梯子 fit.shrink・fit.grow を足す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "auto-fit",
       "dependsOn": [],
       "milestone": null,
@@ -2876,7 +2876,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:29:03.385Z",
-      "updatedAt": "2026-11-13T07:29:03.385Z",
+      "updatedAt": "2026-11-13T07:29:14.919Z",
       "closedAt": null,
       "extra": {}
     },
