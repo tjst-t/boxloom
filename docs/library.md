@@ -62,10 +62,10 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 | `IRDeck` | 読んだ IR(`docs/ir.md`)。中の欄は IR の形のまま |
 | `Issue` | 誤りと警告の1件(`docs/content-syntax.md` の5章の形。`File`・`Line`・`Column`・`Path`・`Code`・`Message`・`Expected`・`Hint`)。`String()` で1行の文 |
 | `MarkdownErrors` | `[]Issue` の error(Markdown と YAML の deck の誤り。行・列つき)。`errors.As` で取り出す |
-| `CheckOptions` | `Template`(IR の template より優先)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Strict`(警告も誤り扱い)・`Assets`(画像を読む `fs.FS`)・`AllowOverflow`(はみ出しがあっても書く。警告は `Warnings` に残る) |
+| `CheckOptions` | `Template`(IR の template より優先)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Strict`(警告も誤り扱い)・`Assets`(画像を読む `fs.FS`) |
 | `CheckResult` | `OK`・`Errors`・`Warnings`・`Capacity`。JSON にすると `boxloom check -format json` と同じ形(切れ端は nil にならない) |
 | `SlideCapacity` | 本文を持つスライドごとの容量(`docs/ir.md` の「容量の計測」) |
-| `BuildOptions` | `Template`(空なら IR の template、それも無ければ light)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Assets`(画像を読む `fs.FS`) |
+| `BuildOptions` | `Template`(空なら IR の template、それも無ければ light)・`Values`(`ParseTemplate` で読んだ値の表。あれば名前より優先)・`Assets`(画像を読む `fs.FS`)・`AllowOverflow`(はみ出し `layout-overflow` があっても PPTX を書く。警告は `Warnings` に残る。false なら書かずに `*OverflowError`) |
 | `Template` | 読んだテンプレート。`ParseTemplate` の返り値を `Values` に渡すためのもので、中の欄は安定させない |
 | `TemplateError` | `ParseTemplate` の誤り。`Issue`(code は `template-values`、path は値の表の中の場所)を持つ。`errors.As` で取り出す |
 | `BuildResult` | `Template`(使った名前)・`Slides`(枚数)・`Warnings`(`"slide 2: [FILL-RATIO WARNING] …"` の文) |
