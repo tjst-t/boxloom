@@ -17,6 +17,9 @@
 //     丸い矢印の印、ほかは薄い字)。
 //   - toc(Backlog #86):全面の基調色に白い字。題 28pt の下に白い罫線、章 20pt、
 //     節 16pt で字下げ、頁番号は右寄せ。
+//   - cover・closing(Backlog #92):表紙は全面の写真(meta.coverImage)の上に、左上から
+//     幅 0.53・高さ 0.45 の基調色の箱を置き、白い字で題・副題を書く。作者・日付・機密区分・
+//     免責は箱の下に置く。終わりのスライドは同じ写真に基調色の箱だけ。
 //   - pairs(Backlog #87):標準の組み方(pairsStyled)の見た目を差し替える。対ごとに
 //     A・B・C… の四角い印(基調色・白い字)を subject の頭に、2つの側の間に丸い山形の印を
 //     置き、対の間に罫線(grid)を引く。側の見出し(title)は薄い面(card)の帯の上に字の色で書く。
@@ -70,6 +73,12 @@ func registerReportParts(t *Template) error {
 		return err
 	}
 	if err := t.skeleton.override(skelToc, skeletonFunc(reportToc)); err != nil {
+		return err
+	}
+	if err := t.skeleton.override(skelCover, skeletonFunc(reportCover)); err != nil {
+		return err
+	}
+	if err := t.skeleton.override(skelClosing, skeletonFunc(reportClosing)); err != nil {
 		return err
 	}
 	for name, f := range map[string]componentFunc{
@@ -181,6 +190,72 @@ func reportToc(ctx skeletonContext) (*Spec, error) {
 	}
 	main := Col(rows, tokGap("headerGap"), WithGrow(1), markFrame(frameMain))
 	return Col([]*Spec{title, rule, main}, tokGap("sectionGap"), tokPadXY("pagePadding", "pagePaddingY"), tokBackground("accent")), nil
+}
+
+// report の表紙・終わりのスライドの基調色の箱の大きさ(ページの幅・高さに対する比)。
+// 読む資料のサンプルを測った値。
+const (
+	reportCoverBoxW = 0.53
+	reportCoverBoxH = 0.45
+)
+
+// reportCoverBand は表紙・終わりのスライドの上の帯:左に基調色の箱(幅 reportCoverBoxW)、
+// 右は写真が見える空き。高さは呼ぶ側が grow で決める。
+func reportCoverBand(box *Spec) *Spec {
+	return Row([]*Spec{
+		apply(box, []SpecOpt{tokBackground("accent"), WithGrow(reportCoverBoxW), WithBasis(0)}),
+		Col(nil, WithGrow(1-reportCoverBoxW), WithBasis(0)),
+	}, WithGrow(reportCoverBoxH), WithBasis(0))
+}
+
+// reportCover は report の表紙:全面に写真(meta.coverImage)を敷き、左上の基調色の箱
+// (幅 0.53・高さ 0.45)の下寄せに白い字で題・副題を書く。作者・日付・機密区分・免責は
+// 箱の下に置く。写真が無ければ地の色の上に同じ形。
+func reportCover(ctx skeletonContext) (*Spec, error) {
+	t, d, s := ctx.t, ctx.deck, ctx.slide
+	title, subtitle, author := s.Title, s.Subtitle, s.Author
+	titleAt, subtitleAt, authorAt := "title", "subtitle", "author"
+	if d.Meta != nil {
+		if title == nil {
+			title, titleAt = d.Meta.Title, "/meta/title"
+		}
+		if subtitle == nil {
+			subtitle, subtitleAt = d.Meta.Subtitle, "/meta/subtitle"
+		}
+		if author == nil {
+			author, authorAt = d.Meta.Author, "/meta/author"
+		}
+	}
+	inBox := []*Spec{Col(nil, WithGrow(1))}
+	if title != nil {
+		inBox = append(inBox, t.text(title, "coverTitle", "bg", true, WithPlaceholder("ctrTitle"), fromIR(titleAt)))
+	}
+	if subtitle != nil {
+		inBox = append(inBox, t.text(subtitle, "coverSubtitle", "bg", false, WithPlaceholder("subTitle"), fromIR(subtitleAt)))
+	}
+	box := Col(inBox, tokGap("itemGap"), tokPad("coverPadding"))
+
+	var foot []*Spec
+	if author != nil {
+		foot = append(foot, t.text(author, "coverAuthor", "text_primary", false, fromIR(authorAt)))
+	}
+	if d.Meta != nil && d.Meta.Date != "" {
+		foot = append(foot, TextNode(t.Marks.formatDate(d.Meta.Date), tokSize("coverAuthor"), tokColor("text_primary"), fromIR("/meta/date")))
+	}
+	if d.Meta != nil && d.Meta.Confidential != nil {
+		foot = append(foot, t.text(d.Meta.Confidential, "small", "text_primary", true, fromIR("/meta/confidential")))
+	}
+	if d.Meta != nil && d.Meta.Disclaimer != nil {
+		foot = append(foot, t.text(d.Meta.Disclaimer, "small", "text_muted", false, fromIR("/meta/disclaimer")))
+	}
+	below := Col(foot, tokGap("itemGap"), tokPadXY("coverPadding", "pagePaddingY"), WithGrow(1-reportCoverBoxH), WithBasis(0))
+	return ctx.withCoverImage(Col([]*Spec{reportCoverBand(box), below}, tokBackground("bg")))
+}
+
+// reportClosing は report の終わりのスライド:表紙と同じ写真に、同じ位置の基調色の箱だけ。
+func reportClosing(ctx skeletonContext) (*Spec, error) {
+	band := reportCoverBand(Col(nil))
+	return ctx.withCoverImage(Col([]*Spec{band, Col(nil, WithGrow(1-reportCoverBoxH), WithBasis(0))}, tokBackground("bg")))
 }
 
 // reportContentHeader は report の本文のスライドの頭:上にリード文(上の見出し)、

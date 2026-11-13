@@ -33,10 +33,11 @@ const (
 	skelFooter        = "footer"        // 頁番号・機密区分
 	skelSource        = "source"        // 出典の行
 	skelToc           = "toc"           // 目次のスライド(meta.toc。toc.go)
+	skelClosing       = "closing"       // 終わりのスライド(meta.closing。closing.go)
 )
 
 // skeletonNames は骨組みの部品の名前の一覧(override できるのはこれだけ)。
-var skeletonNames = []string{skelCover, skelContentHeader, skelContentFrame, skelSection, skelStatement, skelFooter, skelSource, skelToc}
+var skeletonNames = []string{skelCover, skelContentHeader, skelContentFrame, skelSection, skelStatement, skelFooter, skelSource, skelToc, skelClosing}
 
 // frameMark は骨組みの枠の印(Spec.frame)。
 type frameMark uint8
@@ -49,7 +50,8 @@ const (
 
 // skeletonContext は骨組みの部品に渡すもの:テンプレート・文書・スライドの番号と
 // スライド、ほかの骨組みの部品を組む口(part)、本文のブロックを組む口(blocks)。
-// 目次のスライド(toc.go)は IR に無いので index は tocSlide、slide は組み立てで作ったもの。
+// 目次のスライド(toc.go)・終わりのスライド(closing.go)は IR に無いので index は
+// tocSlide・closingSlide、slide は組み立てで作ったもの。
 type skeletonContext struct {
 	t     *Template
 	deck  *IRDeck
@@ -164,7 +166,11 @@ func (r *skeletonRegistry) names() []string {
 // defaultSkeleton は標準の骨組みの表(組み方は template.go のもの)。
 func defaultSkeleton() *skeletonRegistry {
 	r := &skeletonRegistry{parts: map[string]skeletonPart{
-		skelCover:         skeletonFunc(func(ctx skeletonContext) (*Spec, error) { return ctx.t.cover(ctx.deck, ctx.slide), nil }),
+		skelCover: skeletonFunc(func(ctx skeletonContext) (*Spec, error) {
+			// 表紙の写真(meta.coverImage)があれば全面に敷き、その上に今の見た目を重ねる。
+			return ctx.withCoverImage(ctx.t.cover(ctx.deck, ctx.slide))
+		}),
+		skelClosing:       skeletonFunc(closingFrame),
 		skelContentHeader: skeletonFunc(func(ctx skeletonContext) (*Spec, error) { return ctx.t.contentHeader(ctx.slide), nil }),
 		skelContentFrame:  skeletonFunc(contentFrame),
 		skelSection:       skeletonFunc(func(ctx skeletonContext) (*Spec, error) { return ctx.t.section(ctx.deck, ctx.index, ctx.slide), nil }),
@@ -194,9 +200,12 @@ var standardSkeleton = defaultSkeleton()
 func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 	pages := deckPages(d)
 	var ctx skeletonContext
-	if i == tocSlide {
+	switch i {
+	case tocSlide:
 		ctx = t.tocContext(d, pages)
-	} else {
+	case closingSlide:
+		ctx = t.closingContext(d, pages)
+	default:
 		ctx = skeletonContext{t: t, deck: d, index: i, slide: &d.Slides[i], st: &skeletonState{}, pages: pages, page: pageIndex(pages, i)}
 	}
 	s := ctx.slide
@@ -212,6 +221,8 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 		name, mainWhat = skelStatement, "statement"
 	case "toc":
 		name, mainWhat = skelToc, "table of contents"
+	case "closing":
+		name = skelClosing
 	default:
 		return nil, fmt.Errorf("unknown slide type %q", s.Type)
 	}
@@ -238,7 +249,7 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 		out.Main, out.MainWhat = mains[0], mainWhat
 	default:
 		if len(bodies)+len(mains) != 0 {
-			return nil, fmt.Errorf("%s: a cover has no body or main box", name)
+			return nil, fmt.Errorf("%s: a %s slide has no body or main box", name, s.Type)
 		}
 	}
 	// 本文の領域は根の内側から本文の箱以外の子を引いて測る(measureBody)ので、

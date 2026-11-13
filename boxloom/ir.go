@@ -41,6 +41,12 @@ type IRMeta struct {
 	// Toc は表紙の直後に目次のスライドを置くか(既定 false)。目次のスライドは IR に
 	// 書かず、組み立てで作る(level 1・2 の区切りと、組み立てたあとの頁番号)。
 	Toc bool `json:"toc,omitempty"`
+	// CoverImage は表紙の写真(飾り。代わりの文は持たない)。文書からの相対パスで、
+	// 決まりは画像の src と同じ。テンプレートが表紙(と終わりのスライド)の全面に敷く。
+	CoverImage string `json:"coverImage,omitempty"`
+	// Closing は最後に終わりのスライドを置くか(既定 false)。終わりのスライドは IR に
+	// 書かず、組み立てで作る(closing.go)。
+	Closing bool `json:"closing,omitempty"`
 }
 
 // IRSlide はスライド。Type で cover / content / section / statement を選ぶ。

@@ -114,6 +114,9 @@ type Spec struct {
 	// tok は部品が書いたトークン(値の表の名前・段の刻み・役割名)。resolveSpec が
 	// 上の数と色に直す(token.go)。layout の出力はこれを tokens に出す。
 	tok specTokens
+	// bgImage はスライドの地に全面に敷く写真(根の箱だけが持つ。表紙・終わりの
+	// スライドの meta.coverImage。renderSlide が p:bg に書く)。
+	bgImage *imageAsset
 
 	Box LBox // compute_layout()実行後に確定する
 }

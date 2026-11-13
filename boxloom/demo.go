@@ -51,10 +51,12 @@ func buildSlideSpec(th Theme, subtitle string) *Spec {
 }
 
 // renderSlide はスライドの根を描く。根の地は全面の四角ではなくスライドの
-// 背景(マスターの地か、違う色ならそのスライドの p:bg)にする。
+// 背景(マスターの地か、違う色ならそのスライドの p:bg)にする。根が写真を持てば
+// (bgImage)、写真を地に敷く。
 func renderSlide(ctx RenderContext, root *Spec) {
 	bg := root.Background
 	ctx.Out.SetSlideBackground(bg)
+	ctx.Out.BackgroundImage = root.bgImage
 	root.Background = ""
 	renderSpec(ctx, root)
 	root.Background = bg

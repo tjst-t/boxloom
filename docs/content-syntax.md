@@ -89,6 +89,8 @@ YAML で書く。使えるキー:
 | `template` | テンプレートの名前 | |
 | `cover` | 表紙を出すか(既定 `true`) | |
 | `toc` | 表紙の直後に目次を置くか(既定 `false`)。level 1・2 の区切りを頁番号つきで並べる | |
+| `coverImage` | 表紙の写真(PNG / JPEG。文書からの相対パス)。飾りなので代わりの文は要らない | |
+| `closing` | 最後に終わりのスライドを置くか(既定 `false`) | |
 
 表紙は文書の頭から作る。表紙のためにスライドを書く必要はない。
 IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭に `{type: "cover"}` の
@@ -101,6 +103,27 @@ IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭�
 2(節)を、目次を足したあとの頁番号つきで並べる。見た目はテンプレートの骨組みの `toc`。
 フッターの頁番号も目次を数える。`boxloom check` の誤り・警告の場所(`/slides/N`)は IR の
 スライドの番号のまま。
+
+`coverImage` は表紙に敷く写真(IR は `meta.coverImage`)。決まりは画像の `src` と同じで、
+文書のファイルからの相対パス・区切りは `/`・PNG か JPEG。絶対パス・URL・文書のフォルダの外
+(`..`)は `image-path`、無いものは `image-missing`、PNG・JPEG でないものは `image-format` の誤り
+(場所は `/meta/coverImage`)。飾りの写真なので `alt` は書かない。写真は全面に敷き、縦横比が
+ページと違えば長い方の両端を切る(引き伸ばさない)。どう重ねるかはテンプレートの骨組み
+(標準の表紙は写真の上に今の見た目を重ね、report は写真の上に基調色の箱を置いて白い字で
+題・副題を書き、日付を箱の下に置く)。
+
+`closing: true` なら、組み立てで最後に終わりのスライドを1枚足す(IR は `meta.closing`。
+終わりのスライドは IR に書かない)。標準は地の色だけで、`coverImage` があればその写真を
+全面に敷く(report は同じ写真に基調色の箱だけ)。終わりのスライドの警告の場所は `/meta/closing`。
+
+```markdown
+---
+title: 架空の街の移動の調べ
+template: report
+coverImage: images/cover.jpg
+closing: true
+---
+```
 
 「数字はすべて架空」「社外秘」のような文書全体に掛かる断りは、スライドごとの
 `:::note` に繰り返さず、`disclaimer`・`confidential` に1回だけ書く。

@@ -99,8 +99,8 @@ func (t *Template) BuildDeck(d *IRDeck) ([]*BuiltSlide, error) {
 	for _, i := range deckPages(d) {
 		s, err := t.buildSlide(d, i)
 		if err != nil {
-			if i == tocSlide {
-				return nil, fmt.Errorf("meta.toc: %w", err)
+			if path, _, _, ok := generatedSlide(i); ok {
+				return nil, fmt.Errorf("%s: %w", strings.ReplaceAll(path[1:], "/", "."), err)
 			}
 			return nil, fmt.Errorf("slides[%d]: %w", i, err)
 		}
@@ -144,7 +144,7 @@ func (t *Template) buildSlide(d *IRDeck, i int) (*BuiltSlide, error) {
 // buildSlideTokens は i 枚目をトークンのまま組む(解決はしない)。組むのは骨組みの
 // 部品の表(skeleton.go)。
 func (t *Template) buildSlideTokens(d *IRDeck, i int) (*BuiltSlide, error) {
-	if i != tocSlide {
+	if _, _, _, gen := generatedSlide(i); !gen {
 		if err := t.checkVariant(d.Slides[i].Variant); err != nil {
 			return nil, err
 		}
@@ -708,8 +708,8 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 		p.SetNotes(b.Notes)
 		pages = append(pages, p)
 		for _, w := range warnings {
-			if i == tocSlide {
-				all = append(all, tocWarnPrefix+w)
+			if _, _, prefix, ok := generatedSlide(i); ok {
+				all = append(all, prefix+w)
 				continue
 			}
 			all = append(all, fmt.Sprintf("slide %d: %s", i+1, w))

@@ -1249,6 +1249,25 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 			if b {
 				meta.set("toc", true)
 			}
+		case "closing":
+			b, ok := yBool(v)
+			if !ok {
+				p.fail(line, v.col, path, codeInvalidValue, "closing は true か false で書いてください", []string{"true", "false"}, "")
+				continue
+			}
+			if b {
+				meta.set("closing", true)
+			}
+		case "coverImage":
+			if v.kind != 's' || v.str == "" {
+				p.fail(line, v.col, path, codeInvalidValue, "coverImage は画像のパス(文書からの相対パス)で書いてください", nil, "例 coverImage: images/cover.jpg")
+				continue
+			}
+			if err := checkImageSrc(v.str); err != nil {
+				p.fail(line, v.col, path, codeImagePath, err.Error(), nil, "文書のファイルからの相対パスで書いてください(例 images/cover.jpg)")
+				continue
+			}
+			meta.set("coverImage", v.str)
 		default:
 			p.fail(line, 1, "/meta", codeUnknownKey, fmt.Sprintf("文書の頭にキー %s はありません", key), allowed, "")
 		}
@@ -1257,9 +1276,10 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 		p.fail(n.line, 1, "/meta", codeMissingKey, "文書の頭に title がありません", []string{"title"}, "")
 		return nil, cover
 	}
-	// meta の中の順を IR の例と揃える(title, subtitle, author, date, confidential, disclaimer, toc)。
+	// meta の中の順を IR の例と揃える(title, subtitle, author, date, confidential, disclaimer, toc,
+	// coverImage, closing)。
 	ordered := &jobj{}
-	for _, k := range []string{"title", "subtitle", "author", "date", "confidential", "disclaimer", "toc"} {
+	for _, k := range []string{"title", "subtitle", "author", "date", "confidential", "disclaimer", "toc", "coverImage", "closing"} {
 		for i, kk := range meta.keys {
 			if kk == k {
 				ordered.set(k, meta.vals[i])

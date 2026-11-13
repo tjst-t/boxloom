@@ -25,8 +25,9 @@ func sectionLevel(s *IRSlide) int {
 	return s.Level
 }
 
-// deckPages は組み立てたあとの頁の並び:頁ごとに IR のスライドの番号(目次は tocSlide)。
-// 目次は表紙の直後(表紙が無ければ先頭)。toc が false なら IR の並びそのもの。
+// deckPages は組み立てたあとの頁の並び:頁ごとに IR のスライドの番号(目次は tocSlide、
+// 終わりのスライドは closingSlide)。目次は表紙の直後(表紙が無ければ先頭)、終わりの
+// スライドは最後。toc・closing が false なら IR の並びそのもの。
 func deckPages(d *IRDeck) []int {
 	pages := make([]int, 0, len(d.Slides)+1)
 	toc := d.Meta != nil && d.Meta.Toc
@@ -42,6 +43,9 @@ func deckPages(d *IRDeck) []int {
 	}
 	if toc && at >= len(d.Slides) {
 		pages = append(pages, tocSlide)
+	}
+	if d.Meta != nil && d.Meta.Closing {
+		pages = append(pages, closingSlide)
 	}
 	return pages
 }

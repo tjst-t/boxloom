@@ -256,19 +256,28 @@ type mediaPart struct {
 func assignMedia(slides []*PPTXBuilder) []mediaPart {
 	var parts []mediaPart
 	byData := map[string]string{}
+	add := func(img *imageAsset) string {
+		name, ok := byData[string(img.Data)]
+		if !ok {
+			name = fmt.Sprintf("image%d.%s", len(parts)+1, img.Format)
+			byData[string(img.Data)] = name
+			parts = append(parts, mediaPart{name: name, data: img.Data})
+		}
+		return name
+	}
 	for _, sl := range slides {
 		ridByName := map[string]string{}
+		if sl.BackgroundImage != nil {
+			sl.bgMedia = add(sl.BackgroundImage)
+			sl.bgRID = fmt.Sprintf("rId%d", 10+len(ridByName))
+			ridByName[sl.bgMedia] = sl.bgRID
+		}
 		for i := range sl.Shapes {
 			s := &sl.Shapes[i]
 			if s.kind != skPicture || s.image == nil {
 				continue
 			}
-			name, ok := byData[string(s.image.Data)]
-			if !ok {
-				name = fmt.Sprintf("image%d.%s", len(parts)+1, s.image.Format)
-				byData[string(s.image.Data)] = name
-				parts = append(parts, mediaPart{name: name, data: s.image.Data})
-			}
+			name := add(s.image)
 			s.media = name
 			rid, ok := ridByName[name]
 			if !ok {
@@ -302,6 +311,10 @@ func mediaContentTypes(parts []mediaPart) string {
 func slideImageRels(p *PPTXBuilder) string {
 	var b strings.Builder
 	seen := map[string]bool{}
+	if p.BackgroundImage != nil && p.bgRID != "" {
+		seen[p.bgRID] = true
+		fmt.Fprintf(&b, "\n"+`<Relationship Id="%s" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/%s"/>`, p.bgRID, p.bgMedia)
+	}
 	for _, s := range p.Shapes {
 		if s.kind != skPicture || s.rid == "" || seen[s.rid] {
 			continue
@@ -315,6 +328,25 @@ func slideImageRels(p *PPTXBuilder) string {
 func lastRowAttr(on bool) string {
 	if on {
 		return ` lastRow="1"`
+	}
+	return ""
+}
+
+// coverCropXML は全面に敷く写真の a:srcRect:写真の縦横比がページと違えば、長い方の
+// 両端を同じだけ切ってページを覆う(引き伸ばさない)。同じなら何も書かない。
+func coverCropXML(img *imageAsset, pageW, pageH float64) string {
+	if img == nil || img.W <= 0 || img.H <= 0 || pageW <= 0 || pageH <= 0 {
+		return ""
+	}
+	page, pic := pageW/pageH, img.aspect()
+	// 切る割合(片側。1/1000 パーセント = 100000 が全体)。
+	switch {
+	case pic > page*1.0001:
+		c := int(math.Round((1 - page/pic) / 2 * 100000))
+		return fmt.Sprintf(`<a:srcRect l="%d" r="%d"/>`, c, c)
+	case pic < page/1.0001:
+		c := int(math.Round((1 - pic/page) / 2 * 100000))
+		return fmt.Sprintf(`<a:srcRect t="%d" b="%d"/>`, c, c)
 	}
 	return ""
 }

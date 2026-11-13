@@ -112,7 +112,12 @@ type PPTXBuilder struct {
 	ColorTheme *DeckColors
 	// Background はスライドの地(p:cSld の p:bg)。"" ならマスターの地を引き継ぐ。
 	Background string
-	nextID     int
+	// BackgroundImage はスライドの地に全面に敷く写真(p:bg の a:blipFill。表紙の写真)。
+	// nil でなければ Background の色より優先する。縦横比はページに合わせて端を切る
+	// (引き伸ばさない)。bgMedia・bgRID は書き出すときに決まる。
+	BackgroundImage *imageAsset
+	bgMedia, bgRID  string
+	nextID          int
 }
 
 // DeckColors は PPTX のテーマに写すテンプレートの名前と色(役割名 → 16進)。
@@ -1297,7 +1302,11 @@ func writeSlide(write func(name, content string) error, num int, p *PPTXBuilder)
 	}
 
 	bg := ""
-	if p.Background != "" {
+	if p.BackgroundImage != nil && p.bgRID != "" {
+		bg = `<p:bg><p:bgPr><a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="` + p.bgRID + `"/>` +
+			coverCropXML(p.BackgroundImage, p.WidthPt, p.HeightPt) +
+			`<a:stretch><a:fillRect/></a:stretch></a:blipFill><a:effectLst/></p:bgPr></p:bg>`
+	} else if p.Background != "" {
 		bg = `<p:bg><p:bgPr><a:solidFill><a:srgbClr val="` + p.Background + `"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>`
 	}
 	slide := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

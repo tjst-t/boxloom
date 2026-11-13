@@ -34,6 +34,7 @@ func slideXfrms(t *testing.T, pptx []byte) map[int][]LayoutBox {
 		rc, _ := f.Open()
 		b, _ := io.ReadAll(rc)
 		rc.Close()
+		out[n-1] = out[n-1] // 図形の無いスライド(写真だけの終わりのスライド)も数える
 		for _, m := range xfrmRe.FindAllStringSubmatch(string(b), -1) {
 			v := make([]float64, 4)
 			for i := range v {

@@ -92,7 +92,8 @@ func TestLayoutRoundTrip(t *testing.T) {
 			}
 			se := zipEntries(t, stub.Bytes())
 			for i, s := range dump.Slides {
-				if hasSubsystemNode(s.Root) {
+				// Deck も Assets も無ければ地の写真(meta.coverImage)は読めない。
+				if hasSubsystemNode(s.Root) || s.BackgroundImage != "" {
 					continue
 				}
 				name := "ppt/slides/slide" + itoa(i+1) + ".xml"

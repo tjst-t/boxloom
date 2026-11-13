@@ -58,7 +58,7 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 
 ```
 文書   { boxloom: "0.1", template?, meta?, slides: [スライド] }
-meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc? }   日付・機密区分・免責は文書に1回。toc: true で表紙の直後に目次(組み立てで作る)
+meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc?, coverImage?, closing? }   日付・機密区分・免責は文書に1回。toc: true で表紙の直後に目次、closing: true で最後に終わりのスライド(どちらも組み立てで作る)。coverImage は表紙(と終わりのスライド)に敷く写真
 スライド  { type: "cover",     variant?, title?, subtitle?, author?, notes? }
          { type: "content",   variant?, title, lead?, marker?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead、marker は隅の印(2字まで)
          { type: "section",   variant?, title, level?, notes? }  章の区切り(本文なし。level は 1 章・2 節・3 項目、既定 1)
@@ -257,6 +257,19 @@ Schema では書けないので `boxloom check` が見る。
   report は右上の隅に三角の地(幅・高さ 48pt、役割 `support`)と、その中の丸(地の色 `bg`)に
   印を、左にパンくず(`small`・`text_muted`)を、ページの上の余白の中に描く。パンくずは印の
   あるスライドにだけ描き、前に区切りが無ければ印だけ。
+
+### 9.3 表紙の写真と終わりのスライド(#92)
+
+- **`meta.coverImage`** は表紙に敷く写真のパス。決まりは画像の `src`(`imageSrc`)と同じで、
+  ファイルは `Assets` から読み、`boxloom check` が `image-path`・`image-missing`・`image-format`
+  を場所 `/meta/coverImage` で出す。飾りの写真なので代わりの文(`alt`)は持たない
+  (中身を伝える画像は本文の `image` に書く)。
+- 写真はスライドの地(`p:bg` の `a:blipFill`)として全面に敷く。縦横比がページと違えば、
+  長い方の両端を同じだけ切る(`a:srcRect`。引き伸ばさない)。PowerPoint では背景の書式から
+  差し替えられる。どう重ねるかはテンプレートの骨組みの `cover`・`closing`。
+- **終わりのスライドは IR に書かない。** `meta.closing: true` だけを書き、組み立てで最後に
+  1枚足す(目次と同じく `deckPages`)。中身を持たない頁なので、作者が書くものは無い。
+  警告の場所は `/meta/closing`、`boxloom layout` の場所も `/meta/closing`(type `closing`)。
 
 ### 10. 並列のまとまり・表・画像(#20・#21・#22)
 

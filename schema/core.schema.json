@@ -280,6 +280,14 @@
         "toc": {
           "description": "表紙の直後に目次のスライドを置くか(既定 false)。目次は IR に書かず、組み立てで作る(level 1・2 の区切りと、組み立てたあとの頁番号)。",
           "type": "boolean"
+        },
+        "coverImage": {
+          "description": "表紙の写真(飾り。代わりの文は要らない)。文書からの相対パスで、決まりは画像の src と同じ(PNG / JPEG、絶対パス・URL・.. は誤り)。テンプレートが表紙の全面に敷き、closing が true なら終わりのスライドにも敷く。",
+          "$ref": "#/$defs/imageSrc"
+        },
+        "closing": {
+          "description": "最後に終わりのスライドを置くか(既定 false)。終わりのスライドは IR に書かず、組み立てで作る(coverImage があればその写真を敷く)。",
+          "type": "boolean"
         }
       },
       "required": [

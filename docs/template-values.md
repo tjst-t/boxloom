@@ -33,7 +33,12 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 見た目の違いは report が自分の値の表と組み方で持つ。コアの標準の部品・骨組みには条件分岐を
 足していない(dark・light の出力は変わらない)。
 
-**組み方(`report.go`)**:骨組みの部品 `contentHeader`・`section`・`toc` を差し替える(`docs/layers.md` の8.4)。
+**組み方(`report.go`)**:骨組みの部品 `contentHeader`・`section`・`toc`・`cover`・`closing` を差し替える(`docs/layers.md` の8.4)。
+
+- 表紙(#92):全面に写真(`meta.coverImage`)を敷き、左上から幅 0.53・高さ 0.45 の基調色の箱を
+  置いて、その下寄せに白い字(`bg`)で題(`coverTitle`)・副題(`coverSubtitle`)を書く。作者・
+  日付・機密区分・免責は箱の下に置く。終わりのスライドは同じ写真に同じ箱だけ。写真が無ければ
+  地の色の上に同じ形。
 
 - 区切り(#86):level 1・2 は frame(全面の基調色に白い枠を置き、54pt の白い太字の題)、
   level 3 は agenda(左の帯 1/3 を基調色にして親の節の題を白い字で、右に同じ節の項目の

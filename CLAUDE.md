@@ -87,7 +87,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
 なっているのは値の表(色・大きさ・印の文字・字体、Gantt の寸法)で、
 `boxloom/templates/<名前>.json` と `boxloom/subsystems/gantt.json`・`shapes.json` ほか(同梱。
 知らないキー・欠けたキーは誤り)。骨組みはまだコードで、部品の登録簿と同じ作りの表
-(`skeleton.go`。表紙・本文の頭・本文の並べ方・区切り・主張・フッター・出典・目次の8つ)に載せ、
+(`skeleton.go`。表紙・本文の頭・本文の並べ方・区切り・主張・フッター・出典・目次・終わりの9つ)に載せ、
 テンプレートが名前ごとに差し替えられる(`docs/layers.md` の8.4)。詳細は
 `docs/template-values.md`。字体はテンプレートが選び、字体ごとの寸法
 (`boxloom/fonts/*.json`)で測る。置き換わったときの余裕は `docs/fonts.md`。
@@ -242,7 +242,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     対ごとに2つの側の行をそろえる。はみ出しは対ごと(印 `measurePairRows`)。組み方を
     持たないテンプレートは `columns` で組んで `component-fallback`。`docs/layers.md` の8.1・8.3
   - `skeleton.go` = 骨組みの部品の表(`cover`・`contentHeader`・`contentFrame`・`section`・
-    `statement`・`footer`・`source`・`toc`。標準は `defaultSkeleton`、テンプレートは写しを名前ごとに
+    `statement`・`footer`・`source`・`toc`・`closing`。標準は `defaultSkeleton`、テンプレートは写しを名前ごとに
     override)。コアは本文の箱の印(`frameBody`)で容量・はみ出しを、`title` のプレースホルダーの
     印の葉で題の1行を測る。`docs/layers.md` の8.4
   - `report.go` = report(読む資料のテンプレート)が自分で持つ組み方。骨組みの `contentHeader` を
@@ -251,6 +251,10 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `toc.go` = 区切りの階層(section の `level` 1〜3。親の無い level は check の `section-level`)と
     目次(`meta.toc`)。目次のスライドは IR に書かず、組み立てで表紙の直後に足す(`deckPages`)。
     頁番号(目次・フッター)は頁の並びで、check の場所と容量は IR の番号のまま。`docs/ir.md` の9.1
+  - `closing.go` = 表紙の写真(`meta.coverImage`。画像と同じ決まりで Assets から読み、根の箱に
+    敷いて `p:bg` の写真に書く。縦横比が違えば端を切る)と終わりのスライド(`meta.closing`。IR に
+    書かず組み立てで最後に足す。骨組みの `closing`)。report は表紙を写真+基調色の箱(幅 0.53・
+    高さ 0.45)に白い字、終わりは同じ写真と箱だけ。`docs/ir.md` の9.3
   - `token.go` = 配置の段のトークン。部品と骨組みは Spec に数・色を書かず、値の表の名前・
     段の刻み(`space(n)`・`type(n)`)・役割名を書き、`BuildSlide` の中の `resolveSpec`(組み立ての
     直後・計測の前の1か所)で数と色に直す。トークンの無い数・色・段に無い刻み・知らない名前は

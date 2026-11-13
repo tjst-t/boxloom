@@ -274,6 +274,10 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 
 	if meta, ok := getPath(doc, "meta").(map[string]any); ok {
 		c.checkNotEmpty(meta, "/meta", "confidential", "disclaimer")
+		// 表紙の写真は画像の src と同じ決まり(代わりの文は要らない。飾りの写真)。
+		if src, ok := meta["coverImage"].(string); ok {
+			c.checkImageFile(src, "/meta/coverImage")
+		}
 	}
 	slides, _ := getPath(doc, "slides").([]any)
 	c.checkTableChains(slides)
@@ -399,20 +403,8 @@ func (c *checker) checkBlock(bm map[string]any, bp string, tm *Template) {
 			c.addIssue(Issue{Path: p + "/alt", Code: "image-alt", Message: "the image has no alternative text (alt)",
 				Hint: "画像が何を示すかを1文で書いてください(読み上げと、画像が無いときに使います)"})
 		}
-		src, ok := m["src"].(string)
-		if !ok {
-			return
-		}
-		if _, err := c.images.get(src); err != nil {
-			code := imageCode(err)
-			if code == "" {
-				code = "image-missing"
-			}
-			hint := "画像は文書のファイルと同じフォルダ(かその下)に置き、文書からの相対パスで書きます"
-			if code == "image-format" {
-				hint = "PNG か JPEG にしてください"
-			}
-			c.addIssue(Issue{Path: p + "/src", Code: code, Message: err.Error(), Hint: hint})
+		if src, ok := m["src"].(string); ok {
+			c.checkImageFile(src, p+"/src")
 		}
 	}
 	switch bm["type"] {
@@ -913,13 +905,16 @@ func figureWarnPointer(loc string) string {
 }
 
 func warningIssue(file, w string) Issue {
-	// 目次のスライド(IR に無い)の警告は文書の頭の toc を指す。
-	if rest, ok := strings.CutPrefix(w, tocWarnPrefix); ok {
-		is := warningIssue(file, "slide 1: "+rest)
-		if p, ok := strings.CutPrefix(is.Path, "/slides/0"); ok {
-			is.Path = "/meta/toc" + p
+	// 目次・終わりのスライド(IR に無い)の警告は文書の頭の toc・closing を指す。
+	for _, gen := range []int{tocSlide, closingSlide} {
+		path, _, prefix, _ := generatedSlide(gen)
+		if rest, ok := strings.CutPrefix(w, prefix); ok {
+			is := warningIssue(file, "slide 1: "+rest)
+			if p, ok := strings.CutPrefix(is.Path, "/slides/0"); ok {
+				is.Path = path + p
+			}
+			return is
 		}
-		return is
 	}
 	m := warnRe.FindStringSubmatch(w)
 	if m == nil {
@@ -1126,5 +1121,20 @@ func (c *checker) checkTablePoints(cell any, at string) {
 		if strings.TrimSpace(inlinePlainAny(it)) == "" {
 			c.add(fmt.Sprintf("%s/points/%d", at, i), "the item of the cell list is empty", "table-points")
 		}
+	}
+}
+
+// checkImageFile は画像のファイル(書き方・有無・形式)を見る。誤りの場所は p。
+func (c *checker) checkImageFile(src, p string) {
+	if _, err := c.images.get(src); err != nil {
+		code := imageCode(err)
+		if code == "" {
+			code = "image-missing"
+		}
+		hint := "画像は文書のファイルと同じフォルダ(かその下)に置き、文書からの相対パスで書きます"
+		if code == "image-format" {
+			hint = "PNG か JPEG にしてください"
+		}
+		c.addIssue(Issue{Path: p, Code: code, Message: err.Error(), Hint: hint})
 	}
 }

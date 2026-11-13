@@ -46,10 +46,13 @@ type LayoutBox struct {
 
 // LayoutSlide は1枚のスライドの木。
 type LayoutSlide struct {
-	Path string      `json:"path"` // /slides/S
-	Line int         `json:"line,omitempty"`
-	Type string      `json:"type"` // IR のスライドの type
-	Root *LayoutNode `json:"root"`
+	Path string `json:"path"` // /slides/S
+	Line int    `json:"line,omitempty"`
+	Type string `json:"type"` // IR のスライドの type
+	// BackgroundImage はスライドの地に全面に敷く写真(meta.coverImage)。表紙・終わりの
+	// スライドで写真を敷くときだけ。
+	BackgroundImage string      `json:"backgroundImage,omitempty"`
+	Root            *LayoutNode `json:"root"`
 }
 
 // LayoutPadding は箱の内側の余白(x は左右、y は上下)。
@@ -205,13 +208,17 @@ func layoutDeck(deck *IRDeck, opt BuildOptions, lines lineMap) (*LayoutDump, err
 	out := &LayoutDump{Format: LayoutFormat, Template: t.Name, Page: LayoutSize{v.PageW, v.PageH}, Slides: []LayoutSlide{}}
 	for _, b := range built {
 		computeLayout(b.Root, 0, 0, v.PageW, v.PageH)
-		// 目次のスライド(meta.toc)は IR に無いので、場所は文書の頭の toc。
-		sp, typ := "/meta/toc", "toc"
-		if i := b.SlideIndex; i != tocSlide {
-			sp, typ = fmt.Sprintf("/slides/%d", i), deck.Slides[i].Type
+		// 目次・終わりのスライド(meta.toc・meta.closing)は IR に無いので、場所は文書の頭。
+		sp, typ, _, gen := generatedSlide(b.SlideIndex)
+		if !gen {
+			sp, typ = fmt.Sprintf("/slides/%d", b.SlideIndex), deck.Slides[b.SlideIndex].Type
 		}
 		d := &layoutDumper{slide: sp, lines: lines, body: b.Body, groups: map[*Spec]columnInfo{}, pairPaths: map[*Spec]string{}}
-		out.Slides = append(out.Slides, LayoutSlide{Path: sp, Line: lines.Line(sp), Type: typ, Root: d.node(b.Root, sp)})
+		ls := LayoutSlide{Path: sp, Line: lines.Line(sp), Type: typ, Root: d.node(b.Root, sp)}
+		if b.Root.bgImage != nil && deck.Meta != nil {
+			ls.BackgroundImage = deck.Meta.CoverImage
+		}
+		out.Slides = append(out.Slides, ls)
 	}
 	return out, nil
 }

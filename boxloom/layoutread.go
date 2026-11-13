@@ -173,6 +173,19 @@ func readLayoutTree(file string, src []byte, opt LayoutReadOptions) (*layoutTree
 			continue
 		}
 		b.Root = r.node(sl.Root, at+"/root")
+		// 地の写真は Deck の組み立てから(無ければ Assets から読む。どちらも無ければ敷かない)。
+		if sl.BackgroundImage != "" {
+			switch {
+			case deckSlides != nil:
+				b.Root.bgImage = deckSlides[i].Root.bgImage
+			case opt.Assets != nil:
+				a, err := loadImage(opt.Assets, sl.BackgroundImage)
+				if err != nil {
+					r.add(at+"/backgroundImage", imageCode(err), err.Error())
+				}
+				b.Root.bgImage = a
+			}
+		}
 		if deckSlides != nil && r.next != len(r.subs) {
 			r.add(at, "layout-deck", fmt.Sprintf("the tree has %d subsystem leaves, the deck's slide %d", r.next, len(r.subs)))
 		}

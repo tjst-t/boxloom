@@ -18,9 +18,10 @@
         "required": ["path", "type", "root"],
         "additionalProperties": false,
         "properties": {
-          "path": {"description": "IR のスライドの場所(/slides/S)。組み立てで作った目次のスライド(meta.toc)は /meta/toc。", "type": "string", "pattern": "^(/slides/[0-9]+|/meta/toc)$"},
+          "path": {"description": "IR のスライドの場所(/slides/S)。組み立てで作った目次のスライド(meta.toc)は /meta/toc、終わりのスライド(meta.closing)は /meta/closing。", "type": "string", "pattern": "^(/slides/[0-9]+|/meta/toc|/meta/closing)$"},
           "line": {"$ref": "#/$defs/line"},
-          "type": {"enum": ["cover", "content", "section", "statement", "toc"]},
+          "type": {"enum": ["cover", "content", "section", "statement", "toc", "closing"]},
+          "backgroundImage": {"description": "スライドの地に全面に敷く写真(meta.coverImage。文書からの相対パス)。表紙・終わりのスライドで、写真を敷くときだけ。", "type": "string"},
           "root": {"$ref": "#/$defs/node"}
         }
       }

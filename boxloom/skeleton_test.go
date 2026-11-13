@@ -9,9 +9,9 @@ import (
 	"testing"
 )
 
-// 骨組みの7つの部品が標準の表にあり、どのテンプレートも写しを持つ。
+// 骨組みの9つの部品が標準の表にあり、どのテンプレートも写しを持つ。
 func TestSkeletonRegistryNames(t *testing.T) {
-	want := []string{"contentFrame", "contentHeader", "cover", "footer", "section", "source", "statement", "toc"}
+	want := []string{"closing", "contentFrame", "contentHeader", "cover", "footer", "section", "source", "statement", "toc"}
 	if got := standardSkeleton.names(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("skeleton = %v, want %v", got, want)
 	}
