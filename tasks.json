@@ -2885,7 +2885,7 @@
       "number": 127,
       "kind": "task",
       "title": "-fit:はみ出すスライドを梯子で詰めて収める",
-      "status": "in-progress",
+      "status": "done",
       "parent": "auto-fit",
       "dependsOn": [
         "build-overflow-error",
@@ -2896,12 +2896,12 @@
       "labels": [],
       "body": "BuildOptions.Fit・CheckOptions.Fit と CLI `build -fit`・`check -fit`(IR は変えない)。Fit のとき、layout-overflow になる本文のスライドは、今の密度(normal なら dense の組、dense なら fit.shrink の最初)から1段ずつ下りて組み直して測り(measureBody と同じ1回の測り)、最初に収まった段で組む。最後の段でも収まらなければ今までどおり layout-overflow(build は誤り、#124)。調整したスライドには info の Issue `fit-applied`(path=/slides/S、message に段と残り pt)を出し、check -format json の capacity にそのスライドの `fit`(段の名前)を出す。Fit でないときの出力は1バイトも変えない。docs/build.md・docs/ir.md(capacity と code の表)・docs/library.md・SKILL.md(-fit は最後の手段で、まず文を削る・分ける)を直す。",
       "doneWhen": "はみ出す例が -fit で収まり fit-applied が出る/最後の段でも収まらない例は誤りのまま/-fit なしの golden が変わらない/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/fit-shrink）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:29:03.385Z",
-      "updatedAt": "2026-11-13T08:25:44.153Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T08:45:36.815Z",
+      "closedAt": "2026-11-13T08:45:36.815Z",
       "extra": {}
     },
     {
