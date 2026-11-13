@@ -2953,7 +2953,7 @@
       "number": 130,
       "kind": "task",
       "title": "pairs の側は見出しを省いても複数のブロックを書ける",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -2965,7 +2965,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:35:04.497Z",
-      "updatedAt": "2026-11-13T07:35:04.497Z",
+      "updatedAt": "2026-11-13T07:36:48.464Z",
       "closedAt": null,
       "extra": {}
     },
