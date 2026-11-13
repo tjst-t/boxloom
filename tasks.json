@@ -2066,6 +2066,145 @@
       "updatedAt": "2026-11-13T00:28:26.162Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "gantt-month-grid",
+      "number": 89,
+      "kind": "task",
+      "title": "Gantt:月の格子(年と月の2段の見出し)・山形の棒・縦の余白を使う",
+      "status": "ready",
+      "parent": "sample-fidelity",
+      "dependsOn": [
+        "green-template"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "## なぜ\n#82 の原因1・5。読む資料のスケジュールは、次の形で書かれている。\n- 上に年と月の2段の見出しを置き、月ごとに縦の細い罫線を引く。\n- 棒は右に尖った山形(homePlate の形)で、薄い基調色の面に字の色で書く。\n- グループの名前は左に置く。\n- 図がページの高さを使い切る。\n\nいまの Gantt は、目盛りが書いたところだけに出て、高さは自然の大きさで止まり、下が空く。\n\n## 決め事\nテンプレートの値の表の subsystems.gantt に次を足す。どれも値の表の名前で持ち、既定は今の動きにする。\n- `axisStyle`:`ticks`(今)/`monthGrid`。monthGrid は、span の月ごとに列を作り、年の行と月の行を描く。書いた ticks・milestones は、今どおり印として重ねる。\n- `barShape`:`rect`(今)/`chevron`。\n- `fillHeight`(真偽):true なら Measure の Max を 0(上限なし)にして、余った高さを行に配る。配るのは注記の行を除く行に等しく、行の高さの上限は値の表で持つ。\n- green は monthGrid・chevron・true。dark・light・report は今のまま。\n- docs/subsystem.md と docs/template-values.md を直す。\n\n## 確かめ方\n架空の8か月の Gantt で、月の列の数・年の境目・山形の棒・本文の高さを使い切ることを試験で見る。",
+      "doneWhen": "green で Gantt が月の格子(年・月の2段)と山形の棒で描かれ、本文の領域の高さを使い切ることを試験で確かめる/dark・light・report の既存の Gantt の出力が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T00:31:17.139Z",
+      "updatedAt": "2026-11-13T00:31:17.139Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
+      "id": "phases-figure",
+      "number": 90,
+      "kind": "task",
+      "title": "フェーズの図(phases):段の山形の見出し+段ごとの箱(番号・題・箇条)+段をまたぐ群の帯",
+      "status": "ready",
+      "parent": "sample-fidelity",
+      "dependsOn": [
+        "green-template"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "## なぜ\n#82 の原因4。読む資料の「事業の全体像」は、次の形で書かれている。\n- 段(Step1〜3、それぞれに題と期間)を山形で横に並べる。\n- その上に、複数の段をまたぐ群の帯(例:「①調査」が Step1・2、「②報告書」が Step3)を置く。\n- 各段の下に、番号つきの箱(題+箇条)を縦に積む。一部の箱は「追加の検討」として色を変える。\n\nいまの process は、段に題と短い説明しか持てない。\n\n## 決め事\n- 新しいサブシステム `phases`(箱と線の図の仲間。docs/subsystem.md の11節の作りを倉う)。\n- IR の data:\n  - `steps: [{id?, title, period?, items: [{title, detail?(文か文の列), status?, emphasis?}]}]`(2〜5段)\n  - `groups?: [{title, from: stepのid, to: stepのid}]`(段をまたぐ帯)\n  - `legend?`(状態の意味)\n- 箱の番号は、段をまたいで通しで自動で振る(ローマ数字か算用数字かは値の表)。\n- 座標・色・字の大きさは書けない。\n- Measure は段の中の箱の文の量から自然・最小の高さを申告する。余った高さは箱に配る。\n- Markdown は ```phases のコードブロック(YAML)。Schema・schema コマンド・docs/patterns.md(どのときに process でなく phases を選ぶか)・SKILL.md を直す。\n\n## 確かめ方\n架空の3段・群2つ・箱7つの例を examples に置き、green・light で build できること。",
+      "doneWhen": "phases が IR・Markdown・Schema・schema コマンドで読める/段の山形・群の帯・通し番号の箱が描かれることを試験で確かめる/はみ出しが layout-overflow で測れる/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T00:31:17.139Z",
+      "updatedAt": "2026-11-13T00:31:17.139Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
+      "id": "cycle-figure",
+      "number": 91,
+      "kind": "task",
+      "title": "循環の図(cycle):輪に並んだ段(番号・題・強調)。columns の中にも置ける",
+      "status": "ready",
+      "parent": "sample-fidelity",
+      "dependsOn": [
+        "green-template"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "## なぜ\n#82 の原因4。読む資料では、「拠点づくりの過程」を輪に並んだ段で示す。\n- 0〜4 の5段をドーナツの扇形で並べる。各段は番号の丸と題を持ち、段ごとに基調色の濃淡で塗る。\n- よく図の右に段ごとの説明を置く(左に図・右に文)。\n\n## 決め事\n- 新しいサブシステム `cycle`。\n  - IR の data は `steps: [{title, detail?, emphasis?, status?}]`(3〜6段)、`start?`(番号の始まり 0 か 1、既定 1)、`legend?`。\n  - 座標・色・角度は書けない。\n- PPTX は本物の図形(blockArc か扇形の freeform)と、文を持つ図形で描く。\n- 縦横比は固定(FixedAspect)。余った幅は spare-width で知らせる。\n- **columns の中に置けるサブシステムに cycle を加える**(いまは chart だけ)。左に図・右に段ごとの説明、が主な使い道。\n- Markdown は ```cycle。Schema・schema コマンド・docs/subsystem.md・docs/patterns.md・SKILL.md を直す。\n\n## 確かめ方\n架空の5段の例を、単独と columns の中で build する。",
+      "doneWhen": "cycle が IR・Markdown・Schema・schema コマンドで読める/扇形の段・番号・題が描かれることを試験で確かめる/columns の中に置ける/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T00:31:17.139Z",
+      "updatedAt": "2026-11-13T00:31:17.139Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
+      "id": "cover-image",
+      "number": 92,
+      "kind": "task",
+      "title": "表紙の写真と終わりのスライド(green は写真の上に基調色の箱)",
+      "status": "ready",
+      "parent": "sample-fidelity",
+      "dependsOn": [
+        "green-template"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "## なぜ\n#82 の原因4。読む資料の表紙は次の形で、最後のページも同じ写真で閉じる。\n- 全面に写真を敷く。\n- 左に基調色の大きな箱を置き、白い字で題・副題を書く。\n- 日付は箱の下に置く。\n\n## 決め事\n- 文書の頭に `coverImage` を足す。画像のパスで、画像の決まり(PNG/JPEG・Assets から読む・絶対パスと URL と .. は誤り)に従う。飾りの写真なので、代わりの文は要らない。\n- 文書の頭に `closing`(真偽)を足す。true なら、最後に表紙と同じ写真の終わりのスライドを置く。終わりのスライドは文を持たない。\n- IR は meta.coverImage・meta.closing。写真に字を重ねるときの置き方はテンプレートの値の表 `coverStyle` で選ぶ。\n  - `rule`:今の見た目。\n  - `imageBox`:写真の上に基調色の箱。箱は左上から幅 0.53・高さ 0.45 を値の表で持つ。\n  - 写真の無いときは rule。\n- docs/content-syntax.md 3.1・ir.md を直す。\n\n## 確かめ方\n架空の写真(リポジトリにある examples の画像か、試験で作る単色の PNG)で確かめる。",
+      "doneWhen": "meta.coverImage・meta.closing が IR・Markdown・Schema で読める/green で表紙が写真+基調色の箱、終わりに同じ写真のスライドが出ることを試験で確かめる/写真の無い表紙の出力が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T00:31:17.139Z",
+      "updatedAt": "2026-11-13T00:31:17.139Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
+      "id": "slide-marker-breadcrumb",
+      "number": 93,
+      "kind": "task",
+      "title": "スライドの隅の印(marker)と、今の項目のパンくず",
+      "status": "ready",
+      "parent": "sample-fidelity",
+      "dependsOn": [
+        "green-template",
+        "section-levels-toc"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "## なぜ\n#82 の原因4。読む資料の詳細のページでは、今どのパターン・どの要因の話かを次の2つで示す。\n- 右上の隅に、三角の地(濃い色)と丸の中の短い印(1・2・A・B)を置く。\n- その左に、小さい字(10pt・薄い字)で今の項目の名前(パンくず)を置く。\n\n## 決め事\n- **スライドの属性 `marker`**:空白を含まない短い文で2字まで。Markdown は `# 題 {marker=A}`、IR はスライドの欄 marker。content スライドだけに付けられる。\n- **パンくずは書かずに自動で作る**:そのスライドより前で最も近い、いちばん深い level の区切り(#86 の level)の題を使う。出すかどうかは値の表 `breadcrumb`(真偽)。\n- 見た目は値の表 `markerStyle`(`none`/`corner`)で選ぶ。\n  - green は corner・breadcrumb true。\n  - 隅の三角は幅・高さ 48pt で、色は 295E7E 系(値の表の役割)。\n  - dark・light・report は今のまま。marker は書いても誤りにしないが描かない。check で情報を出すかは実装で決めてよい。\n- docs/content-syntax.md 3.2・ir.md を直す。",
+      "doneWhen": "marker が IR・Markdown・Schema で読める/green で隅の印とパンくず(直前のいちばん深い区切りの題)が出ることを試験で確かめる/dark・light・report の既存の出力が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T00:31:17.139Z",
+      "updatedAt": "2026-11-13T00:31:17.139Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
+      "id": "matrix-check-style",
+      "number": 94,
+      "kind": "task",
+      "title": "matrix の印の見た目:丸にチェック、セルの面を塗らない、行の題に説明の箇条",
+      "status": "ready",
+      "parent": "sample-fidelity",
+      "dependsOn": [
+        "green-template"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "## なぜ\n#82 の原因1・4。読む資料の「要因×拠点」の対応表は、次の形で書かれている。\n- セルに面を塗らない。\n- あるものだけ、基調色の丸に白いチェックを描き、その下に短い文(参照の頁 p.35 など)を置く。無いものは空ける。\n- 行の題は、題の下に小さい箇条(説明)を持つ。\n- 列の見出しの上に、列の群の名前(2列・3列をまたぐ)を置く。\n\n## 決め事\n- **IR(matrix の data)**\n  - 行に任意の `detail`(文か文の列)を足す。\n  - `columnGroups?: [{title, span}]` を足す。span の合計が列の数と違うと check の誤り。\n- **見た目(値の表 subsystems.matrix)**:`cellStyle`(`filled` 今/`mark`)。\n  - mark では、support は丸にチェック、none は何も描かない。その他の状態は丸をその状態の色で塗る。\n  - セルの text は丸の下に小さい字で置く。\n  - green は mark。dark・light・report は今のまま。\n- docs/subsystem.md の11節・content-syntax.md 3.5 を直す。",
+      "doneWhen": "matrix の行の detail と columnGroups が読め check が span の誤りを返す/green でセルが塗られず support が丸とチェックで出ることを試験で確かめる/dark・light・report の既存の出力が変わらない/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T00:31:17.139Z",
+      "updatedAt": "2026-11-13T00:31:17.139Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
