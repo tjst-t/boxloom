@@ -3031,6 +3031,29 @@
       "updatedAt": "2026-11-13T07:35:17.920Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "orgchart-narrow",
+      "number": 134,
+      "kind": "task",
+      "title": "狭い枠の組織図は孫の段を縦に積んで最小の高さを下げる",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [
+        "orgchart-assistant"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "再現の第6回(p33):3段・2単位の組織図を幅約 420pt の列に置くと、Min が 405pt、枠が 182pt になる。直し方:幅が足りないとき、一番下の段(孫)を横に並べず、親の下に字下げした縦の並び(箱の縦積み+左の縦線)で描く形に切り替え、Measure は切り替えた形の自然・最小を申告する。切り替えたら info の警告は出さない(形の選択はサブシステムの仕事)。docs/subsystem.md に書く。",
+      "doneWhen": "狭い幅の3段の組織図で Min が横並びより小さくなり、描いた図形が枠に収まる試験/広い幅では今の出力のまま(golden が変わらない)/tools/ci.sh go python pptx が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-13T07:35:22.177Z",
+      "updatedAt": "2026-11-13T07:35:22.177Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
