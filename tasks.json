@@ -3230,7 +3230,7 @@
       "number": 143,
       "kind": "task",
       "title": "matrix の行の要約を独立した列にする(detailColumn)",
-      "status": "in-progress",
+      "status": "done",
       "parent": null,
       "dependsOn": [
         "matrix-narrow-cliff"
@@ -3240,12 +3240,12 @@
       "labels": [],
       "body": "再現の第7回(元の p28・29):元の資料は「各行の要約」が行の題の右の独立した列で、評価の列は印の幅だけと細い。今の matrix は rows[].detail を行の題の下に置くので、列の中に置くと行が高くなる(p28 で Min 992pt)。\n記法(IR):matrix に任意の `detailColumn: \"見出しの文\"`。あると rows[].detail を行の題の下でなく、題の右の見出しつきの列に出す。列の幅は文の列(行の題・要約)が取り、評価の列は印と短い文の幅。Markdown は ```matrix の YAML に同じキー。サブシステムの Schema・docs/subsystem.md の matrix の節・例。",
       "doneWhen": "detailColumn ありの matrix で要約が独立した列に出て、同じ内容の detail を題の下に置くより Min の高さが下がる試験/detailColumn なしの出力と golden が変わらない/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/matrix-detail-column）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T09:24:50.809Z",
-      "updatedAt": "2026-11-13T10:14:56.861Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T10:35:36.351Z",
+      "closedAt": "2026-11-13T10:35:36.351Z",
       "extra": {}
     }
   ]
