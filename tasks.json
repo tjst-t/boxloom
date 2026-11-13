@@ -3037,7 +3037,7 @@
       "number": 134,
       "kind": "task",
       "title": "狭い枠の組織図は孫の段を縦に積んで最小の高さを下げる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [
         "orgchart-assistant"
@@ -3051,7 +3051,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T07:35:22.177Z",
-      "updatedAt": "2026-11-13T07:35:22.177Z",
+      "updatedAt": "2026-11-13T08:38:50.941Z",
       "closedAt": null,
       "extra": {}
     },
