@@ -318,6 +318,8 @@ type pairsInfo struct {
 	// split・splitWidth は側の幅の比を決めた箱の幅(同じ幅なら決め直さない)。
 	split      bool
 	splitWidth float64
+	// share は中身から決めた subject の側の幅の割合(pairSideShare)。
+	share float64
 }
 
 // pairRow は1つの対の行と、その2つの側の箱。before は対の前に引いた罫線など、
@@ -487,11 +489,15 @@ const pairSideTie = 1.0
 // そろう。配置(computeLayout)と高さの見積もり(heightForWidth)の頭で呼ぶ。
 func splitPairs(s *Spec, width float64) {
 	info := s.pairs
-	if info.splitWidth == width && info.split {
-		return
+	if !info.split || info.splitWidth != width {
+		info.split, info.splitWidth = true, width
+		info.share = pairSideShare(info, max0(width-2*s.padX()))
 	}
-	info.split, info.splitWidth = true, width
-	share := pairSideShare(info, max0(width-2*s.padX()))
+	info.setShare(info.share)
+}
+
+// setShare は subject の側の幅の割合 share を全ての行(見出しの行も)に書く。
+func (info *pairsInfo) setShare(share float64) {
 	set := func(subject, response *Spec) {
 		if subject != nil {
 			subject.Grow = 2 * share
@@ -504,6 +510,162 @@ func splitPairs(s *Spec, width float64) {
 	for _, r := range info.rows {
 		set(r.subject, r.response)
 	}
+}
+
+// layoutPairs は対の並びの箱を並べる(computeLayout から)。幅の比は中身から決め
+// (splitPairs)、並べた後に、図(縦横比を保つ画像など)が側の幅を使い切らずに残した
+// 幅を、どの行も高くならない分だけもう片側へ回して並べ直す(#113)。図は縦の高さで
+// 縮んだ大きさのまま描かれるので、回した幅で隣の側の文が低くなる。
+func layoutPairs(s *Spec, x, y, width, height float64) {
+	splitPairs(s, width)
+	layoutNode(s, x, y, width, height)
+	if !hasFigure(s.pairs.list) {
+		return
+	}
+	// 回せる幅を測ると(heightForWidth が行を並べ直すので)Box が崩れる。回しても
+	// 回さなくても並べ直す。
+	if share, ok := pairsGiveShare(s.pairs); ok {
+		s.pairs.setShare(share)
+	}
+	layoutNode(s, x, y, width, height)
+}
+
+// pairsGiveShare は、並べた後の側の箱から、図の側の余りをもう片側へ回したときの
+// subject の側の幅の割合を決める。回せるのは、その側の列の全ての行で、
+// 図の側なら図の外の余り、文の側なら高さが行の高さを越えない分の
+// うち一番小さい幅。図の余りを持つ側が無い・回せる幅が無いときは ok が false。
+func pairsGiveShare(info *pairsInfo) (float64, bool) {
+	type sidePair struct{ subject, response *Spec }
+	var ps []sidePair
+	if info.headSubject != nil && info.headResponse != nil {
+		ps = append(ps, sidePair{info.headSubject, info.headResponse})
+	}
+	for _, r := range info.rows {
+		ps = append(ps, sidePair{r.subject, r.response})
+	}
+	if len(ps) == 0 {
+		return 0, false
+	}
+	sum := ps[0].subject.Box.Width + ps[0].response.Box.Width
+	if sum <= 0 {
+		return 0, false
+	}
+	// give は1つの列(subject か response)から回せる幅。
+	give := func(pick func(sidePair) *Spec) (float64, bool) {
+		g, figure := math.Inf(1), false
+		for _, p := range ps {
+			sd := pick(p)
+			if sp, ok := sideFigureSpare(sd); ok {
+				if sp > spareWidthMin {
+					figure = true
+				}
+				g = math.Min(g, sp)
+				continue
+			}
+			g = math.Min(g, heightSlack(sd))
+		}
+		if math.IsInf(g, 1) {
+			g = 0
+		}
+		return g, figure
+	}
+	cur := ps[0].subject.Box.Width / sum
+	gs, fs := give(func(p sidePair) *Spec { return p.subject })
+	gr, fr := give(func(p sidePair) *Spec { return p.response })
+	switch {
+	case fs && gs > spareWidthMin && (!fr || gs >= gr):
+		return cur - gs/sum, true
+	case fr && gr > spareWidthMin:
+		return cur + gr/sum, true
+	}
+	return 0, false
+}
+
+// sideFigureSpare は、図(印でないサブシステム)を持つ側の箱 sd を、中身の高さを
+// 増やさず図も縮めずに狭められる幅(図の外の余りと、文の葉が折り返しを増やさずに
+// 空けられる幅のうち小さい方)。図を持たない側は ok が false。
+func sideFigureSpare(sd *Spec) (float64, bool) {
+	if !hasFigure(sd) {
+		return 0, false
+	}
+	g := boxGive(sd)
+	if math.IsInf(g, 1) {
+		g = 0
+	}
+	return g, true
+}
+
+// hasFigure は s の下に図(印でないサブシステムの葉)があるか。
+func hasFigure(s *Spec) bool {
+	if s.Kind == KindSubsystem && s.Subsystem != nil {
+		_, orn := s.Subsystem.(ornament)
+		return !orn
+	}
+	for _, c := range s.Children {
+		if hasFigure(c) {
+			return true
+		}
+	}
+	return false
+}
+
+// boxGive は、並べた後の箱 s を、中身が自分の箱の高さを越えず図も縮めずに狭められる
+// 幅(制約の無い箱は +Inf)。図は描く矩形の外の余り、文は高さが箱を越えない分、
+// 図を含まない行・列は中身を積んだ高さが箱を越えない分、図を含む列は子の最小、
+// 図を含む行は伸びる子(幅の変化を受ける子)の最小。
+func boxGive(s *Spec) float64 {
+	switch {
+	case s.Width != nil:
+		return 0
+	case s.Kind == KindSubsystem:
+		if s.Subsystem == nil {
+			return math.Inf(1)
+		}
+		if _, orn := s.Subsystem.(ornament); orn {
+			return 0
+		}
+		d := subsystemDrawBox(s)
+		return max0(s.Box.Width - d.Width)
+	case s.Kind == KindText || !hasFigure(s):
+		if len(s.Children) == 0 && s.Kind != KindText {
+			return math.Inf(1)
+		}
+		return heightSlack(s)
+	}
+	g := math.Inf(1)
+	for _, c := range s.Children {
+		if s.Kind == KindRow && c.Grow == 0 {
+			continue
+		}
+		g = math.Min(g, boxGive(c))
+	}
+	return g
+}
+
+// heightSlack は、箱 s を、縮めずに積んだ高さ(heightForWidth)が並べた後の箱の高さを
+// 越えずに狭められる幅。
+func heightSlack(s *Spec) float64 {
+	limit := s.Box.Width - 1
+	if limit <= 0 {
+		return 0
+	}
+	fits := func(d float64) bool { return heightForWidth(s, s.Box.Width-d) <= s.Box.Height+overflowEps }
+	if fits(limit) {
+		return limit
+	}
+	if !fits(0) {
+		return 0
+	}
+	lo, hi := 0.0, limit
+	for hi-lo > 0.25 {
+		mid := (lo + hi) / 2
+		if fits(mid) {
+			lo = mid
+		} else {
+			hi = mid
+		}
+	}
+	return lo
 }
 
 // pairSideShare は subject の側の幅の割合(2つの側の幅の合計に対する。0〜1)。中身を

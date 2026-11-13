@@ -282,6 +282,14 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
    割るのは各側の自然な幅(最長の1行で決まり、量を表さない)ではなく要る面積(要る高さの
    釣り合い)で、長い箇条の側が広くなり、対の要る高さは半々のとき以下になる(#108。試験は
    `boxloom/pairs_width_test.go` の `TestPairsSideWidthByArea`)。
+   側の形(1つのブロック・見出しと複数のブロック、中に表・引用)によらず同じ計算を通る
+   (#113。試験は `boxloom/pairs_balance_test.go` の `TestPairsBalanceGroupedSides`)。
+   並べた後に、図(縦横比を保つ画像)が高さで縮んで側の幅を使い切らなかったときは、その余りを
+   もう片側へ回して並べ直す(`layoutPairs`・`pairsGiveShare`)。回せるのは同じ列の全ての行
+   (見出しの行も)で、図の側は図の外の余り、文の側は要る高さが行の高さを越えない分の一番
+   小さい幅(図は縮んだ大きさのまま描かれ、どの行も高くならない。`pairsSideMin` の下限は
+   掛けない)。回せなかった余りは、側の中のブロックの幅に対して測って `spare-width`
+   (path は `/slides/S/body/N/pairs/K/subject/body/I`)で知らせる。対の並びの全体の幅では測らない。
    はみ出しは測る単位の印 `measurePairRows` で対ごとに測る(2.1 の表)。例は
    `examples/md/pairs.bx.md`、代わりの組み方の IR は `examples/ir/pairs-fallback.json`、
    試験は `boxloom/pairs_test.go`。

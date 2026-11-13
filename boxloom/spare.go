@@ -28,9 +28,9 @@ const spareWidthMin = 0.5
 // blockSpareWidth は、ブロック b の中の図が左右に残した幅(pt)の合計。図の
 // 描く矩形(subsystemDrawBox)の左端の最小〜右端の最大の外側を、ブロックの幅から
 // 測る。図を持たないブロックと、並列のまとまり(columns。まとまりごとに幅が
-// 違う)は 0。computeLayout の後に呼ぶ。
+// 違う)・対の並び(pairs。側ごとに測る。pairSpareWidths)は 0。computeLayout の後に呼ぶ。
 func blockSpareWidth(b *Spec) float64 {
-	if b == nil || b.columns != nil || b.Box.Width <= 0 {
+	if b == nil || b.columns != nil || b.pairs != nil || b.Box.Width <= 0 {
 		return 0
 	}
 	left, right := math.Inf(1), math.Inf(-1)
@@ -147,6 +147,77 @@ func columnSpareWarnings(body *Spec, spare map[spareKey]float64) []string {
 					i, ci, k, kind, w, 100*w/inner.Box.Width, inner.Box.Width))
 			}
 		}
+	}
+	return out
+}
+
+// pairSpare は対の並びの中の、横の余りを持つブロック1つ(側の中の幅に対して測る)。
+type pairSpare struct {
+	block, pair int
+	side        string // "subject" か "response"
+	inner       int    // 見出しと複数のブロックの側の body の番号(1つのブロックの側は -1)
+	spare       float64
+	width       float64 // ブロックの幅(側の中の幅)
+	kind        string
+}
+
+// pairSpareWidths は対の並び(pairs)の側の中のブロックごとの横の余り。対の並びは、
+// 図の側が残した幅をもう片側へ回すので(layoutPairs)、残るのは回せなかった分
+// (同じ列の別の対の文が高くなる)。
+func pairSpareWidths(body *Spec) []pairSpare {
+	var out []pairSpare
+	if body == nil {
+		return out
+	}
+	for i, b := range body.Children {
+		if b.pairs == nil {
+			continue
+		}
+		for k, r := range b.pairs.rows {
+			for _, sd := range []struct {
+				name  string
+				box   *Spec
+				parts pairSideParts
+			}{{"subject", r.subject, r.subjectParts}, {"response", r.response, r.responseParts}} {
+				blocks, grouped := sd.parts.body, true
+				if len(blocks) == 0 {
+					blocks, grouped = sd.box.Children, false
+				}
+				for j, blk := range blocks {
+					w := blockSpareWidth(blk)
+					if w <= 0 {
+						continue
+					}
+					at := -1
+					if grouped {
+						at = j
+					}
+					out = append(out, pairSpare{block: i, pair: k, side: sd.name, inner: at, spare: w, width: blk.Box.Width, kind: blk.irType})
+				}
+			}
+		}
+	}
+	return out
+}
+
+// pairSpareWarnings は、側の中のブロックの横の余りがそのブロックの幅の
+// spareWidthWarnRatio 以上のものごとに警告の文を1つ作る。
+func pairSpareWarnings(spare []pairSpare) []string {
+	var out []string
+	for _, p := range spare {
+		if p.width <= 0 || p.spare/p.width < spareWidthWarnRatio-1e-9 {
+			continue
+		}
+		at := fmt.Sprintf("pairs[%d]: %s: ", p.pair, p.side)
+		if p.inner >= 0 {
+			at += fmt.Sprintf("body[%d]: ", p.inner)
+		}
+		kind := ""
+		if p.kind != "" {
+			kind = " (" + p.kind + ")"
+		}
+		out = append(out, fmt.Sprintf("[SPARE-WIDTH WARNING] body[%d]: %sthe figure in block%s leaves %.1fpt (%.0f%%) of the side width empty beside it (side width %.1fpt)",
+			p.block, at, kind, p.spare, 100*p.spare/p.width, p.width))
 	}
 	return out
 }

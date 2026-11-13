@@ -393,10 +393,18 @@ func naturalSize(s *Spec, axis byte) float64 {
 // computeLayout はspec(とその子孫)に確定した絶対座標(spec.Box)を割り当てる。
 // box_engine.pyのcompute_layout()と同一アルゴリズム。
 func computeLayout(s *Spec, x, y, width, height float64) {
-	s.Box = LBox{X: x, Y: y, Width: width, Height: height}
 	if s.pairs != nil {
-		splitPairs(s, width)
+		// 対の並び:中身から決めた幅の比で並べ、図の側が使わずに残した幅を
+		// もう片側へ回して並べ直す(pairs.go の layoutPairs)。
+		layoutPairs(s, x, y, width, height)
+		return
 	}
+	layoutNode(s, x, y, width, height)
+}
+
+// layoutNode は computeLayout の本体(対の並びの幅の割り方は呼ぶ側が決める)。
+func layoutNode(s *Spec, x, y, width, height float64) {
+	s.Box = LBox{X: x, Y: y, Width: width, Height: height}
 
 	if (s.Kind != KindRow && s.Kind != KindCol) || len(s.Children) == 0 {
 		return

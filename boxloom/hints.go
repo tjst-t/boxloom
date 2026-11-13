@@ -24,6 +24,8 @@ const (
 		"説明の文を置くか(画像・chart・cycle はまとまりの中に置けます)、図を縦に大きく見せられるよう同じスライドの文を減らしてください"
 	spareColumnHint = "図(円グラフ・循環の図・画像)がまとまりの幅を使い切らず、横が空きます。図のまとまりの role=main を外す" +
 		"(文のまとまりを main にする)か、図のまとまりに文を足して縦を使ってください。字や図を大きくはしません"
+	sparePairHint = "対の側の図(画像)が側の幅を使い切らず、横が空きます。図の余りは、同じ列のどの対も高くならない分だけもう片側へ回してあり、" +
+		"残りは同じ列の別の対の文がそれ以上狭められない分です。図のある対を別の対の並びに分けるか、図の側に文を足して縦を使ってください"
 	statValueHint = "数と単位はそれぞれ途中で折らないので、カードの幅に入らないと単位が次の行に落ちるか、数がカードからはみ出します。" +
 		"値を短くする(桁を丸める・大きな単位にする)・" +
 		"単位や補足は label に移す・同じ stat の数を減らしてカードを広くする、のどれかで直してください。字は小さくしません"
@@ -68,6 +70,9 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 				w.Hint = spareWidthHint
 				if strings.Contains(w.Path, "/columns/") {
 					w.Hint = spareColumnHint
+				}
+				if strings.Contains(w.Path, "/pairs/") {
+					w.Hint = sparePairHint
 				}
 			}
 		case "fill-ratio":

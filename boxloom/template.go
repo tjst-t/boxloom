@@ -685,6 +685,7 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 			warnings = append(warnings, spareWidthWarnings(b.Body, spare, kinds)...)
 			colSpare := columnSpareWidths(b.Body)
 			warnings = append(warnings, columnSpareWarnings(b.Body, colSpare)...)
+			warnings = append(warnings, pairSpareWarnings(pairSpareWidths(b.Body))...)
 			warnings = append(warnings, keepLineWarnings(b.Body)...)
 			// 警告と容量は同じ測り値から作る(数字が食い違わないように)。
 			if blocks, area, need, ok := measureBody(b.Root, b.Body); ok {
