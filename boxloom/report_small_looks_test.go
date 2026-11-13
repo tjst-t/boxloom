@@ -66,7 +66,9 @@ func TestReportTableGroupVertical(t *testing.T) {
 	// 帯の列の幅は縦の1行(tableText × 行の高さ + 左右の余白)で、余りの幅を受け取らない。
 	tm, _ := LookupTemplate("report")
 	v := tm.Values
+	restore := useFonts(tm.Fonts) // 行の高さは report の fonts.lineHeight
 	want := ptToEMU(vertBandWidth(v.TableText, v.TableCellPadX))
+	restore()
 	m := regexp.MustCompile(`<a:gridCol w="(\d+)"/>`).FindAllStringSubmatch(slide, -1)
 	if len(m) != 3 {
 		t.Fatalf("gridCol = %d", len(m))

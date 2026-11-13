@@ -162,7 +162,7 @@ func TestTableGroupLabelGrowsLastRow(t *testing.T) {
 	if hs[1] != hs[3] || hs[2] <= hs[1] {
 		t.Fatalf("the last row of the group should grow and the others stay: %v", hs)
 	}
-	need := float64(runsLines(long, 10, 60-8))*10*lineHeightMult + 4
+	need := float64(runsLines(long, 10, 60-8))*10*lineHeightMult() + 4
 	if hs[1]+hs[2] < need-1e-6 {
 		t.Errorf("rows %v do not hold the label (%v)", hs, need)
 	}

@@ -339,7 +339,7 @@ func (s *MatrixSubsystem) geom(width float64) *matrixGeom {
 		g.legendRows[len(g.legendRows)-1] = append(g.legendRows[len(g.legendRows)-1], i)
 		x += w + v.LegendItemGap
 	}
-	g.legendH = float64(len(g.legendRows)) * tx.Small * lineHeightMult
+	g.legendH = float64(len(g.legendRows)) * tx.Small * lineHeightMult()
 
 	head := math.Max(g.headerNeed, v.HeaderH)
 	g.parts = []flexPart{fixedPart(v.Padding)}
@@ -485,7 +485,7 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 	}
 	// 凡例(1列目のセルの左端から)。
 	legend := s.legend()
-	lineH := tx.Small * lineHeightMult
+	lineH := tx.Small * lineHeightMult()
 	for k, row := range pl.g.legendRows {
 		x := pl.x0 + pl.g.headW + v.CellGap
 		y := pl.legendY + float64(k)*lineH

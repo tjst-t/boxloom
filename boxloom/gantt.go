@@ -503,7 +503,7 @@ func planSegmentLabel(gv *GanttValues, chart *GanttChart, chartW float64, seg Ga
 		return p
 	}
 	p.mode = segLabelWrap
-	p.rowH = float64(len(lines))*gv.SmallText*lineHeightMult + gv.BarInset
+	p.rowH = float64(len(lines))*gv.SmallText*lineHeightMult() + gv.BarInset
 	return p
 }
 
@@ -1088,7 +1088,7 @@ func ganttLabelRects(gv *GanttValues, chart *GanttChart, f ganttFrame) []placedB
 			tw = math.Max(tw, runWidthPt(line, size, bold))
 			n++
 		}
-		th := float64(n) * size * lineHeightMult
+		th := float64(n) * size * lineHeightMult()
 		y := top
 		if middle {
 			y = top + (boxH-th)/2

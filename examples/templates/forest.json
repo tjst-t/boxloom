@@ -112,7 +112,8 @@
       "DejaVu Sans"
     ],
     "widthMargin": 1.05,
-    "fixedLineSpacing": true
+    "fixedLineSpacing": true,
+    "lineHeight": 1.35
   },
   "variants": []
 }

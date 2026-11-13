@@ -177,7 +177,7 @@ func (p *PPTXBuilder) cellParaXML(c TableCell, size float64) string {
 	var b strings.Builder
 	sz := int(size * 100)
 	if p.Fonts != nil && p.Fonts.FixedLineSpacing {
-		fmt.Fprintf(&b, `<a:p><a:pPr algn="%s"><a:lnSpc><a:spcPts val="%d"/></a:lnSpc></a:pPr>`, alignAttr(c.Align), int(math.Round(size*lineHeightMult*100)))
+		fmt.Fprintf(&b, `<a:p><a:pPr algn="%s"><a:lnSpc><a:spcPts val="%d"/></a:lnSpc></a:pPr>`, alignAttr(c.Align), int(math.Round(size*p.Fonts.lineHeight()*100)))
 	} else {
 		fmt.Fprintf(&b, `<a:p><a:pPr algn="%s"/>`, alignAttr(c.Align))
 	}
@@ -224,7 +224,7 @@ func (p *PPTXBuilder) cellListXML(c TableCell, size float64) string {
 		mark, rest := splitMark(it)
 		var props, indent string
 		if p.Fonts != nil && p.Fonts.FixedLineSpacing {
-			props = fmt.Sprintf(`<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(size*lineHeightMult*100)))
+			props = fmt.Sprintf(`<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(size*p.Fonts.lineHeight()*100)))
 		}
 		if mark != nil {
 			var bullet string

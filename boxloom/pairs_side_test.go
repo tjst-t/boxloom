@@ -141,6 +141,9 @@ func TestPairsSideBodyStacks(t *testing.T) {
 			t.Fatalf("%s: %+v", tmpl, res.Errors)
 		}
 		for _, w := range res.Warnings {
+			if w.Code == "fill-ratio" {
+				continue // 詰まった report では例の本文が少なく見える(積み方の試験とは別の話)
+			}
 			t.Errorf("%s: unexpected warning %+v", tmpl, w)
 		}
 		dump, err := Layout("p.bx.md", data, BuildOptions{Template: tmpl})

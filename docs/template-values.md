@@ -121,7 +121,14 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 
 **段(scale)**:`spacingUnit` 2、`typeSizes` 8・9・10・11・12・14・16・18・20・24・28・32・54。
 
-**大きさ(values)**:960×540pt。`fillRatioMin`(0.65)・印(marks)・字体(fonts)は前のまま。
+**大きさ(values)**:960×540pt。`fillRatioMin`(0.65)・印(marks)は前のまま。
+
+**字体と行送り(fonts、#102)**:元の資料は同じ 14pt でも載る量が約1.3倍だった(行送りが約1.2倍、
+和文1字の送りが平均約 0.86em)。report は `latin`・`eastAsian` を BIZ UDPGothic(同梱の字体で唯一、
+仮名と約物がプロポーショナル)、`fallbackFonts` を欧文の字体だけ(Liberation Sans・DejaVu Sans)、
+`widthMargin` 1.05、`lineHeight` 1.2 にした。架空の和文の段落(14pt)の要る高さは、変更前の
+**0.790 倍**(幅 420pt、9行→8行)・**0.889 倍**(幅 860pt、4行のまま)。測り方と、字体が置き換わった
+ときの余裕は `docs/fonts.md` の6章(試験 `TestReportFontDensity`)。
 
 | 値 | light | report |
 |---|---|---|
@@ -264,7 +271,8 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
   "marks":  { "slideSource": "出典:", "date": "{YYYY}年{M}月{D}日", "yearMonth": "{YYYY}年{M}月",
               "point": "・", "subPoint": "– ", "pro": "＋ ", "con": "－ ", "...": "..." },
   "fonts":  { "latin": "Noto Sans CJK JP", "eastAsian": "Noto Sans CJK JP",
-              "fallbackFonts": ["BIZ UDPGothic", "…"], "widthMargin": 1.05, "fixedLineSpacing": true },
+              "fallbackFonts": ["BIZ UDPGothic", "…"], "widthMargin": 1.05, "fixedLineSpacing": true,
+              "lineHeight": 1.35 },
   "variants": [],
   "subsystems": { "gantt": { "...": "subsystems/gantt.json と同じ形" } }
 }
@@ -522,8 +530,9 @@ dark / light / report は `{n}/{m}`)。目次のスライド(`meta.toc`)の題(`
 
 欧文の字体(`latin`)・和文の字体(`eastAsian`)・置き換わり得る字体
 (`fallbackFonts`)・幅の余裕(`widthMargin`)・行の送りを固定するか
-(`fixedLineSpacing`)。字体は寸法(`boxloom/fonts/*.json`)を持つものだけ選べ、
-無ければ誤り。和文の字体は仮名と漢字を持つ字体に限る。`widthMargin` は 1〜1.5。
+(`fixedLineSpacing`)・行の送り(`lineHeight`。字の大きさに掛ける倍率)。字体は寸法
+(`boxloom/fonts/*.json`)を持つものだけ選べ、無ければ誤り。和文の字体は仮名と漢字を
+持つ字体に限る。`widthMargin` は 1〜1.5、`lineHeight` は 1〜2(dark / light は 1.35、report は 1.2)。
 意味・測った数字・推奨する値は `docs/fonts.md`。
 
 ### variants

@@ -167,9 +167,12 @@ type TemplateFonts struct {
 	// 効く)。空なら選んだ字体の幅だけで測る。PPTX には書かない。
 	FallbackFonts []string `json:"fallbackFonts"`
 	// FixedLineSpacing が true なら、PPTX の段落に行の送りを pt で書く
-	// (字の大きさ×lineHeightMult)。字体が置き換わっても行の高さが測った
+	// (字の大きさ×lineHeightMult())。字体が置き換わっても行の高さが測った
 	// とおりになる。false なら字体まかせ(描く側の字体の ascent+descent)。
 	FixedLineSpacing bool `json:"fixedLineSpacing"`
+	// LineHeight は行の送り(字の大きさに掛ける倍率)。行の高さの見積もりにも、
+	// fixedLineSpacing のとき PPTX に書く送りにも使う。dark・light は 1.35。
+	LineHeight float64 `json:"lineHeight"`
 }
 
 // FontSet は測るときと書き出すときに使う字体の一式。
@@ -178,6 +181,15 @@ type FontSet struct {
 	Fallbacks        []*FontMetrics
 	WidthMargin      float64
 	FixedLineSpacing bool
+	LineHeight       float64 // 0 なら既定(defaultLineHeight)
+}
+
+// lineHeight は行の送りの倍率。値の無い一式(試験で組むもの)は既定。
+func (f *FontSet) lineHeight() float64 {
+	if f == nil || f.LineHeight == 0 {
+		return defaultLineHeight
+	}
+	return f.LineHeight
 }
 
 // resolveFonts は値の表の fonts を検査して寸法を引く。
@@ -196,7 +208,10 @@ func resolveFonts(f TemplateFonts) (*FontSet, error) {
 	if !(f.WidthMargin >= 1 && f.WidthMargin <= 1.5) {
 		return nil, fmt.Errorf("fonts.widthMargin: must be between 1 and 1.5 (got %v)", f.WidthMargin)
 	}
-	fs := &FontSet{Latin: lat, EastAsian: ea, WidthMargin: f.WidthMargin, FixedLineSpacing: f.FixedLineSpacing}
+	if !(f.LineHeight >= 1 && f.LineHeight <= 2) {
+		return nil, fmt.Errorf("fonts.lineHeight: must be between 1 and 2 (got %v)", f.LineHeight)
+	}
+	fs := &FontSet{Latin: lat, EastAsian: ea, WidthMargin: f.WidthMargin, FixedLineSpacing: f.FixedLineSpacing, LineHeight: f.LineHeight}
 	seen := map[string]bool{}
 	for i, fam := range f.FallbackFonts {
 		if seen[fam] {
@@ -251,7 +266,7 @@ func defaultFontSet() *FontSet {
 	if err != nil {
 		panic(err)
 	}
-	return &FontSet{Latin: noto, EastAsian: noto, WidthMargin: 1.05}
+	return &FontSet{Latin: noto, EastAsian: noto, WidthMargin: 1.05, LineHeight: defaultLineHeight}
 }
 
 // activeFonts は文字を測るときに使う字体の一式。テンプレートが組み立てを

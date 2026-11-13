@@ -107,17 +107,15 @@
     "toc": "目次"
   },
   "fonts": {
-    "latin": "Noto Sans CJK JP",
-    "eastAsian": "Noto Sans CJK JP",
+    "latin": "BIZ UDPGothic",
+    "eastAsian": "BIZ UDPGothic",
     "fallbackFonts": [
-      "BIZ UDPGothic",
-      "BIZ UDGothic",
-      "IPAexGothic",
       "Liberation Sans",
       "DejaVu Sans"
     ],
     "widthMargin": 1.05,
-    "fixedLineSpacing": true
+    "fixedLineSpacing": true,
+    "lineHeight": 1.2
   },
   "variants": [],
   "subsystems": {

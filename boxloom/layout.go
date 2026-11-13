@@ -357,7 +357,7 @@ func naturalSize(s *Spec, axis byte) float64 {
 		if axis == 'w' {
 			return textNaturalWidth(s)
 		}
-		return s.FontSize * lineHeightMult
+		return s.FontSize * lineHeightMult()
 	case KindSubsystem:
 		return subsystemNatural(s, axis, Constraint{})
 	}

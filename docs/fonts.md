@@ -30,7 +30,8 @@ Boxloom は文字の幅を自分で測って折り返し、行の数から枠の
   "eastAsian": "Noto Sans CJK JP",
   "fallbackFonts": [],
   "widthMargin": 1.05,
-  "fixedLineSpacing": false
+  "fixedLineSpacing": false,
+  "lineHeight": 1.35
 }
 ```
 
@@ -40,7 +41,8 @@ Boxloom は文字の幅を自分で測って折り返し、行の数から枠の
 | `eastAsian` | 和文の字体。PPTX のテーマの `a:ea` | 寸法があり、仮名と漢字を持つ(`japanese: true`)こと |
 | `fallbackFonts` | 置き換わり得る字体。測るときは文字ごとに、選んだ字体とこれらのうち**いちばん広い幅**を使う。PPTX には書かない | どれも寸法があること・重ならないこと |
 | `widthMargin` | 測った幅に掛ける余裕(1.05 なら 5% 広めに見積もる)。**全角より狭い文字(欧文・数字・詰めた仮名など)にだけ掛ける**。漢字・仮名・全角の約物はどの和文の字体でも 1em の正方形なので掛けない | 1〜1.5 |
-| `fixedLineSpacing` | true なら段落に行の送りを pt で書く(字の大きさ×1.35)。字体が替わっても行の高さが組んだとおりになる | 真偽値 |
+| `fixedLineSpacing` | true なら段落に行の送りを pt で書く(字の大きさ×`lineHeight`)。字体が替わっても行の高さが組んだとおりになる | 真偽値 |
+| `lineHeight` | 行の送り(字の大きさに掛ける倍率)。組むときの行の高さの見積もりと、`fixedLineSpacing` のとき書く送りの両方に使う。dark・light は 1.35(box_engine.py の LINE_HEIGHT_MULT)、report は 1.2(6章) | 1〜2 |
 
 **文字の振り分け**:U+2000 より前(ASCII・ラテン文字)は欧文の字体、それ以降
 (一般句読点・記号・仮名・漢字・全角形)は和文の字体で測る。PowerPoint は文の
@@ -186,7 +188,8 @@ PowerPoint の実際の禁則の設定(追い出しかぶら下げか)、PowerPo
   "eastAsian": "Noto Sans CJK JP",
   "fallbackFonts": ["BIZ UDPGothic", "BIZ UDGothic", "IPAexGothic", "Liberation Sans", "DejaVu Sans"],
   "widthMargin": 1.05,
-  "fixedLineSpacing": true
+  "fixedLineSpacing": true,
+  "lineHeight": 1.35
 }
 ```
 
@@ -211,7 +214,94 @@ PowerPoint の実際の禁則の設定(追い出しかぶら下げか)、PowerPo
 (人が決めた。Backlog #36)。そのため dark・light で作る PPTX は、それ以前とは
 変わっている。従来の Go のデモ `go run ./cmd/boxloom` は字体の既定の一式を使うので変わらない。
 
-## 6. 確かめていないこと
+## 6. report の字体と行送り(#102)
+
+読む資料のサンプルは、公称の字の大きさが同じ 14pt でも、report の約1.3倍の量が載っていた。
+元の字体(商用の狭い和文字体)は和文1字の送りが平均約 0.86em、行送りは約1.2倍。report は
+Noto Sans CJK JP を置き換わり得る字体5つのいちばん広い幅で測り(和文はほぼ 1em)、行送りは
+1.35 だった。どちらも値の表の中で直した(コアは `lineHeight` のキーを足しただけ)。
+
+```json
+"fonts": {
+  "latin": "BIZ UDPGothic",
+  "eastAsian": "BIZ UDPGothic",
+  "fallbackFonts": ["Liberation Sans", "DejaVu Sans"],
+  "widthMargin": 1.05,
+  "fixedLineSpacing": true,
+  "lineHeight": 1.2
+}
+```
+
+### 6.1 和文の送り(架空の段落で測った)
+
+架空の和文の段落(漢字・仮名・約物の混ざった 122 字。`report_density_test.go` の
+`densityParagraph`)の1字あたりの平均の送り。寸法は同梱の実測だけ。
+
+| 字体 | 平均の送り | 仮名と約物だけ |
+|---|---|---|
+| Noto Sans CJK JP | 1.000em | 1.000em |
+| BIZ UDGothic | 1.000em | 1.000em |
+| IPAexGothic | 1.000em | 1.000em |
+| **BIZ UDPGothic** | **0.947em** | **0.916em** |
+| (参考)元の資料の字体 | 約 0.86em | — |
+
+同梱の字体で仮名と約物が詰まっているのは BIZ UDPGothic だけ(漢字はどれも 1em)。
+測るときの送り(置き換わり得る字体の最大と `widthMargin` を掛けた値)は、変更前 1.000em、
+変更後 **0.968em**(BIZ UDPGothic の仮名・約物は全角より狭いので余裕 1.05 が掛かる)。
+元の 0.86em にはまだ届かない。もっと狭い字体の実測の寸法が手に入れば寄せられる。
+
+### 6.2 置き換わり得る字体と余裕の決め方
+
+- `fallbackFonts` に**和文を持つ字体を入れない**。和文の字体は文字ごとの最大で測るので、
+  BIZ UDGothic・IPAexGothic・Noto Sans CJK JP のどれか1つを入れるだけで仮名が 1em に戻り、
+  詰めた分が消える。欧文は BIZ UDPGothic・Liberation Sans(Arial と同じ幅)・DejaVu Sans
+  (メイリオの欧文の代わり)の最大で測る。
+- BIZ UDPGothic は Windows 10 以降に同梱されているので、読む資料を開く主な環境では
+  測った字体のまま描かれる。置き換わるのは BIZ UDPGothic の無い環境(macOS・Linux の
+  多く)で、そのとき仮名が全角の字体になると1行が広がる。その量を `fonts` で測った。
+- `widthMargin` は 1.05 のまま(全角より狭い文字、つまり欧文と BIZ UDPGothic の仮名・約物に掛かる)。
+  1.00 と比べて、全角の字体に置き換わったときに増える行・はみ出す枠が大きく減る(下の表)。
+  1.10 にすると仮名が 1em 以上になり、字体を替えた意味が無くなる。
+
+`examples/md/` の全部(22 本、文字の枠 1256)を `-template report` で測った合計
+(`go run ./cmd/boxloom fonts`。右へはみ出す行・描く側で行が増える枠・そのうち枠に収まらない枠):
+
+| 置き換わり方 | widthMargin 1.00:はみ出す行 / 増える / 収まらない | **1.05(採用)** |
+|---|---|---|
+| (測った字体のまま) | 0 / 0 / 0 | 0 / 0 / 0 |
+| BIZ UDPGothic | 0 / 0 / 0 | 0 / 0 / 0 |
+| BIZ UDGothic | 45 / 11 / 7 | 25 / 1 / 0 |
+| IPAexGothic | 39 / 7 / 5 | 22 / 1 / 0 |
+| Liberation Sans + IPAexGothic | 38 / 6 / 4 | 22 / 1 / 0 |
+| DejaVu Sans + IPAexGothic | 64 / 31 / 29 | 23 / 1 / 0 |
+
+- 採用の値で、全角の和文字体に置き換わっても**枠の下へはみ出す箱は 0**。行が増える1つは
+  1行→2行で、枠の余りに収まる。
+- 右へはみ出す 22〜25 行は、自分の自然な幅で箱を作る短い文字(1行のラベル)で、ほとんどは
+  +3pt 未満。いちばん大きいのは引用の印「“」(32pt。BIZ UDPGothic では詰まり、全角の字体では
+  1em になる。+15pt)。この1字は余裕をいくつにしても(1.5 でも)消えない。
+- 変更前の report(5つの字体の最大)はどの置き換わり方でも 0 / 0 / 0 だった。読む資料を
+  BIZ UDPGothic の無い環境で開くと、短いラベルが少し右へ出ることがある。これは詰めた送りの代わりに
+  受け入れたもの。
+- 縦:BIZ UDPGothic の1行の高さ(ascent+descent)は 1.001em で、行送り 1.2 より低い。
+  `fixedLineSpacing` で送りを pt で書くので、置き換わっても行の高さは変わらない。
+
+### 6.3 要る高さ(試験 `TestReportFontDensity`)
+
+同じ架空の段落を2回つなげたもの(244 字)を report の本文(14pt)で測った。
+
+| 幅 | 変更前(Noto・5つの最大・1.35) | 変更後(BIZ UDPGothic・1.2) | 比 |
+|---|---|---|---|
+| 420pt(2列の1列) | 9行・170.1pt | 8行・134.4pt | **0.790** |
+| 860pt(本文の全幅) | 4行・75.6pt | 4行・67.2pt | **0.889** |
+
+行送りの分(1.2 / 1.35 = 0.889)はどの幅でも効き、送りの分は行の数が1つ減るときに効く。
+`examples/md/` を report で check すると、詰まった分 `fill-ratio` の「少なすぎる」が
+ai-society(1→3)・cover-image(1)・evidence(2)・table-continues(3)・text-patterns(1)に
+新しく出る(はみ出し・題とリードの折り返しの警告は増えない)。dark・light は `lineHeight` 1.35 のままで、出力は変わらない
+(`TestOutputsGolden`)。
+
+## 7. 確かめていないこと
 
 - PowerPoint・Keynote・Google Slides では開いていない。PowerPoint が無い字体を
   何に置き換えるかも確かめていない(4章の置き換わり方は想定)。

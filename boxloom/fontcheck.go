@@ -127,11 +127,11 @@ func measurePages(pages []*PPTXBuilder, alt *FontSet) fontStats {
 					box := LBox{X: tr.X + it.Indent, Y: tr.Y, Width: tr.Width - it.Indent, Height: math.Inf(1)}
 					lines := wrapRuns(it.Runs, it.Size, box.Width)
 					restore()
-					used += it.SpaceBefore + float64(len(lines))*it.Size*lineHeightMult
+					used += it.SpaceBefore + float64(len(lines))*it.Size*lineHeightMult()
 					before := st.RewrapMore
 					n := measureUnit(&st, alt, p, s, it.Runs, lines, box, it.Size)
 					if st.RewrapMore > before {
-						added += float64(n-len(lines)) * it.Size * lineHeightMult
+						added += float64(n-len(lines)) * it.Size * lineHeightMult()
 						grown = append(grown, len(st.Rewraps)-1)
 					}
 				}
@@ -202,7 +202,7 @@ func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []T
 		case n > len(lines):
 			st.RewrapChanged++
 			st.RewrapMore++
-			over := float64(n)*size*lineHeightMult > box.Height+0.5
+			over := float64(n)*size*lineHeightMult() > box.Height+0.5
 			if over {
 				st.RewrapOverflow++
 			}
@@ -217,7 +217,7 @@ func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []T
 		}
 	}
 	// 行の高さ:固定しないなら字体の ascent+descent で送られる(目安)。
-	lh := lineHeightMult
+	lh := lineHeightMult()
 	if p.Fonts == nil || !p.Fonts.FixedLineSpacing {
 		lh = alt.Latin.LineHeightEm()
 		if hasEastAsian(lines) {
@@ -225,8 +225,8 @@ func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []T
 		}
 	}
 	h := float64(len(lines)) * size * lh
-	assumed := float64(len(lines)) * size * lineHeightMult
-	// 組むときの見積もり(行の数×字の大きさ×lineHeightMult)では収まって
+	assumed := float64(len(lines)) * size * lineHeightMult()
+	// 組むときの見積もり(行の数×字の大きさ×lineHeightMult())では収まって
 	// いた箱だけを数える(エンジンが縮めた箱・固定の大きさの箱は別の話)。
 	if h-box.Height > eps && assumed <= box.Height+eps {
 		st.HeightOver++
@@ -247,7 +247,7 @@ func scenarioFonts(sc fontScenario, base *FontSet) (*FontSet, error) {
 		return nil, err
 	}
 	// 描く側の字体なので、置き換わり得る字体の一覧は持たない(そのまま測る)。
-	return &FontSet{Latin: lat, EastAsian: ea, WidthMargin: base.WidthMargin, FixedLineSpacing: base.FixedLineSpacing}, nil
+	return &FontSet{Latin: lat, EastAsian: ea, WidthMargin: base.WidthMargin, FixedLineSpacing: base.FixedLineSpacing, LineHeight: base.LineHeight}, nil
 }
 
 // withMargin はテンプレートの写しの、幅の余裕だけを替えたもの。

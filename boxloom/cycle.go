@@ -386,7 +386,7 @@ func (s *CycleSubsystem) titleBox(i int, cx, cy, r float64) LBox {
 		return lo
 	}
 	runs := s.titleRuns(&s.Data.Steps[i], "", nil)
-	lineH := tx.Sub * lineHeightMult
+	lineH := tx.Sub * lineHeightMult()
 	var best LBox
 	var loose LBox // 行の数には収まるが最後の行が短いもの
 	for lines := 1; lines <= 4; lines++ {

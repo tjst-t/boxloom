@@ -181,7 +181,7 @@ func TestTablePointsRowHeight(t *testing.T) {
 	}}
 	widths := []float64{40, 120}
 	hs, total := tl.rowHeights(widths)
-	lineH := 10 * lineHeightMult
+	lineH := 10 * lineHeightMult()
 	if d := hs[1] - (3*lineH + 4); d > 1e-6 || d < -1e-6 {
 		t.Errorf("3 items must make 3 lines: %v", hs)
 	}

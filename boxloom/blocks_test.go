@@ -246,7 +246,7 @@ func TestColumnsImageShrinksBeforeText(t *testing.T) {
 	b := built[0]
 	computeLayout(b.Root, 0, 0, tm.Values.PageW, tm.Values.PageH)
 	para := b.Body.Children[0]
-	if want := tm.Values.Body * lineHeightMult; math.Abs(para.Box.Height-want) > 0.01 {
+	if want := tm.Values.Body * lineHeightMult(); math.Abs(para.Box.Height-want) > 0.01 {
 		t.Errorf("paragraph height %.2f, want %.2f (it must not shrink)", para.Box.Height, want)
 	}
 	if over := lintBodyOverflow(b.Root, b.Body, nil); len(over) != 0 {

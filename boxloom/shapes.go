@@ -248,7 +248,7 @@ func (s *ShapesSubsystem) textNeed(it *ShapeItem, b LBox) (needW, needH, haveW, 
 	for _, l := range lines {
 		needW = math.Max(needW, naturalRunsWidth(l, size))
 	}
-	needH = float64(len(lines)) * size * lineHeightMult
+	needH = float64(len(lines)) * size * lineHeightMult()
 	return
 }
 

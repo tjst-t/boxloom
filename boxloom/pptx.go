@@ -546,7 +546,7 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 }
 
 // parasXML は行を1つずつ段落(a:p)にする(折り返さない文字だけ)。fonts.fixedLineSpacing なら
-// 行の送りを測ったとおり(字の大きさ×lineHeightMult)に pt で書く。
+// 行の送りを測ったとおり(字の大きさ×lineHeightMult())に pt で書く。
 func (p *PPTXBuilder) parasXML(s *shape, lines [][]TextRun) string {
 	return p.parasXMLSized(s, lines, s.fontSize)
 }
@@ -565,7 +565,7 @@ func (p *PPTXBuilder) parasXMLSized(s *shape, lines [][]TextRun, fontSize float6
 		}
 		lnSpc := ""
 		if p.Fonts != nil && p.Fonts.FixedLineSpacing {
-			lnSpc = fmt.Sprintf(`<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(fontSize*lineHeightMult*100)))
+			lnSpc = fmt.Sprintf(`<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(fontSize*p.Fonts.lineHeight()*100)))
 		}
 		if lnSpc == "" && bullet == "" {
 			paras.WriteString(fmt.Sprintf(`<a:p><a:pPr%s algn="%s"/>`, indent, alignAttr(s.align)))
@@ -629,7 +629,7 @@ func (p *PPTXBuilder) paraXML(s *shape, lines [][]TextRun, fontSize float64, o p
 	}
 	var props strings.Builder
 	if p.Fonts != nil && p.Fonts.FixedLineSpacing {
-		fmt.Fprintf(&props, `<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(fontSize*lineHeightMult*100)))
+		fmt.Fprintf(&props, `<a:lnSpc><a:spcPts val="%d"/></a:lnSpc>`, int(math.Round(fontSize*p.Fonts.lineHeight()*100)))
 	}
 	if o.spaceBefore > 0 {
 		fmt.Fprintf(&props, `<a:spcBef><a:spcPts val="%d"/></a:spcBef>`, int(math.Round(o.spaceBefore*100)))

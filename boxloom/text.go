@@ -23,9 +23,13 @@ import (
 	"strings"
 )
 
-const (
-	lineHeightMult = 1.35 // 行間。box_engine.py の LINE_HEIGHT_MULT と同じ。
-)
+// defaultLineHeight は既定の行の送り(字の大きさに掛ける倍率)。box_engine.py の
+// LINE_HEIGHT_MULT と同じ。
+const defaultLineHeight = 1.35
+
+// lineHeightMult は行の送り(字の大きさに掛ける倍率)。テンプレートの
+// fonts.lineHeight で決まる(いまの字体の一式 activeFonts が持つ)。
+func lineHeightMult() float64 { return activeFonts.lineHeight() }
 
 // measureSafetyMargin は測った幅に掛ける余裕(既定 1.05。box_engine.py の
 // MEASURE_SAFETY_MARGIN と同じ)。テンプレートの fonts.widthMargin で決まる。
@@ -134,7 +138,7 @@ func wrapText(text string, fontSizePt, maxWidthPt float64, bold bool) []string {
 // box_engine.py の measure_text_height() に相当。
 func measureTextHeight(text string, fontSizePt, maxWidthPt float64, bold bool) float64 {
 	lines := wrapText(text, fontSizePt, maxWidthPt, bold)
-	return float64(len(lines)) * fontSizePt * lineHeightMult
+	return float64(len(lines)) * fontSizePt * lineHeightMult()
 }
 
 // --- 装飾つきの文字(強調などを含む1つの段落) ---
@@ -339,7 +343,7 @@ func keepTokens(rs []rune, style []int, runs []TextRun) []string {
 
 // measureRunsHeight は折り返した行数から高さを出す。
 func measureRunsHeight(runs []TextRun, fontSizePt, maxWidthPt float64) float64 {
-	return float64(len(wrapRuns(runs, fontSizePt, maxWidthPt))) * fontSizePt * lineHeightMult
+	return float64(len(wrapRuns(runs, fontSizePt, maxWidthPt))) * fontSizePt * lineHeightMult()
 }
 
 // kinsokuGlue が true なら、閉じの約物(、。」など)を前のトークンにつなげて折る

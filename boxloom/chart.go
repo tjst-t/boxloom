@@ -266,7 +266,7 @@ type chartGeom struct {
 	labelLines    int     // 項目の名前の行の数(一番多いもの)
 }
 
-func (s *ChartSubsystem) lineH() float64 { return s.fontSize() * lineHeightMult }
+func (s *ChartSubsystem) lineH() float64 { return s.fontSize() * lineHeightMult() }
 
 func (s *ChartSubsystem) legend() bool {
 	return s.Form() != ChartPie && len(s.Data.Series) > 1

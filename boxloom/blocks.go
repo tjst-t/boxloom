@@ -197,7 +197,7 @@ func (t *tableLeaf) colWidths(w float64) []float64 {
 func (t *tableLeaf) isFixed(c int) bool { return c < len(t.fixed) && t.fixed[c] }
 
 // vertBandWidth は縦書きのセルの列の幅(縦の1行の幅 + 左右の余白)。
-func vertBandWidth(size, padX float64) float64 { return size*lineHeightMult + 2*padX }
+func vertBandWidth(size, padX float64) float64 { return size*lineHeightMult() + 2*padX }
 
 // vertLength は縦書きのセルの文の縦の長さ(折り返さない1行。段落は縦の行を分けずに足す)。
 func (c TableCell) vertLength(size float64) float64 {
@@ -230,7 +230,7 @@ func (c TableCell) lines(size, width float64) int {
 // 群の最後の行に足す(群の境目は行の境目なので、行ごとに測ったまま)。
 func (t *tableLeaf) rowHeights(widths []float64) ([]float64, int) {
 	hs := make([]float64, len(t.cells))
-	lineH := t.size * lineHeightMult
+	lineH := t.size * lineHeightMult()
 	rowLines := make([]int, len(t.cells))
 	for r, row := range t.cells {
 		lines := 1
@@ -313,7 +313,7 @@ func (t *tableLeaf) captionHeight(w float64) float64 {
 	if n == 0 {
 		return 0
 	}
-	return float64(n)*t.capSize*lineHeightMult + t.capGap
+	return float64(n)*t.capSize*lineHeightMult() + t.capGap
 }
 
 func (t *tableLeaf) sizeAt(w float64) Size {
@@ -387,7 +387,7 @@ func (t *tableLeaf) Render(ctx RenderContext, box LBox) {
 		}
 		if len(t.mark) > 0 {
 			// 「n/m」の印は説明の文の1行目の右端(表の右端にそろえる)。
-			lh := t.capSize * lineHeightMult
+			lh := t.capSize * lineHeightMult()
 			ctx.Out.AddRichTextBox(LBox{X: box.X + box.Width - markW, Y: y, Width: markW, Height: lh}, t.mark, t.capSize, "right", "top")
 		}
 		y += ch + t.capGap
@@ -649,7 +649,7 @@ func (m *imageLeaf) captionHeight(w float64) float64 {
 	if len(m.caption) == 0 {
 		return 0
 	}
-	return float64(runsLines(m.caption, m.capSize, w))*m.capSize*lineHeightMult + m.capGap
+	return float64(runsLines(m.caption, m.capSize, w))*m.capSize*lineHeightMult() + m.capGap
 }
 
 // widthForHeight は高さ h に収まるときの幅(説明の文の高さは幅で変わるので数回詰める)。

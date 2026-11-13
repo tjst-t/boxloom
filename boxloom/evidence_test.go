@@ -138,7 +138,7 @@ func TestSourceShrinksBodyArea(t *testing.T) {
 		t.Fatalf("capacity: %v %v", without, with)
 	}
 	tm, _ := LookupTemplate("light")
-	want := tm.Values.SectionGap + tm.Values.Small*lineHeightMult
+	want := tm.Values.SectionGap + tm.Values.Small*lineHeightMult()
 	if d := without[0].BodyArea - with[0].BodyArea; abs(d-want) > 0.2 {
 		t.Fatalf("body area shrank by %.1f, want about %.1f", d, want)
 	}

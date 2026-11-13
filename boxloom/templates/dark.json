@@ -97,7 +97,8 @@
     "eastAsian": "Noto Sans CJK JP",
     "fallbackFonts": ["BIZ UDPGothic", "BIZ UDGothic", "IPAexGothic", "Liberation Sans", "DejaVu Sans"],
     "widthMargin": 1.05,
-    "fixedLineSpacing": true
+    "fixedLineSpacing": true,
+    "lineHeight": 1.35
   },
   "variants": []
 }

@@ -98,7 +98,7 @@ func runsBox(runs []TextRun, size, maxW float64) (w, h float64) {
 	for _, l := range lines {
 		w = math.Max(w, naturalRunsWidth(l, size))
 	}
-	return w, float64(len(lines)) * size * lineHeightMult
+	return w, float64(len(lines)) * size * lineHeightMult()
 }
 
 // runsNaturalWidth は折り返さないときの幅(改行で分けた一番長い行)。
@@ -636,7 +636,7 @@ func layoutFigureLegend(items []LegendItem, avail, size float64, lv figureLegend
 		l.rows[len(l.rows)-1] = append(l.rows[len(l.rows)-1], i)
 		x += w + lv.itemGap
 	}
-	l.h = float64(len(l.rows)) * size * lineHeightMult
+	l.h = float64(len(l.rows)) * size * lineHeightMult()
 	return l
 }
 
@@ -657,7 +657,7 @@ const noWrapSlack = 4.0
 // drawFigureLegend は凡例を (x, y) から描く。見本は箱と同じ形(地の塗りに状態の
 // 色の枠線)。
 func drawFigureLegend(ctx RenderContext, x0, y0 float64, l figureLegendLayout, size float64, lv figureLegendValues) {
-	lineH := size * lineHeightMult
+	lineH := size * lineHeightMult()
 	for k, row := range l.rows {
 		x, y := x0, y0+float64(k)*lineH
 		for _, i := range row {

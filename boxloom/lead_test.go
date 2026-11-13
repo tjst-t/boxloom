@@ -106,7 +106,7 @@ func TestLeadReducesBodyArea(t *testing.T) {
 	}
 	tm, _ := LookupTemplate("light")
 	v := tm.Values
-	want := v.LeadText*lineHeightMult + v.HeaderGap
+	want := v.LeadText*lineHeightMult() + v.HeaderGap
 	if d := a[0].BodyArea - b[0].BodyArea; d < want-0.5 || d > want+0.5 {
 		t.Fatalf("body area shrank by %.1fpt, want %.1fpt", d, want)
 	}

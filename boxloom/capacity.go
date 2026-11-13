@@ -96,7 +96,7 @@ func round1(v float64) float64 { return math.Round(v*10) / 10 }
 // slideCapacity は measureBody の結果から容量を作る。si は IR のスライドの番号、
 // gap は本文のブロックの間の gap、bodySize は本文の字の大きさ。
 func slideCapacity(blocks []BlockMeasure, area, need, gap float64, si int, types []string, bodySize float64) SlideCapacity {
-	lh := bodySize * lineHeightMult
+	lh := bodySize * lineHeightMult()
 	sc := SlideCapacity{
 		Path:           fmt.Sprintf("/slides/%d", si),
 		BodyArea:       round1(area),
