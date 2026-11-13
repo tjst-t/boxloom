@@ -174,7 +174,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
      (並列のまとまり)は、Phase3a で中のサブシステム(画像など)の縮められる分を
      先に返す。印の無い箱は従来どおり(既存の出力は変わらない)。
    - Go 版だけの追加(その4): 並列のまとまりの行では、まとまりの幅の下限を申告する図
-     (`columnFloor`。いまは cycle の、題を輪の外に置くのに要る幅)があれば、grow の配分の
+     (`columnFloor`。cycle の題を輪の外に置くのに要る幅と、phases・matrix・orgchart の Min の幅、#117)があれば、grow の配分の
      後にそのまとまりを下限まで広げ、ほかの伸びるまとまりから取る(#112)。
 2. **inner canvas sub-engine**: サブシステムの葉(`Subsystem` interface。
    Python 版では grow=1, basis=0 で領域確保のみの `canvas`)の中に、Gantt専用の座標スケール(`TimeScale`: 日付→x座標の
@@ -223,7 +223,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `cycle.go` = 輪に並んだ段(cycle、#91)。段(3〜6)を上から時計回りに本物の `blockArc` の扇で
     並べ、基調色の濃淡で塗る。番号の丸は輪の外の縁、題は扇の中(扇に収まる枠を測って探す。
     入らなければ題を輪の外に置き輪を小さくする、#110)、detail は輪の外。縦横比を保つ(FixedAspect、余りは spare-width)。columns の中に置ける
-    サブシステムは chart と cycle(`ir.go` の `columnSubsystems`)。詳細は `docs/subsystem.md` の11節
+    サブシステムは chart・cycle・phases・matrix・orgchart(`ir.go` の `columnSubsystems`。ほかに pairs・gallery も置ける、#117)。詳細は `docs/subsystem.md` の11節
   - `phases.go` = フェーズの図(phases)。段の山形(左端は homePlate、続きは chevron。先の深さは
     `ShapeOpts.Depth`)・段をまたぐ群の帯・段ごとに縦に積む番号つきの箱(題と補足。補足の列は
     段落の箇条)。群の帯の見た目は値の表 `bandStyle`(report は塗り)。番号は段をまたいで通しで、形は値の表 `subsystems.phases.numberStyle`(report は
