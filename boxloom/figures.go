@@ -725,6 +725,33 @@ func legendMissingWarnings(kind string, missing []string) []string {
 // columnMinWidth は並列のまとまりの中で要る幅(columnFloor、#117):図の Min の幅。
 // まとまりがこれより狭いと文が箱に入らないので、まとまりの行は図のまとまりを
 // ここまで広げ、ほかの伸びるまとまりから取る。
-func (s *PhasesSubsystem) columnMinWidth() float64   { return s.Measure(Constraint{}).Min.Width }
-func (s *MatrixSubsystem) columnMinWidth() float64   { return s.Measure(Constraint{}).Min.Width }
+func (s *PhasesSubsystem) columnMinWidth() float64 { return s.Measure(Constraint{}).Min.Width }
+
+// matrix はさらに、見出しとセルの文が横にはみ出さない(figure-text-overflow にならない)
+// 一番狭い幅まで(Min の幅は列の数を見ないので、列が多いと列が数 pt まで潰れる、#132)。
+// 高さは十分に取って幅だけを 1pt の刻みで二分探索する。どの幅でも収まらなければ Min。
+func (s *MatrixSubsystem) columnMinWidth() float64 {
+	lo := s.Measure(Constraint{}).Min.Width
+	fits := func(w float64) bool {
+		h := s.Measure(Constraint{Width: w}).Max.Height
+		return len(s.Lint(LBox{Width: w, Height: h})) == 0
+	}
+	if fits(lo) {
+		return lo
+	}
+	hi := math.Max(lo, 4*s.vals().NaturalWidth)
+	if !fits(hi) {
+		return lo
+	}
+	lo = math.Ceil(lo)
+	for hi-lo > 1 {
+		mid := math.Floor((lo + hi) / 2)
+		if fits(mid) {
+			hi = mid
+		} else {
+			lo = mid
+		}
+	}
+	return math.Ceil(hi)
+}
 func (s *OrgChartSubsystem) columnMinWidth() float64 { return s.Measure(Constraint{}).Min.Width }

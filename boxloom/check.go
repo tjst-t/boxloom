@@ -950,6 +950,8 @@ var warnBlockRe = regexp.MustCompile(`^body\[([0-9]+)\]: (.*)$`)
 
 var warnColumnRe = regexp.MustCompile(`^columns\[([0-9]+)\]: body\[([0-9]+)\]: (.*)$`)
 
+var warnColumnOnlyRe = regexp.MustCompile(`^columns\[([0-9]+)\]: (.*)$`)
+
 // warnPairRe は対の並びの中の場所(pairs[K]: か pairs[K]: subject: か、見出しと複数の
 // ブロックの側の pairs[K]: subject: body[I]: )。
 var warnPairRe = regexp.MustCompile(`^pairs\[([0-9]+)\]: (?:(subject|response): (?:body\[([0-9]+)\]: )?)?(.*)$`)
@@ -1062,6 +1064,9 @@ func warningIssue(file, w string) Issue {
 		// 並列のまとまりの中のブロック(columns[C]: body[K]: ...)。
 		if cm := warnColumnRe.FindStringSubmatch(msg); cm != nil {
 			path, msg = path+"/columns/"+cm[1]+"/body/"+cm[2], cm[3]
+		} else if cm := warnColumnOnlyRe.FindStringSubmatch(msg); cm != nil {
+			// まとまりそのもの(columns[C]: ...。column-floor)。
+			path, msg = path+"/columns/"+cm[1], cm[2]
 		}
 		// 対の並びの中(pairs[K]: … か pairs[K]: subject: …)。
 		if pm := warnPairRe.FindStringSubmatch(msg); pm != nil {

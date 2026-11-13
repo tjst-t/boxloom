@@ -802,11 +802,16 @@ legend: {conditional: 予算が付くときだけ}      # status を使ったら
   題を輪の外に置いた `outsideMinDiameter` の輪(題は塊まで折り返す)のうち幅の狭いほうの幅、
   高さは読める形のうち一番低いもの(外の題は受けた幅で折り返す)。
 - **列の中の幅(#112)**:cycle は並列のまとまりの中で、この最小の幅を「まとまりの幅の下限」
-  としても申告する(`layout.go` の `columnFloor`)。まとまりの配分(role=main の重みなど)で
-  これより狭くなるまとまりは下限まで広がり、足りる分をほかの伸びるまとまりから、それぞれの
-  下限を下回らない範囲で取る。取りきれなければ図は狭いまま描き、題は扇の中のまま
-  `figure-text-overflow`(と `subsystem-min`)の警告になる。下限を申告するのは cycle と、
-  phases・matrix・orgchart(図の Min の幅、#117)と pillars(#121)で、グラフ・画像のまとまりの幅は従来どおり。
+  としても申告する(`layout.go` の `columnFloor`)。まとまりの幅は、下限に届かないまとまりを
+  下限で止めながら、残りを grow の比(role=main の重み)で配り直す(止めたら残りで配り直す。
+  CSS の flexible lengths の凍結と同じ)。両側の図が下限を持っても、どちらも下限を守り、
+  主のまとまりが広いのはその上で効く(#132)。下限の和が伸びるまとまりの幅の和を超えるときは、
+  下限を持つまとまりに下限の比で配り(どれも同じ割合だけ足りない)、下限を割ったまとまりごとに
+  `column-floor` の警告(path はまとまり `/slides/S/body/N/columns/C`、文に要る幅・有る幅・足りない pt)を
+  出す。図は狭いまま描くので、`figure-text-overflow`(と `subsystem-min`)も出る。下限を申告するのは cycle と、
+  phases・orgchart(図の Min の幅、#117)、matrix(見出しとセルの文が横にはみ出さない一番狭い幅。
+  Min の幅は列の数を見ないので、列の多い matrix が数 pt の列に潰れないように、#132)と
+  pillars(#121)で、グラフ・画像のまとまりの幅は従来どおり。
   枠が図より広ければ、コアが図の幅まで切り詰め、余りを `spare-width`・`remainingWidth` で
   知らせる(9節)。
 - **並列のまとまり(columns)の中に置ける**(chart・cycle・phases・matrix・orgchart・pillars。左に輪・右に段ごとの説明)。

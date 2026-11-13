@@ -174,8 +174,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
      (並列のまとまり)は、Phase3a で中のサブシステム(画像など)の縮められる分を
      先に返す。印の無い箱は従来どおり(既存の出力は変わらない)。
    - Go 版だけの追加(その4): 並列のまとまりの行では、まとまりの幅の下限を申告する図
-     (`columnFloor`。cycle の題を輪の外に置くのに要る幅と、phases・matrix・orgchart の Min の幅、#117、pillars の柱の文が読める幅、#121)があれば、grow の配分の
-     後にそのまとまりを下限まで広げ、ほかの伸びるまとまりから取る(#112)。
+     (`columnFloor`。cycle の題を輪の外に置くのに要る幅と、phases・orgchart の Min の幅、#117、matrix の文が横に入る幅、#132、pillars の柱の文が読める幅、#121)があれば、grow の配分の
+     後に下限に届かないまとまりを下限で止め、残りを grow の比で配り直す(#112、両側の下限を守る #132)。
+     下限の和が入らなければ下限の比で配り、check の警告 `column-floor`。
 2. **inner canvas sub-engine**: サブシステムの葉(`Subsystem` interface。
    Python 版では grow=1, basis=0 で領域確保のみの `canvas`)の中に、Gantt専用の座標スケール(`TimeScale`: 日付→x座標の
    区分線形補間、区間圧縮に対応)でチャートを描画する(`render_gantt()` /

@@ -694,6 +694,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `stat-value` | `stat` の数と単位が、カードの幅に1行で入らない。数と単位はそれぞれ途中で折らない(「億ド / ル」「12,345, / 678」と折れると読み違えるため)ので、入らなければ単位が次の行に落ち、数そのものが入らなければ1行のままカードからはみ出す。path はその数(`/slides/S/body/N/items/K`、.md なら `:::value` の行)、文に要る幅と有る幅(pt)。字は縮めない |
 | `layout-overflow` | 本文のブロックが本文の領域に収まらない。はみ出したブロックごとに1件で、`path` はそのブロック(`/slides/S/body/N`)、文にはみ出した高さ(pt)を書く(下の節)。区切りの題・主張の1文がページに収まらないときも出し、`path` はそのスライド(`/slides/S`)。並列のまとまりは、まとまりの中のはみ出したブロック(`/slides/S/body/N/columns/C/body/K`) |
 | `component-fallback` | テンプレートが組み方を持たない標準でない型のブロックを、型の代わりの組み方(標準の型への書き換え)で組んだ。path はそのブロック(`/slides/S/body/N`)。テンプレートを指したとき(`-template`・値の表・IR の `template`)だけ出し、指さなければ型の語彙だけで検査する(`docs/layers.md` の8.2) |
+| `column-floor` | 並列のまとまり(columns)のうち、中の図(cycle・phases・matrix・orgchart・pillars)が申告した幅の下限を割ったまとまり。下限の和が入らないときだけ起こり、まとまりは下限の比で配られる。path はまとまり(`/slides/S/body/N/columns/C`)、文に要る幅・有る幅・足りない pt。図を減らす・図を自分のスライドに移す(`docs/subsystem.md` の11節) |
 | `subsystem-min` | サブシステムに割り当てた大きさが、自己申告の最小を下回った(サブシステムの警告の path は、そのブロック `/slides/S/body/N`) |
 | `annotation-overlap` | Gantt の注釈に空いた置き場所が無く、ほかの注釈に重ねて置いた |
 | `milestone-overlap` | Gantt の節目の日付が近すぎて、段を2つにずらしても文字が重なった。path はその節目(`…/data/milestones/N`)(`docs/subsystem.md` の6節「節目の段」) |

@@ -238,6 +238,9 @@ func lintSubsystems(root *Spec) []string {
 				out = append(out, l.Lint(subsystemDrawBox(s))...)
 			}
 		}
+		if s.columns != nil {
+			out = append(out, lintColumnFloors(s.columns)...)
+		}
 		for _, c := range s.Children {
 			walk(c)
 		}
@@ -272,5 +275,23 @@ func lintSubsystemMin(root *Spec) []string {
 		}
 	}
 	walk(root)
+	return out
+}
+
+// lintColumnFloors は並列のまとまりのうち、中の図が申告した最小の幅(columnFloor)を
+// 割ったまとまりの警告(column-floor)。下限の和が本文の幅を超えると、まとまりの幅は
+// 下限の比で配られて、どれも下限に届かない(layout.go の applyColumnFloors)。
+func lintColumnFloors(info *columnsInfo) []string {
+	var out []string
+	for ci, col := range info.cols {
+		if col.spec == nil {
+			continue
+		}
+		f := columnMinWidth(col.spec)
+		if w := col.spec.Box.Width; f > w+overflowEps {
+			out = append(out, fmt.Sprintf("[COLUMN-FLOOR WARNING] columns[%d]: the figure in this column needs at least %.1fpt width, got %.1fpt (%.1fpt short); the columns' figures do not fit side by side",
+				ci, f, w, f-w))
+		}
+	}
 	return out
 }

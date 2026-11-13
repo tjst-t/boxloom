@@ -11,8 +11,6 @@
 
 package boxloom
 
-import "math"
-
 type AlignItems int
 
 const (
@@ -723,45 +721,64 @@ func columnMinWidth(c *Spec) float64 {
 	return m
 }
 
-// applyColumnFloors は並列のまとまりの行で、図が申告した最小の幅(columnFloor)に
-// 足りないまとまりを広げ、足りる分を伸びるほかのまとまりから、それぞれの最小の幅を
-// 下回らない範囲で、余りの比で取る(取れなければ取れた分だけ。足りない分は図の
-// 警告に任せる)。申告の無い行では何もしない。
+// applyColumnFloors は並列のまとまりの行で、図が申告した最小の幅(columnFloor)を
+// どのまとまりにも守らせる。伸びるまとまりの幅の和(avail)を、下限に届かない
+// まとまりを下限で止めながら grow の比で配り直す(止めたら残りで配り直す。CSS の
+// flexible lengths の凍結と同じ)。主のまとまり(role=main)が広いのは、下限を守った
+// 上での配分で効く。下限の和が avail を超えるときは、下限を持つまとまりに下限の比で
+// 配る(下限の無いまとまりは 0。check の column-floor が割った分を知らせる)。
+// 申告の無い行では何もしない。
 func applyColumnFloors(children []*Spec, main []float64) {
 	n := len(children)
 	floor := make([]float64, n)
-	need := 0.0
+	need, avail, floorSum := false, 0.0, 0.0
 	for i, c := range children {
 		if c.Grow <= 0 {
 			continue
 		}
+		avail += main[i]
 		floor[i] = columnMinWidth(c)
+		floorSum += floor[i]
 		if floor[i] > main[i] {
-			need += floor[i] - main[i]
+			need = true
 		}
 	}
-	if need <= 0 {
+	if !need {
 		return
 	}
-	spare := make([]float64, n)
-	total := 0.0
-	for i, c := range children {
-		if c.Grow <= 0 || floor[i] >= main[i] {
-			continue
+	if floorSum >= avail {
+		for i, c := range children {
+			if c.Grow > 0 {
+				main[i] = avail * floor[i] / floorSum
+			}
 		}
-		spare[i] = main[i] - floor[i]
-		total += spare[i]
-	}
-	if total <= 0 {
 		return
 	}
-	take := math.Min(need, total)
-	for i := range children {
-		switch {
-		case spare[i] > 0:
-			main[i] -= take * spare[i] / total
-		case floor[i] > main[i]:
-			main[i] += take * (floor[i] - main[i]) / need
+	frozen := make([]bool, n)
+	for {
+		rest, grow := avail, 0.0
+		for i, c := range children {
+			if c.Grow <= 0 {
+				continue
+			}
+			if frozen[i] {
+				rest -= main[i]
+			} else {
+				grow += c.Grow
+			}
+		}
+		changed := false
+		for i, c := range children {
+			if c.Grow <= 0 || frozen[i] {
+				continue
+			}
+			main[i] = rest * c.Grow / grow
+			if main[i] < floor[i] {
+				main[i], frozen[i], changed = floor[i], true, true
+			}
+		}
+		if !changed {
+			return
 		}
 	}
 }
