@@ -3230,7 +3230,7 @@
       "number": 143,
       "kind": "task",
       "title": "matrix の行の要約を独立した列にする(detailColumn)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [
         "matrix-narrow-cliff"
@@ -3244,7 +3244,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T09:24:50.809Z",
-      "updatedAt": "2026-11-13T09:24:50.809Z",
+      "updatedAt": "2026-11-13T10:14:56.861Z",
       "closedAt": null,
       "extra": {}
     }
