@@ -2402,7 +2402,7 @@
       "number": 104,
       "kind": "task",
       "title": "report の表紙と終わり:基調色の箱を題の行数に合わせて大きくし、終わりの箱に文を置く",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "sample-fidelity",
       "dependsOn": [],
       "milestone": null,
@@ -2414,7 +2414,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T04:39:01.378Z",
-      "updatedAt": "2026-11-13T04:39:01.378Z",
+      "updatedAt": "2026-11-13T04:39:16.139Z",
       "closedAt": null,
       "extra": {}
     },
