@@ -966,6 +966,9 @@ func warningIssue(file, w string) Issue {
 	if figure && strings.Contains(m[3], "a funnel is for values that decrease") {
 		rule = "funnel-increase" // funnel の数が前の段より増えた
 	}
+	if m[2] == "SUBSYSTEM" && strings.Contains(m[3], "table: header[") && strings.Contains(m[3], "the columns do not fit at their minimum widths") {
+		rule = "table-col-width" // 表の列の守りたい最小の幅の合計が表の幅に入らない
+	}
 	if rule == "" {
 		rule = strings.ToLower(m[2])
 	}

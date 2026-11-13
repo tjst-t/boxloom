@@ -5,9 +5,11 @@
 // レイアウトと話す(登録簿には載せない。IR ではサブシステムではなくブロック。
 // docs/patterns.md の 2.1・2.2)。
 //
-//   - 表:列の幅は中身から測る(折り返さない幅と、単語を割らない最小の幅)。
-//     割り当てられた幅いっぱいに広げ、余りは折り返さない幅の比で配る。足りなければ
-//     最小の幅まで縮める。行の高さはセルの文を折り返した高さ。縮めない
+//   - 表:列の幅は中身から測る(折り返さない幅と、単語を割らない最小の幅と、
+//     見出しの文字列・和文の4字の塊を守る最小の幅 floor)。割り当てられた幅いっぱいに
+//     広げ、余りは折り返さない幅の比で配る。足りなければ floor まで、floor の合計も
+//     入らなければ従来どおり単語を割らない最小の幅まで縮める(table-col-width の警告。
+//     docs/ir.md の15章)。行の高さはセルの文を折り返した高さ。縮めない
 //     (Min = Natural = Max)。数だけの列は右に揃える(テンプレートの方針)。
 //   - 画像:縦横比を保つ(FixedAspect)。幅いっぱいを自然な大きさとし、高さが
 //     足りなければ imageMinHeight まで縮む(幅も比で縮み、余りは Place の側 =
@@ -22,6 +24,7 @@ import (
 	"math"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // --- 文字の小道具 ---
@@ -52,6 +55,30 @@ func minRunsWidth(runs []TextRun, size float64) float64 {
 		start = end + 1
 	}
 	return m
+}
+
+// cjkChunkWidth は、和文(漢字・仮名・長音)の続いた字を tableCJKChunk 字ずつの
+// 塊とみなしたときの、一番広い塊の幅(余裕込み)。続きが短ければその続き全体。
+func cjkChunkWidth(runs []TextRun, size float64) float64 {
+	rs, style := richRunes(runs)
+	m := 0.0
+	for i := range rs {
+		if !isCJKLetter(rs[i]) {
+			continue
+		}
+		w := 0.0
+		for k := i; k < len(rs) && k < i+tableCJKChunk && isCJKLetter(rs[k]); k++ {
+			w += charEmWidth(rs[k], runs[style[k]].Bold) * size
+		}
+		m = math.Max(m, w)
+	}
+	return m
+}
+
+// isCJKLetter は和文の語をなす字(漢字・平仮名・片仮名・長音・々)。約物は含めない
+// (句読点・括弧の前後では折れてよい)。
+func isCJKLetter(r rune) bool {
+	return unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana) || r == 'ー' || r == '々'
 }
 
 // maxLineWidth は "\n" で分けた行のうち一番長い行の幅(折り返さない幅)。
@@ -92,16 +119,40 @@ type tableLeaf struct {
 	capSize   float64
 	capGap    float64
 	natural   []float64 // 列ごとの折り返さない幅(余白込み)
-	minimum   []float64 // 列ごとの最小の幅(余白込み)
+	minimum   []float64 // 列ごとの最小の幅(余白込み。語を割らない幅)
+	// floor は列ごとの守りたい最小の幅(余白込み):見出しの文字列の幅と、セルの中の
+	// 折れない塊(欧文の語・和文は続いた字の tableCJKChunk 字分)の幅の大きい方。
+	// 合計が表の幅に収まる限り、列はこれより狭くしない(nil なら minimum と同じ)。
+	floor []float64
 }
+
+// tableCJKChunk は表の列の最小の幅で、和文(漢字・仮名)の続いた字を割らない塊の字数。
+// 「地域中核」のような4字の語までは1行に置ける幅を、列の最小にする。
+const tableCJKChunk = 4
 
 func (t *tableLeaf) Name() string { return "table" }
 
-// colWidths は幅 w に列の幅を配る。
+// floorSum は守りたい最小の幅(floor)の合計。
+func (t *tableLeaf) floorSum() float64 {
+	sum := 0.0
+	for i := range t.natural {
+		if t.floor != nil {
+			sum += t.floor[i]
+		} else {
+			sum += t.minimum[i]
+		}
+	}
+	return sum
+}
+
+// colWidths は幅 w に列の幅を配る。収まれば折り返さない幅の比で広げる。足りなければ
+// 守りたい最小の幅(floor)を先に取り、残りを折り返さない幅と floor の差の比で配る。
+// floor の合計も入らなければ、語を割らない最小の幅(minimum)で同じように配る
+// (Lint が table-col-width の警告にする)。
 func (t *tableLeaf) colWidths(w float64) []float64 {
 	n := len(t.natural)
 	out := make([]float64, n)
-	sumN, sumM := 0.0, 0.0
+	sumN, sumM, sumF := 0.0, 0.0, t.floorSum()
 	for i := range t.natural {
 		sumN += t.natural[i]
 		sumM += t.minimum[i]
@@ -112,6 +163,11 @@ func (t *tableLeaf) colWidths(w float64) []float64 {
 	case sumN <= w:
 		for i := range out {
 			out[i] = t.natural[i] + (w-sumN)*t.natural[i]/sumN
+		}
+	case t.floor != nil && sumF <= w:
+		span := sumN - sumF
+		for i := range out {
+			out[i] = t.floor[i] + (w-sumF)*(t.natural[i]-t.floor[i])/span
 		}
 	case sumM <= w:
 		span := sumN - sumM
@@ -239,6 +295,38 @@ func (t *tableLeaf) Measure(c Constraint) Measurement {
 	return Measurement{Natural: s, Min: Size{Width: minW, Height: s.Height}, Max: Size{Height: s.Height}}
 }
 
+// Lint は、守りたい最小の幅(見出しの文字列・折れない塊)の合計が表の幅に入らず、
+// 列の幅を語を割らない最小の幅で配ったこと(table-col-width)を警告にする。
+// 名指しするのは、floor より狭くなった最初の列。
+func (t *tableLeaf) Lint(box LBox) []string {
+	if t.floor == nil || box.Width <= 0 {
+		return nil
+	}
+	sumN, sumF := 0.0, t.floorSum()
+	for _, v := range t.natural {
+		sumN += v
+	}
+	if sumN <= box.Width || sumF <= box.Width+0.01 {
+		return nil
+	}
+	ws := t.colWidths(box.Width)
+	col := 0
+	for i := range ws {
+		if ws[i] < t.floor[i]-0.01 {
+			col = i
+			break
+		}
+	}
+	head := ""
+	if len(t.cells) > 0 && col < len(t.cells[0]) {
+		for _, r := range t.cells[0][col].Runs {
+			head += r.Text
+		}
+	}
+	return []string{fmt.Sprintf("[SUBSYSTEM WARNING] table: header[%d] (%q): the columns do not fit at their minimum widths (the headings and unbreakable words need %.1fpt, the table has %.1fpt); short columns may wrap inside words",
+		col, head, sumF, box.Width)}
+}
+
 func (t *tableLeaf) textLines(width float64) int {
 	_, n := t.rowHeights(t.colWidths(width))
 	return n + t.captionLines(width)
@@ -348,16 +436,25 @@ func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 	// 列の幅はひと続きの全部の表の行(と見出しの行)で測る(どの枚でも同じ幅になる)。
 	leaf.natural = make([]float64, len(header))
 	leaf.minimum = make([]float64, len(header))
+	leaf.floor = make([]float64, len(header))
 	for _, m := range members {
 		cells := leaf.cells
 		if m != b {
 			cells = t.tableCells(m, header, numeric, look)
 		}
-		for _, row := range cells {
+		for r, row := range cells {
 			for c, cell := range row {
 				for _, runs := range cell.paras() {
-					leaf.natural[c] = math.Max(leaf.natural[c], maxLineWidth(runs, leaf.size)+2*leaf.padX)
-					leaf.minimum[c] = math.Max(leaf.minimum[c], minRunsWidth(runs, leaf.size)+2*leaf.padX)
+					natural := maxLineWidth(runs, leaf.size) + 2*leaf.padX
+					minimum := minRunsWidth(runs, leaf.size) + 2*leaf.padX
+					floor := math.Max(minimum, cjkChunkWidth(runs, leaf.size)+2*leaf.padX)
+					if r == 0 {
+						// 見出しの行は文字列を折らない幅を守る(1行目は見出し)。
+						floor = natural
+					}
+					leaf.natural[c] = math.Max(leaf.natural[c], natural)
+					leaf.minimum[c] = math.Max(leaf.minimum[c], minimum)
+					leaf.floor[c] = math.Max(leaf.floor[c], floor)
 				}
 			}
 		}

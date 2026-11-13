@@ -267,6 +267,61 @@ func TestTableColumnWidths(t *testing.T) {
 	}
 }
 
+// 短い見出しの列は、長い文の列があっても見出しの幅より狭くならない(1字ずつ縦に折れない)。
+// 和文の4字の語(「地域中核」)も1行に置ける。守りたい幅が入らなければ従来の割り方に戻り、
+// table-col-width の警告を出す。
+func TestTableColumnFloor(t *testing.T) {
+	long := strings.Repeat("架空の町の窓口で受け付けた相談を週ごとにまとめ、担当の課へ回す流れを説明する長い文。", 3)
+	tm, _ := LookupTemplate("light")
+	d, err := ReadIR("t.json", []byte(oneSlide(`{"type": "table", "header": ["規模感", "説明"], "rows": [["地域中核", "`+long+`"], ["小", "`+long+`"]]}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	built, err := tm.BuildDeck(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := built[0]
+	computeLayout(b.Root, 0, 0, tm.Values.PageW, tm.Values.PageH)
+	node := b.Body.Children[0]
+	leaf, ok := node.Subsystem.(*tableLeaf)
+	if !ok {
+		t.Fatalf("not a table leaf: %T", node.Subsystem)
+	}
+	ws := leaf.colWidths(node.Box.Width)
+	head := maxLineWidth(leaf.cells[0][0].Runs, leaf.size) + 2*leaf.padX
+	if ws[0] < head-0.01 {
+		t.Errorf("short column %.1fpt is narrower than its heading %.1fpt", ws[0], head)
+	}
+	if n := runsLines(leaf.cells[1][0].Runs, leaf.size, ws[0]-2*leaf.padX); n != 1 {
+		t.Errorf("「地域中核」 wraps into %d lines", n)
+	}
+	// 従来の割り方(floor なし)では見出しより狭かった(この試験が効いていること)。
+	old := (&tableLeaf{natural: leaf.natural, minimum: leaf.minimum}).colWidths(node.Box.Width)
+	if old[0] >= head {
+		t.Errorf("the old split already gives %.1fpt >= %.1fpt; the test does not bite", old[0], head)
+	}
+	if w := leaf.Lint(LBox{Width: node.Box.Width}); len(w) != 0 {
+		t.Errorf("unexpected warning: %v", w)
+	}
+	// 守りたい幅の合計が入らない幅:従来の割り方に戻し、警告する。
+	narrow := leaf.floorSum() - 10
+	got := leaf.colWidths(narrow)
+	want := (&tableLeaf{natural: leaf.natural, minimum: leaf.minimum}).colWidths(narrow)
+	for i := range got {
+		if math.Abs(got[i]-want[i]) > 1e-9 {
+			t.Errorf("fallback col %d: %.2f, want %.2f", i, got[i], want[i])
+		}
+	}
+	w := leaf.Lint(LBox{Width: narrow})
+	if len(w) != 1 {
+		t.Fatalf("warnings: %v", w)
+	}
+	if is := warningIssue("t.json", "slide 1: "+strings.Replace(w[0], "] ", "] body[0]: ", 1)); is.Code != "table-col-width" || is.Path != "/slides/0/body/0" {
+		t.Errorf("issue: %+v", is)
+	}
+}
+
 func TestNumericColumns(t *testing.T) {
 	cells := func(ss ...string) []IRTableCell {
 		var out []IRTableCell

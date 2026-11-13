@@ -478,6 +478,7 @@ Fixes by code:
 | `figure-text-overflow` (warning) | A `process`/`phases`/`orgchart`/`matrix`/`funnel` box or a `cycle` sector cannot hold its text (an unbreakable word is too wide, or the figure got too little height): shorten the text or give the figure its own slide |
 | `funnel-increase` (warning) | A funnel value grows: check the numbers, or use `process` if the stages do not shrink |
 | `figure-legend` (warning) | A `process`/`phases`/`orgchart`/`funnel`/`cycle` box has a `status` but `legend` has no text for that status, so readers cannot tell what the outline color means: add `legend: {<status>: what it means}`, or drop the `status` if it means nothing |
+| `table-col-width` (warning) | The table's short columns cannot all keep their heading and unbreakable words on one line (too many or too wide columns), so a short column may wrap inside a word: shorten the headings, drop a column, or split the table into two tables |
 | `chart-labels` (warning) | `chart` category names are too long for the space the app gives them (they would be tilted or skipped): shorten the names, use fewer categories, or use `item` (horizontal bars have room for names) |
 
 ### Splitting an overflowing slide
