@@ -727,7 +727,7 @@
       "additionalProperties": false
     },
     "points": {
-      "description": "箇条。入れ子にできる。",
+      "description": "箇条。入れ子にできる。ordered なら番号つき(番号の形はテンプレート)。",
       "type": "object",
       "properties": {
         "type": {
@@ -735,6 +735,10 @@
         },
         "variant": {
           "$ref": "#/$defs/variant"
+        },
+        "ordered": {
+          "description": "番号つきの箇条(手順・読む順のように、順序に意味がある)。番号の形はテンプレートの値の表 orderedStyle が決める。既定は false。",
+          "type": "boolean"
         },
         "items": {
           "type": "array",
@@ -767,11 +771,20 @@
               "items": {
                 "$ref": "#/$defs/pointItem"
               }
+            },
+            "ordered": {
+              "description": "入れ子の箇条(items)を番号つきにする(親の箇条とは独立)。入れ子の段の番号は 1. の形。items が要る。既定は false。",
+              "type": "boolean"
             }
           },
           "required": [
             "content"
           ],
+          "dependentRequired": {
+            "ordered": [
+              "items"
+            ]
+          },
           "additionalProperties": false
         }
       ]

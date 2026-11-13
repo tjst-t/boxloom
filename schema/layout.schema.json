@@ -62,7 +62,10 @@
         "phrase": {"description": "折るところを文の切れ目・読点に寄せる。", "type": "boolean"},
         "field": {"description": "アプリが値を入れる欄(slidenum)。", "type": "string"},
         "role": {"description": "色の役割名(部品が書いたもの)。", "type": "string"},
-        "sizeToken": {"description": "塊だけの字の大きさのトークン(値の表の名前か type(n))。", "type": "string"}
+        "sizeToken": {"description": "塊だけの字の大きさのトークン(値の表の名前か type(n))。", "type": "string"},
+        "autoNum": {"description": "番号つきの箇条の番号の形(PPTX の a:buAutoNum の type)。text は番号の見本。", "enum": ["arabicPeriod", "romanLcPeriod", "circleNumDbPlain"]},
+        "width": {"description": "塊の幅(字の幅の代わりに測る。番号つきの箇条の番号の分)。", "$ref": "#/$defs/pt"},
+        "widthToken": {"description": "塊の幅の em の名前(塊の字の大きさに掛ける)。", "type": "string"}
       }
     },
     "marks": {

@@ -72,6 +72,11 @@ type LayoutRun struct {
 	// Role は色の役割名、SizeToken は字の大きさのトークン(部品が書いたもの)。
 	Role      string `json:"role,omitempty"`
 	SizeToken string `json:"sizeToken,omitempty"`
+	// AutoNum は番号つきの箇条の番号の形(a:buAutoNum の type)。Width は塊の幅(pt。
+	// 字の幅の代わりに測る)、WidthToken はその em の名前。
+	AutoNum    string  `json:"autoNum,omitempty"`
+	Width      float64 `json:"width,omitempty"`
+	WidthToken string  `json:"widthToken,omitempty"`
 }
 
 // LayoutMarks は計測と書き出しの印(docs/layers.md の2.1)。
@@ -280,7 +285,8 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 		n.FontSize = s.FontSize
 		if len(s.Runs) > 0 {
 			for _, r := range s.Runs {
-				n.Runs = append(n.Runs, LayoutRun{Text: r.Text, Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep, Phrase: r.Phrase, Field: r.Field, Role: r.role, SizeToken: r.sizeTok})
+				n.Runs = append(n.Runs, LayoutRun{Text: r.Text, Color: r.Color, Bold: r.Bold, Size: r.Size, Mark: r.Mark, Keep: r.Keep, Phrase: r.Phrase, Field: r.Field, Role: r.role, SizeToken: r.sizeTok,
+					AutoNum: r.AutoNum, Width: r.Width, WidthToken: r.widthTok})
 			}
 		} else {
 			n.Color, n.Bold = s.Color, s.Bold

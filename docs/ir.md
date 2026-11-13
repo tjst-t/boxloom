@@ -69,6 +69,7 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer? }   日付
 対の並び  { type: "pairs", headings: { subject, response }, pairs: [{ subject: 側, response: 側 }] }  (2組以上。側は paragraph|points|quote)
 表       { type: "table", header: [セル], rows: [[セル]], total?: [セル], caption? }   (セルはインライン。どの行も見出しと同じ数。total は合計の行)
 画像     { type: "image", src, alt, caption? }   /  { type: "gallery", images: [{ src, alt, caption? }] }  (2〜6枚)
+箇条     { type: "points", ordered?: true, items: [インライン | { content, items?, ordered? }] }  (ordered は番号つき。入れ子の項目の ordered はその items に効く)
 インライン "文字列"  か  ["文字列", {type: em|code|link|br, …}, …]
 サブシステム { type: "subsystem", subsystem: "gantt" | "shapes" | "process" | "orgchart" | "matrix" | "funnel" | "chart", variant?, data: {…} }
 ```
@@ -85,6 +86,19 @@ meta   { title, subtitle?, author?, date?, confidential?, disclaimer? }   日付
   "items": [
     ["第1世代(Board A)は ", {"type": "em", "content": "2029年12月"}, " にハードウェア保守が切れる"],
     "Loom 4 は Store X 非対応のため、第1世代は移行先になり得ない" ] }
+```
+
+番号つきの箇条(手順・読む順のように、順序に意味があるもの)は `ordered: true`
+(既定は false)。番号は PowerPoint が振り(PPTX の `a:buAutoNum`)、番号の形は
+テンプレートの値の表の `orderedStyle`(`arabicPeriod` 1. ・`romanLcPeriod` i. ・
+`circleNumDbPlain` ①)が決める。入れ子の箇条は項目の object の `ordered` で、親とは
+独立に番号つきにできる(入れ子の段の番号の形は 1. に決めてある。`ordered` には
+`items` が要る)。番号の分の幅は箇条の字下げ(`pointIndentEm`)で、check の容量も
+同じ幅で測る。
+
+```json
+{ "type": "points", "ordered": true,
+  "items": ["票を書く", {"content": "係が確かめる", "ordered": true, "items": ["傷を見る", "台帳に写す"]}] }
 ```
 
 ## 設計判断

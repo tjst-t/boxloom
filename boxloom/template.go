@@ -431,21 +431,30 @@ func (t *Template) buildBlockIn(ctx componentContext, b *IRBlock) (*Spec, error)
 }
 
 // points は箇条。印は先頭の塊(Mark)に入れ、PPTX では段落の箇条の印として
-// 書く(折り返した行は印の下に戻る)。
-func (t *Template) points(items []IRPointItem, depth int) *Spec {
+// 書く(折り返した行は印の下に戻る)。ordered なら印は番号(AutoNum。1段目は
+// 値の表の orderedStyle、入れ子は orderedNestedStyle)で、番号の分の幅は
+// 箇条の字下げ(pointIndentEm)。
+func (t *Template) points(items []IRPointItem, depth int, ordered bool) *Spec {
 	mark := t.Marks.Point
 	size := "body"
+	style := t.Values.OrderedStyle
 	if depth > 0 {
 		mark, size = t.Marks.SubPoint, "subPoint"
+		style = orderedNestedStyle
 	}
 	var kids []*Spec
-	for _, it := range items {
-		runs := append([]TextRun{{Text: mark, role: "accent", Bold: true, Mark: true}}, t.runs(it.Content, "text_primary", false)...)
+	for i, it := range items {
+		head := TextRun{Text: mark, role: "accent", Bold: true, Mark: true}
+		if ordered {
+			head = TextRun{Text: orderedLabel(style, i+1), role: "accent", Bold: true, Mark: true,
+				AutoNum: style, widthTok: "pointIndentEm"}
+		}
+		runs := append([]TextRun{head}, t.runs(it.Content, "text_primary", false)...)
 		kids = append(kids, RichTextNode(runs, tokSize(size)))
 		if len(it.Items) > 0 {
 			// 字下げ: 左に固定幅の空き + 入れ子の箇条(残りの幅をもらう)。空きの幅は
 			// 字の大きさの倍(pointIndentEm は em の名前なので、空きの箱の字の大きさに掛ける)。
-			kids = append(kids, Row([]*Spec{Col(nil, tokSize(size), tokWidth("pointIndentEm")), t.points(it.Items, depth+1)}))
+			kids = append(kids, Row([]*Spec{Col(nil, tokSize(size), tokWidth("pointIndentEm")), t.points(it.Items, depth+1, it.Ordered)}))
 		}
 	}
 	col := Col(kids, tokGap("itemGap"), asList())

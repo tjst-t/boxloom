@@ -228,7 +228,7 @@ type bodySyntaxItem struct {
 func bodySyntax() []bodySyntaxItem {
 	return []bodySyntaxItem{
 		{"段落", "文", "paragraph"},
-		{"- 項目 / 1. 項目", "箇条(入れ子は2段まで)", "points(入れ子は {content, items})"},
+		{"- 項目 / 1. 項目", "箇条(入れ子は2段まで)。1. は番号つきの箇条(番号の形はテンプレート。1 から始める。同じ段に - と混ぜない)", "points(入れ子は {content, items}。1. なら ordered: true)"},
 		{"**…**", "強調(太字という見た目ではなく、強調という意味)", "インラインの em"},
 		{"`…`", "コード・識別子", "インラインの code"},
 		{"[文](URL)", "リンク", "インラインの link"},

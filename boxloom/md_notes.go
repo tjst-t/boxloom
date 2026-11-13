@@ -2,6 +2,7 @@ package boxloom
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -48,9 +49,14 @@ func (p *mdParser) notesText(fs []*mdFenceBlk, path string) (string, bool) {
 		case mdList:
 			var walk func(ents []*mdListEnt, prefix string)
 			walk = func(ents []*mdListEnt, prefix string) {
-				for _, e := range ents {
+				for k, e := range ents {
 					t := notesPlain(p.parseInline(e.text.trimBR(), path))
-					lines = append(lines, prefix+"- "+strings.ReplaceAll(t, "\n", "\n"+prefix+"  "))
+					// 番号の箇条は番号を書き出す(ノートは文字だけなので、アプリは振らない)。
+					head := "- "
+					if len(ents) > 0 && ents[0].ordered {
+						head = strconv.Itoa(k+1) + ". "
+					}
+					lines = append(lines, prefix+head+strings.ReplaceAll(t, "\n", "\n"+prefix+strings.Repeat(" ", len(head))))
 					walk(e.children, prefix+"  ")
 				}
 			}

@@ -53,6 +53,7 @@ func TestMarkdownExamplesMatchIR(t *testing.T) {
 		{"../examples/md/table-groups.bx.md", "../examples/ir/table-groups.json"},
 		{"../examples/md/table-points.bx.md", "../examples/ir/table-points.json"},
 		{"../examples/md/table-continues.bx.md", "../examples/ir/table-continues.json"},
+		{"../examples/md/ordered-points.bx.md", "../examples/ir/ordered-points.json"},
 		{"../examples/md/warnings/table-overflow.bx.md", "../examples/ir/check-warnings/table-overflow.json"},
 	}
 	for _, pr := range pairs {

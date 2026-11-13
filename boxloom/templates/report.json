@@ -63,6 +63,7 @@
     "quoteMark": 24,
     "quoteSource": 10,
     "pointIndentEm": 1.5,
+    "orderedStyle": "arabicPeriod",
     "cardPadding": 12,
     "cardRadius": 6,
     "subsystemRadius": 8,

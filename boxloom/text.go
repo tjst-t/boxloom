@@ -171,6 +171,26 @@ type TextRun struct {
 	// Field は PPTX でアプリが値を入れる欄(a:fld の type。"slidenum" ならスライドの
 	// 番号)。Text は組み立てたときの値で、測るのにも、欄の値の控えにも使う。
 	Field string
+	// AutoNum は番号つきの箇条の印(Mark の塊)の番号の形(PPTX の a:buAutoNum の
+	// type。orderedStyles のどれか)。Text は番号の見本(測るのには使わない)。
+	AutoNum string
+	// Width は塊の幅(pt)。0 でなければ字の幅の代わりにこれで測る(番号つきの箇条の
+	// 番号の分。番号の字の幅は数によって変わるので、決まった幅を取る)。widthTok は
+	// 部品が書いた em の名前で、resolveSpec が塊の字の大きさに掛けて Width に直す。
+	Width    float64
+	widthTok string
+}
+
+// runRuneWidth は塊 r の i 番目の文字(first はその塊の最初の文字か)の幅(pt)。
+// Width のある塊は、最初の文字に塊の幅をまとめて数える。
+func runRuneWidth(ch rune, r TextRun, first bool, fontSizePt float64) float64 {
+	if r.Width > 0 {
+		if first {
+			return r.Width
+		}
+		return 0
+	}
+	return charEmWidth(ch, r.Bold) * runSize(r, fontSizePt)
 }
 
 // runSize は塊の字の大きさ(0 なら葉の大きさ)。
@@ -207,8 +227,10 @@ func richRunes(runs []TextRun) ([]rune, []int) {
 func naturalRunsWidth(runs []TextRun, fontSizePt float64) float64 {
 	total := 0.0
 	for _, r := range runs {
+		first := true
 		for _, ch := range r.Text {
-			total += charEmWidth(ch, r.Bold) * runSize(r, fontSizePt)
+			total += runRuneWidth(ch, r, first, fontSizePt)
+			first = false
 		}
 	}
 	return total
@@ -236,7 +258,8 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 		// 印を除いた本文を、幅から印の幅を引いた幅で折る。
 		markEnd, markW := start, 0.0
 		for markEnd < paraEnd && runs[style[markEnd]].Mark {
-			markW += charEmWidth(rs[markEnd], runs[style[markEnd]].Bold) * runSize(runs[style[markEnd]], fontSizePt)
+			first := markEnd == 0 || style[markEnd-1] != style[markEnd]
+			markW += runRuneWidth(rs[markEnd], runs[style[markEnd]], first, fontSizePt)
 			markEnd++
 		}
 		var toks []wrapTok

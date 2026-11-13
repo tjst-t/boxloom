@@ -54,6 +54,7 @@
     "quoteMark": 36,
     "quoteSource": 12,
     "pointIndentEm": 1.5,
+    "orderedStyle": "arabicPeriod",
     "cardPadding": 20,
     "cardRadius": 10,
     "subsystemRadius": 12,

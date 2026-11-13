@@ -441,6 +441,21 @@ func (r *layoutReader) text(n *LayoutNode, s *Spec, at string) {
 		case lr.Size != 0:
 			r.add(ra+"/size", "layout-raw", fmt.Sprintf("size %v is written without a token (sizeToken)", lr.Size))
 		}
+		switch {
+		case lr.WidthToken != "":
+			if _, ok := r.tt.ems[lr.WidthToken]; !ok {
+				r.add(ra+"/widthToken", "layout-token", fmt.Sprintf("%q is not an em name of the value table (unit \"em\")", lr.WidthToken))
+			}
+			run.widthTok = lr.WidthToken
+		case lr.Width != 0:
+			r.add(ra+"/width", "layout-raw", fmt.Sprintf("width %v is written without a token (widthToken)", lr.Width))
+		}
+		if lr.AutoNum != "" {
+			if _, ok := orderedStyles[lr.AutoNum]; !ok {
+				r.add(ra+"/autoNum", "layout-token", fmt.Sprintf("unknown numbering style %q", lr.AutoNum), sortedKeys(orderedStyles)...)
+			}
+			run.AutoNum = lr.AutoNum
+		}
 		s.Runs = append(s.Runs, run)
 	}
 	s.Text = runsText(s.Runs)

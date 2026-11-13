@@ -333,7 +333,8 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `takeawayText` | 結論(takeaway)の1文 |
 | `statValue` `statUnit` `statLabel` | 統計強調(stat)の数・単位・説明 |
 | `quoteText` `quoteMark` `quoteSource` | 引用(quote)の言葉・頭の印・出どころ |
-| `pointIndentEm` | 入れ子の箇条の字下げ。親の字の大きさに掛ける倍率 |
+| `pointIndentEm` | 入れ子の箇条の字下げ。親の字の大きさに掛ける倍率。番号つきの箇条の番号の分の幅にも使う |
+| `orderedStyle` | 番号つきの箇条(`ordered`)の1段目の番号の形。`arabicPeriod`(1.)・`romanLcPeriod`(i.)・`circleNumDbPlain`(①)のどれか(PPTX の `a:buAutoNum` の type)。入れ子の段は `arabicPeriod` に決めてある。dark / light / report は `arabicPeriod`。ほかの名前は読み込みで誤り |
 | `cardPadding` `cardRadius` | 比較のカード |
 | `subsystemRadius` | サブシステムを載せるカードの角 |
 | `coverRuleWidth` `coverRuleHeight` | 表紙の題の下の線。区切りの題・主張の1文の上の線にも使う |

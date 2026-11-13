@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -180,6 +181,9 @@ type mdListEnt struct {
 	line, indent int
 	text         mdText
 	children     []*mdListEnt
+	// ordered は番号の印(1. など)で書いた項目、num はその数。
+	ordered bool
+	num     int
 }
 
 type mdFenceBlk struct {
@@ -574,6 +578,9 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 			}
 			blankSinceList = false
 			ent := &mdListEnt{line: no, indent: ind}
+			if n, err := strconv.Atoi(strings.TrimRight(m[1], ".)")); err == nil {
+				ent.ordered, ent.num = true, n
+			}
 			ent.text.appendLine(strings.TrimSpace(m[3]), no, ind+len(m[1])+2)
 			p.placeListEnt(list, ent)
 
@@ -1250,7 +1257,11 @@ func (p *mdParser) blocks(items []*mdItem, path string) []any {
 				out = append(out, b)
 			}
 		case mdList:
-			out = append(out, obj("type", "points", "items", p.listItems(it.items, bp+"/items", true)))
+			pts := obj("type", "points", "items", p.listItems(it.items, bp+"/items", true))
+			if p.listOrdered(it.items, bp+"/items") {
+				pts.set("ordered", true)
+			}
+			out = append(out, pts)
 		case mdCode:
 			if b := p.codeBlock(it, bp); b != nil {
 				out = append(out, b)
@@ -1262,6 +1273,28 @@ func (p *mdParser) blocks(items []*mdItem, path string) []any {
 		}
 	}
 	return out
+}
+
+// listOrdered は同じ段の項目が番号の印(1. など)で書かれているか。番号の箇条は 1 から
+// 始める(2 以上で始めると誤り)。「- 」と番号を同じ段に混ぜるのも誤り。
+func (p *mdParser) listOrdered(ents []*mdListEnt, path string) bool {
+	if len(ents) == 0 {
+		return false
+	}
+	first := ents[0]
+	if first.ordered && first.num != 1 {
+		p.fail(first.line, first.indent+1, path, codeInvalidValue,
+			fmt.Sprintf("番号つきの箇条は 1 から始めます(%d から始まっています)", first.num), []string{"1."},
+			"番号はアプリが 1 から振ります。最初の項目を「1. 」で書いてください")
+	}
+	for _, e := range ents[1:] {
+		if e.ordered != first.ordered {
+			p.fail(e.line, e.indent+1, path, codeInvalidValue, "同じ段の箇条に「- 」と番号(1. など)を混ぜられません",
+				[]string{"-", "1."}, "順序に意味があるなら全部を番号で、無いなら全部を「- 」で書いてください")
+			break
+		}
+	}
+	return first.ordered
 }
 
 func (p *mdParser) listItems(ents []*mdListEnt, path string, allowNest bool) []any {
@@ -1279,7 +1312,11 @@ func (p *mdParser) listItems(ents []*mdListEnt, path string, allowNest bool) []a
 			out = append(out, content)
 			continue
 		}
-		out = append(out, obj("content", p.parseInlineAt(e.text.trimBR(), ip+"/content"), "items", p.listItems(e.children, ip+"/items", false)))
+		item := obj("content", p.parseInlineAt(e.text.trimBR(), ip+"/content"), "items", p.listItems(e.children, ip+"/items", false))
+		if p.listOrdered(e.children, ip+"/items") {
+			item.set("ordered", true)
+		}
+		out = append(out, item)
 	}
 	return out
 }
@@ -1515,6 +1552,9 @@ func (p *mdParser) compareBlock(f *mdFenceBlk, path string) any {
 				if li.kind != mdList {
 					p.fail(li.line, 1, sp, codeMisplaced, fmt.Sprintf(":::%s の中には箇条(- …)だけを書けます", sf.name), nil, "")
 					continue
+				}
+				if len(li.items) > 0 && li.items[0].ordered {
+					p.fail(li.items[0].line, li.items[0].indent+1, sp, codeInvalidValue, fmt.Sprintf(":::%s の箇条に番号は付けられません", sf.name), []string{"-"}, "「- 」で書いてください")
 				}
 				items = append(items, p.listItems(li.items, sp, false)...)
 			}

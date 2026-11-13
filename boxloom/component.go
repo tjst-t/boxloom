@@ -181,7 +181,7 @@ func defaultComponents() *componentRegistry {
 		return t.text(b.Content, "small", "text_muted", false), nil
 	})
 	reg("points", func(ctx componentContext, b *IRBlock) (*Spec, error) {
-		return ctx.t.points(b.Items, 0), nil
+		return ctx.t.points(b.Items, 0, b.Ordered), nil
 	})
 	reg("compare", func(ctx componentContext, b *IRBlock) (*Spec, error) {
 		return ctx.t.compare(b.Options), nil

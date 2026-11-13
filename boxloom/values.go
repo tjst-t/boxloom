@@ -78,7 +78,10 @@ type TemplateValues struct {
 	QuoteMark             float64 `json:"quoteMark" scale:"type"`     // 引用の頭の印
 	QuoteSource           float64 `json:"quoteSource" scale:"type"`   // 引用の出どころ
 
-	PointIndentEm float64 `json:"pointIndentEm" unit:"em"` // 入れ子の箇条の字下げ(親の字の大きさの倍)
+	PointIndentEm float64 `json:"pointIndentEm" unit:"em"` // 入れ子の箇条の字下げ(親の字の大きさの倍)。番号つきの箇条の番号の幅も
+	// OrderedStyle は番号つきの箇条(points の ordered)の1段目の番号の形
+	// (orderedStyles のどれか。PPTX の a:buAutoNum の type)。入れ子の段は arabicPeriod。
+	OrderedStyle string `json:"orderedStyle"`
 
 	CardPadding     float64 `json:"cardPadding" scale:"space"`
 	CardRadius      float64 `json:"cardRadius"`
@@ -403,6 +406,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	}
 	if err := checkMarks(f.Marks); err != nil {
 		return nil, err
+	}
+	if _, ok := orderedStyles[f.Values.OrderedStyle]; !ok {
+		return nil, fmt.Errorf("values.orderedStyle: %q is not a numbering style (known: %v)", f.Values.OrderedStyle, sortedKeys(orderedStyles))
 	}
 	fonts, err := resolveFonts(f.Fonts)
 	if err != nil {

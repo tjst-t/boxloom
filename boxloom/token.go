@@ -286,6 +286,8 @@ func (tt *tokenTable) resolve(s *Spec, at string) error {
 			return raw(field+".color", r.Color)
 		case r.sizeTok == "" && r.Size != 0:
 			return raw(field+".size", r.Size)
+		case r.widthTok == "" && r.Width != 0:
+			return raw(field+".width", r.Width)
 		}
 		if r.role != "" {
 			if r.Color, err = tt.color(r.role); err != nil {
@@ -298,6 +300,17 @@ func (tt *tokenTable) resolve(s *Spec, at string) error {
 			if r.Size, err = tt.typeSize(r.sizeTok); err != nil {
 				return fail(field+".size", err)
 			}
+		}
+		if r.widthTok != "" {
+			// 塊の幅は em の名前だけ(塊の字の大きさに掛ける)。
+			x, ok := tt.ems[r.widthTok]
+			if !ok {
+				return fail(field+".width", fmt.Errorf("%q is not an em name of the value table (unit \"em\")", r.widthTok))
+			}
+			if !hasFont {
+				return fail(field+".width", fmt.Errorf("%q is relative to the font size, but the leaf has no fontSize token", r.widthTok))
+			}
+			r.Width = x * runSize(*r, s.FontSize)
 		}
 	}
 	for i, c := range s.Children {

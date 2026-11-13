@@ -60,6 +60,7 @@ type IRBlock struct {
 	Content Inline            // paragraph / note / takeaway / quote
 	Source  Inline            // quote: 出どころ
 	Items   []IRPointItem     // points
+	Ordered bool              // points: 番号つき(順序に意味がある。番号の形はテンプレートの orderedStyle)
 	Options []IRCompareOption // compare
 	Stats   []IRStatItem      // stat
 
@@ -107,6 +108,8 @@ type IRImage struct {
 type IRPointItem struct {
 	Content Inline        `json:"content"`
 	Items   []IRPointItem `json:"items,omitempty"`
+	// Ordered は入れ子の箇条(Items)が番号つきか(親の箇条とは独立)。
+	Ordered bool `json:"ordered,omitempty"`
 }
 
 // IRStatItem は stat の1つの数。Value は書いたとおりの文字(計算はしない)。
@@ -272,6 +275,9 @@ func (p *IRPointItem) UnmarshalJSON(b []byte) error {
 		}
 		if v.Content == nil {
 			return fmt.Errorf("point item object needs \"content\"")
+		}
+		if v.Ordered && len(v.Items) == 0 {
+			return fmt.Errorf("point item \"ordered\" numbers the nested \"items\", but the item has none")
 		}
 		*p = IRPointItem(v)
 		return nil
@@ -440,6 +446,7 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 			Type    string        `json:"type"`
 			Variant string        `json:"variant"`
 			Items   []IRPointItem `json:"items"`
+			Ordered bool          `json:"ordered"`
 		}
 		if err := strictUnmarshal(b, &v); err != nil {
 			return err
@@ -447,7 +454,7 @@ func (k *IRBlock) UnmarshalJSON(b []byte) error {
 		if len(v.Items) == 0 {
 			return fmt.Errorf("points needs at least one item")
 		}
-		*k = IRBlock{Type: v.Type, Variant: v.Variant, Items: v.Items}
+		*k = IRBlock{Type: v.Type, Variant: v.Variant, Items: v.Items, Ordered: v.Ordered}
 	case "compare":
 		var v struct {
 			Type    string            `json:"type"`

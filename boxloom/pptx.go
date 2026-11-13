@@ -716,7 +716,8 @@ func splitMark(line []TextRun) (mark, rest []TextRun) {
 	return line[:i], line[i:]
 }
 
-// bulletXML は頭の印を段落の箇条の印(a:buClr・a:buFont・a:buChar)にし、
+// bulletXML は頭の印を段落の箇条の印(a:buClr・a:buFont・a:buChar。番号つきの
+// 箇条(AutoNum)なら a:buAutoNum)にし、
 // 本文を印の幅(測ったとおり。印の後ろの空白も含む)だけ字下げする属性
 // (marL と、印を左端に戻す負の indent)を返す。印の幅は折り返しの測りと
 // 同じ数え方なので、1行目に入る文字は測ったとおり。印の字体は文字の
@@ -747,7 +748,13 @@ func (p *PPTXBuilder) bulletXML(mark []TextRun, fontSize, base float64) (bullet,
 		fmt.Fprintf(&b, `<a:buSzPct val="%d"/>`, int(math.Max(25000, math.Min(400000, math.Round(sz/fontSize*100000)))))
 	}
 	fmt.Fprintf(&b, `<a:buFont typeface="%s"/>`, escapeXML(font))
-	fmt.Fprintf(&b, `<a:buChar char="%s"/>`, escapeXML(ch))
+	if mark[0].AutoNum != "" {
+		// 番号はアプリが振る(続けて並ぶ同じ段の段落の何番目か)。印の文字は番号の見本で、
+		// 字体はその見本の文字で選んである(① は和文)。
+		fmt.Fprintf(&b, `<a:buAutoNum type="%s"/>`, escapeXML(mark[0].AutoNum))
+	} else {
+		fmt.Fprintf(&b, `<a:buChar char="%s"/>`, escapeXML(ch))
+	}
 	e := ptToEMU(w)
 	return b.String(), fmt.Sprintf(` marL="%d" indent="%d"`, ptToEMU(base+w), -e)
 }

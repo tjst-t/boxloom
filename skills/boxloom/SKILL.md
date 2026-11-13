@@ -100,7 +100,7 @@ Speaker notes go here. Plain paragraphs and bullets only.
   the title (1–2 lines). The template puts the lead under the title, outside the body.
 - `---` is not a slide separator (it is an error). `##` and deeper headings are errors
   (a group title is written as `:::column Title`, not as a subheading).
-- Body: paragraphs, `- ` / `1. ` bullets (two levels max), `**emphasis**`
+- Body: paragraphs, `- ` / `1. ` bullets (two levels max; `1. ` = numbered, see below), `**emphasis**`
   (one kind of emphasis only), `` `code` ``, `[text](url)`, trailing `\` for a
   meaningful line break. No italics, strikethrough, footnotes, HTML.
 - Fenced blocks: open with `:::name` and close with the **same number of colons**.
@@ -168,6 +168,7 @@ Available now (check `boxloom schema` — more may have been added):
 | An image that shows the point (screenshot, photo, drawing) | a paragraph containing only `![alt text](images/x.png "caption")` | Alt text is required (`image-alt`). Path is relative to the deck file; no URLs, absolute paths or `..` (`image-path`). PNG or JPEG only (`image-format`). Kept in proportion, never cropped. Image + text side by side → `::::columns` with the image in one group |
 | 2–6 images compared or in sequence | one paragraph with 2–6 `![alt](path "caption")` | Becomes a gallery (one row for 2–3, a grid for 4–6). 7+ is an error: split the slide |
 | Parallel points | bullets | 2 levels max |
+| Steps or items whose order matters (a procedure, a reading order) | numbered bullets `1. ` | Start at `1.` (a list starting at 2+ is `invalid-value`); later numbers are not read — the template numbers them (1. / i. / ①). Don't mix `- ` and `1. ` at one level. A nested list can be numbered on its own. Not for parallel points |
 | Connected prose | paragraph | 2–3 sentences |
 | What the slide says: its conclusion in one or two sentences | `:::lead` at the top level of a content slide, one paragraph | **Every content slide gets one.** Placed by the template right under the title, outside the body; it takes room from the body (1 line ≈ 32 pt, 2 lines ≈ 57 pt). When it needs two lines the engine breaks it after a sentence end (。) or, failing that, a comma (、) without adding a line — so two short sentences read best. Not a summary of the bullets — the claim they prove |
 | Where the slide's numbers, table, figure or quote come from (source, sample size, date) | `:::source` at the top level of the slide, one paragraph | **Every slide that shows numbers, a table, a chart or a quote gets one.** Content and statement slides only (not section). Placed by the template under the body, above the footer; it takes room from the body (`layout-overflow` counts it). One per slide: several sources go in one paragraph |
