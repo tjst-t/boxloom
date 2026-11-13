@@ -828,7 +828,8 @@ func pairSideShare(info *pairsInfo, width float64) float64 {
 }
 
 // pairsNeed は、subject の側の幅の割合 share で割ったときの対の並びの要る高さ(全ての行
-// (見出しの行も)の、高い方の側を縮めずに積んだ高さの合計)を返す関数と、最初の行の側の
+// (見出しの行も)の、高い方の側を縮めずに積んだ高さ(側でない印・名前の列の方が高ければ
+// そちら)の合計)を返す関数と、最初の行の側の
 // 幅の合計(pt)。width は対の箱の中の幅。行が無ければ nil。
 func pairsNeed(info *pairsInfo, width float64) (func(share float64) float64, float64) {
 	type pair struct{ subject, response, row *Spec }
@@ -852,16 +853,34 @@ func pairsNeed(info *pairsInfo, width float64) (func(share float64) float64, flo
 		}
 		return max0(w)
 	}
+	// fixed は行の側でない子(印・間の印・対の名前の見出しの列)の一番高いもの。行の高さは
+	// 側だけでなくこれでも決まる(#135。report の印は 24pt、長い名前の列は折り返す)ので、
+	// 側がこれより低いうちは側の幅を変えても行は低くならない。
+	fixed := func(row *Spec) float64 {
+		h := 0.0
+		for _, c := range row.Children {
+			if c.Grow == 0 {
+				w := naturalSize(c, 'w')
+				if c.Width != nil {
+					w = *c.Width
+				}
+				h = math.Max(h, heightForWidth(c, w))
+			}
+		}
+		return h
+	}
 	avails := make([]float64, len(ps))
+	floors := make([]float64, len(ps))
 	for i, p := range ps {
 		avails[i] = sides(p.row)
+		floors[i] = fixed(p.row)
 	}
 	total := func(share float64) float64 {
 		h := 0.0
 		for i, p := range ps {
 			a := heightForWidth(p.subject, avails[i]*share)
 			b := heightForWidth(p.response, avails[i]*(1-share))
-			h += math.Max(a, b)
+			h += math.Max(floors[i], math.Max(a, b))
 		}
 		return h
 	}

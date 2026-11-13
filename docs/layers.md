@@ -284,6 +284,13 @@ func (r *ComponentRegistry) Override(name string, c Component) error // 標準�
    測る(見出しの行を含めて n 行なら約 460n 回)。探し直すのは対の箱の幅が変わったときだけ。
    試験は `boxloom/pairs_ratio_test.go` の `TestPairsSideShareFine`(左が長い対と右が長い対が
    混ざると 0.53 のような粗い候補でない比を取り、0.2・0.3・0.5・0.7・0.8 のどれよりも高くならず、半々より低い)。
+   行の高さは側だけでなく、側でない子(report の 24pt の印・間の山形・3字以上の対の名前の
+   見出しの列。#118)でも決まるので、行ごとの高さは側の高い方とそれらの一番高いものの大きい方で
+   数える(#135。前は側だけを数え、名前の列が折り返して行を決めているときにも半々近くを選んで、
+   長い文の側が要らずに高かった)。report・dense(#116)・対の名前(印の中・見出しの列・subject の頭)・
+   見出しと複数のブロックの側でも同じ探索を通ることは `boxloom/pairs_ratio_report_test.go`
+   (`TestPairsSideShareReportDenseLabel`・`TestPairsSideShareExamplesReport`・
+   `TestPairsSideShareLabelColumnFloor`。行を並べて測った高さの合計が粗い比のどれよりも高くならない)。
    短い側(論点・名前)は狭く、長い側が広くなり、両側が同じくらいなら半々のまま。
    全ての行(見出しの行も)を同じ割り方にそろえる。dark・light・report で同じ規則。
    割るのは各側の自然な幅(最長の1行で決まり、量を表さない)ではなく要る面積(要る高さの
