@@ -108,6 +108,9 @@ type BuildOptions struct {
 	// 収まらなければ今までどおり layout-overflow。fill-ratio が下回る normal の本文の
 	// スライドは fit.grow を上り、はみ出さない最も上の段で組む(目標に届いたらそこで
 	// 止める。fit_grow.go)。詰めた・広げたスライドは Info に書く。
+	// 「収まった」は layout-overflow も図の崩れ(figure-text-overflow・subsystem-min・
+	// column-floor)も無いこと(#145)。最後の段でも崩れが残れば、AllowOverflow でない限り
+	// 書かずに *OverflowError を返す(Fit でなければ図の崩れは警告のまま)。
 	// IR は変えない。false なら出力は Fit の無いときと同じ。
 	Fit bool
 
@@ -121,7 +124,8 @@ type BuildOptions struct {
 var ErrLayoutOverflow = errors.New("layout-overflow: the deck does not fit")
 
 // OverflowError は Build がはみ出しで止まったときの誤り。Issues は
-// layout-overflow の全件(check の警告と同じ path・message・hint。File と行は
+// layout-overflow の全件と、Fit のときは図の崩れ(figure-text-overflow・subsystem-min・
+// column-floor。全部の段でも直らなかったもの、#145)の全件(check の警告と同じ path・message・hint。File と行は
 // 空なので、呼ぶ側が文書の名前を添える)、Warnings はそれ以外も含めた組み立ての
 // 警告の全部(BuildResult.Warnings と同じ形)。
 type OverflowError struct {
@@ -131,7 +135,17 @@ type OverflowError struct {
 
 func (e *OverflowError) Error() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "layout-overflow: %d block(s) do not fit the slide; PPTX not written (follow each hint, or build with AllowOverflow / -allow-overflow)", len(e.Issues))
+	figures := 0
+	for _, is := range e.Issues {
+		if is.Code != codeLayoutOverflow {
+			figures++
+		}
+	}
+	if figures == 0 {
+		fmt.Fprintf(&b, "layout-overflow: %d block(s) do not fit the slide; PPTX not written (follow each hint, or build with AllowOverflow / -allow-overflow)", len(e.Issues))
+	} else {
+		fmt.Fprintf(&b, "layout-overflow: %d block(s) do not fit the slide and %d figure(s) break even at the last -fit step; PPTX not written (follow each hint, or build with AllowOverflow / -allow-overflow)", len(e.Issues)-figures, figures)
+	}
 	for _, is := range e.Issues {
 		b.WriteString("\n  " + is.String())
 	}
@@ -177,7 +191,15 @@ func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !opt.AllowOverflow && hasOverflowWarning(warnings) {
+	// -fit のときは図の崩れ(figure-text-overflow・subsystem-min・column-floor)も、全部の
+	// 段で直らなかった収まらなさとして誤りにする(#145。-fit なしでは警告のまま)。
+	fitBroken := false
+	if opt.Fit {
+		for _, w := range warnings {
+			fitBroken = fitBroken || fitBrokenCode(w) != ""
+		}
+	}
+	if !opt.AllowOverflow && (hasOverflowWarning(warnings) || fitBroken) {
 		designated := opt.Values != nil || opt.Template != "" || deck.Template != ""
 		issues, err := t.layoutIssues("", deck, warnings, caps, designated)
 		if err != nil {
@@ -185,7 +207,7 @@ func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 		}
 		oe := &OverflowError{Warnings: warnings}
 		for _, is := range issues {
-			if is.Code == codeLayoutOverflow {
+			if is.Code == codeLayoutOverflow || opt.Fit && fitBrokenCodes[is.Code] {
 				oe.Issues = append(oe.Issues, is)
 			}
 		}

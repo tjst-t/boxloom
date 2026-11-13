@@ -294,6 +294,19 @@ func BuildBlocking(warns []Issue) int {
 	return n
 }
 
+// FitBuildBlocking は -fit の build(BuildOptions.Fit)を止める図の崩れ(figure-text-overflow・
+// subsystem-min・column-floor。全部の段でも直らなかったもの、#145)の数。layout-overflow は
+// 含めない(BuildBlocking)。-fit なしの build は図の崩れでは止まらない。
+func FitBuildBlocking(warns []Issue) int {
+	n := 0
+	for _, w := range warns {
+		if fitBrokenCodes[w.Code] {
+			n++
+		}
+	}
+	return n
+}
+
 type checker struct {
 	file   string
 	errs   []Issue

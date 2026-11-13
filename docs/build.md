@@ -47,10 +47,24 @@ go run ./cmd/boxloom                                                      # 従�
   `slide N: [FIT-APPLIED INFO] … step (body 12pt, blockGap 8pt), remaining 3.2pt …` と書く
   (警告ではなく知らせ。`check -fit` では info の `fit-applied`)。まず文を削る・スライドを
   分けるのが先で、`-fit` はそれでも数 pt 足りないときのため(`skills/boxloom/SKILL.md`)。
+- **`-fit` の「収まった」(#145)**:`-fit` が段を選ぶときの「収まった」は、`layout-overflow` に加えて
+  図の崩れ(`figure-text-overflow`・`subsystem-min`・`column-floor`)が1件も無いこと。本文の箱に
+  収まっても、図の中の字が入らない・図が最小を割るスライドは崩れて見える(列の中の matrix で評価の列が
+  0.6pt 足りないだけで「p.35」がアプリで1字ずつ折れ、行の高さが数倍になる)ので、はみ出さずに図だけが
+  崩れるスライドも梯子を下り、各段もこの条件で見る(知らせは `a figure broke (…), so -fit built it with …`)。
+  広げ(下の項)も図が崩れる段の手前で止まる。全部の段でも崩れが残れば、`-fit` の build は
+  `layout-overflow` と同じく誤り(`*OverflowError` の Issues に `figure-text-overflow` などが入る。
+  `-allow-overflow` なら作る)。`-fit` を付けなければ、図の崩れは今までどおり警告だけで作る。
+- **短い語の崖(#145)**:matrix の評価の列の最小(Measure の Min の幅に入る `colMin`)は、印と
+  一番長い語(「p.35」など)が折れずに入る幅。最小の大きさの検査と字の検査は 0.5pt までを丸めの
+  誤差として見ないので、以前は Min をわずかに割ると評価の列と行の見出しを最小の比で配り、0.x pt の
+  不足が黙って通ってアプリで短い語が1字ずつ折れた。いまは Min を割ったとき、行の見出し(と説明の列)が
+  一番長い語の幅(`headMin`)まで先に譲り、評価の列は `colMin` を保つ(題は字の境で折れるだけ)。
+  それも入らないときだけ語の幅の比で配る(`figure-text-overflow`)。Min を守った幅の組み方は変わらない。
 - **`-fit` の広げ(#128)**:同じ `-fit` で、収まっていて fill-ratio が値の表の `fillRatioMin` を
   下回る本文のスライド(normal のものだけ。dense は広げない)は、梯子 `fit.grow` を
-  `fit.grow[0]` → `fit.grow[1]` と上る。各段で組み直して詰めと同じ測りではみ出しと fill-ratio を見て、
-  はみ出す段の手前で止め、fill-ratio が目標に届いたらその段で止める。fill-ratio が前の段より
+  `fit.grow[0]` → `fit.grow[1]` と上る。各段で組み直して詰めと同じ測りではみ出し・図の崩れと fill-ratio を見て、
+  はみ出す(図が崩れる)段の手前で止め、fill-ratio が目標に届いたらその段で止める。fill-ratio が前の段より
   上がらない段(図が本文の高さを決めるときなど)は選ばない。字と間合いの段を上げるだけで任意の倍率は
   使わず、本文の下の余りをブロックの間に配ることもしない。広げたスライドは
   `slide N: [FIT-APPLIED INFO] the body was underfilled (50.0%), … fit.grow[1] step (…), fill ratio 66.8%, …`

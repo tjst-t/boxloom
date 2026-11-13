@@ -179,7 +179,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 			is.File = in
 			fmt.Fprintln(stderr, "error:", is.String())
 		}
-		fmt.Fprintf(stderr, "error: %s: %d block(s) overflow; pptx not written. Fix them as the hints say (boxloom check %s shows the lines), or build with -allow-overflow\n", in, len(oe.Issues), in)
+		fmt.Fprintf(stderr, "error: %s: %d block(s) overflow (or, with -fit, break); pptx not written. Fix them as the hints say (boxloom check %s shows the lines), or build with -allow-overflow\n", in, len(oe.Issues), in)
 		return 1
 	}
 	if *out == "" {
@@ -269,6 +269,10 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		if n := boxloom.BuildBlocking(res.Warnings); n > 0 {
 			// check は作らないので警告のまま。build はこれで止まる。
 			fmt.Fprintf(stdout, "; %d layout-overflow warning(s) stop build (use build -allow-overflow to build anyway)", n)
+		}
+		if n := boxloom.FitBuildBlocking(res.Warnings); *fit && n > 0 {
+			// -fit の build は、全部の段でも直らなかった図の崩れでも止まる(#145)。
+			fmt.Fprintf(stdout, "; %d broken figure warning(s) stop build -fit (use build -allow-overflow to build anyway)", n)
 		}
 		fmt.Fprintln(stdout)
 	}

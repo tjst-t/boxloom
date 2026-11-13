@@ -41,8 +41,8 @@ func (t *Template) fitGrowGroup(d *IRDeck, group []int, base []fitMeasure) (map[
 		if err != nil {
 			return nil, nil, err
 		}
-		if ms == nil || anyOver(ms) {
-			break // 広げてはみ出すなら、その手前の段まで
+		if ms == nil || anyBad(ms) {
+			break // 広げてはみ出す・図が崩れるなら、その手前の段まで
 		}
 		mr := minRatio(ms)
 		if !(mr > ratio+floatEps) {

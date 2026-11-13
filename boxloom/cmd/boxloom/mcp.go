@@ -247,7 +247,7 @@ func mcpTools() []map[string]any {
 			"inputSchema": map[string]any{"type": "object", "properties": with(mcpDeckProps, map[string]any{
 				"output":        map[string]any{"type": "string", "description": "PPTX file to write. Default: out/<deck name>.pptx under the server's working directory."},
 				"allowOverflow": map[string]any{"type": "boolean", "description": "Write the PPTX even if a slide overflows (layout-overflow stays in warnings). Default false: overflow is an error."},
-				"fit":           map[string]any{"type": "boolean", "description": "Pack an overflowing body slide down the template's ladder (dense, then fit.shrink) and build it at the first step that fits; a thin normal body slide (under fill-ratio) is widened up fit.grow to the highest step that still fits; adjusted slides are listed in info. If the last step still overflows, it stays layout-overflow. A last resort: shorten or split first."},
+				"fit":           map[string]any{"type": "boolean", "description": "Pack an overflowing body slide down the template's ladder (dense, then fit.shrink) and build it at the first step that fits; a thin normal body slide (under fill-ratio) is widened up fit.grow to the highest step that still fits; adjusted slides are listed in info. \"Fits\" means no layout-overflow and no broken figure (figure-text-overflow, subsystem-min, column-floor). If the last step still overflows or breaks a figure, the build fails like layout-overflow (unless allowOverflow). A last resort: shorten or split first."},
 			}), "additionalProperties": false},
 		},
 	}

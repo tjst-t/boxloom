@@ -73,8 +73,8 @@ func cliffMatrixJSON(cols int) string {
 // 行の題と評価の列が語の途中で折れない幅(floor の和)から Min の幅まで狭めても、
 // 評価の列は最小(印と短い文が入る幅)を保ち、先に縮むのは行の題の列。文は横に
 // はみ出さず、評価の列の幅は崖のように落ちない(1pt 狭めて 2pt 以上は変わらない)。
-// 以前はこの間で自然の幅の比に切り替わり、評価の列が数 pt に崩れた。Min を割って
-// 初めて両方が最小を割り、figure-text-overflow になる。
+// 以前はこの間で自然の幅の比に切り替わり、評価の列が数 pt に崩れた。行の題の列が
+// 一番長い語の幅を割って初めて両方が最小を割り、figure-text-overflow になる(#145)。
 func TestMatrixNarrowKeepsRatingColumns(t *testing.T) {
 	restore := useFonts(mustTemplate("report").Fonts)
 	defer restore()
@@ -110,10 +110,22 @@ func TestMatrixNarrowKeepsRatingColumns(t *testing.T) {
 				t.Errorf("%d columns at %.0fpt (Min %.1f): %v", cols, w, min, l)
 			}
 		}
+		// Min を割ると、行の題の列が一番長い語の幅(headMin)まで先に譲り、評価の列は
+		// 最小を保つ(#145。題は字の境で折れるだけで、評価の列の短い語は1字ずつ折れない)。
+		// 最小の大きさの警告は出る。
 		w := min - 8
+		if g := m.geom(w); g.colW < mw.colMin-0.01 {
+			t.Errorf("%d columns at %.0fpt below Min %.1f: rating column %.1fpt < its minimum %.1fpt", cols, w, min, g.colW, mw.colMin)
+		}
 		h := m.Measure(Constraint{Width: w}).Max.Height
+		if l := lintSubsystemMin(&Spec{Kind: KindSubsystem, Subsystem: m, Box: LBox{Width: w, Height: h}}); len(l) == 0 {
+			t.Errorf("%d columns at %.0fpt below Min %.1f: no subsystem-min", cols, w, min)
+		}
+		// 行の題の列も語の幅を割って初めて、両方が最小を割り figure-text-overflow になる。
+		w = 2*v.Padding + C*v.CellGap + mw.headMin + C*mw.colMin - 8
+		h = m.Measure(Constraint{Width: w}).Max.Height
 		if l := m.Lint(LBox{Width: w, Height: h}); len(l) == 0 {
-			t.Errorf("%d columns at %.0fpt below Min %.1f: no figure-text-overflow", cols, w, min)
+			t.Errorf("%d columns at %.0fpt below the words' width: no figure-text-overflow", cols, w)
 		}
 	}
 }

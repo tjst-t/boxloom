@@ -284,7 +284,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     足りない」)と容量の `denseRemaining` を出す(`docs/ir.md` の 9.4)
   - `fit_shrink.go` = `-fit`(`BuildOptions.Fit`・`CheckOptions.Fit`、#127。opt-in の最後の手段)。はみ出す本文の
     スライドだけを値の表の梯子(normal は dense → `fit.shrink[0]` → …、dense は `fit.shrink[0]` から)で組み直して
-    同じ measureBody で測り、最初に収まった段で組む(本文の箱の印 `fit`。IR は変えない)。info の `fit-applied`
+    同じ measureBody で測り、最初に収まった段で組む(本文の箱の印 `fit`。IR は変えない)。「収まった」は layout-overflow も図の崩れ(figure-text-overflow・subsystem-min・column-floor、`fitBrokenCodes`)も無いこと(#145。全部の段でも崩れが残れば -fit の build は誤り、-allow-overflow なら作る)。info の `fit-applied`
     (`CheckResult.Info`・`BuildResult.Info`)と容量の `fit`。最後の段でも入らなければ layout-overflow のまま。
     dense・fit の組は図と引用の字・寸法(#139。`figureDetail`・`quote*`・`calloutMark` と、orgchart・phases・matrix の
     箱の余白・間合い・高さの下限。元の値は `subsystems.<図>`、`values.go` の `figureSizes`)も持ち、`setTextSizes` が

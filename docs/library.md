@@ -72,6 +72,7 @@ res, err := boxloom.Build(f, deck, boxloom.BuildOptions{
 | `BuildResult` | `Template`(使った名前)・`Slides`(枚数)・`Warnings`(`"slide 2: [FILL-RATIO WARNING] …"` の文)・`Info`(`Fit` で詰めたスライドの `"slide 2: [FIT-APPLIED INFO] …"` の文。無ければ nil) |
 | `ErrLayoutOverflow` / `OverflowError` | はみ出しで `Build` が書かなかったとき(`errors.Is` / `errors.As`)。`Issues` は check の `layout-overflow` の警告と同じ path・文・hint の全件(`File` と行は空。呼ぶ側が添える)、`Warnings` は組み立ての警告の全部 |
 | `BuildBlocking` | `([]Issue) int`。警告のうち build を止めるもの(`layout-overflow`)の数(`boxloom check` の要約の行) |
+| `FitBuildBlocking` | `([]Issue) int`。`-fit` の build(`BuildOptions.Fit`)だけを止める図の崩れ(`figure-text-overflow`・`subsystem-min`・`column-floor`)の数(`boxloom check -fit` の要約の行、#145) |
 | `ErrUnknownTemplate` | テンプレートの名前が無いとき。`Build`・`Schema` の誤りを `errors.Is` で見分ける |
 
 - `Build` はテンプレートが無いときと組めなかったとき、w に何も書かずに誤りを返す。

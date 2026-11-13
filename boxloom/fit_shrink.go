@@ -6,8 +6,12 @@
 //
 //   - 梯子は今の密度から下りる:normal のスライドは dense の組 → fit.shrink[0] → …、
 //     dense のスライドは fit.shrink[0] → …。値の表の fit が無ければ dense までしか下りない
-//   - 各段で組み直し、check と同じ1回の測り(measureBody)ではみ出しを見て、最初に
-//     収まった段で組む。最後の段でも収まらなければ元の組み方のまま(layout-overflow)
+//   - 各段で組み直し、check と同じ1回の測り(measureBody)ではみ出しを、組み立てと同じ
+//     サブシステムの検査(lintBlockSubsystems)で図の崩れを見て、最初に収まった段で組む。
+//     「収まった」は layout-overflow も図の崩れ(figure-text-overflow・subsystem-min・
+//     column-floor。fitBrokenCodes)も無いこと(#145。本文の箱に収まっても図の字が入らない
+//     スライドは崩れて見える)。はみ出さずに図だけが崩れるスライドも梯子を下りる。
+//     最後の段でも収まらなければ元の組み方のまま(警告が残り、-fit の build は誤り。api.go)
 //   - 続きの表(continues)のひと続きのスライドは、どれか1枚がはみ出せば全部を同じ段まで
 //     下げる(全部が収まる最初の段。列の幅と字が枚の間でそろう。fitGroupOf、#140)。
 //     梯子は組のどれかが normal なら dense から、全部が dense なら fit.shrink[0] から。
@@ -22,7 +26,10 @@
 
 package boxloom
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // fitStepDense は梯子の dense の段の名前(容量の fit・fit-applied の文)。
 const fitStepDense = "dense"
@@ -86,6 +93,8 @@ type fitChoice struct {
 	fromRatio float64 // 広げる前の fill-ratio(grow のときだけ)
 	ratio     float64 // その段で組んだときの fill-ratio
 	group     []int   // 同じ段で組んだ組(続きの表のひと続き。1枚なら長さ1)
+	over      bool    // 詰めた理由:元の組み方で本文がはみ出した
+	broken    bool    // 詰めた理由:元の組み方で図が崩れた(fitBrokenCodes、#145)
 }
 
 // fitStepTry は梯子の1段(名前・写しへの当て方・値)。
@@ -145,17 +154,17 @@ func (t *Template) fitGroup(d *IRDeck, group []int) (map[int]*BuiltSlide, map[in
 	if err != nil || base == nil {
 		return nil, nil, err
 	}
-	over := false
-	for _, m := range base {
-		over = over || m.over
-	}
-	if !over {
+	if !anyBad(base) {
 		if len(group) > 1 {
 			// 続きの表のひと続きは広げない(最後の枚が薄いのは分けた表の常で、その枚の
 			// ために広げると満ちた枚まで字が変わる。全部の枚をテンプレートの大きさのまま)。
 			return nil, nil, nil
 		}
 		return t.fitGrowGroup(d, group, base)
+	}
+	baseOver, baseBroken := false, false
+	for _, m := range base {
+		baseOver, baseBroken = baseOver || m.over, baseBroken || m.broken
 	}
 	anyNormal := false
 	for _, j := range group {
@@ -174,7 +183,7 @@ func (t *Template) fitGroup(d *IRDeck, group []int) (map[int]*BuiltSlide, map[in
 		if err != nil {
 			return nil, nil, err
 		}
-		if ms == nil || anyOver(ms) {
+		if ms == nil || anyBad(ms) {
 			continue
 		}
 		built := map[int]*BuiltSlide{}
@@ -190,16 +199,17 @@ func (t *Template) fitGroup(d *IRDeck, group []int) (map[int]*BuiltSlide, map[in
 			}
 			built[j] = b
 			choices[j] = &fitChoice{step: st.name, body: st.v.Body, blockGap: st.v.BlockGap,
-				remaining: ms[n].remaining, ratio: ms[n].ratio, group: group}
+				remaining: ms[n].remaining, ratio: ms[n].ratio, group: group, over: baseOver, broken: baseBroken}
 		}
 		return built, choices, nil
 	}
 	return nil, nil, nil
 }
 
-func anyOver(ms []fitMeasure) bool {
+// anyBad は組のどれかが収まらない(はみ出すか図が崩れる)か。
+func anyBad(ms []fitMeasure) bool {
 	for _, m := range ms {
-		if m.over {
+		if m.bad() {
 			return true
 		}
 	}
@@ -220,8 +230,30 @@ func fitDeckCopy(d *IRDeck, group []int, set func(*IRSlide)) *IRDeck {
 type fitMeasure struct {
 	ok        bool
 	over      bool    // layout-overflow になるか
+	broken    bool    // 図が崩れるか(fitBrokenCodes の警告が出る。#145)
 	remaining float64 // 本文の残り(pt)
 	ratio     float64 // fill-ratio(組んだ後の警告と同じ bodyFillRatio)
+}
+
+// bad は -fit がその段を「収まった」とみなさないか:本文がはみ出すか、図が崩れる(#145)。
+func (m fitMeasure) bad() bool { return m.over || m.broken }
+
+// fitBrokenCodes は -fit が「収まった」とみなさない図の崩れの警告(#145)。本文の箱に
+// 収まっても、図の中の字が入らない・図が自分の最小を割る・並列のまとまりが図の下限を
+// 割るスライドは崩れて見える(列の中の matrix で評価の列が 0.6pt 足りないだけで、
+// 「p.35」がアプリで1字ずつ折れて行の高さが数倍になる)。
+var fitBrokenCodes = map[string]bool{"figure-text-overflow": true, "subsystem-min": true, "column-floor": true}
+
+// fitBrokenCode は組み立ての警告の文 w(頭の "slide N: " は有っても無くても)が図の崩れ
+// なら、その code(fitBrokenCodes)。そうでなければ ""。
+func fitBrokenCode(w string) string {
+	if !strings.HasPrefix(w, "slide ") {
+		w = "slide 1: " + w
+	}
+	if c := warningIssue("", w).Code; fitBrokenCodes[c] {
+		return c
+	}
+	return ""
 }
 
 // measureFitGroup は group の全部の枚に set を当てた写しで、枚ごとに measureFitStep で測る。
@@ -252,6 +284,10 @@ func (t *Template) measureFitStep(d *IRDeck, i int) (fitMeasure, error) {
 	v := t.Values
 	computeLayout(b.Root, 0, 0, v.PageW, v.PageH)
 	ratio := bodyFillRatio(b.Body) // renderPages と同じく、並べた直後・描く前に測る
+	broken := false
+	for _, w := range lintBlockSubsystems(b) { // renderPages と同じ検査(並べた後・描く前)
+		broken = broken || fitBrokenCode(w) != ""
+	}
 	renderSlide(RenderContext{Out: NewPPTXBuilder(v.PageW, v.PageH), Roles: newCheckedRoles(t.Theme)}, b.Root)
 	blocks, area, need, ok := measureBody(b.Root, b.Body)
 	if !ok {
@@ -261,7 +297,7 @@ func (t *Template) measureFitStep(d *IRDeck, i int) (fitMeasure, error) {
 	for _, blk := range d.Slides[i].Body {
 		kinds = append(kinds, blk.Type)
 	}
-	return fitMeasure{ok: true, over: len(overflowWarnings(blocks, area, need, kinds)) > 0, remaining: round1(area - need), ratio: ratio}, nil
+	return fitMeasure{ok: true, over: len(overflowWarnings(blocks, area, need, kinds)) > 0, broken: broken, remaining: round1(area - need), ratio: ratio}, nil
 }
 
 // fitAppliedWarning は調整したスライドの info の文(warningIssue が fit-applied にする)。
@@ -277,6 +313,12 @@ func fitAppliedWarning(c *fitChoice) string {
 	what := "the body overflowed"
 	if len(c.group) > 1 {
 		what = "the continued table overflowed"
+	}
+	switch {
+	case c.broken && c.over:
+		what += " and a figure broke (figure-text-overflow, subsystem-min or column-floor)"
+	case c.broken:
+		what = "a figure broke (figure-text-overflow, subsystem-min or column-floor)"
 	}
 	return fmt.Sprintf("[FIT-APPLIED INFO] %s, so -fit built it with the template's %s step (body %gpt, blockGap %gpt)%s, remaining %.1fpt. To keep the template's size, shorten the text or split the slide",
 		what, c.step, c.body, c.blockGap, chain, c.remaining)
