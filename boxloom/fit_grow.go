@@ -12,48 +12,72 @@
 //   - dense のスライドは広げない(作者が詰めると決めたもの)。字と間合いの段を上げる
 //     だけで、任意の倍率は使わない
 //
+// 続きの表のひと続き(fitGroupOf)は広げない(最後の枚が薄いのは分けた表の常。#140)。
+//
 // 広げたスライドには info の fit-applied(段・広げる前と後の fill-ratio・残り pt)を出し、
 // 容量に fit を入れる。fill-ratio の警告は組んだ後の値で出す(renderPages)。
 
 package boxloom
 
-// fitGrowSlide は、元の組み方の測り値 m で薄い i 枚目を fit.grow で広げる。
-func (t *Template) fitGrowSlide(d *IRDeck, i int, m fitMeasure) (*BuiltSlide, *fitChoice, error) {
+// fitGrowGroup は、元の組み方の測り値 base(group の枚ごと)で薄い組を fit.grow で広げる。
+// 組の全部の枚に同じ段を当て、fill-ratio は一番低い枚で見る(いまは1枚の組だけを渡す。
+// fitGroup)。
+func (t *Template) fitGrowGroup(d *IRDeck, group []int, base []fitMeasure) (map[int]*BuiltSlide, map[int]*fitChoice, error) {
 	target := t.Values.FillRatioMin
-	if d.Slides[i].dense() || len(t.Fit.Grow) == 0 || !(m.ratio < target) {
+	ratio := minRatio(base)
+	if len(t.Fit.Grow) == 0 || !(ratio < target) {
 		return nil, nil, nil
 	}
-	var best *fitChoice
-	ratio := m.ratio
-	var bestSet func(*IRSlide)
+	for _, j := range group {
+		if d.Slides[j].dense() {
+			return nil, nil, nil
+		}
+	}
+	var best []fitMeasure
+	var bestRef fitRef
 	for k := range t.Fit.Grow {
 		r := fitRef{grow: true, n: k + 1}
-		set := func(s *IRSlide) { s.fit = r }
-		mk, err := t.measureFitStep(d, i, set)
+		ms, err := t.measureFitGroup(d, group, func(s *IRSlide) { s.fit = r })
 		if err != nil {
 			return nil, nil, err
 		}
-		if !mk.ok || mk.over {
+		if ms == nil || anyOver(ms) {
 			break // 広げてはみ出すなら、その手前の段まで
 		}
-		if !(mk.ratio > ratio+floatEps) {
+		mr := minRatio(ms)
+		if !(mr > ratio+floatEps) {
 			continue // fill-ratio が上がらない段(図が大きさを決める本文など)は選ばない
 		}
-		ratio = mk.ratio
-		v := r.values(t)
-		best = &fitChoice{step: r.name(), grow: true, body: v.Body, blockGap: v.BlockGap,
-			remaining: mk.remaining, fromRatio: m.ratio, ratio: mk.ratio}
-		bestSet = set
-		if mk.ratio >= target {
+		ratio, best, bestRef = mr, ms, r
+		if mr >= target {
 			break // 目標に届いたらそこで止める
 		}
 	}
 	if best == nil {
 		return nil, nil, nil
 	}
-	b, err := t.buildSlide(fitDeckCopy(d, i, bestSet), i)
-	if err != nil {
-		return nil, nil, err
+	set := func(s *IRSlide) { s.fit = bestRef }
+	dd := fitDeckCopy(d, group, set)
+	v := bestRef.values(t)
+	built := map[int]*BuiltSlide{}
+	choices := map[int]*fitChoice{}
+	for n, j := range group {
+		b, err := t.buildSlide(dd, j)
+		if err != nil {
+			return nil, nil, err
+		}
+		built[j] = b
+		choices[j] = &fitChoice{step: bestRef.name(), grow: true, body: v.Body, blockGap: v.BlockGap,
+			remaining: best[n].remaining, fromRatio: base[n].ratio, ratio: best[n].ratio, group: group}
 	}
-	return b, best, nil
+	return built, choices, nil
+}
+
+// minRatio は一番低い fill-ratio。
+func minRatio(ms []fitMeasure) float64 {
+	r := ms[0].ratio
+	for _, m := range ms[1:] {
+		r = min(r, m.ratio)
+	}
+	return r
 }

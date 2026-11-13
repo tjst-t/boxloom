@@ -8,6 +8,10 @@
 //     dense のスライドは fit.shrink[0] → …。値の表の fit が無ければ dense までしか下りない
 //   - 各段で組み直し、check と同じ1回の測り(measureBody)ではみ出しを見て、最初に
 //     収まった段で組む。最後の段でも収まらなければ元の組み方のまま(layout-overflow)
+//   - 続きの表(continues)のひと続きのスライドは、どれか1枚がはみ出せば全部を同じ段まで
+//     下げる(全部が収まる最初の段。列の幅と字が枚の間でそろう。fitGroupOf、#140)。
+//     梯子は組のどれかが normal なら dense から、全部が dense なら fit.shrink[0] から。
+//     ひと続きは広げない(fit_grow.go)
 //   - 詰めたスライドには info の [FIT-APPLIED INFO](code fit-applied。段と残り pt)を出し、
 //     容量に fit(段の名前)を入れる
 //
@@ -81,6 +85,7 @@ type fitChoice struct {
 	remaining float64 // その段で組んだときの本文の残り(pt)
 	fromRatio float64 // 広げる前の fill-ratio(grow のときだけ)
 	ratio     float64 // その段で組んだときの fill-ratio
+	group     []int   // 同じ段で組んだ組(続きの表のひと続き。1枚なら長さ1)
 }
 
 // fitStepTry は梯子の1段(名前・写しへの当て方・値)。
@@ -90,20 +95,74 @@ type fitStepTry struct {
 	v    TemplateValues
 }
 
-// fitSlide は -fit のとき i 枚目(本文のスライド)を梯子で詰める・広げる。はみ出すなら
-// 詰め(下の梯子)、収まって fill-ratio が下回る normal のスライドなら広げ(fit_grow.go)。
-// どちらもしない・どの段も使えないなら nil(元のまま組む)。調整したら、その段で組んだ
-// スライドを返す。
+// fitSlide は -fit のとき i 枚目(本文のスライド)を梯子で詰める・広げる(i を含む組
+// fitGroupOf を同じ段で組み、i 枚目の分を返す)。どちらもしない・どの段も使えないなら
+// nil(元のまま組む)。
 func (t *Template) fitSlide(d *IRDeck, i int) (*BuiltSlide, *fitChoice, error) {
-	m, err := t.measureFitStep(d, i, func(*IRSlide) {})
-	if err != nil || !m.ok {
+	built, choices, err := t.fitGroup(d, fitGroupOf(d, i))
+	if err != nil {
 		return nil, nil, err
 	}
-	if !m.over {
-		return t.fitGrowSlide(d, i, m)
+	return built[i], choices[i], nil
+}
+
+// fitGroupOf は i 枚目と同じ段で組むスライドの番号(昇順)。続きの表(continues)の
+// ひと続きのスライドは、どれか1枚がはみ出せば全部を同じ段まで下げ(列の幅と字が枚の間で
+// そろう)、広げはしない(#140)。続きの表はすぐ前のスライドに続くので、
+// 組は「次のスライドが続きの表を持つ」で隣どうしをつないだ並び。表の無いスライドは i だけ。
+func fitGroupOf(d *IRDeck, i int) []int {
+	continues := func(j int) bool {
+		if j <= 0 || j >= len(d.Slides) {
+			return false
+		}
+		for _, k := range bodyTables(&d.Slides[j]) {
+			if d.Slides[j].Body[k].Continues {
+				return true
+			}
+		}
+		return false
+	}
+	lo, hi := i, i
+	for continues(lo) {
+		lo--
+	}
+	for continues(hi + 1) {
+		hi++
+	}
+	var out []int
+	for j := lo; j <= hi; j++ {
+		out = append(out, j)
+	}
+	return out
+}
+
+// fitGroup は組 group(fitGroupOf)を1つの段で詰める・広げる。どれかがはみ出すなら
+// 詰め(下の梯子。全部が収まる最初の段)、どれもはみ出さず、1枚の組で fill-ratio が
+// 下回る normal のスライドなら広げ(fit_grow.go)。返すのは段を変えたスライドだけ
+// (番号 → 組んだスライド・段)。
+func (t *Template) fitGroup(d *IRDeck, group []int) (map[int]*BuiltSlide, map[int]*fitChoice, error) {
+	base, err := t.measureFitGroup(d, group, func(*IRSlide) {})
+	if err != nil || base == nil {
+		return nil, nil, err
+	}
+	over := false
+	for _, m := range base {
+		over = over || m.over
+	}
+	if !over {
+		if len(group) > 1 {
+			// 続きの表のひと続きは広げない(最後の枚が薄いのは分けた表の常で、その枚の
+			// ために広げると満ちた枚まで字が変わる。全部の枚をテンプレートの大きさのまま)。
+			return nil, nil, nil
+		}
+		return t.fitGrowGroup(d, group, base)
+	}
+	anyNormal := false
+	for _, j := range group {
+		anyNormal = anyNormal || !d.Slides[j].dense()
 	}
 	var steps []fitStepTry
-	if !d.Slides[i].dense() && t.Dense != (DenseValues{}) {
+	if anyNormal && t.Dense != (DenseValues{}) {
 		steps = append(steps, fitStepTry{fitStepDense, func(s *IRSlide) { s.Density = densityDense }, t.densed().Values})
 	}
 	for k := range t.Fit.Shrink {
@@ -111,27 +170,49 @@ func (t *Template) fitSlide(d *IRDeck, i int) (*BuiltSlide, *fitChoice, error) {
 		steps = append(steps, fitStepTry{r.name(), func(s *IRSlide) { s.fit = r }, r.values(t).apply(t.Values)})
 	}
 	for _, st := range steps {
-		m, err := t.measureFitStep(d, i, st.set)
+		ms, err := t.measureFitGroup(d, group, st.set)
 		if err != nil {
 			return nil, nil, err
 		}
-		if m.over {
+		if ms == nil || anyOver(ms) {
 			continue
 		}
-		b, err := t.buildSlide(fitDeckCopy(d, i, st.set), i)
-		if err != nil {
-			return nil, nil, err
+		built := map[int]*BuiltSlide{}
+		choices := map[int]*fitChoice{}
+		dd := fitDeckCopy(d, group, st.set)
+		for n, j := range group {
+			if st.name == fitStepDense && d.Slides[j].dense() {
+				continue // もう dense の枚は、dense の段では変わらない
+			}
+			b, err := t.buildSlide(dd, j)
+			if err != nil {
+				return nil, nil, err
+			}
+			built[j] = b
+			choices[j] = &fitChoice{step: st.name, body: st.v.Body, blockGap: st.v.BlockGap,
+				remaining: ms[n].remaining, ratio: ms[n].ratio, group: group}
 		}
-		return b, &fitChoice{step: st.name, body: st.v.Body, blockGap: st.v.BlockGap, remaining: m.remaining, ratio: m.ratio}, nil
+		return built, choices, nil
 	}
 	return nil, nil, nil
 }
 
-// fitDeckCopy は d の写しで、i 枚目のスライドの写しに set を当てたもの(IR は変えない)。
-func fitDeckCopy(d *IRDeck, i int, set func(*IRSlide)) *IRDeck {
+func anyOver(ms []fitMeasure) bool {
+	for _, m := range ms {
+		if m.over {
+			return true
+		}
+	}
+	return false
+}
+
+// fitDeckCopy は d の写しで、group の枚のスライドの写しに set を当てたもの(IR は変えない)。
+func fitDeckCopy(d *IRDeck, group []int, set func(*IRSlide)) *IRDeck {
 	dd := *d
 	dd.Slides = append([]IRSlide(nil), d.Slides...)
-	set(&dd.Slides[i])
+	for _, j := range group {
+		set(&dd.Slides[j])
+	}
 	return &dd
 }
 
@@ -143,10 +224,25 @@ type fitMeasure struct {
 	ratio     float64 // fill-ratio(組んだ後の警告と同じ bodyFillRatio)
 }
 
-// measureFitStep は i 枚目を set を当てた写しで組み・並べ・描き、check と同じ
+// measureFitGroup は group の全部の枚に set を当てた写しで、枚ごとに measureFitStep で測る。
+// どれかの本文を測れなければ nil。
+func (t *Template) measureFitGroup(d *IRDeck, group []int, set func(*IRSlide)) ([]fitMeasure, error) {
+	dd := fitDeckCopy(d, group, set)
+	var out []fitMeasure
+	for _, j := range group {
+		m, err := t.measureFitStep(dd, j)
+		if err != nil || !m.ok {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, nil
+}
+
+// measureFitStep は i 枚目を(段を当てた写し d で)組み・並べ・描き、check と同じ
 // measureBody で測る。
-func (t *Template) measureFitStep(d *IRDeck, i int, set func(*IRSlide)) (fitMeasure, error) {
-	b, err := t.buildSlide(fitDeckCopy(d, i, set), i)
+func (t *Template) measureFitStep(d *IRDeck, i int) (fitMeasure, error) {
+	b, err := t.buildSlide(d, i)
 	if err != nil {
 		return fitMeasure{}, err
 	}
@@ -170,10 +266,18 @@ func (t *Template) measureFitStep(d *IRDeck, i int, set func(*IRSlide)) (fitMeas
 
 // fitAppliedWarning は調整したスライドの info の文(warningIssue が fit-applied にする)。
 func fitAppliedWarning(c *fitChoice) string {
+	chain := ""
+	if len(c.group) > 1 {
+		chain = fmt.Sprintf(" (the same step for every slide of the continued table, slides %d-%d)", c.group[0], c.group[len(c.group)-1])
+	}
 	if c.grow {
 		return fmt.Sprintf("[FIT-APPLIED INFO] the body was underfilled (%.1f%%), so -fit built it with the template's %s step (body %gpt, blockGap %gpt), fill ratio %.1f%%, remaining %.1fpt. To keep the template's size, add content or merge it with a neighbouring thin slide",
 			c.fromRatio*100, c.step, c.body, c.blockGap, c.ratio*100, c.remaining)
 	}
-	return fmt.Sprintf("[FIT-APPLIED INFO] the body overflowed, so -fit built it with the template's %s step (body %gpt, blockGap %gpt), remaining %.1fpt. To keep the template's size, shorten the text or split the slide",
-		c.step, c.body, c.blockGap, c.remaining)
+	what := "the body overflowed"
+	if len(c.group) > 1 {
+		what = "the continued table overflowed"
+	}
+	return fmt.Sprintf("[FIT-APPLIED INFO] %s, so -fit built it with the template's %s step (body %gpt, blockGap %gpt)%s, remaining %.1fpt. To keep the template's size, shorten the text or split the slide",
+		what, c.step, c.body, c.blockGap, chain, c.remaining)
 }

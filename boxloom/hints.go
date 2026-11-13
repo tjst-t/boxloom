@@ -133,15 +133,21 @@ func joinHints(hs ...string) string {
 }
 
 // tableSplitHint は、はみ出した本文の表の分け方の案(容量の split)を1文にする。
-// 表でなければ空。
+// はみ出したのがその表か、表の後のブロック(注記など。#140)のときに付ける。
+// 案が無ければ空。
 func tableSplitHint(path string, capOf map[string]SlideCapacity) string {
-	var s int
-	if _, err := fmt.Sscanf(path, "/slides/%d/body/", &s); err != nil {
+	var s, k int
+	if _, err := fmt.Sscanf(path, "/slides/%d/body/%d", &s, &k); err != nil {
 		return ""
 	}
-	for _, b := range capOf[fmt.Sprintf("/slides/%d", s)].Blocks {
-		if b.Path != path || b.Split == nil {
+	blocks := capOf[fmt.Sprintf("/slides/%d", s)].Blocks
+	for bk, b := range blocks {
+		if b.Split == nil || bk > k {
 			continue
+		}
+		rest := ""
+		if bk < len(blocks)-1 {
+			rest = fmt.Sprintf("表(%s)の後のブロックは最初のスライドに残す見込みで数えています。", b.Path)
 		}
 		var at, rows []string
 		for _, r := range b.Split.SplitBefore {
@@ -150,7 +156,7 @@ func tableSplitHint(path string, capOf map[string]SlideCapacity) string {
 		for _, n := range b.Split.Rows {
 			rows = append(rows, strconv.Itoa(n))
 		}
-		return fmt.Sprintf("この表は %d 枚に分けられます。%s の前で分けます(表ごとの本体の行の数 %s。合計の行は最後の表)。"+
+		return rest + fmt.Sprintf("この表は %d 枚に分けられます。%s の前で分けます(表ごとの本体の行の数 %s。合計の行は最後の表)。"+
 			"分けた表はすぐ次のスライドに置き、続きの表には continues: true(Markdown は説明の行の {continues})を書いて見出しの行を書きません。"+
 			"見出しの行と「n/m」の印・列の幅は Boxloom がそろえます。字は小さくしません",
 			b.Split.Tables, strings.Join(at, "・"), strings.Join(rows, "・"))

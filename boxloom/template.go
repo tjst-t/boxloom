@@ -647,18 +647,27 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 	var pages []*PPTXBuilder
 	var all []string
 	caps := []SlideCapacity{}
+	// -fit の段は組(続きの表のひと続き。fitGroupOf)ごとに1度だけ選ぶ。
+	fitBuilt, fitChosen, fitDone := map[int]*BuiltSlide{}, map[int]*fitChoice{}, map[int]bool{}
 	for _, b := range built {
 		// 警告と容量の場所は IR のスライドの番号(目次のスライドは IR に無いので
 		// 警告の頭は "table of contents"、容量は出さない)。
 		i := b.SlideIndex
 		var fitted *fitChoice
 		if _, _, _, gen := generatedSlide(i); fit && !gen && b.Body != nil {
-			fb, c, err := t.fitSlide(d, i)
-			if err != nil {
-				return nil, nil, nil, fmt.Errorf("slides[%d]: %w", i, err)
+			if !fitDone[i] {
+				group := fitGroupOf(d, i)
+				fb, c, err := t.fitGroup(d, group)
+				if err != nil {
+					return nil, nil, nil, fmt.Errorf("slides[%d]: %w", i, err)
+				}
+				for _, j := range group {
+					fitDone[j] = true
+					fitBuilt[j], fitChosen[j] = fb[j], c[j]
+				}
 			}
-			if c != nil {
-				b, fitted = fb, c
+			if c := fitChosen[i]; c != nil {
+				b, fitted = fitBuilt[i], c
 			}
 		}
 		v := t.Values

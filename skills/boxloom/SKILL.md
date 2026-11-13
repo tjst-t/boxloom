@@ -533,7 +533,9 @@ Boxloom never moves table rows to the next slide by itself. When a table overflo
 1. Keep rows before the first `splitBefore` in the original table. Move each following
    run of rows into a new table on a new slide placed **right after** the previous one
    (no other slide between). You may split a little earlier at a natural break (a new
-   group or category); never later than proposed.
+   group or category); never later than proposed. Blocks after the table on that slide
+   (a `:::note`, a paragraph) stay on the first slide: the proposal already leaves room for
+   them, and it is also given when only such a block overflows.
 2. Each continuing table: start with the delimiter row `| --- | --- |` (no header row),
    then the rows, then the caption line `: {continues}` (`: {continues total=last}` on
    the last part if the table has a total row; remove `{total=last}` from the earlier

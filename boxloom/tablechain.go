@@ -229,10 +229,12 @@ func (t *tableLeaf) leftmostMergedColumn() int {
 	return best
 }
 
-// split は表を、最初の枚は firstAvail、続きの枚は laterAvail の高さに収まるよう
+// split は表を、最初の枚は firstAvail(表の上端から、表の後のブロックの分を引いた
+// 本文の下端まで)、続きの枚は laterAvail の高さに収まるよう
 // 本体の行で分ける案(width は表の幅)。各枚は説明の文の行(と「n/m」の印)と
 // 見出しの行を持つ。群の表は群の境目で分け、1つの群が1枚に入らないときだけ
-// 群の中で分ける。合計の行は最後の枚。1枚に入る・見出しの行も入らないなら nil。
+// 群の中で分ける。合計の行は最後の枚。1枚に入る・見出しの行も入らない・最初の枚に
+// 本体の行が1つも入らないなら nil。
 func (t *tableLeaf) split(width, firstAvail, laterAvail float64) *tableSplit {
 	hs, _ := t.rowHeights(t.colWidths(width))
 	probe := *t
@@ -280,6 +282,10 @@ func (t *tableLeaf) split(width, firstAvail, laterAvail float64) *tableSplit {
 	}
 	s := &tableSplit{}
 	avail := firstAvail - over
+	if len(expanded) == 0 || height(expanded[0]) > avail+overflowEps {
+		// 最初の枚に本体の行が1つも入らない(表の上か後のブロックだけで埋まる)。
+		return nil
+	}
 	cur, start := 0.0, 0
 	for _, u := range expanded {
 		h := height(u)

@@ -75,8 +75,9 @@ type BlockCapacity struct {
 
 // TableSplitCapacity ははみ出した表の分け方の案。表を tables 枚に分け、2枚目からの
 // 表は splitBefore の本体の行(IR の rows の番号)から始める。続きの表には
-// continues: true を書き、見出しの行は書かない(docs/ir.md の 14章)。続きの枚は
-// 本文が表だけで、題・出典・フッターは同じと見込む。
+// continues: true を書き、見出しの行は書かない(docs/ir.md の 14章)。表の後の
+// ブロック(注記など)は最初の枚に残し、続きの枚は本文が表だけで、題・出典・フッターは
+// 同じと見込む。
 type TableSplitCapacity struct {
 	Tables      int   `json:"tables"`
 	SplitBefore []int `json:"splitBefore"`
