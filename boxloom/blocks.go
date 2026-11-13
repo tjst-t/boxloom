@@ -292,9 +292,30 @@ func numericColumns(rows [][]IRTableCell, n int) []bool {
 	return out
 }
 
+// tableLook は表の見た目(役割名と値の表の名前)。標準の部品は standardTableLook、
+// テンプレートは自分の組み方で別の見た目を渡せる(report.go)。色は役割名で書き、
+// "" は塗らない・引かない。
+type tableLook struct {
+	headerFill, bodyFill string // 見出しの行・本体の行の面
+	rule                 string // 行の間の線
+	headerText           string // 見出しの行の字
+	// headerRule は見出しの行の下の線("" なら行の間の線と同じ)。太さは値の表の
+	// tableHeaderRuleWidth。
+	headerRule string
+	// groupFill・groupText は行の群の名前のセルの面と字("" の面は行の面のまま)。
+	groupFill, groupText string
+}
+
+// standardTableLook は標準の表:見出しの行は薄い面、本体はカードの面、行の間は罫線。
+var standardTableLook = tableLook{headerFill: "card_alt", bodyFill: "card", rule: "grid",
+	headerText: "text_primary", groupText: "text_primary"}
+
 // table は表の葉を作る。続きの表(continues)は、最初の表の見出しの行を繰り返し、
 // 列の幅と数の列をひと続きの全部の行で決め、「n/m」の印を付ける(tablechain.go)。
-func (t *Template) table(b *IRBlock) *Spec {
+func (t *Template) table(b *IRBlock) *Spec { return t.tableStyled(b, standardTableLook) }
+
+// tableStyled は見た目 look で表の葉を作る。
+func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 	v, th := t.Values, t.Theme
 	header, grouped := b.tableHeader(), b.tableGrouped()
 	members := []*IRBlock{b}
@@ -313,8 +334,12 @@ func (t *Template) table(b *IRBlock) *Spec {
 	}
 	leaf := &tableLeaf{size: v.TableText, padX: v.TableCellPadX, padY: v.TableCellPadY,
 		capSize: v.CaptionText, capGap: v.CaptionGap,
-		draw: TableDraw{HeaderFill: th.c("card_alt"), BodyFill: th.c("card"), RuleColor: th.c("grid"), RuleWidth: v.TableRuleWidth}}
-	leaf.cells = t.tableCells(b, header, numeric)
+		draw: TableDraw{HeaderFill: roleColor(th, look.headerFill), BodyFill: roleColor(th, look.bodyFill),
+			RuleColor: roleColor(th, look.rule), RuleWidth: v.TableRuleWidth}}
+	if look.headerRule != "" {
+		leaf.draw.HeaderRuleColor, leaf.draw.HeaderRuleWidth = th.c(look.headerRule), v.TableHeaderRuleWidth
+	}
+	leaf.cells = t.tableCells(b, header, numeric, look)
 	if b.Total != nil {
 		// 合計の行は本体の行と見分ける: 太字にし、上に濃い線を引く(TableDraw.TotalRow)。
 		leaf.draw.TotalRow = true
@@ -326,7 +351,7 @@ func (t *Template) table(b *IRBlock) *Spec {
 	for _, m := range members {
 		cells := leaf.cells
 		if m != b {
-			cells = t.tableCells(m, header, numeric)
+			cells = t.tableCells(m, header, numeric, look)
 		}
 		for _, row := range cells {
 			for c, cell := range row {
@@ -352,6 +377,14 @@ func (t *Template) table(b *IRBlock) *Spec {
 	return SubsystemNode(leaf)
 }
 
+// roleColor は役割名の色("" なら "")。
+func roleColor(th Theme, role string) string {
+	if role == "" {
+		return ""
+	}
+	return th.c(role)
+}
+
 // tableBodyCells は本体と合計の行のセル(群の表では先頭に群の列の空のセルを足す)。
 func tableBodyCells(b *IRBlock, grouped bool) [][]IRTableCell {
 	var body [][]IRTableCell
@@ -368,51 +401,53 @@ func tableBodyCells(b *IRBlock, grouped bool) [][]IRTableCell {
 }
 
 // tableCells は表の見出しの行・本体の行・合計の行のセル。
-func (t *Template) tableCells(b *IRBlock, header []Inline, numeric []bool) [][]TableCell {
+func (t *Template) tableCells(b *IRBlock, header []Inline, numeric []bool, look tableLook) [][]TableCell {
 	th := t.Theme
 	grouped := b.Groups != nil
-	cell := func(c int, in IRTableCell, bold bool) TableCell {
+	cell := func(c int, in IRTableCell, bold bool, role string) TableCell {
 		align := "left"
 		if numeric[c] {
 			align = "right"
 		}
 		if in.Points == nil {
-			return TableCell{Runs: t.leafRuns(in.Text, "text_primary", bold), Align: align}
+			return TableCell{Runs: t.leafRuns(in.Text, role, bold), Align: align}
 		}
 		// セルの中の箇条: 項目ごとに1つの段落。印は本文の箇条と同じ marks.point
 		// (先頭の塊の Mark。PPTX では a:buChar)。
 		out := TableCell{Align: "left"}
 		for _, it := range in.Points {
 			mark := TextRun{Text: t.Marks.Point, Color: th.c("accent"), Bold: true, Mark: true}
-			out.Items = append(out.Items, append([]TextRun{mark}, t.leafRuns(it, "text_primary", bold)...))
+			out.Items = append(out.Items, append([]TextRun{mark}, t.leafRuns(it, role, bold)...))
 		}
 		return out
 	}
 	cellRow := func(cells []IRTableCell, bold bool) []TableCell {
 		var out []TableCell
 		for c, in := range cells {
-			out = append(out, cell(c, in, bold))
+			out = append(out, cell(c, in, bold, "text_primary"))
 		}
 		return out
 	}
 	var rows [][]TableCell
 	var hdr []TableCell
 	for c, in := range header {
-		hdr = append(hdr, cell(c, IRTableCell{Text: in}, true))
+		hdr = append(hdr, cell(c, IRTableCell{Text: in}, true, look.headerText))
 	}
 	rows = append(rows, hdr)
 	if grouped {
 		// 群の名前は先頭の列の縦に結合したセル(a:tbl の rowSpan と vMerge)。
-		// 名前は見出しと同じく太字にして、行の中身と見分ける。
+		// 名前は見出しと同じく太字にして、行の中身と見分ける。面は look.groupFill
+		// (縦に結合した続きのセルも同じ面にする。アプリによって続きのセルの面が見えるため)。
 		body := tableBodyCells(b, true)
+		groupFill := roleColor(th, look.groupFill)
 		ri := 0
 		for _, g := range b.Groups {
 			for k := 0; k < g.Rows; k++ {
 				var lead TableCell
 				if k == 0 {
-					lead = TableCell{Runs: t.leafRuns(g.Label, "text_primary", true), Align: "left", RowSpan: g.Rows}
+					lead = TableCell{Runs: t.leafRuns(g.Label, look.groupText, true), Align: "left", RowSpan: g.Rows, Fill: groupFill}
 				} else {
-					lead = TableCell{Align: "left", VMerge: true}
+					lead = TableCell{Align: "left", VMerge: true, Fill: groupFill}
 				}
 				rest := cellRow(body[ri], false)[1:]
 				rows = append(rows, append([]TableCell{lead}, rest...))

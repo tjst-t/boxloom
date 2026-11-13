@@ -85,6 +85,8 @@
     "tableCellPaddingX": 6,
     "tableCellPaddingY": 4,
     "tableRuleWidth": 0.75,
+    "tableHeaderRuleWidth": 1.5,
+    "calloutMark": 24,
     "imageMinHeight": 64,
     "captionGap": 4
   },

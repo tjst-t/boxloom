@@ -20,6 +20,14 @@
 //   - pairs(Backlog #87):標準の組み方(pairsStyled)の見た目を差し替える。対ごとに
 //     A・B・C… の四角い印(基調色・白い字)を subject の頭に、2つの側の間に丸い山形の印を
 //     置き、対の間に罫線(grid)を引く。側の見出し(title)は薄い面(card)の帯の上に字の色で書く。
+//   - table(#88):見出しの行は面を塗らず基調色の字にし、下に基調色の罫線
+//     (tableHeaderRuleWidth)を引く。行の間は灰色(grid)の細い罫線で、本体の行も
+//     面を塗らない。行の群の名前のセルは濃い基調色(support)の面に白い字(bg)。
+//     本物の a:tbl のまま、罫線と面はセルの書式で書く(reportTableLook)。
+//   - takeaway(#88):左に丸い矢印(基調色の円に白い右向きの矢印。直径 calloutMark)、
+//     右に基調色の太字の結論の文。地の面も左の帯も置かない(上下の余白はカードと同じ)。
+//   - quote(#88):薄い面(card)の吹き出し(角丸の面と、右の人の印へ向かう尾)の中に
+//     引用の文、右に人の印(頭と肩。基調色)とその下に出どころ。
 //
 // 白は役割名 bg(report の地の色。白)で書く。測った大きさは段の刻み(type(n)・
 // space(n))で書く(report が自分で持つ組み方の逃げ道。標準の部品は名前だけ)。
@@ -59,6 +67,21 @@ func registerReportParts(t *Template) error {
 	}
 	if err := t.skeleton.override(skelToc, skeletonFunc(reportToc)); err != nil {
 		return err
+	}
+	for name, f := range map[string]componentFunc{
+		"table": func(ctx componentContext, b *IRBlock) (*Spec, error) {
+			return ctx.t.tableStyled(b, reportTableLook), nil
+		},
+		"takeaway": func(ctx componentContext, b *IRBlock) (*Spec, error) {
+			return ctx.t.reportTakeaway(b.Content), nil
+		},
+		"quote": func(ctx componentContext, b *IRBlock) (*Spec, error) {
+			return ctx.t.reportQuote(b.Content, b.Source), nil
+		},
+	} {
+		if err := t.components.override(name, f); err != nil {
+			return err
+		}
 	}
 	return t.skeleton.override(skelContentHeader, skeletonFunc(func(ctx skeletonContext) (*Spec, error) {
 		return ctx.t.reportContentHeader(ctx.slide), nil
@@ -283,4 +306,88 @@ func (m *pairMark) Render(ctx RenderContext, box LBox) {
 	w, h := box.Width*0.36, box.Height*0.44
 	ctx.Out.AddShape(LBox{X: box.X + (box.Width-w)/2 + box.Width*0.03, Y: box.Y + (box.Height-h)/2, Width: w, Height: h},
 		ShapeOpts{Prst: "chevron", Fill: on})
+}
+
+// reportTableLook は report の表の見た目:見出しの行は面なし・基調色の字・基調色の
+// 罫線、本体は面なしで灰色の罫線、行の群の名前は濃い基調色の面に白い字。
+var reportTableLook = tableLook{headerText: "accent", headerRule: "accent", rule: "grid",
+	groupFill: "support", groupText: "bg"}
+
+// reportTakeaway は結論:左に丸い矢印、右に基調色の太字の文。地の面は置かないが、
+// 上下にカードと同じ余白(cardPadding)を取り、本文から離して置く。
+func (t *Template) reportTakeaway(in Inline) *Spec {
+	return Row([]*Spec{
+		SubsystemNode(&calloutMark{kind: calloutArrow, size: t.Values.CalloutMark}),
+		t.prose(in, "takeawayText", "accent", true, WithGrow(1), WithBasis(0)),
+	}, tokGap("itemGap"), tokPadXY("", "cardPadding"))
+}
+
+// reportQuote は引用:吹き出し(薄い面と、右へ向かう尾)の中に言葉、右に人の印と出どころ。
+// 吹き出しと人の印の列の幅は 3:1。
+func (t *Template) reportQuote(content, source Inline) *Spec {
+	size := t.Values.CalloutMark
+	bubble := Row([]*Spec{
+		Col([]*Spec{t.prose(content, "quoteText", "text_primary", false)},
+			tokPad("cardPadding"), tokBackground("card"), tokRadius("cardRadius"), WithGrow(1), WithBasis(0), asCard()),
+		SubsystemNode(&calloutMark{kind: calloutTail, size: size}),
+	}, WithGrow(3), WithBasis(0))
+	person := []*Spec{SubsystemNode(&calloutMark{kind: calloutPerson, size: size})}
+	if len(source) > 0 {
+		person = append(person, t.prose(source, "quoteSource", "text_muted", false))
+	}
+	return Row([]*Spec{bubble, Col(person, tokGap("itemGap"), WithGrow(1), WithBasis(0))}, tokGap("itemGap"))
+}
+
+// calloutKind は report の結論・引用に添える小さな図形の種類。
+type calloutKind int
+
+const (
+	calloutArrow  calloutKind = iota // 丸い矢印(基調色の円に白い右向きの矢印)
+	calloutPerson                    // 人の印(基調色の頭と肩)
+	calloutTail                      // 吹き出しの尾(薄い面の三角。左の面から右へ)
+)
+
+// calloutMark は report の組み方の中の図形の葉(shapes ではない)。大きさは値の表の
+// calloutMark(尾は幅がその半分)、色は描くときに役割名で引く。葉は自分の大きさの
+// 正方形を上の端に描き、割り当てがそれより高ければ下を空ける。
+type calloutMark struct {
+	kind calloutKind
+	size float64
+}
+
+func (c *calloutMark) Name() string { return "callout" }
+
+// ornament:文に添える印で、図ではない(横の余り spare-width に数えない)。
+func (c *calloutMark) ornament() {}
+
+func (c *calloutMark) width() float64 {
+	if c.kind == calloutTail {
+		return c.size / 2
+	}
+	return c.size
+}
+
+func (c *calloutMark) Measure(Constraint) Measurement {
+	s := Size{Width: c.width(), Height: c.size}
+	return Measurement{Natural: s, Min: s, Max: Size{Width: s.Width}}
+}
+
+func (c *calloutMark) Render(ctx RenderContext, box LBox) {
+	s := c.size
+	switch c.kind {
+	case calloutArrow:
+		ctx.Out.AddShape(LBox{X: box.X, Y: box.Y, Width: s, Height: s}, ShapeOpts{Prst: "ellipse", Fill: ctx.Roles.Color("accent")})
+		ctx.Out.AddShape(LBox{X: box.X + s*0.25, Y: box.Y + s*0.3, Width: s * 0.5, Height: s * 0.4},
+			ShapeOpts{Prst: "rightArrow", Fill: ctx.Roles.Color("bg")})
+	case calloutPerson:
+		fill := ctx.Roles.Color("accent")
+		head := s * 0.45
+		ctx.Out.AddShape(LBox{X: box.X + (s-head)/2, Y: box.Y, Width: head, Height: head}, ShapeOpts{Prst: "ellipse", Fill: fill})
+		ctx.Out.AddShape(LBox{X: box.X + s*0.1, Y: box.Y + s*0.5, Width: s * 0.8, Height: s * 0.5}, ShapeOpts{Prst: "round2SameRect", Fill: fill})
+	case calloutTail:
+		// 尾は人の印の頭の高さに置く(左の面に少し重ねて継ぎ目を見せない)。
+		h := math.Min(s*0.5, box.Height)
+		ctx.Out.AddShape(LBox{X: box.X - 0.5, Y: box.Y + s*0.15, Width: c.width() + 0.5, Height: h},
+			ShapeOpts{Prst: "rtTriangle", Fill: ctx.Roles.Color("card")})
+	}
 }

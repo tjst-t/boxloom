@@ -60,8 +60,23 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
   頭に、2つの側の間に丸い山形の印(同じ大きさ)を置き、対の間に罫線(`grid`・高さ
   `tableRuleWidth`)を引く。側の見出し(`title`)は薄い面(`card`=F1F2F1)の帯の上に字の色・
   太字の本文で書く。印は飾りの葉(`ornament`)で、横の余り(`spare-width`)には数えない。
+- 表(`table`、#88)を `tableStyled` に report の見た目(`reportTableLook`)を渡して組む。
+  見出しの行は面を塗らず、字を基調色(`accent`)にし、下に基調色の罫線(`tableHeaderRuleWidth`
+  1.5pt)を引く。本体の行も面を塗らず、行の間は灰色(`grid`)の細い罫線(`tableRuleWidth`
+  0.75pt)。行の群の名前のセル(結合の続きも)は濃い基調色(`support` 187955)の面に白い字(`bg`)。
+  本物の `a:tbl` のまま、罫線と面はセルの書式(`a:tcPr` の `a:lnB` と塗り)で書く。
+- 結論(`takeaway`、#88)は地の面と左の帯を置かず、左に丸い矢印(基調色の円に白い右向きの
+  矢印。直径 `calloutMark` 24pt)、右に基調色の太字の文(`takeawayText`)。上下にカードと同じ
+  余白(`cardPadding`)を取り、本文から離す。
+- 引用(`quote`、#88)は薄い面(`card` F1F2F1)の角丸の吹き出しの中に引用の文(`quoteText`)。
+  吹き出しには右へ向かう尾(同じ面の三角)を付け、その右に人の印(基調色の円の頭と、上の角の
+  丸い四角の肩。`calloutMark` 24pt)、印の下に出どころ(`quoteSource`・`text_muted`。印があるので
+  頭の `marks.quoteSource` は付けない)。吹き出しと人の印の列の幅は 3:1。
+- 丸い矢印・人の印・尾は shapes ではなく、report の組み方の中の図形の葉(`calloutMark`)で描く。
+  色は描くときに役割名で引く。文に添える印なので、横の余り(`spare-width`)には数えない
+  (`spare.go` の `ornament`)。
 - 試験は `TestReportContentHeader`・`TestReportOverrideIsOnlyReport`・`TestReportColumnHeadings`・
-  `TestReportPairsMarks`。
+  `TestReportPairsMarks`・`TestReportTableLook`・`TestReportCallouts`。
 
 **色(theme)**:測った色を、コアの役割名に当てた(役割名は増やしていない)。
 
@@ -109,6 +124,7 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 | `statValue` / `statUnit` / `quoteMark` | 36 / 16 / 36 | 32 / 14 / 32 |
 | `cardPadding` / `columnGap` | 20 / 32 | 12 / 24 |
 | `tableCellPaddingX` / `tableCellPaddingY` / `tableRuleWidth` | 8 / 4 / 1 | 6 / 4 / 0.75 |
+| `tableHeaderRuleWidth` / `calloutMark`(report の組み方だけが使う) | 1 / 24 | 1.5 / 24 |
 
 頁番号は標準のフッターのまま右下に `small`(10pt)・`text_muted`(7F7F7F)で置く。列の見出しは
 16pt・基調色(上の「組み方」)。`columns` は report が Go で持つ組み方(`report.go`。#84)で、
@@ -409,6 +425,8 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `tableText` | 表のセルの字(12。見出しの行は太字) |
 | `tableCellPaddingX` `tableCellPaddingY` | セルの左右・上下の余白(8・4) |
 | `tableRuleWidth` | 表の行の間の線の太さ(1。線の色は役割名 `grid`、見出しの行の塗りは `card_alt`、本体は `card`) |
+| `tableHeaderRuleWidth` | 見出しの行の下に別の線を引く組み方の、その線の太さ(report は 1.5 で基調色。dark / light は使わない。値は `tableRuleWidth` と同じにしてある) |
+| `calloutMark` | 結論の丸い矢印の直径と、引用の人の印の大きさ(report の組み方だけが使う。dark / light は使わない。24) |
 | `imageMinHeight` | 画像を縮めてよい下限の高さ(96。はみ出しの検査はこの高さで測る) |
 | `captionGap` | 表・画像と説明の文の間(4。説明の文の字は `captionText`) |
 

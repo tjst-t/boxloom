@@ -35,6 +35,8 @@ type TableCell struct {
 	// VMerge は上のセルに結合された続きのセル(a:tc の vMerge。文字は持たない)。
 	RowSpan int
 	VMerge  bool
+	// Fill はこのセルの面(""なら行の面。行の群の名前のセルを濃い面にするなど)。
+	Fill string
 }
 
 // TableDraw は表の描き方(テンプレートが決めた見た目)。
@@ -48,6 +50,9 @@ type TableDraw struct {
 	BodyFill   string // 本体の行の塗り
 	RuleColor  string // 行の間の線
 	RuleWidth  float64
+	// HeaderRuleColor・HeaderRuleWidth は見出しの行の下の線(""なら行の間の線と同じ)。
+	HeaderRuleColor string
+	HeaderRuleWidth float64
 	// TotalRow は最後の行が合計の行か(IR の table の total)。真なら a:tbl の
 	// lastRow を立て、その行の上に TotalRuleColor の線を引く。
 	TotalRow       bool
@@ -107,6 +112,9 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 		if totalRule && r == len(t.Cells)-2 {
 			return dark("lnB")
 		}
+		if r == 0 && t.HeaderRuleColor != "" {
+			return fmt.Sprintf(`<a:lnB w="%d"><a:solidFill><a:srgbClr val="%s"/></a:solidFill></a:lnB>`, ptToEMU(t.HeaderRuleWidth), hexColor(t.HeaderRuleColor))
+		}
 		return rule("lnB")
 	}
 	for r, row := range t.Cells {
@@ -115,10 +123,13 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 		if r == 0 {
 			fill = t.HeaderFill
 		}
-		fillXML := "<a:noFill/>"
-		if fill != "" {
-			fillXML = fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, hexColor(fill))
+		fillOf := func(fill string) string {
+			if fill == "" {
+				return "<a:noFill/>"
+			}
+			return fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, hexColor(fill))
 		}
+		rowFill := fillOf(fill)
 		lnT := noLine("lnT")
 		if totalRule && r == len(t.Cells)-1 {
 			lnT = dark("lnT")
@@ -136,6 +147,10 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 				if r+1 < len(t.Cells) && ci < len(t.Cells[r+1]) && t.Cells[r+1][ci].VMerge {
 					lnB = noLine("lnB")
 				}
+			}
+			fillXML := rowFill
+			if c.Fill != "" {
+				fillXML = fillOf(c.Fill)
 			}
 			fmt.Fprintf(&b, `<a:tc%s><a:txBody><a:bodyPr/><a:lstStyle/>%s</a:txBody><a:tcPr marL="%d" marR="%d" marT="%d" marB="%d">%s%s%s%s%s</a:tcPr></a:tc>`,
 				span, p.cellParaXML(c, t.FontSize), ptToEMU(t.PadX), ptToEMU(t.PadX), ptToEMU(t.PadY), ptToEMU(t.PadY),

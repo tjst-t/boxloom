@@ -15,8 +15,8 @@ import (
 	"math"
 )
 
-// ornament は飾りの印だけを描くサブシステムの葉(report の対の A・B・C の印など。
-// report.go)。図ではないので、横の余りを測らない。
+// ornament は飾りの印だけを描くサブシステムの葉(report の対の A・B・C の印、
+// 結論の丸い矢印・引用の人の印など。report.go)。図ではないので、横の余りを測らない。
 type ornament interface{ ornament() }
 
 // spareWidthWarnRatio は、横の余りがブロックの幅のこの割合以上なら警告する。

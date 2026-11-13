@@ -105,6 +105,12 @@ type TemplateValues struct {
 	TableCellPadX  float64 `json:"tableCellPaddingX" scale:"space"` // セルの左右の余白
 	TableCellPadY  float64 `json:"tableCellPaddingY" scale:"space"` // セルの上下の余白
 	TableRuleWidth float64 `json:"tableRuleWidth"`                  // 行の間の線の太さ
+	// TableHeaderRuleWidth は見出しの行の下の線の太さ(見出しの下に別の線を引く
+	// テンプレートだけが使う。report)。
+	TableHeaderRuleWidth float64 `json:"tableHeaderRuleWidth"`
+	// CalloutMark は結論の丸い矢印の直径と、引用の人の印の大きさ(その印を描く
+	// テンプレートだけが使う。report)。
+	CalloutMark float64 `json:"calloutMark"`
 
 	ImageMinHeight float64 `json:"imageMinHeight"`           // 画像を縮めてよい下限の高さ
 	CaptionGap     float64 `json:"captionGap" scale:"space"` // 表・画像と説明の文の間

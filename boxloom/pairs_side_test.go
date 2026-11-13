@@ -322,7 +322,8 @@ func TestReportPairsMarks(t *testing.T) {
 			tm := mustTemplate(tmpl)
 			accent, grid, card, white := tm.Theme["accent"], tm.Theme["grid"], tm.Theme["card"], tm.Theme["bg"]
 			chevrons := strings.Count(xml, `prst="chevron"`)
-			ellipses := strings.Count(xml, `prst="ellipse"`)
+			// 引用の人の印(頭の円と肩)と結論の丸い矢印(円と矢印)の円は数えない(#88)。
+			ellipses := strings.Count(xml, `prst="ellipse"`) - strings.Count(xml, `prst="round2SameRect"`) - strings.Count(xml, `prst="rightArrow"`)
 			gridRects := strings.Count(xml, `<a:prstGeom prst="rect"></a:prstGeom>
 <a:solidFill><a:srgbClr val="`+grid+`"/>`)
 			if tmpl != "report" {
