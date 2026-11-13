@@ -106,8 +106,8 @@ func defaultSlides() []SlideDecl {
 	return []SlideDecl{
 		{Name: "content", Heading: "題(短い見出し。1行に収める)", Body: []string{"本文", "lead", "notes", "source"},
 			Meaning: "本文のスライド。type を省くとこれ。言いたいことの文は :::lead に", IR: "{type: content, title, lead?, body}"},
-		{Name: "section", Heading: "章の題", Body: []string{"notes"},
-			Meaning: "章の変わり目(R1)。本文は書けない(目次は本文のスライドに箇条で)", IR: "{type: section, title}"},
+		{Name: "section", Heading: "章・節・項目の題", Body: []string{"notes"},
+			Meaning: "章の変わり目(R1)。{level=1〜3}(1 章・2 節・3 節の中の項目。既定 1)。親の無い level は誤り。本文は書けない(目次は文書の頭の toc: true で作る)", IR: "{type: section, title, level?}"},
 		{Name: "statement", Heading: "言いたいことの1文", Body: []string{"notes", "source"},
 			Meaning: "このスライドで言うことが1文だけ(R2)。根拠はほかのスライドに置く。本文は書けない", IR: "{type: statement, content}"},
 	}
@@ -205,6 +205,7 @@ func frontMatterKeys() []frontMatterKey {
 		{"disclaimer", "文書全体の免責・但し書き(1回だけ書く)。表紙に出す。文中の記法で読む", false, "meta.disclaimer"},
 		{"template", "テンプレートの名前", false, "template"},
 		{"cover", "表紙を出すか(true / false、既定 true)", false, "先頭の {type: cover} のスライド"},
+		{"toc", "表紙の直後に目次を置くか(true / false、既定 false)。level 1・2 の区切りを頁番号つきで並べる(目次のスライドは組み立てで作る)", false, "meta.toc"},
 	}
 }
 
@@ -241,7 +242,7 @@ func bodySyntax() []bodySyntaxItem {
 // markdownRules は記法全体の約束事(2章・3章の要点)。
 func markdownRules() []string {
 	return []string{
-		"`# 題` が1枚のスライドの始まり。行末に {type=種類 variant=名前} を書ける。種類は slides(省けば content)。section・statement は # の行の文だけを持ち、本文は書けない(:::notes と、statement は :::source も書ける)。1枚目の # より前に本文を書くのは誤り",
+		"`# 題` が1枚のスライドの始まり。行末に {type=種類 variant=名前} を書ける。種類は slides(省けば content)。区切りは {type=section level=2} のように階層(1〜3、既定 1)を書ける。section・statement は # の行の文だけを持ち、本文は書けない(:::notes と、statement は :::source も書ける)。1枚目の # より前に本文を書くのは誤り",
 		"`---`(水平線)はスライドの区切りではなく誤り",
 		"小見出し(##)は使えない(IR に小見出しは無い。まとまりの題は囲みの見出しの文で書く)。### 以下の見出しも使えない",
 		"表のセルの中はインライン(強調・コード・リンク)だけ。どの行も見出しと同じ数のセル",

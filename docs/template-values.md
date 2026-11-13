@@ -33,7 +33,16 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 見た目の違いは report が自分の値の表と組み方で持つ。コアの標準の部品・骨組みには条件分岐を
 足していない(dark・light の出力は変わらない)。
 
-**組み方(`report.go`)**:骨組みの部品 `contentHeader` を差し替える(`docs/layers.md` の8.4)。
+**組み方(`report.go`)**:骨組みの部品 `contentHeader`・`section`・`toc` を差し替える(`docs/layers.md` の8.4)。
+
+- 区切り(#86):level 1・2 は frame(全面の基調色に白い枠を置き、54pt の白い太字の題)、
+  level 3 は agenda(左の帯 1/3 を基調色にして親の節の題を白い字で、右に同じ節の項目の
+  一覧を 24pt で。今の項目は直径 24pt の基調色の丸に白い矢印の印と字の色、ほかは
+  `text_muted`)。章の一覧(`sectionTracker`)は出さない。
+- 目次(#86):全面の基調色に白い字。題 28pt の下に白い罫線、章 20pt の太字、節 16pt を
+  `tocIndent` で字下げ、頁番号は右寄せ。フッターは置かない。
+- 白は役割名 `bg`(report の地の色)、測った大きさは段の刻み(`type(54)` など)で書く。
+
 
 - リード文(`:::lead`)を上の見出しに置く:`leadText`(24pt)・基調色(`accent`)・太字。
   2行までに収める想定(越えたときの警告はまだ無い。越えると本文の領域がその分減る)。
@@ -375,6 +384,7 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `sectionTracker` | 真偽。`true` なら、区切りが2つ以上ある文書の区切りのスライドに、章の一覧と現在地を題の下に置く(いまの章は帯がアクセント・題が `text_primary` の太字、ほかは帯が `grid`・題が `text_muted`)。`false` なら置かない |
 | `sectionTrackerText` | 章の一覧の字の大きさ |
 | `sectionTrackerPadding` | 章の一覧の題のまわりの余白(余白の段の上。組み方は値の表の名前だけを書くので、`itemGap` の半分のような計算した値の代わりに置く) |
+| `tocIndent` | 目次(`meta.toc`)の節(level 2)の字下げ(余白の段の上) |
 | `statementText` | 主張(statement)の1文 |
 | `takeawayText` | 結論(takeaway)の1文 |
 | `statValue` `statUnit` `statLabel` | 統計強調(stat)の数・単位・説明 |
@@ -403,7 +413,7 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 間(`statUnit`。dark / light は空=「71%」「38社」と詰める。空でもよいのはこれだけ)。
 後ろの空きも含めて書く。続けた表(`continues`)の各枚の印(`tableContinued`。`{n}` を
 何枚目か、`{m}` をひと続きの枚数に置き換える。両方が無ければ読み込みで誤り。
-dark / light / report は `{n}/{m}`)。
+dark / light / report は `{n}/{m}`)。目次のスライド(`meta.toc`)の題(`toc`。dark / light / report は「目次」)。
 
 `point`・`subPoint`・`pro`・`con` は、PPTX では本文の文字にせず、段落の箇条の印
 (`a:buChar`。色は印の色、字体は印の文字で選ぶ:U+2000 未満は `latin`、以降は

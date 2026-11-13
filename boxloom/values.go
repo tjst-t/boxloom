@@ -69,14 +69,16 @@ type TemplateValues struct {
 	SectionTrackerText float64 `json:"sectionTrackerText" scale:"type"`
 	// SectionTrackerPadding は章の一覧の題の上下左右の余白(左の帯との間も)。
 	SectionTrackerPadding float64 `json:"sectionTrackerPadding" scale:"space"`
-	StatementText         float64 `json:"statementText" scale:"type"` // 主張(statement)の1文
-	TakeawayText          float64 `json:"takeawayText" scale:"type"`  // 結論(takeaway)の1文
-	StatValue             float64 `json:"statValue" scale:"type"`     // 統計強調(stat)の数
-	StatUnit              float64 `json:"statUnit" scale:"type"`      // 数の単位
-	StatLabel             float64 `json:"statLabel" scale:"type"`     // 数の説明
-	QuoteText             float64 `json:"quoteText" scale:"type"`     // 引用(quote)の言葉
-	QuoteMark             float64 `json:"quoteMark" scale:"type"`     // 引用の頭の印
-	QuoteSource           float64 `json:"quoteSource" scale:"type"`   // 引用の出どころ
+	// TocIndent は目次(meta.toc)の節(level 2)の字下げ。
+	TocIndent     float64 `json:"tocIndent" scale:"space"`
+	StatementText float64 `json:"statementText" scale:"type"` // 主張(statement)の1文
+	TakeawayText  float64 `json:"takeawayText" scale:"type"`  // 結論(takeaway)の1文
+	StatValue     float64 `json:"statValue" scale:"type"`     // 統計強調(stat)の数
+	StatUnit      float64 `json:"statUnit" scale:"type"`      // 数の単位
+	StatLabel     float64 `json:"statLabel" scale:"type"`     // 数の説明
+	QuoteText     float64 `json:"quoteText" scale:"type"`     // 引用(quote)の言葉
+	QuoteMark     float64 `json:"quoteMark" scale:"type"`     // 引用の頭の印
+	QuoteSource   float64 `json:"quoteSource" scale:"type"`   // 引用の出どころ
 
 	PointIndentEm float64 `json:"pointIndentEm" unit:"em"` // 入れ子の箇条の字下げ(親の字の大きさの倍)。番号つきの箇条の番号の幅も
 	// OrderedStyle は番号つきの箇条(points の ordered)の1段目の番号の形
@@ -138,6 +140,8 @@ type TemplateMarks struct {
 	// TableContinued は続けた表(continues)の各枚に付ける印。{n} を何枚目か、{m} を
 	// 全部の枚数に置き換える(例 "{n}/{m}")。
 	TableContinued string `json:"tableContinued"`
+	// Toc は目次のスライド(meta.toc)の題。
+	Toc string `json:"toc"`
 }
 
 // GanttValues は Gantt サブシステムの寸法(pt)。既定は subsystems/gantt.json。

@@ -56,10 +56,10 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 
 ```
 文書   { boxloom: "0.1", template?, meta?, slides: [スライド] }
-meta   { title, subtitle?, author?, date?, confidential?, disclaimer? }   日付・機密区分・免責は文書に1回
+meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc? }   日付・機密区分・免責は文書に1回。toc: true で表紙の直後に目次(組み立てで作る)
 スライド  { type: "cover",     variant?, title?, subtitle?, author?, notes? }
          { type: "content",   variant?, title, lead?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead
-         { type: "section",   variant?, title, notes? }          章の区切り(本文なし)
+         { type: "section",   variant?, title, level?, notes? }  章の区切り(本文なし。level は 1 章・2 節・3 項目、既定 1)
          { type: "statement", variant?, content, source?, notes? }        言うことが1文だけ(本文なし)
 ブロック  paragraph | points | compare | note | takeaway | stat | quote | columns | table | image | gallery | subsystem | pairs   (どれも type で選ぶ。pairs は標準でない型)
          takeaway { content }                                     本文の中の結論の1文
@@ -227,6 +227,18 @@ Schema では書けないので `boxloom check` が見る。
 - **`quote` の `source` は必須。** 出どころの無い他人の言葉は R11 の悪い例になるため。
   引用符は IR に書かない(付けるか・何を付けるかはテンプレートの印 `marks.quote`)。
 - Schema で書けない「見える文字があるか」は `boxloom check` の `empty-text`(下の表)。
+
+### 9.1 区切りの階層と目次(#86)
+
+- **区切りの `level`**(1〜3、既定 1)は意味だけ:1 章・2 節・3 節の中の項目。見た目は
+  テンプレートの骨組みの `section` が決める(標準は階層によらず同じ。report は 1・2 を
+  frame、3 を agenda)。親の無い階層は Schema で書けないので `boxloom check` の `section-level`。
+- **目次は IR に書かない。** `meta.toc: true` だけを書き、組み立てで表紙の直後に1枚足す。
+  頁番号は組み立てたあとに決まるもので、作者が書いて合わせるものではないため。目次に
+  載せるのは level 1・2(項目まで並べると目次が本文の代わりになる)。
+- 目次を足すと頁番号は IR の番号とずれる。フッター・目次の番号は頁の番号、`boxloom check`
+  の場所(`/slides/N`)と容量は IR の番号(作者が直す場所)。目次のスライドの警告は場所
+  `/meta/toc`。
 
 ### 10. 並列のまとまり・表・画像(#20・#21・#22)
 
@@ -441,6 +453,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 |---|---|
 | `unique-id` | id は文書全体で一意(スライドやチャートをまたいでも重ならない) |
 | `target-exists` | 注釈の `target` が、同じチャートのグループか行の id を指す。shapes のコネクタの `from`・`to` が、同じ図の図形の id を指す(別のチャート・図の id なら、その場所を添えて断る) |
+| `section-level` | 区切りの `level` に親が無い(level 2 の前に level 1 が無い・level 3 の前に、最後の level 1 の後の level 2 が無い) |
 | `date-order` | `from` が `to` より前(同じ日も断る。長さ0の区間は描けない) |
 | `date-valid` | 日付が暦の上で実在する(Schema の正規表現は 2028-02-30 を通す) |
 | `within-span` | Gantt の区間・リスク・注記・目盛り・節目・注釈・軸を切る日付が、`span` の中にある(外の日付は軸の端に押し込まれて、誤った絵になるため) |

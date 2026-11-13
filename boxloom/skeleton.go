@@ -32,10 +32,11 @@ const (
 	skelStatement     = "statement"     // 主張のスライド
 	skelFooter        = "footer"        // 頁番号・機密区分
 	skelSource        = "source"        // 出典の行
+	skelToc           = "toc"           // 目次のスライド(meta.toc。toc.go)
 )
 
 // skeletonNames は骨組みの部品の名前の一覧(override できるのはこれだけ)。
-var skeletonNames = []string{skelCover, skelContentHeader, skelContentFrame, skelSection, skelStatement, skelFooter, skelSource}
+var skeletonNames = []string{skelCover, skelContentHeader, skelContentFrame, skelSection, skelStatement, skelFooter, skelSource, skelToc}
 
 // frameMark は骨組みの枠の印(Spec.frame)。
 type frameMark uint8
@@ -48,13 +49,20 @@ const (
 
 // skeletonContext は骨組みの部品に渡すもの:テンプレート・文書・スライドの番号と
 // スライド、ほかの骨組みの部品を組む口(part)、本文のブロックを組む口(blocks)。
+// 目次のスライド(toc.go)は IR に無いので index は tocSlide、slide は組み立てで作ったもの。
 type skeletonContext struct {
 	t     *Template
 	deck  *IRDeck
 	index int
 	slide *IRSlide
 	st    *skeletonState
+	// pages は組み立てたあとの頁の並び(deckPages)、page はこのスライドの頁(0 から)。
+	pages []int
+	page  int
 }
+
+// tocEntries は目次に載せる区切り(level 1・2)と頁番号。
+func (ctx skeletonContext) tocEntries() []tocEntry { return tocEntries(ctx.deck, ctx.pages) }
 
 // skeletonState は1枚の組み立ての中で部品どうしが分け合うもの。
 type skeletonState struct {
@@ -161,7 +169,8 @@ func defaultSkeleton() *skeletonRegistry {
 		skelContentFrame:  skeletonFunc(contentFrame),
 		skelSection:       skeletonFunc(func(ctx skeletonContext) (*Spec, error) { return ctx.t.section(ctx.deck, ctx.index, ctx.slide), nil }),
 		skelStatement:     skeletonFunc(statementFrame),
-		skelFooter:        skeletonFunc(func(ctx skeletonContext) (*Spec, error) { return ctx.t.footer(ctx.deck, ctx.index), nil }),
+		skelFooter:        skeletonFunc(func(ctx skeletonContext) (*Spec, error) { return ctx.t.footer(ctx.deck, ctx.page, len(ctx.pages)), nil }),
+		skelToc:           skeletonFunc(tocFrame),
 		skelSource: skeletonFunc(func(ctx skeletonContext) (*Spec, error) {
 			if ctx.slide.Source == nil {
 				return nil, nil
@@ -183,8 +192,14 @@ var standardSkeleton = defaultSkeleton()
 // buildSkeleton は i 枚目を骨組みの表で組み、印から本文の箱・ページに収まるべき箱・
 // 題の葉を見つける(トークンのまま。解決は buildSlide)。
 func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
-	s := &d.Slides[i]
-	ctx := skeletonContext{t: t, deck: d, index: i, slide: s, st: &skeletonState{}}
+	pages := deckPages(d)
+	var ctx skeletonContext
+	if i == tocSlide {
+		ctx = t.tocContext(d, pages)
+	} else {
+		ctx = skeletonContext{t: t, deck: d, index: i, slide: &d.Slides[i], st: &skeletonState{}, pages: pages, page: pageIndex(pages, i)}
+	}
+	s := ctx.slide
 	var name, mainWhat string
 	switch s.Type {
 	case "cover":
@@ -195,6 +210,8 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 		name, mainWhat = skelSection, "section title"
 	case "statement":
 		name, mainWhat = skelStatement, "statement"
+	case "toc":
+		name, mainWhat = skelToc, "table of contents"
 	default:
 		return nil, fmt.Errorf("unknown slide type %q", s.Type)
 	}
@@ -205,7 +222,7 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 	if root == nil {
 		return nil, fmt.Errorf("%s: no slide", name)
 	}
-	out := &BuiltSlide{Root: root, Notes: s.Notes, Warnings: ctx.st.warns}
+	out := &BuiltSlide{Root: root, Notes: s.Notes, Warnings: ctx.st.warns, SlideIndex: i}
 	bodies, mains := framesOf(root)
 	switch s.Type {
 	case "content":
@@ -214,7 +231,7 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 		}
 		out.Body = bodies[0]
 		out.Title = placeholderLeaf(root, "title")
-	case "section", "statement":
+	case "section", "statement", "toc":
 		if len(bodies) != 0 || len(mains) != 1 {
 			return nil, fmt.Errorf("%s: a %s slide needs exactly one main box (markFrame(frameMain)) and no body box; found %d and %d", name, s.Type, len(mains), len(bodies))
 		}

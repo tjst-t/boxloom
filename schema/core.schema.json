@@ -276,6 +276,10 @@
         "disclaimer": {
           "description": "文書全体の免責・但し書き(1回だけ書く)。テンプレートが表紙に出す。",
           "$ref": "#/$defs/inline"
+        },
+        "toc": {
+          "description": "表紙の直後に目次のスライドを置くか(既定 false)。目次は IR に書かず、組み立てで作る(level 1・2 の区切りと、組み立てたあとの頁番号)。",
+          "type": "boolean"
         }
       },
       "required": [
@@ -441,6 +445,12 @@
         "title": {
           "description": "章の題。",
           "$ref": "#/$defs/inline"
+        },
+        "level": {
+          "description": "区切りの階層(1 章・2 節・3 節の中の項目。既定 1)。親の無い階層(1 より前の 2 など)は boxloom check の誤り(section-level)。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
         },
         "notes": {
           "$ref": "#/$defs/notes"

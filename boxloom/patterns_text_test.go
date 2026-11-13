@@ -309,7 +309,7 @@ func TestStatementOverflowWarning(t *testing.T) {
 func TestSchemaListsTextPatterns(t *testing.T) {
 	out := schemaOut(t, "light")
 	md := out["markdown"].(map[string]any)
-	if !reflect.DeepEqual(md["slideAttributes"], []any{"type", "variant"}) {
+	if !reflect.DeepEqual(md["slideAttributes"], []any{"type", "variant", "level"}) {
 		t.Errorf("slideAttributes = %v", md["slideAttributes"])
 	}
 	tm := out["templates"].([]any)[0].(map[string]any)

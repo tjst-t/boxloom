@@ -11,7 +11,7 @@ import (
 
 // 骨組みの7つの部品が標準の表にあり、どのテンプレートも写しを持つ。
 func TestSkeletonRegistryNames(t *testing.T) {
-	want := []string{"contentFrame", "contentHeader", "cover", "footer", "section", "source", "statement"}
+	want := []string{"contentFrame", "contentHeader", "cover", "footer", "section", "source", "statement", "toc"}
 	if got := standardSkeleton.names(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("skeleton = %v, want %v", got, want)
 	}

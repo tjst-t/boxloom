@@ -36,6 +36,9 @@ type IRMeta struct {
 	Confidential Inline `json:"confidential,omitempty"`
 	// Disclaimer は文書全体の免責・但し書き(表紙に1回)。
 	Disclaimer Inline `json:"disclaimer,omitempty"`
+	// Toc は表紙の直後に目次のスライドを置くか(既定 false)。目次のスライドは IR に
+	// 書かず、組み立てで作る(level 1・2 の区切りと、組み立てたあとの頁番号)。
+	Toc bool `json:"toc,omitempty"`
 }
 
 // IRSlide はスライド。Type で cover / content / section / statement を選ぶ。
@@ -48,8 +51,11 @@ type IRSlide struct {
 	Content  Inline // statement だけ(言いたいことの1文)
 	Source   Inline // content・statement: 出典(本文の流れの外。本文の下・フッターの上)
 	Lead     Inline // content だけ: リード文(題の下に置く、このスライドで言いたいことの文)
-	Body     []IRBlock
-	Notes    string
+	// Level は section だけ: 区切りの階層(1 章・2 節・3 節の中の項目)。書かなければ 0
+	// (1 と同じ。sectionLevel で読む)。
+	Level int
+	Body  []IRBlock
+	Notes string
 }
 
 // IRBlock は本文のブロック。Type で種類を選び、種類ごとに使う欄が違う。
@@ -393,6 +399,7 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 			Type    string `json:"type"`
 			Variant string `json:"variant"`
 			Title   Inline `json:"title"`
+			Level   int    `json:"level"`
 			Notes   string `json:"notes"`
 		}
 		if err := strictUnmarshal(b, &v); err != nil {
@@ -401,7 +408,10 @@ func (s *IRSlide) UnmarshalJSON(b []byte) error {
 		if v.Title == nil {
 			return fmt.Errorf("section slide needs \"title\"")
 		}
-		*s = IRSlide{Type: v.Type, Variant: v.Variant, Title: v.Title, Notes: v.Notes}
+		if v.Level != 0 && (v.Level < 1 || v.Level > 3) {
+			return fmt.Errorf("level: section level must be 1, 2 or 3 (got %d)", v.Level)
+		}
+		*s = IRSlide{Type: v.Type, Variant: v.Variant, Title: v.Title, Level: v.Level, Notes: v.Notes}
 		return nil
 	case "statement":
 		var v struct {

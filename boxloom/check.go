@@ -277,6 +277,7 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 	}
 	slides, _ := getPath(doc, "slides").([]any)
 	c.checkTableChains(slides)
+	c.checkSectionLevels(slides)
 	for si, s := range slides {
 		sp := fmt.Sprintf("/slides/%d", si)
 		sm, _ := s.(map[string]any)
@@ -317,6 +318,34 @@ func (c *checker) walkDoc(doc any, tm *Template) {
 		}
 	})
 	c.checkDates(doc)
+}
+
+// checkSectionLevels は区切りの階層(level)の親を見る。level n(2・3)の区切りは、
+// その前に level n-1 の区切りがあり、その後に n-1 より浅い区切りが来ていないこと
+// (1 より前の 2・章を変えた後の 3 は親が無い)。
+func (c *checker) checkSectionLevels(slides []any) {
+	var have [4]bool
+	for si, s := range slides {
+		sm, _ := s.(map[string]any)
+		if sm["type"] != "section" {
+			continue
+		}
+		lv := 1
+		if f, ok := sm["level"].(float64); ok {
+			lv = int(f)
+		}
+		if lv < 1 || lv > 3 {
+			continue // 範囲の誤りは Schema が出す
+		}
+		if lv > 1 && !have[lv-1] {
+			c.add(fmt.Sprintf("/slides/%d/level", si),
+				fmt.Sprintf("section level %d has no parent: no level %d section comes before it (since the last shallower section)", lv, lv-1), "section-level")
+		}
+		have[lv] = true
+		for k := lv + 1; k < len(have); k++ {
+			have[k] = false
+		}
+	}
 }
 
 // checkBodyBlock は本文の1つのブロックの意味の検査。標準でない型は、型の語彙の
@@ -868,6 +897,14 @@ func figureWarnPointer(loc string) string {
 }
 
 func warningIssue(file, w string) Issue {
+	// 目次のスライド(IR に無い)の警告は文書の頭の toc を指す。
+	if rest, ok := strings.CutPrefix(w, tocWarnPrefix); ok {
+		is := warningIssue(file, "slide 1: "+rest)
+		if p, ok := strings.CutPrefix(is.Path, "/slides/0"); ok {
+			is.Path = "/meta/toc" + p
+		}
+		return is
+	}
 	m := warnRe.FindStringSubmatch(w)
 	if m == nil {
 		return Issue{File: file, Message: w, Code: "warning"}

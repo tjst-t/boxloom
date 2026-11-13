@@ -78,6 +78,9 @@ type BuiltSlide struct {
 	MainWhat string
 	// Title は本文のスライドの題の葉(1行に収まるかを測る。ほかでは nil)。
 	Title *Spec
+	// SlideIndex は組んだ元の IR のスライドの番号(d.Slides の添字)。組み立てで作った
+	// 目次のスライド(meta.toc)は tocSlide。
+	SlideIndex int
 }
 
 // BuildDeck は IR の全スライドを組む。誤りは IR の中の場所を添えて返す。
@@ -91,10 +94,14 @@ func (t *Template) BuildDeck(d *IRDeck) ([]*BuiltSlide, error) {
 	if err := linkTableChains(d); err != nil {
 		return nil, err
 	}
+	// 頁の並び(目次があれば表紙の直後に足す。toc.go)の順に組む。
 	var out []*BuiltSlide
-	for i := range d.Slides {
+	for _, i := range deckPages(d) {
 		s, err := t.buildSlide(d, i)
 		if err != nil {
+			if i == tocSlide {
+				return nil, fmt.Errorf("meta.toc: %w", err)
+			}
 			return nil, fmt.Errorf("slides[%d]: %w", i, err)
 		}
 		out = append(out, s)
@@ -137,8 +144,10 @@ func (t *Template) buildSlide(d *IRDeck, i int) (*BuiltSlide, error) {
 // buildSlideTokens は i 枚目をトークンのまま組む(解決はしない)。組むのは骨組みの
 // 部品の表(skeleton.go)。
 func (t *Template) buildSlideTokens(d *IRDeck, i int) (*BuiltSlide, error) {
-	if err := t.checkVariant(d.Slides[i].Variant); err != nil {
-		return nil, err
+	if i != tocSlide {
+		if err := t.checkVariant(d.Slides[i].Variant); err != nil {
+			return nil, err
+		}
 	}
 	return t.buildSkeleton(d, i)
 }
@@ -308,11 +317,12 @@ func (t *Template) leadText(in Inline) *Spec {
 }
 
 // footer は本文のスライドの下の行(左に作者と機密区分、右に「何枚目 / 全部」)。
+// page は組み立てたあとの頁(0 から。目次を足せば IR の番号とずれる)、total は全部の頁。
 // 番号はスライドの番号の置き場(sldNum)の中の番号の欄(a:fld slidenum)なので、
 // PowerPoint でスライドを足す・並べ替えると振り直る。全部の枚数の欄は PowerPoint に
 // 無いので「/ 全部」は組み立てたときの数の文字のまま。左の欄はフッターの置き場(ftr。
 // 作者と機密区分の両方があれば作者の側)。
-func (t *Template) footer(d *IRDeck, i int) *Spec {
+func (t *Template) footer(d *IRDeck, page, total int) *Spec {
 	left := ""
 	if d.Meta != nil && d.Meta.Author != nil {
 		left = d.Meta.Author.Plain()
@@ -336,8 +346,8 @@ func (t *Template) footer(d *IRDeck, i int) *Spec {
 	return Row([]*Spec{
 		leftSpec,
 		RichTextNode([]TextRun{
-			{Text: fmt.Sprint(i + 1), role: "text_muted", Field: "slidenum"},
-			{Text: fmt.Sprintf(" / %d", len(d.Slides)), role: "text_muted"},
+			{Text: fmt.Sprint(page + 1), role: "text_muted", Field: "slidenum"},
+			{Text: fmt.Sprintf(" / %d", total), role: "text_muted"},
 		}, tokSize("small"), WithAlign("right"), WithPlaceholder("sldNum")),
 	}, WithJustify(JustifySpaceBetween))
 }
@@ -621,7 +631,10 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 	var pages []*PPTXBuilder
 	var all []string
 	caps := []SlideCapacity{}
-	for i, b := range built {
+	for _, b := range built {
+		// 警告と容量の場所は IR のスライドの番号(目次のスライドは IR に無いので
+		// 警告の頭は "table of contents"、容量は出さない)。
+		i := b.SlideIndex
 		v := t.Values
 		computeLayout(b.Root, 0, 0, v.PageW, v.PageH)
 
@@ -692,6 +705,10 @@ func (t *Template) renderPages(d *IRDeck) ([]*PPTXBuilder, []string, []SlideCapa
 		p.SetNotes(b.Notes)
 		pages = append(pages, p)
 		for _, w := range warnings {
+			if i == tocSlide {
+				all = append(all, tocWarnPrefix+w)
+				continue
+			}
 			all = append(all, fmt.Sprintf("slide %d: %s", i+1, w))
 		}
 	}

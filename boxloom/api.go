@@ -139,7 +139,7 @@ func Build(w io.Writer, deck *IRDeck, opt BuildOptions) (*BuildResult, error) {
 	if err := WriteDeck(w, pages, title); err != nil {
 		return nil, err
 	}
-	return &BuildResult{Template: t.Name, Slides: len(deck.Slides), Warnings: warnings}, nil
+	return &BuildResult{Template: t.Name, Slides: len(pages), Warnings: warnings}, nil
 }
 
 // Schema は `boxloom schema` の JSON(AI に渡す一覧。docs/schema-command.md)を

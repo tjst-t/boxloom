@@ -45,6 +45,7 @@
     "sectionTracker": true,
     "sectionTrackerText": 14,
     "sectionTrackerPadding": 4,
+    "tocIndent": 24,
     "statementText": 36,
     "takeawayText": 16,
     "statValue": 36,
@@ -84,7 +85,8 @@
     "quote": "“",
     "quoteSource": "— ",
     "statUnit": "",
-    "tableContinued": "{n}/{m}"
+    "tableContinued": "{n}/{m}",
+    "toc": "目次"
   },
   "fonts": {
     "latin": "Noto Sans CJK JP",

@@ -88,12 +88,19 @@ YAML で書く。使えるキー:
 | `disclaimer` | 文書全体の免責・但し書き。表紙に1回だけ出す | |
 | `template` | テンプレートの名前 | |
 | `cover` | 表紙を出すか(既定 `true`) | |
+| `toc` | 表紙の直後に目次を置くか(既定 `false`)。level 1・2 の区切りを頁番号つきで並べる | |
 
 表紙は文書の頭から作る。表紙のためにスライドを書く必要はない。
 IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭に `{type: "cover"}` の
 スライドが置かれる。`template` は IR の根の `template` になる。文書の頭を書かなければ
 `meta` も表紙も無い。`title`・`subtitle`・`author`・`confidential`・`disclaimer` の値は
 本文と同じ文中の記法(`**…**` など)で読む。
+
+`toc: true` なら、組み立てで表紙の直後(表紙が無ければ先頭)に目次のスライドを1枚足す
+(IR は `meta.toc`。目次のスライドは IR に書かない)。目次には区切りのうち level 1(章)と
+2(節)を、目次を足したあとの頁番号つきで並べる。見た目はテンプレートの骨組みの `toc`。
+フッターの頁番号も目次を数える。`boxloom check` の誤り・警告の場所(`/slides/N`)は IR の
+スライドの番号のまま。
 
 「数字はすべて架空」「社外秘」のような文書全体に掛かる断りは、スライドごとの
 `:::note` に繰り返さず、`disclaimer`・`confidential` に1回だけ書く。
@@ -102,14 +109,15 @@ IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭�
 
 - `# 題` が1枚の始まり。次の `#` か文書の終わりまでがそのスライド。
 - `#` の行の末尾に属性を `{…}` で付けられる: `# 論点 {variant=dense}`。
-  使える属性は `type`(スライドの種類)と `variant`(テンプレートが名乗る名前)。
+  使える属性は `type`(スライドの種類)と `variant`(テンプレートが名乗る名前)と、
+  区切りだけの `level`(下)。
   スライドの `id` は予定(IR 第一版に無い)。
 - **スライドの種類は `type` で選ぶ**(省けば `content`)。`#` の行の文の意味は種類で決まる:
 
   | `type` | `#` の行の文 | 後ろに書けるもの | IR |
   |---|---|---|---|
   | `content`(既定) | 題(短い見出し。1行) | 本文・`:::lead`・`:::notes`・`:::source` | `{type: "content", title, lead?, body}` |
-  | `section` | 章の題 | `:::notes` だけ | `{type: "section", title}` |
+  | `section` | 章・節・項目の題 | `:::notes` だけ | `{type: "section", title, level?}` |
   | `statement` | 言いたいことの1文 | `:::notes`・`:::source` だけ | `{type: "statement", content}` |
 
   ```
@@ -125,6 +133,11 @@ IR では、文書の頭は `meta` になり、`cover` が `true` なら先頭�
   - `section`・`statement` の後ろに本文(段落・箇条・囲み・コードブロック)を書くと
     `misplaced-content`。区切りに目次を足す・主張に理由の箇条を足すのは、
     `docs/patterns.md` の R1・R2 の悪い例なので、記法で止める。
+  - **区切りの階層**は `level`(1 章・2 節・3 節の中の項目。既定 1):
+    `# 返却の流れ {type=section level=2}`。親の無い階層(1 より前の 2、章を変えた後の 3 など)は
+    `boxloom check` の `section-level`。1〜3 のほかは `invalid-value`、区切りでないスライドに
+    書けば `misplaced-content`。見た目はテンプレートが決める(標準の区切りは階層によらず同じ。
+    report は 1・2 を全面の基調色の枠、3 を親の節の題と兄弟の項目の一覧にする)。
   - `type=cover` は誤り(表紙は文書の頭から作る。3.1)。知らない種類は `invalid-value`
     で、選べる名前を `expected` に入れる。
   - 理由:種類を `#` の行の属性にしたのは、どの種類も「1枚の始まり」と「1つの文」を

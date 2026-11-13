@@ -202,11 +202,15 @@ func layoutDeck(deck *IRDeck, opt BuildOptions, lines lineMap) (*LayoutDump, err
 	}
 	v := t.Values
 	out := &LayoutDump{Format: LayoutFormat, Template: t.Name, Page: LayoutSize{v.PageW, v.PageH}, Slides: []LayoutSlide{}}
-	for i, b := range built {
+	for _, b := range built {
 		computeLayout(b.Root, 0, 0, v.PageW, v.PageH)
-		sp := fmt.Sprintf("/slides/%d", i)
+		// 目次のスライド(meta.toc)は IR に無いので、場所は文書の頭の toc。
+		sp, typ := "/meta/toc", "toc"
+		if i := b.SlideIndex; i != tocSlide {
+			sp, typ = fmt.Sprintf("/slides/%d", i), deck.Slides[i].Type
+		}
 		d := &layoutDumper{slide: sp, lines: lines, body: b.Body, groups: map[*Spec]columnInfo{}, pairParts: map[*Spec]string{}}
-		out.Slides = append(out.Slides, LayoutSlide{Path: sp, Line: lines.Line(sp), Type: deck.Slides[i].Type, Root: d.node(b.Root, sp)})
+		out.Slides = append(out.Slides, LayoutSlide{Path: sp, Line: lines.Line(sp), Type: typ, Root: d.node(b.Root, sp)})
 	}
 	return out, nil
 }

@@ -18,9 +18,9 @@
         "required": ["path", "type", "root"],
         "additionalProperties": false,
         "properties": {
-          "path": {"description": "IR のスライドの場所(/slides/S)。", "type": "string", "pattern": "^/slides/[0-9]+$"},
+          "path": {"description": "IR のスライドの場所(/slides/S)。組み立てで作った目次のスライド(meta.toc)は /meta/toc。", "type": "string", "pattern": "^(/slides/[0-9]+|/meta/toc)$"},
           "line": {"$ref": "#/$defs/line"},
-          "type": {"enum": ["cover", "content", "section", "statement"]},
+          "type": {"enum": ["cover", "content", "section", "statement", "toc"]},
           "root": {"$ref": "#/$defs/node"}
         }
       }

@@ -1056,6 +1056,7 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 		if v, ok := attrs["variant"]; ok {
 			sl.set("variant", v)
 		}
+		level, hasLevel := p.sectionLevel(attrs, s, path, typ)
 		body, notes := splitNotes(s.items)
 		body, sources := splitSource(body)
 		body, leads := splitLead(body)
@@ -1068,6 +1069,9 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 			sl.set("body", p.blocks(body, path+"/body"))
 		case "section":
 			sl.set("title", p.parseInline(s.title, path+"/title"))
+			if hasLevel {
+				sl.set("level", level)
+			}
 			p.noSlideBody(body, path, typ)
 		case "statement":
 			sl.set("content", p.parseInline(s.title, path+"/content"))
@@ -1105,7 +1109,7 @@ func (p *mdParser) toIR(doc *mdDoc) *jobj {
 }
 
 // slideAttributeNames は「# 題 {…}」に書ける属性。
-var slideAttributeNames = []string{"type", "variant"}
+var slideAttributeNames = []string{"type", "variant", "level"}
 
 // slideType は「# 題 {type=…}」のスライドの種類(省けば content)。表紙は文書の頭から
 // 作るので type=cover は誤り。
@@ -1126,6 +1130,25 @@ func (p *mdParser) slideType(attrs map[string]string, s *mdSlide, path string) s
 	}
 	p.fail(s.line, s.attrsCol, path+"/type", codeInvalidValue, fmt.Sprintf("スライドの種類 %q はありません", typ), names, hint)
 	return "content"
+}
+
+// sectionLevel は「# 題 {type=section level=n}」の階層(1〜3)。区切りのほかのスライドに
+// 書いたら誤り。
+func (p *mdParser) sectionLevel(attrs map[string]string, s *mdSlide, path, typ string) (int, bool) {
+	v, ok := attrs["level"]
+	if !ok {
+		return 0, false
+	}
+	if typ != "section" {
+		p.fail(s.line, s.attrsCol, path, codeMisplaced, fmt.Sprintf("level は区切りのスライド(type=section)にだけ書けます(このスライドは type=%s)", typ), nil, "{type=section level=2} のように書きます")
+		return 0, false
+	}
+	switch v {
+	case "1", "2", "3":
+		return int(v[0] - '0'), true
+	}
+	p.fail(s.line, s.attrsCol, path+"/level", codeInvalidValue, fmt.Sprintf("区切りの階層 %q はありません", v), []string{"1", "2", "3"}, "1 が章、2 が節、3 が節の中の項目です")
+	return 0, false
 }
 
 // noSlideBody は本文を持たないスライド(区切り・主張)に本文を書いた誤りを出す。
@@ -1195,6 +1218,15 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 				continue
 			}
 			cover = b
+		case "toc":
+			b, ok := yBool(v)
+			if !ok {
+				p.fail(line, v.col, path, codeInvalidValue, "toc は true か false で書いてください", []string{"true", "false"}, "")
+				continue
+			}
+			if b {
+				meta.set("toc", true)
+			}
 		default:
 			p.fail(line, 1, "/meta", codeUnknownKey, fmt.Sprintf("文書の頭にキー %s はありません", key), allowed, "")
 		}
@@ -1203,9 +1235,9 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 		p.fail(n.line, 1, "/meta", codeMissingKey, "文書の頭に title がありません", []string{"title"}, "")
 		return nil, cover
 	}
-	// meta の中の順を IR の例と揃える(title, subtitle, author, date, confidential, disclaimer)。
+	// meta の中の順を IR の例と揃える(title, subtitle, author, date, confidential, disclaimer, toc)。
 	ordered := &jobj{}
-	for _, k := range []string{"title", "subtitle", "author", "date", "confidential", "disclaimer"} {
+	for _, k := range []string{"title", "subtitle", "author", "date", "confidential", "disclaimer", "toc"} {
 		for i, kk := range meta.keys {
 			if kk == k {
 				ordered.set(k, meta.vals[i])
