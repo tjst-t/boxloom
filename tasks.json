@@ -2190,7 +2190,7 @@
       "number": 94,
       "kind": "task",
       "title": "matrix の印の見た目:丸にチェック、セルの面を塗らない、行の題に説明の箇条",
-      "status": "in-progress",
+      "status": "done",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template"
@@ -2200,12 +2200,12 @@
       "labels": [],
       "body": "## なぜ\n#82 の原因1・4。読む資料の「要因×拠点」の対応表は、次の形で書かれている。\n- セルに面を塗らない。\n- 当てはまるセルだけ、基調色の丸に白いチェックを描き、その下に短い文(参照の頁 p.35 など)を置く。当てはまらないセルは空ける。\n- 行の題は、題の下に小さい箇条(説明)を持つ。\n- 列の見出しの上に、列の群の名前(2列・3列をまたぐ)を置く。\n\n## 決め事(サブシステムの層。コアは変えない)\n- **IR(matrix の data)**:\n  - 行に任意の `detail`(文か文の列)を足す。\n  - `columnGroups?: [{title, span}]` を足す。span の合計が列の数と違うと、check の誤り。\n- **見た目**:値の表の subsystems.matrix に `cellStyle` を足す(`filled` が今、`mark` が新しい形)。\n  - mark では、support は丸にチェックを描き、none は何も描かない。その他の状態は、丸をその状態の色で塗る。\n  - セルの text は、丸の下に小さい字で置く。\n  - report は mark にする。dark・light は今のまま。\n- 直すもの:docs/subsystem.md の11節・content-syntax.md 3.5。",
       "doneWhen": "matrix の行の detail と columnGroups が読め check が span の誤りを返す/report でセルが塗られず support が丸とチェックで出ることを試験で確かめる/dark・light の既存の出力が変わらない/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/matrix-check-style）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:31:17.139Z",
-      "updatedAt": "2026-11-13T03:57:59.533Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T04:13:00.860Z",
+      "closedAt": "2026-11-13T04:13:00.860Z",
       "extra": {}
     },
     {
