@@ -2166,7 +2166,7 @@
       "number": 93,
       "kind": "task",
       "title": "スライドの隅の印(marker)と、今の項目のパンくず",
-      "status": "in-progress",
+      "status": "done",
       "parent": "sample-fidelity",
       "dependsOn": [
         "green-template",
@@ -2177,12 +2177,12 @@
       "labels": [],
       "body": "## なぜ\n#82 の原因4。読む資料の詳細のページでは、いまどのパターン・どの要因の話かを、次の2つで示す。\n- 右上の隅:三角の地(濃い色)を置き、丸の中に短い印(1・2・A・B)を置く。\n- その左:小さい字(10pt・薄い字)で、今の項目の名前(パンくず)を置く。\n\n## 決め事\n- **意味(コアの IR)**:スライドの属性 `marker` を足す。\n  - 空白を含まない短い文で、2字まで。\n  - Markdown は `# 題 {marker=A}`、IR はスライドの欄 marker。\n  - content のスライドだけに付けられる。\n- **パンくずは書かせず、自動で作る**:そのスライドより前で最も近い区切りのうち、いちばん深い level(#86)の区切りの題を使う。\n- **骨組み**:\n  - 標準の contentHeader は marker を描かない(今のまま)。\n  - report の contentHeader の差し替え(report が Go で持つ)が、隅の印とパンくずを描く。\n    - 隅の三角は幅・高さ 48pt。\n    - 色は値の表の役割(隅の印の地)で書く。\n- 直すもの:docs/content-syntax.md 3.2・ir.md。dark・light で marker を書いたときの扱い(描かない。check で情報を出すかどうか)も書く。",
       "doneWhen": "marker が IR・Markdown・Schema で読める/report で隅の印とパンくず(直前のいちばん深い区切りの題)が出ることを試験で確かめる/dark・light の golden が変わらない/tools/ci.sh go python pptx が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/slide-marker-breadcrumb）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-13T00:31:17.139Z",
-      "updatedAt": "2026-11-13T03:51:01.613Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-13T04:05:12.741Z",
+      "closedAt": "2026-11-13T04:05:12.741Z",
       "extra": {}
     },
     {
