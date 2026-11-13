@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://boxloom.invalid/schema/ir/0.1/subsystems/cycle.schema.json",
   "title": "Boxloom IR: cycle subsystem (0.1)",
-  "description": "輪に並んだ段(繰り返す過程)。段は3〜6つで、上から時計回りにドーナツの扇形で並び、扇の塗りは基調色の濃淡。各段の番号の丸は輪の上、題と detail は輪の外に置く。縦横比を保つ図で、余った幅は spare-width で知らせる。並列のまとまり(columns)の中にも置ける(左に図・右に段ごとの説明)。座標・色・角度は書けない。",
+  "description": "輪に並んだ段(繰り返す過程)。段は3〜6つで、上から時計回りにドーナツの扇形で並び、扇の塗りは基調色の濃淡。番号の丸は輪の外の縁に、題は扇の中に、detail は輪の外に置く(題は扇に入る短い名前にする)。縦横比を保つ図で、余った幅は spare-width で知らせる。並列のまとまり(columns)の中にも置ける(左に図・右に段ごとの説明)。座標・色・角度は書けない。",
   "type": "object",
   "properties": {
     "type": {

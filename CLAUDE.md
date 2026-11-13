@@ -220,8 +220,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `cycle.go` = 輪に並んだ段(cycle、#91)。段(3〜6)を上から時計回りに本物の `blockArc` の扇で
     並べ、基調色の濃淡で塗る。番号の丸は輪の外の縁、題は扇の中(扇に収まる枠を測って探す)、
     detail は輪の外。縦横比を保つ(FixedAspect、余りは spare-width)。columns の中に置ける
-    サブシステムは chart と cycle(`ir.go` の `columnSubsystems`)。`docs/subsystem.md` の11節
-    詳細は `docs/subsystem.md` の11節
+    サブシステムは chart と cycle(`ir.go` の `columnSubsystems`)。詳細は `docs/subsystem.md` の11節
   - `phases.go` = フェーズの図(phases)。段の山形(左端は homePlate、続きは chevron。先の深さは
     `ShapeOpts.Depth`)・段をまたぐ群の帯・段ごとに縦に積む番号つきの箱(題と補足。補足の列は
     段落の箇条)。番号は段をまたいで通しで、形は値の表 `subsystems.phases.numberStyle`(report は
