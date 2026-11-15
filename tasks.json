@@ -3508,6 +3508,29 @@
       "updatedAt": "2026-11-15T13:24:39.308Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "fit-columns-152",
+      "number": 156,
+      "kind": "task",
+      "title": "-fit で columns を列ごとに別のスライドへ分ける動き(#152)を外す",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [
+        "repro-cleanup"
+      ],
+      "body": "## なぜ\nサンプルの再現の中で #152(commit 79766d0・3cede2f)を入れた。-fit で非常用の段でも入らない columns を、列ごとに続きのスライドへ分ける。だが columns の意味は「まとまりを横に並べて見比べる」で、列を別の枚に分けると並べる意味が壊れる。人が決めた -fit の分け方(Memory)は「表は行・対は対・箇条は項目」だけで、columns は「分けない」側だった。中身を書き直すべきところをエンジンが別の形に変えるのは、Boxloom の方針(収まらなければ作者に知らせる)と合わない。\n\n## やること\n- fit_split_columns.go・fit_split_columns_test.go を消し、fit_split.go・fit_emergency.go・fit_shrink.go・capacity.go・hints.go・template.go の #152 の分岐を外す。動きは #152 の前に戻す(非常用の段でも入らない columns は誤り)。\n- 誤りの hint の「あと N pt 足りません」と直し方(列を別のスライドに分ける・図を別のスライドに移す・文を削る)、および capacity.fitShort は、columns の分けとは関係なく役に立つなら残す。columns を分けたことを前提にした文だけ外す。\n- TestFitBrokenEveryStepIsError を #152 の前の形に戻す(matrix の列を戻すなど)。\n- docs/build.md・docs/ir.md(fit-split の行・#152 の段落)・SKILL.md・CLAUDE.md・cmd/boxloom/mcp.go の説明から #152 を外す。\n\n## 確かめ方\n非常用の段でも入らない2列の columns を -fit で build すると、列ごとの分けは起きず誤りになり、hint で列を別のスライドに分けるよう作者に促す。例・試験の文は架空のものだけを使う。",
+      "doneWhen": "columns を列ごとに分けるコードと文書が無くなり、上の試験が通り、tools/ci.sh が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-15T13:32:44.497Z",
+      "updatedAt": "2026-11-15T13:32:44.497Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
