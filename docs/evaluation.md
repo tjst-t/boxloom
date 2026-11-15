@@ -13,7 +13,8 @@
 | `proposal.bx.md` | dark | 13 | 表紙、区切り3つ、columns+chart、pairs(引用の側つき)、表(合計)、matrix(emphasis・legend)、compare 3案、columns+cycle、stat+表、process(legend)、番号つきの箇条+表+takeaway |
 | `report.bx.md` | report | 19(目次を含む) | 表紙、目次(`toc: true`)、区切り3つ、stat+箇条+takeaway、columns+chart(stacked)、表(groups・total)、topics(label・引用)、orgchart、pairs(側の見出し)、表(groups・points・total)、matrix、compare+表、phases(groups・legend)、stat+表(total)、表+段落、`{density=dense}` の表と箇条、全ての本文に出典 |
 | `brief.bx.md` | light | 7 | 表紙、statement、stat+表、columns+chart、Gantt(注釈・節目・legend)、箇条+takeaway、番号つきの箇条+表。画像なし |
-| `*-faulty.bx.md` | 同じ | — | 正しい版に誤りを入れた版(2節) |
+| `*-faulty.bx.md` | 同じ | — | 正しい版に誤りを入れた版(2節)。警告になる誤りだけをまとめる |
+| `report-faulty-errors.bx.md` | report | — | 誤り(error)になる R5 だけを入れた版。check は誤りがあると警告を出さないので分けた |
 | `faults.py` | — | — | 誤った版を正しい版から作る。`--each DIR` で誤り1つずつの版と、hint に従って直した版を書く |
 
 書き方は SKILL.md のとおり:本文のスライドは短い1行の題と `:::lead`、図の中は短い言葉で
@@ -44,8 +45,9 @@ LibreOffice(PDF→PNG)で全ての枚を見た。崩れは次の4つ(check は�
 ## 2. 誤った版
 
 各資料に7〜8個の誤りを入れた(`faults.py` の表。P=proposal、R=report、B=brief)。下の表は
-誤りを1つずつ入れた版の結果で、まとめた版(`*-faulty.bx.md`)の結果も同じ(report の誤った版は
-R5 の誤りがあるので check は誤りだけを返し、警告は出さない)。
+誤りを1つずつ入れた版の結果で、まとめた版の結果も同じ。誤り(error)になる R5 だけは
+`report-faulty-errors.bx.md` に分けた(check は誤りがあると警告を出さないので、まとめると他の誤りの
+警告が見えなくなる)。`report-faulty.bx.md` はほかの6つをまとめ、check は R1〜R4・R6 の警告を出す。
 
 - **出たか**:-fit なしの check の code(-fit ありで変わるときは → の後)。
 - **build**:-fit なし / -fit あり の終了コード。
@@ -93,37 +95,37 @@ R7・B1 と、B7 の「takeaway は1枚に1つ」の決まりは出るべき(4�
   設計どおり(#128・#150)だが、-fit を付けた作者は警告を見落としやすい。
 - 見た目の崩れ V1〜V4(1.1節)。
 
-## 4. 直すべきこと(起票の候補)
+## 4. 直すべきこと(起票済み)
 
-この環境からは Backlog を開けず、起票できなかった。下の候補を人が起票する(番号は起票後に
-この表へ書く)。このタスクでは直していない。
+下の候補は Backlog に起票した(番号は表の Backlog の列)。このタスクでは直していない。
 
-| 候補 | 種類 | 内容 | もとの判定 | 優先 |
-|---|---|---|---|---|
-| E1 | 警告が出ない | dark・light にもリードの行の上限(2行)を持たせ、`lead-wrap` を出す | P2 | 高 |
-| E2 | hint | 列の中の図(matrix・phases など)のはみ出しでは、dense を勧めず「図を列から出す・図の列を広げる(role=main を図の側に)」を言う | P4・R4 | 高 |
-| E3 | hint | はみ出すブロックが表・本文の後の小さいブロック(takeaway・箇条)だけのとき、表を分ける案を出さない。伸びたのが前のブロックなら、そのブロックを短くする・分けると言う | D1・B5 | 高 |
-| E4 | 警告が出ない | 1枚に `:::takeaway` が2つ以上あれば誤り(または警告)にする(SKILL.md の「1枚に1つまで」) | B7 | 中 |
-| E5 | 警告が出ない | 数・表・図・引用のある本文のスライドに `:::source` が無ければ警告する | P8 | 中 |
-| E6 | 警告が出ない | statement の文の行の上限(例 3行)を超えたら警告する | B1 | 中 |
-| E7 | hint | `title-wrap`・`lead-wrap`・`milestone-overlap` に hint を付ける(title-wrap は「主張を `:::lead` に移し、題は話題の短い見出しに」) | P1・R2・B3 | 中 |
-| E8 | hint | 表を分ける案を、最後の表が薄くならないように行をならす(R3 なら 9・3 ではなく群の境で 5・7 など)。または分けた後の fill-ratio を見込む | R3 | 中 |
-| E9 | 見た目 | 行の群の縦書きの帯が群の行より高いとき行が伸びる。合計の行の名前が細い群の列で縦に折れる | V1 | 中 |
-| E10 | 見た目 | フッターの作者名が長いと2行に折れてはみ出す。check で警告するか、1行に収める | V2 | 中 |
-| E11 | 見た目 | Gantt の注釈の枠が文より狭く、最後の字が枠の外に落ちる(LibreOffice) | V3 | 中 |
-| E12 | 見た目 | 「1月」のような数+単位の短い列を数の列として右寄せにしない(または列の幅を中身に合わせる) | V4 | 低 |
-| E13 | 誤りの文 | `table-groups` が空の行ごとに「最初の行の群の名前が空」を繰り返す。最初の1件にまとめる | R5 | 低 |
-| E14 | hint | 「隣とまとめる」hint の向きを、連なる薄い枚でそろえる | D2 | 低 |
-| E15 | 警告が出ない | orgchart の細い箱で名前が3行以上に折れるとき警告する(はみ出しは無い) | R7 | 低 |
+| 候補 | Backlog | 種類 | 内容 | もとの判定 | 優先 |
+|---|---|---|---|---|---|
+| E1 | #162 | 警告が出ない | dark・light にもリードの行の上限(2行)を持たせ、`lead-wrap` を出す | P2 | 高 |
+| E2 | #163 | hint | 列の中の図(matrix・phases など)のはみ出しでは、dense を勧めず「図を列から出す・図の列を広げる(role=main を図の側に)」を言う | P4・R4 | 高 |
+| E3 | #164 | hint | はみ出すブロックが表・本文の後の小さいブロック(takeaway・箇条)だけのとき、表を分ける案を出さない。伸びたのが前のブロックなら、そのブロックを短くする・分けると言う | D1・B5 | 高 |
+| E4 | #165 | 警告が出ない | 1枚に `:::takeaway` が2つ以上あれば誤り(または警告)にする(SKILL.md の「1枚に1つまで」) | B7 | 中 |
+| E5 | #166 | 警告が出ない | 数・表・図・引用のある本文のスライドに `:::source` が無ければ警告する | P8 | 中 |
+| E6 | #167 | 警告が出ない | statement の文の行の上限(例 3行)を超えたら警告する | B1 | 中 |
+| E7 | #168 | hint | `title-wrap`・`lead-wrap`・`milestone-overlap` に hint を付ける(title-wrap は「主張を `:::lead` に移し、題は話題の短い見出しに」) | P1・R2・B3 | 中 |
+| E8 | #169 | hint | 表を分ける案を、最後の表が薄くならないように行をならす(R3 なら 9・3 ではなく群の境で 5・7 など)。または分けた後の fill-ratio を見込む | R3 | 中 |
+| E9 | #170 | 見た目 | 行の群の縦書きの帯が群の行より高いとき行が伸びる。合計の行の名前が細い群の列で縦に折れる | V1 | 中 |
+| E10 | #171 | 見た目 | フッターの作者名が長いと2行に折れてはみ出す。check で警告するか、1行に収める | V2 | 中 |
+| E11 | #172 | 見た目 | Gantt の注釈の枠が文より狭く、最後の字が枠の外に落ちる(LibreOffice) | V3 | 中 |
+| E12 | #173 | 見た目 | 「1月」のような数+単位の短い列を数の列として右寄せにしない(または列の幅を中身に合わせる) | V4 | 低 |
+| E13 | #174 | 誤りの文 | `table-groups` が空の行ごとに「最初の行の群の名前が空」を繰り返す。最初の1件にまとめる | R5 | 低 |
+| E14 | #175 | hint | 「隣とまとめる」hint の向きを、連なる薄い枚でそろえる | D2 | 低 |
+| E15 | #176 | 警告が出ない | orgchart の細い箱で名前が3行以上に折れるとき警告する(はみ出しは無い) | R7 | 低 |
 
 ## 5. 流し方
 
 ```sh
 cd boxloom && go build -o /tmp/boxloom ./cmd/boxloom && cd ../examples/eval
-python3 faults.py                       # *-faulty.bx.md を正しい版から作り直す
+python3 faults.py                       # *-faulty.bx.md と report-faulty-errors.bx.md を正しい版から作り直す
 python3 faults.py --each /tmp/each      # 誤り1つずつの版(*-P1.bx.md)と直した版(*-P1-fixed.bx.md)
 /tmp/boxloom check -format json proposal-faulty.bx.md
 /tmp/boxloom check -format json -fit proposal-faulty.bx.md
+/tmp/boxloom check -format json report-faulty-errors.bx.md   # 誤り(R5)だけ
 /tmp/boxloom build -o /tmp/p.pptx proposal.bx.md && /tmp/boxloom build -fit -o /tmp/p-fit.pptx proposal.bx.md
 soffice --headless --convert-to pdf /tmp/p.pptx
 ```

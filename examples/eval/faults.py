@@ -5,7 +5,7 @@
 直した文は、誤った版を作者が message・hint だけを読んで直したときの形で、正しい版と
 同じとは限らない(hint が別の直し方を勧めるときは、それに従った形)。
 
-    python3 examples/eval/faults.py            # *-faulty.bx.md を書き直す
+    python3 examples/eval/faults.py            # *-faulty.bx.md と *-faulty-errors.bx.md を書き直す
     python3 examples/eval/faults.py --each DIR # 誤り1つずつの版と、直した版を DIR に書く
 
 結果の表は docs/evaluation.md。
@@ -132,10 +132,17 @@ def apply(src, old, new, fid):
     return src
 
 
-def faulty(deck):
+# 誤り(error)になる誤りは別のファイル(*-faulty-errors.bx.md)に置く。check は誤りがあると
+# 警告を出さないので、*-faulty.bx.md に混ぜると他の誤りの警告が見えなくなる。
+ERROR_FAULTS = {"report": ["R5"]}
+
+
+def faulty(deck, errors=False):
+    """errors が偽なら ERROR_FAULTS を除いた全ての誤りを、真なら ERROR_FAULTS だけを入れる。"""
     src = read(deck)
     for fid, _, old, new, _ in FAULTS[deck]:
-        src = apply(src, old, new, fid)
+        if (fid in ERROR_FAULTS.get(deck, [])) == errors:
+            src = apply(src, old, new, fid)
     return src
 
 
@@ -151,13 +158,15 @@ def main(argv):
                     f.write(one)
                 # 直し方の書いていない誤りは、hint に従うと正しい版に戻る
                 fixed = apply(base, old, old if fix is None else fix, fid)
-                if True:
-                    with open(os.path.join(out, "%s-%s-fixed.bx.md" % (deck, fid)), "w", encoding="utf-8") as f:
-                        f.write(fixed)
+                with open(os.path.join(out, "%s-%s-fixed.bx.md" % (deck, fid)), "w", encoding="utf-8") as f:
+                    f.write(fixed)
         return
     for deck in FAULTS:
         with open(os.path.join(HERE, deck + "-faulty.bx.md"), "w", encoding="utf-8") as f:
             f.write(faulty(deck))
+        if deck in ERROR_FAULTS:
+            with open(os.path.join(HERE, deck + "-faulty-errors.bx.md"), "w", encoding="utf-8") as f:
+                f.write(faulty(deck, errors=True))
 
 
 if __name__ == "__main__":
