@@ -37,7 +37,7 @@ type FigureText struct {
 	RowTitle float64
 	Point    string // 箇条の印(marks.point。phases の箱の箇条)
 	// Sizes は値の表の字の段(scale.typeSizes。小さい順)。図が字を段で下げるときに使う
-	// (orgchart の3段目、#153)。
+	// (cycle の below、#154)。
 	Sizes []float64
 }
 

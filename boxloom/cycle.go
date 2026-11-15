@@ -985,3 +985,16 @@ func cycleDecl() SubsystemDecl {
 		"status を使ったら legend: {conditional: 意味, …} で枠線の色の意味を書く(凡例が図の下に出る。無ければ figure-legend の警告)",
 	)
 }
+
+// typeStepDown は字の大きさ x を段 sizes(小さい順)で k 段下げたもの。x が段に無ければ
+// x より小さい一番大きい段を1段目と数える。下げきれなければ一番小さい段(それも x 以上なら x)。
+func typeStepDown(sizes []float64, x float64, k int) float64 {
+	out := x
+	for i := len(sizes) - 1; i >= 0 && k > 0; i-- {
+		if sizes[i] < out-scaleEps {
+			out = sizes[i]
+			k--
+		}
+	}
+	return out
+}

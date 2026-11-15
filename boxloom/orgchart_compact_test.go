@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// 再現の第9回の p33 に近い、孫3つずつの3段の組織図(#153)。
+// 孫3つずつの3段の組織図(#153・#157)。名前はすべて架空。
 const orgCompactData = `{"root": {"title": "推進の責任者", "detail": "架空 花子", "emphasis": true},
   "units": [
     {"title": "基盤のチーム", "detail": "架空 太郎", "members": [
@@ -13,33 +13,31 @@ const orgCompactData = `{"root": {"title": "推進の責任者", "detail": "架�
     {"title": "導入のチーム", "detail": "架空 次郎", "members": [
       {"title": "説明会", "detail": "架空 五郎"}, {"title": "窓口運営", "detail": "架空 六郎"}, {"title": "定着支援", "detail": "架空 八郎"}]}]}`
 
-// 狭い列(340pt)の3段の組織図:字を下げずに横に並べる形より縦に積む形が低い幅で、
-// 3段目の字を値の表の段で下げて横に並べる形のほうが低ければ、それを選ぶ(#153)。
-// Measure の Min は選んだ形の Min で、描いた3段目の箱は下げた字、枠に収まり警告も無い。
-// 広い枠(912pt)では字を下げない横に並べる形のまま。
+// -fit なしでは、狭い枠(340pt)でも組織図の3段目の字は値の表の subPoint・figureDetail の
+// まま(#157。#153 の字を下げて横に並べる形は外した)。幅が足りないときは縦に積む形(#134)を
+// 選び、描いた図形は枠に収まり警告も無い。広い枠(912pt)では横に並べる形のまま。
 func TestOrgChartCompactRow(t *testing.T) {
 	const narrow = 340.0
 	for _, tmpl := range []string{"light", "dark", "report"} {
 		tm := mustTemplate(tmpl)
 		restore := useFonts(tm.Fonts)
 		sub := figureFromIR(t, tmpl, "orgchart", orgCompactData).(*OrgChartSubsystem)
-		row0, st := orgMinHeight(sub.geomRow(narrow, 0)), orgMinHeight(sub.geomStacked(narrow))
-		if !(st < row0-0.5) {
-			t.Fatalf("%s: the case needs the stacked form (%.1f) below the plain row (%.1f)", tmpl, st, row0)
+		row, st := orgMinHeight(sub.geomRow(narrow)), orgMinHeight(sub.geomStacked(narrow))
+		if !(st < row-0.5) {
+			t.Fatalf("%s: the case needs the stacked form (%.1f) below the row (%.1f)", tmpl, st, row)
 		}
 		g := sub.geom(narrow)
-		if g.stacked || g.memStep == 0 {
-			t.Fatalf("%s: %.0fpt chose stacked=%v step=%d, want the compact row", tmpl, narrow, g.stacked, g.memStep)
+		if !g.stacked {
+			t.Fatalf("%s: %.0fpt kept the row, want the stacked form", tmpl, narrow)
 		}
 		tx := sub.text()
-		if !(g.memSub < tx.Sub) || !onScale(g.memSub, tm.Scale.TypeSizes) || !onScale(g.memDetail, tm.Scale.TypeSizes) {
-			t.Errorf("%s: member sizes %v/%v (from %v/%v) not lowered on the scale %v", tmpl, g.memSub, g.memDetail, tx.Sub, tx.Detail, tm.Scale.TypeSizes)
+		if tx.Sub != tm.Values.SubPoint || tx.Detail != tm.Values.FigureDetail {
+			t.Fatalf("%s: text %v/%v, want the values %v/%v", tmpl, tx.Sub, tx.Detail, tm.Values.SubPoint, tm.Values.FigureDetail)
 		}
 		m := sub.Measure(Constraint{Width: narrow})
-		if math.Abs(m.Min.Height-orgMinHeight(g)) > 0.01 || !(m.Min.Height < st-0.5) {
-			t.Errorf("%s: Measure min %.1f, compact %.1f, stacked %.1f", tmpl, m.Min.Height, orgMinHeight(g), st)
+		if math.Abs(m.Min.Height-st) > 0.01 {
+			t.Errorf("%s: Measure min %.1f, stacked %.1f", tmpl, m.Min.Height, st)
 		}
-		t.Logf("%s: compact min %.1fpt at %v/%vpt (plain row %.1f, stacked %.1f)", tmpl, m.Min.Height, g.memSub, g.memDetail, row0, st)
 		for _, h := range []float64{m.Min.Height, m.Natural.Height} {
 			box := LBox{X: 30, Y: 20, Width: narrow, Height: h}
 			if ws := sub.Lint(box); len(ws) != 0 {
@@ -57,8 +55,8 @@ func TestOrgChartCompactRow(t *testing.T) {
 					for _, mb := range ms {
 						if s.box == mb && s.kind != skLine && s.kind != skConnector {
 							members++
-							if s.fontSize != g.memSub {
-								t.Errorf("%s: member drawn at %vpt, measured at %vpt", tmpl, s.fontSize, g.memSub)
+							if s.fontSize != tm.Values.SubPoint {
+								t.Errorf("%s: member drawn at %vpt, want subPoint %vpt", tmpl, s.fontSize, tm.Values.SubPoint)
 							}
 						}
 					}
@@ -68,20 +66,11 @@ func TestOrgChartCompactRow(t *testing.T) {
 				t.Errorf("%s h=%.0f: %d member boxes drawn, want 6", tmpl, h, members)
 			}
 		}
-		if w := sub.geom(912); w.stacked || w.memStep != 0 {
-			t.Errorf("%s: 912pt should keep the plain row (stacked=%v step=%d)", tmpl, w.stacked, w.memStep)
+		if w := sub.geom(912); w.stacked {
+			t.Errorf("%s: 912pt should keep the row", tmpl)
 		}
 		restore()
 	}
-}
-
-func onScale(x float64, sizes []float64) bool {
-	for _, s := range sizes {
-		if math.Abs(s-x) < scaleEps {
-			return true
-		}
-	}
-	return false
 }
 
 // fit の段(shrink・emergency)は組織図の箱の高さの下限・段の間・3段目の箱の間・余白も
