@@ -3606,7 +3606,7 @@
       "number": 160,
       "kind": "task",
       "title": "文書・コメント・試験から「サンプルの再現」への言及を外し、一般の理由に書き直す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [
         "below",
@@ -3626,7 +3626,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T13:33:26.256Z",
-      "updatedAt": "2026-11-15T13:33:26.256Z",
+      "updatedAt": "2026-11-15T14:21:16.614Z",
       "closedAt": null,
       "extra": {}
     },
