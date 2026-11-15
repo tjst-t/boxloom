@@ -3711,7 +3711,7 @@
       "number": 164,
       "kind": "task",
       "title": "はみ出しの原因でない表を分ける案を出さない、伸びた前のブロックを指す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3725,7 +3725,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:53:16.978Z",
-      "updatedAt": "2026-11-15T14:53:16.978Z",
+      "updatedAt": "2026-11-15T23:15:36.908Z",
       "closedAt": null,
       "extra": {}
     },
