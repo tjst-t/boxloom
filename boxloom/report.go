@@ -243,7 +243,7 @@ func reportToc(ctx skeletonContext) (*Spec, error) {
 }
 
 // report の表紙・終わりのスライドの基調色の箱の大きさ(ページの幅・高さに対する比)。
-// 読む資料のサンプルを測った値。高さは下限で、中身(題の折り返した行・副題・日付)が要れば
+// 写真を広く見せつつ題と副題が入る大きさ。高さは下限で、中身(題の折り返した行・副題・日付)が要れば
 // 箱を伸ばす(#104)。箱はページの縦の中ほどに置き、上下に写真が見える空きを
 // reportCoverMinGap 以上残す(#109。上下の縁に接しない)。
 const (
@@ -363,14 +363,14 @@ func (t *Template) reportContentHeader(s *IRSlide) *Spec {
 	if s.Lead == nil {
 		return t.text(s.Title, "leadText", "accent", false, WithPlaceholder("title"), fromIR("title"))
 	}
-	// リードは標準の太さ(#100。元の資料も太字でない。太字は字幅が広がり折れやすい)。
+	// リードは標準の太さ(#100。太字は字幅が広がり、1行の文が折れやすい)。
 	lead := t.prose(s.Lead, "leadText", "accent", false, tokLineHeight("leadLineHeight"), fromIR("lead"))
 	title := t.text(s.Title, "slideTitle", "text_primary", false, WithPlaceholder("title"), fromIR("title"))
 	return Col([]*Spec{lead, title}, tokGap("headerGap"))
 }
 
-// report の列の印の寸法(pt)。罫線の太さと流れの丸の直径は、読む資料のサンプルを
-// 測った値。
+// report の列の印の寸法(pt)。罫線は本文の邪魔をしない細さ、流れの丸は
+// 列の間の隙間に収まる直径。
 const (
 	reportRuleWidth    = 0.75
 	reportFlowDiameter = 24
@@ -426,17 +426,17 @@ var reportPairLabelWidth = spaceStep(40)
 
 // reportPairRowGap は report の topics の塊と罫線の間の空き(段の刻み。4pt)。pairs は
 // 値の表の pairsRowGap(normal は同じ 4pt、#136)で、対の行と罫線の間の空き(#103)。罫線の上と
-// 下に取るので、対の行の間は 4 + 0.75 + 4 ≈ 8.75pt(元の資料の目安 8〜12pt)。
+// 下に取るので、対の行の間は 4 + 0.75 + 4 ≈ 8.75pt(対の区切りが見え、密なページで詰めすぎない目安 8〜12pt)。
 var reportPairRowGap = spaceStep(2)
 
 // reportPairsStyle は report の pairs の見た目。側の見出しは帯(面)を置かず、基調色の
-// 太字の本文1行で書く(#103。元の資料はただの1行)。
+// 太字の本文1行で書く(#103。帯の分の高さを本文に回す)。
 var reportPairsStyle = pairsStyle{
 	headRole: "accent",
 	sideTitle: func(t *Template, title Inline) *Spec {
 		return t.text(title, "body", "accent", true)
 	},
-	titleGap: "itemGap",     // 側の見出しと箇条の間を詰める(#146。元の資料は 0)
+	titleGap: "itemGap",     // 側の見出しと箇条の間を詰める(#146。題と中身を1つのまとまりに見せる)
 	rowGap:   "pairsRowGap", // 値の表(normal は reportPairRowGap と同じ 4pt。dense で詰める、#136)
 	mark: func(t *Template, k int, label string) *Spec {
 		if label == "" {
@@ -637,7 +637,7 @@ func (c *calloutMark) Render(ctx RenderContext, box LBox) {
 	}
 }
 
-// reportMarkerSize は隅の印の三角の幅・高さ(pt。読む資料のサンプルを測った値)。
+// reportMarkerSize は隅の印の三角の幅・高さ(pt。上の余白に収まり、隅で印として目立つ大きさ)。
 const reportMarkerSize float64 = 48
 
 // reportMarkerCircle は三角の中の丸の直径(pt)。三角の内接円(半径 約 14pt)に収まり、中の文字の枠に2字が入る。

@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// 狭い枠の3段の組織図(#134。再現の第6回の p33:2単位の組織図を幅約 420pt の列に置くと
+// 狭い枠の3段の組織図(#134。2単位の組織図を幅約 420pt の列に置くと
 // 横に並べた3段目が狭く、Min が枠より高くなった)は、3段目を親の下に字下げして縦に積む形に
 // 切り替え、最小の高さを下げる。描いた図形は枠に収まり、箱は重ならず、文は収まる。
 // 広い枠では横に並べる形のまま。
@@ -87,7 +87,7 @@ func TestOrgChartNarrowStacksMembers(t *testing.T) {
 // 列の中(幅約 420pt)の3段の組織図:縦に積む形の Min で枠を取り、subsystem-min の
 // 警告(最小を割る)を出さない。
 func TestOrgChartNarrowInColumn(t *testing.T) {
-	src := "---\ntitle: 再現\n---\n\n# 体制\n\n::::columns\n:::column 体制\n```orgchart\n" +
+	src := "---\ntitle: 体制\n---\n\n# 体制\n\n::::columns\n:::column 体制\n```orgchart\n" +
 		"root: {title: 推進の責任者, detail: 架空 花子}\nunits:\n" +
 		"  - title: 基盤のチーム\n    detail: 架空 太郎\n    members:\n      - {title: 認証の基盤の整備, detail: 架空 一郎}\n      - {title: データの移行の計画, detail: 架空 二郎}\n      - {title: 監視と運用の設計, detail: 架空 三郎}\n      - {title: 性能の試験と改善, detail: 架空 四郎}\n" +
 		"  - title: 導入のチーム\n    detail: 架空 次郎\n    members:\n      - {title: 現場への説明会の開催, detail: 架空 五郎}\n      - {title: 問い合わせ窓口の運営, detail: 架空 六郎}\n      - {title: 手順書と動画の整備, detail: 架空 七郎}\n      - {title: 利用の定着の支援, detail: 架空 八郎}\n" +

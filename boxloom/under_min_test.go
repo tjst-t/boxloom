@@ -167,7 +167,7 @@ func TestBlocksDoNotOverlapNext(t *testing.T) {
 	}
 }
 
-// 第6回の再現:最小を割る表・phases・列の中の組織図の下にブロックがあっても、
+// 最小を割る表・phases・列の中の組織図の下にブロックがあっても、
 // 図形は次のブロックに重ならず、越えた分は layout-overflow の pt と一致する。
 func TestUnderMinPushesNextBlock(t *testing.T) {
 	var rows []string
@@ -188,7 +188,7 @@ func TestUnderMinPushesNextBlock(t *testing.T) {
 		units = append(units, "  - title: チーム"+itoa(i)+"\n    detail: 架空 太郎\n    members:\n      - {title: 班A, detail: 架空 一郎}\n      - {title: 班B, detail: 架空 二郎}\n      - {title: 班C, detail: 架空 三郎}\n      - {title: 班D, detail: 架空 四郎}\n      - {title: 班E, detail: 架空 五郎}\n      - {title: 班F, detail: 架空 六郎}")
 	}
 	note := "注:数字はすべて架空です。表の下の注は、表と重ならずに下へ押し出されます。"
-	src := "---\ntitle: 再現\n---\n\n" +
+	src := "---\ntitle: 押し出し\n---\n\n" +
 		"# 表の下の注\n\n| 仕組み | 部署 | 気をつけること |\n| --- | --- | --- |\n" + strings.Join(rows, "\n") + "\n\n" + note + "\n\n" +
 		"# phases の下の注\n\n```phases\nsteps:\n" + strings.Join(steps, "\n") + "\n```\n\n" + note + "\n\n" +
 		"# 列の中の組織図\n\n::::columns\n:::column 体制\n```orgchart\nroot: {title: 推進の責任者, detail: 架空 花子}\nunits:\n" + strings.Join(units, "\n") + "\n```\n\n- 下の箇条は組織図に重ならない\n- 二つ目の箇条\n- 三つ目の箇条\n- 四つ目の箇条\n- 五つ目の箇条\n- 六つ目の箇条\n- 七つ目の箇条\n- 八つ目の箇条\n:::\n:::column 補足\n短い補足\n:::\n::::\n"

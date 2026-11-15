@@ -7,7 +7,7 @@ import (
 
 // 3つのテンプレートは収めの梯子(詰め2段・広げ2段)を持ち、詰めは dense から下へ、
 // 広げは values から上へ並ぶ。詰めの段はどれもブロックの間を下げる。report の本文は
-// 11pt、表の字は 10pt を下回らない(元の資料の最小。#139)。
+// 11pt、表の字は 10pt を下回らない(読む資料として読める字の下限。#139)。
 func TestTemplatesHaveFitLadders(t *testing.T) {
 	for _, name := range []string{"dark", "light", "report"} {
 		tm := mustTemplate(name)

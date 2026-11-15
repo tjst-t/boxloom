@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// 再現(#138):長い行の題と箇条の説明を持つ matrix を、下限をわずかに割る幅に置く。
+// #138:長い行の題と箇条の説明を持つ matrix を、下限をわずかに割る幅に置く。
 // 文はすべて架空。
 
 var cliffRows = []struct {
@@ -130,7 +130,7 @@ func TestMatrixNarrowKeepsRatingColumns(t *testing.T) {
 	}
 }
 
-// 第7回の再現の形(元の p29):左の列に pillars、右の列に matrix。以前は matrix の
+// 並列のまとまりの左の列に pillars、右の列に matrix を置く形。以前は matrix の
 // 下限が評価の列の崩れる手前に置かれ、pillars の下限と合わせて本文の幅を 8pt
 // 割ると評価の列が 4pt ほどに崩れた。今は matrix が評価の列の最小までゆずるので、
 // どちらの図の文もはみ出さず、まとまりも下限を割らない。

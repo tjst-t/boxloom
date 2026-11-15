@@ -40,7 +40,7 @@ func TestReportPairs(t *testing.T) {
 	}
 }
 
-// report の値は読む資料のサンプルを測った値(Backlog #83。人の決定)。
+// report の値は読む資料の密度に合わせた値(Backlog #83。人の決定)。
 func TestReportMeasuredValues(t *testing.T) {
 	tm, err := LookupTemplate("report")
 	if err != nil {

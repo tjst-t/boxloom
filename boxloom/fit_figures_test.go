@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// fitFigureDecks は図だけで本文の箱からはみ出すスライド(#139 の再現。matrix・orgchart・
+// fitFigureDecks は図だけで本文の箱からはみ出すスライド(#139。matrix・orgchart・
 // phases・引用つきの pairs)。
 func fitFigureDecks() map[string]string {
 	hdr := "---\ntitle: t\n---\n\n"

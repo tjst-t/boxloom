@@ -90,7 +90,7 @@ func TestDenseRowSpacing(t *testing.T) {
 			if normal.pairMark != v.PairMarkSize || dense.pairMark != dv.PairMarkSize {
 				t.Errorf("report: pair mark normal %v dense %v, want %v %v", normal.pairMark, dense.pairMark, v.PairMarkSize, dv.PairMarkSize)
 			}
-			// report の dense はこれらの余白・字が normal より小さい(元の資料の密なページ)。
+			// report の dense はこれらの余白・字が normal より小さい(表や対の多い密なページを収めるため)。
 			for _, c := range []struct {
 				what          string
 				dense, normal float64
