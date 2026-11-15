@@ -3635,7 +3635,7 @@
       "number": 161,
       "kind": "task",
       "title": "Boxloom の書き方で書いた架空の資料3本で、check の警告が作者を導くかを確かめる",
-      "status": "in-progress",
+      "status": "done",
       "parent": null,
       "dependsOn": [
         "below",
@@ -3652,12 +3652,12 @@
       ],
       "body": "## なぜ\n外部のサンプルの見た目を再現する進め方は終わりにした(人が決めた)。見た目に寄せると、書き直すべき中身に合わせてエンジンが独自の型を発明してしまう(#154 など)。これからは、Boxloom の書き方で書いた資料で、check・build が作者を正しく導くかを判断の材料にする。\n\n## やること\n1. 架空の題材で資料を3本作り、`examples/eval/` に .bx.md で置く。組織名・人名・地名は実在しないもの、または名前を使わない。\n   - 提案の資料(dark):12〜15枚。表紙、区切り、columns・pairs・chart・cycle・matrix を含む。\n   - 読む資料(report):15〜20枚。density=dense のスライド、表(groups・points・total)、phases・orgchart・出典を含む。\n   - 短い報告(light):6〜8枚。statement、takeaway、Gantt、画像なし。\n2. 書き方は SKILL.md のとおり:短い1行の題+:::lead、図の中は短い言葉、全文は横の文に書く。\n3. わざと作者が犯しやすい誤りを入れた版も作る(`*-faulty.bx.md`)。各資料に5つ以上、例えば:題が2行に折れる、リードが長い、本文がはみ出す、サイクル図の題が長い、表が長すぎる、図が狭い列に詰まる、fill-ratio が低い、など。\n4. 各版に `boxloom check -format json` と `build`(-fit あり・なし)を流す。誤った版では、入れた誤りごとに次を表にする:\n   - 警告・誤りが出たか(code)\n   - message・hint を読んで、作者が何を直せばよいか分かるか(分かる・あいまい・誤導)\n   - 直したあと警告が消えたか\n5. 正しい版はそれぞれ警告0件(info は可)で build でき、LibreOffice で PDF にして見た目を確かめる。崩れがあれば記録する。\n6. 結果を docs/evaluation.md にまとめる(表と、直すべき警告・hint の一覧)。直すべきことはそれぞれ Backlog に起票する(このタスクでは直さない)。\n\n## 確かめ方\n3本の資料と誤った版が examples/eval/ にあり、docs/evaluation.md に誤りごとの表と、見つかった問題の Backlog 番号がある。",
       "doneWhen": "examples/eval/ に正しい版3本・誤った版3本があり、正しい版は警告0件で build でき、docs/evaluation.md に入れた誤りごとの判定(出たか・hint で直せるか)と起票した番号がある",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/boxloom-3-check）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T13:33:31.320Z",
-      "updatedAt": "2026-11-15T14:32:47.714Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-15T15:05:19.231Z",
+      "closedAt": "2026-11-15T15:05:19.231Z",
       "extra": {}
     },
     {
