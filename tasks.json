@@ -3780,7 +3780,7 @@
       "number": 167,
       "kind": "task",
       "title": "statement の文が長すぎるとき警告する",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3794,7 +3794,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:53:32.428Z",
-      "updatedAt": "2026-11-15T14:53:32.428Z",
+      "updatedAt": "2026-11-15T23:52:38.064Z",
       "closedAt": null,
       "extra": {}
     },
