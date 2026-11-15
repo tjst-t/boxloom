@@ -3635,7 +3635,7 @@
       "number": 161,
       "kind": "task",
       "title": "Boxloom の書き方で書いた架空の資料3本で、check の警告が作者を導くかを確かめる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [
         "below",
@@ -3656,7 +3656,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T13:33:31.320Z",
-      "updatedAt": "2026-11-15T13:33:31.320Z",
+      "updatedAt": "2026-11-15T14:32:47.714Z",
       "closedAt": null,
       "extra": {}
     }
