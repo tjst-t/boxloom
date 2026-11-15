@@ -3889,6 +3889,29 @@
       "updatedAt": "2026-11-15T14:53:56.442Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "gantt-3",
+      "number": 172,
+      "kind": "bug",
+      "title": "Gantt の注釈の枠が文より狭く、最後の字が枠の外に落ちる",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [
+        "eval-161"
+      ],
+      "body": "#161 の評価(E11・V3、examples/eval/brief.bx.md の5枚目、light):Gantt の注釈「本人確認の作り直しで2か月の遅れ」の最後の字が、LibreOffice で枠の外の2行目に落ちる。注釈の箱の幅を測るときの余裕(widthMargin・枠の内側の余白)が足りないとみられる。箱の幅の計算を直し、置き換わった字体でも1行に入る幅にする。",
+      "doneWhen": "同じ注釈が LibreOffice の PDF で1行に描かれ、幅の計算の試験が通り、tools/ci.sh が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-15T14:54:00.930Z",
+      "updatedAt": "2026-11-15T14:54:00.930Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
