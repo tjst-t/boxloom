@@ -3491,7 +3491,7 @@
       "number": 155,
       "kind": "task",
       "title": "サイクル図の「輪の下に題を並べる」置き方(below)をやめ、中・横で収まらなければ警告にする",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3505,7 +3505,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T13:24:28.704Z",
-      "updatedAt": "2026-11-15T13:24:28.704Z",
+      "updatedAt": "2026-11-15T13:24:39.308Z",
       "closedAt": null,
       "extra": {}
     }
