@@ -3734,7 +3734,7 @@
       "number": 165,
       "kind": "task",
       "title": "1枚に takeaway が2つ以上あれば check で知らせる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3748,7 +3748,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:53:22.519Z",
-      "updatedAt": "2026-11-15T14:53:22.519Z",
+      "updatedAt": "2026-11-15T23:52:35.402Z",
       "closedAt": null,
       "extra": {}
     },
