@@ -3688,7 +3688,7 @@
       "number": 163,
       "kind": "task",
       "title": "列の中の図のはみ出しでは dense を勧めず、図を列から出す・図の列を広げると言う",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3702,7 +3702,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:53:12.419Z",
-      "updatedAt": "2026-11-15T14:53:12.419Z",
+      "updatedAt": "2026-11-15T23:15:34.932Z",
       "closedAt": null,
       "extra": {}
     },
