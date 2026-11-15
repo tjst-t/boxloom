@@ -3560,7 +3560,7 @@
       "number": 158,
       "kind": "task",
       "title": "matrix の detailColumn(置き方を IR に書く欄)を外す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3574,7 +3574,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T13:32:55.247Z",
-      "updatedAt": "2026-11-15T13:32:55.247Z",
+      "updatedAt": "2026-11-15T13:49:24.000Z",
       "closedAt": null,
       "extra": {}
     },
