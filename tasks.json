@@ -3600,6 +3600,35 @@
       "updatedAt": "2026-11-15T13:33:00.161Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "item-3",
+      "number": 160,
+      "kind": "task",
+      "title": "文書・コメント・試験から「サンプルの再現」への言及を外し、一般の理由に書き直す",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [
+        "below",
+        "fit-columns-152",
+        "fit-3-1-2-153",
+        "matrix-detailcolumn-ir",
+        "mochiy-pop-p-one-147"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [
+        "repro-cleanup"
+      ],
+      "body": "## なぜ\nサンプルの再現は終わりにした(人が決めた)。だがリポジトリの文書・コメント・試験の説明には「再現の第N回の pNN」「元の資料は〜」「source deck のように」といった、リポジトリに無い資料を根拠にした文が残っている。読む人には確かめようが無い。値や動きの理由は、その値で何が良くなるか(測った値・一般の理由)で書く。\n\n## やること\n- `git grep -n '再現\\|元の資料\\|サンプル\\|source deck'` で当たる箇所を全部見る(いま CLAUDE.md・docs/template-values.md・docs/fonts.md・docs/subsystem.md・docs/ir.md・docs/build.md・docs/layers.md・docs/library.md・docs/patterns.md・docs/content-syntax-comparison.md・boxloom/report.go・demo.go・gantt.go・layoutread.go と各 *_test.go)。\n- 外部の資料を指す言及は、一般の理由(「読む資料の密度」「狭い枠で〜」など)に書き直すか、要らなければ消す。値は変えない。試験の名前・期待値も変えない。\n- ページ番号・資料の題・組織名・人名・地名は書かない。「再現」が Boxloom の機能としての意味(例:フォントの置き換えで折り返しが再現される)なら残す。\n- コミットの履歴は書き換えない。\n\n## 確かめ方\n上の grep の当たりがすべて、外部の資料を指さない文になっている。tools/ci.sh(BOXLOOM_FORBIDDEN_TERMS の検査を含む)が通る。",
+      "doneWhen": "外部の資料を根拠にした文がリポジトリに無く、tools/ci.sh が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-15T13:33:26.256Z",
+      "updatedAt": "2026-11-15T13:33:26.256Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
