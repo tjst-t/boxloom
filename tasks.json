@@ -3554,6 +3554,29 @@
       "updatedAt": "2026-11-15T13:32:49.335Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "matrix-detailcolumn-ir",
+      "number": 158,
+      "kind": "task",
+      "title": "matrix の detailColumn(置き方を IR に書く欄)を外す",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [
+        "repro-cleanup"
+      ],
+      "body": "## なぜ\n#143・#144(commit 7ced4b1・2f40db3)はサンプルの評価の表に寄せるため、matrix の IR に detailColumn を足した。これがあると、行の説明を題の下でなく題の右の見出しつきの列に置く。Schema の説明自体が「行が低くなる」と置き方の理由を書いている。Memory の決まりは「IR は意味だけを持ち、置き方は組み方(テンプレート・サブシステム)が決める」で、置き方を切り替える欄を IR に持つのはこれに反する。#151 の一部(detailColumn があるときの評価の列の幅・見出しの折り返し)も、この欄に付いている。\n\n## やること\n- schema/subsystems/matrix.schema.json から detailColumn を外し、go generate で boxloom/schemas/ の写しを直す。rows[].detail の説明から detailColumn への言及を外す。\n- matrix.go の detailColumn の置き方と幅の探索(#143・#144)、およびそれに付いた #151 の分岐を外す。説明は #94 のとおり行の題の下に置く。detailColumn に依らない一般の改善(評価の列が印と短い文の幅まで縮む、見出しの折り返しなど)が detailColumn なしでも効いているなら残す。\n- md_figures.go の Markdown の読み取りから detailColumn を外す(知らないキーとして誤りになる)。\n- matrix_detail_column_test.go・matrix_detail_widths_test.go を消し、matrix_header_min_test.go・matrix_wordfit_test.go の detailColumn の使い方を外す。\n- docs/subsystem.md・docs/content-syntax.md・CLAUDE.md から detailColumn を外す。golden の差分が出たら、その理由を確かめて更新する。\n\n## 確かめ方\ndetailColumn を書いた matrix は Schema・check で誤りになる。detail を持つ行は題の下に説明を描く。例・試験の文は架空のものだけを使う。",
+      "doneWhen": "リポジトリに detailColumn が無く(git grep で0件)、tools/ci.sh が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-15T13:32:55.247Z",
+      "updatedAt": "2026-11-15T13:32:55.247Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
