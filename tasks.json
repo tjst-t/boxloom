@@ -3531,6 +3531,29 @@
       "updatedAt": "2026-11-15T13:32:44.497Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "fit-3-1-2-153",
+      "number": 157,
+      "kind": "task",
+      "title": "組織図が -fit なしで3段目の字を勝手に1〜2段下げる動き(#153)を外す",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [
+        "repro-cleanup"
+      ],
+      "body": "## なぜ\n#153(commit a7d6443)はサンプルの1ページに寄せるため、幅が足りないとき、3段目の箱の題と補足の字を値の表の段で1〜2段下げて横に並べる形を試すようにした。これは -fit が無くても起きる。Memory の決まりは「既定では自動で縮めない。-fit を付けたときだけ字と間合いを詰める」で、図が自分の判断でテンプレートより小さい字を使うのはこれに反する。\n\n## やること\n- orgchart.go の geom から「字を下げて横に並べる形」の候補を外す。幅が足りないときは、縦に積む形(#134)と横に並べる形(テンプレートの字のまま)から選ぶ。\n- -fit の段(fit.shrink・fit.emergency)が組織図の箱の高さの下限・段の間・余白を下げる部分は、-fit のときだけなので残す。orgchartTextInsetX もその用途で残してよい。\n- FigureText の Sizes が他で使われていなければ外す。\n- TestOrgChartCompactRow は「-fit なしでは字を下げない」試験に書き換える。TestOrgChartFitLowersMin は残す。\n- docs/subsystem.md 11 の「字を下げて横に並べる形」の段落を外す(fit の段が下限を下げることは書き残す)。\n\n## 確かめ方\n-fit なしで、狭い枠の組織図の3段目の字が値の表の figureTitle・figureDetail のまま描かれる。例・試験の名は架空のものだけを使う。",
+      "doneWhen": "-fit なしで組織図の字が下がらないことの試験が通り、tools/ci.sh が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-15T13:32:49.335Z",
+      "updatedAt": "2026-11-15T13:32:49.335Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
