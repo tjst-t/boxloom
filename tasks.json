@@ -3665,7 +3665,7 @@
       "number": 162,
       "kind": "task",
       "title": "dark・light にもリードの行の上限を持たせ lead-wrap を出す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3679,7 +3679,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:53:07.288Z",
-      "updatedAt": "2026-11-15T14:53:07.288Z",
+      "updatedAt": "2026-11-15T23:15:33.464Z",
       "closedAt": null,
       "extra": {}
     },
