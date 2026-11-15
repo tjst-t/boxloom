@@ -62,7 +62,7 @@ type BlockMeasure struct {
 	// Topics は印つきの塊の並び(topics)のときだけ、塊ごとの測り値。
 	Topics []topicMeasure
 
-	// TableSplit は本文の最後の表か、その後のブロックがはみ出したときだけ、表を何枚に
+	// TableSplit は本文の最後の表そのものがはみ出したときだけ、表を何枚に
 	// 分けられるかの案(表の後のブロックは最初の枚に残し、続きの枚は本文が表だけで、
 	// 題・出典・フッターは同じと見込む。addTableSplit・tablechain.go)。
 	TableSplit *tableSplit
@@ -145,8 +145,8 @@ func measureBody(root, body *Spec) (blocks []BlockMeasure, capacity, need float6
 	return blocks, capacity, cursor, true
 }
 
-// addTableSplit は本文の最後の表に分け方の案を付ける(#140)。表かその後のブロックが
-// はみ出したときだけ。続きの表は前のスライドの最後の表に続くので、分けられるのは
+// addTableSplit は本文の最後の表に分け方の案を付ける(#140)。表そのものが
+// はみ出したときだけ(後のブロックだけがはみ出すときは付けない、#164)。続きの表は前のスライドの最後の表に続くので、分けられるのは
 // 最後の表だけ。表の後のブロック(注記など)は最初の枚に残ると見込み、その高さと
 // 間の blockGap を最初の枚から引く(表の上のブロック・題・リード・出典・フッターは
 // 本文の領域と表の上端で引いてある)。続きの枚は本文が表だけと見込む。
@@ -160,14 +160,12 @@ func addTableSplit(body *Spec, blocks []BlockMeasure, widths map[*Spec]float64, 
 	if last < 0 {
 		return
 	}
-	over := false
-	for _, m := range blocks[last:] {
-		over = over || m.Overflow > 0
-	}
-	if !over {
+	m := &blocks[last]
+	if m.Overflow <= 0 {
+		// 表は収まり、後の小さいブロック(注記・takeaway など)だけがはみ出す:原因は表では
+		// ないので、表を分ける案は出さない(#164。hint は高さを取る前のブロックを指す)。
 		return
 	}
-	m := &blocks[last]
 	after := end - m.Bottom // 表の後のブロックと、その間の gap
 	tl := body.Children[last].Subsystem.(*tableLeaf)
 	m.TableSplit = tl.split(widths[body.Children[last]], capacity-m.Top-after, capacity)

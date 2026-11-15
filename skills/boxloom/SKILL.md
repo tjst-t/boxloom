@@ -533,8 +533,12 @@ by `-fit` into continued slides (`fit-split`); that is a placeholder, not a spli
 slide yourself where the content changes and title each part.
 
 1. In `capacity`, find the slide with `remaining < 0`.
-2. Find the first block with `overflow > 0`. Everything from that block on moves to a
-   new slide placed right after it.
+2. Find the first block with `overflow > 0`. If it is the tallest block, everything from
+   that block on moves to a new slide placed right after it. If an earlier block is taller
+   (the overflowing one is a small `takeaway`/`note`/list after a grown table or list), the
+   hint names that earlier block ("伸びて本文の高さを一番取っているのは前の …"): do not move
+   the conclusion alone. Shorten that earlier block, or split it (a table into continued
+   tables, a list by theme) and move its second half together with the blocks after it.
 3. Give the new slide its own title and lead (not "… (cont.)").
 4. If one block alone is taller than `bodyArea`, split the block itself (a long list
    into two lists by theme, a compare with 4 options into two compares).
@@ -552,7 +556,8 @@ Boxloom never moves table rows to the next slide by itself. When a table overflo
    (no other slide between). You may split a little earlier at a natural break (a new
    group or category); never later than proposed. Blocks after the table on that slide
    (a `:::note`, a paragraph) stay on the first slide: the proposal already leaves room for
-   them, and it is also given when only such a block overflows.
+   them. It is given only when the table itself overflows; when only a block after the table
+   overflows, the hint points at the tallest earlier block instead (step 2 above).
 2. Each continuing table: start with the delimiter row `| --- | --- |` (no header row),
    then the rows, then the caption line `: {continues}` (`: {continues total=last}` on
    the last part if the table has a total row; remove `{total=last}` from the earlier

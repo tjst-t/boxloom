@@ -62,7 +62,12 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 		switch w.Code {
 		case "layout-overflow":
 			if w.Hint == "" {
-				w.Hint = joinHints(densityHint(w.Path, capOf), tableSplitHint(w.Path, capOf))
+				split := tableSplitHint(w.Path, capOf)
+				tall := ""
+				if split == "" {
+					tall = precedingTallHint(w.Path, capOf)
+				}
+				w.Hint = joinHints(tall, densityHint(w.Path, capOf), split)
 				fig := columnFigureHint(w.Path, capOf)
 				if fig != "" {
 					w.Hint = fig // 図が狭い列に詰まった:dense は勧めない(#163)
@@ -192,8 +197,8 @@ func joinHints(hs ...string) string {
 }
 
 // tableSplitHint は、はみ出した本文の表の分け方の案(容量の split)を1文にする。
-// はみ出したのがその表か、表の後のブロック(注記など。#140)のときに付ける。
-// 案が無ければ空。
+// 案は表そのものがはみ出したときだけあり(#164)、その表と後のブロック(注記など。
+// #140)の警告に付ける。案が無ければ空。
 func tableSplitHint(path string, capOf map[string]SlideCapacity) string {
 	var s, k int
 	if _, err := fmt.Sscanf(path, "/slides/%d/body/%d", &s, &k); err != nil {
@@ -221,6 +226,44 @@ func tableSplitHint(path string, capOf map[string]SlideCapacity) string {
 			b.Split.Tables, strings.Join(at, "・"), strings.Join(rows, "・"))
 	}
 	return ""
+}
+
+var bodyBlockPathRe = regexp.MustCompile(`^/slides/(\d+)/body/(\d+)$`)
+
+// precedingTallHint は、はみ出した本文のブロック(本文の直下。columns・pairs・topics の
+// 中は除く)より前に、それより高いブロックがあるとき、本文の高さを一番取っているその
+// 前のブロックを短くする・分けるよう言う(#164)。後ろの小さいブロック(takeaway・注記)
+// だけを次の枚へ送ると、結論だけが離れてしまうため。無ければ空。
+func precedingTallHint(path string, capOf map[string]SlideCapacity) string {
+	m := bodyBlockPathRe.FindStringSubmatch(path)
+	if m == nil {
+		return ""
+	}
+	k, _ := strconv.Atoi(m[2])
+	blocks := capOf["/slides/"+m[1]].Blocks
+	if k >= len(blocks) {
+		return ""
+	}
+	j := -1
+	for i := 0; i < k; i++ {
+		if j < 0 || blocks[i].Need > blocks[j].Need {
+			j = i
+		}
+	}
+	if j < 0 || blocks[j].Need <= blocks[k].Need+overflowEps {
+		return ""
+	}
+	b := blocks[j]
+	how := "文を短くするか、2つのブロックに分け"
+	switch b.Type {
+	case "table":
+		how = "本体の行を減らすか、続きの表(continues)に分け"
+	case "points":
+		how = "項目を減らすか、話題ごとに2つの箇条に分け"
+	}
+	return fmt.Sprintf("はみ出したのはこのブロックですが、伸びて本文の高さを一番取っているのは前の %s(%s、%.1fpt)です。"+
+		"このブロックから後だけを次のスライドへ送ると結論だけが離れます。%s の%s、後半をこのブロックと一緒に次のスライドへ送ってください",
+		b.Path, b.Type, b.Need, b.Path, how)
 }
 
 // cardsHint は、本文に横に並ぶカード(compare の選択肢・stat の数)・並列の

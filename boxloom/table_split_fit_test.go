@@ -52,7 +52,7 @@ func splitFitDeck(parts ...string) []byte {
 
 // 表の後に注記のあるスライドで、分け方の案は注記と blockGap の分を最初の枚から引く。
 // 案のとおりに分ける(注記は最初の枚に残す)と、どの枚もはみ出さない(#140)。表は
-// 収まって注記だけがはみ出すときも、注記の警告に案が付く。
+// 収まって注記だけがはみ出すときは案を出さず、hint は高さを取る表を指す(#164)。
 func TestTableSplitCountsFollowingBlocks(t *testing.T) {
 	for _, tm := range []string{"light", "report"} {
 		proposed := 0
@@ -69,10 +69,23 @@ func TestTableSplitCountsFollowingBlocks(t *testing.T) {
 				continue
 			}
 			var split *TableSplitCapacity
+			tableOver := false
 			for _, b := range res.Capacity[0].Blocks {
 				if b.Path == "/slides/1/body/0" {
 					split = b.Split
+					tableOver = b.Overflow > 0
 				}
+			}
+			if !tableOver {
+				if split != nil {
+					t.Errorf("%s %d rows: only the note overflows but a split is proposed: %+v", tm, n, split)
+				}
+				for _, w := range over {
+					if strings.Contains(w.Hint, "枚に分けられます") || !strings.Contains(w.Hint, "前の /slides/1/body/0(table") {
+						t.Errorf("%s %d rows: %s hint %q", tm, n, w.Path, w.Hint)
+					}
+				}
+				continue
 			}
 			if split == nil || split.Tables != 2 {
 				continue
@@ -185,4 +198,44 @@ func tableLooks(t *testing.T, pptx []byte) (grids, sizes []string) {
 		}
 	}
 	return grids, sizes
+}
+
+// 表の後の takeaway だけがはみ出すとき(#161 の D1・B5)、表を分ける案は出さず、
+// hint は伸びて高さを取っている前のブロック(表)を指す(#164)。
+func TestOverflowOnlyAfterSmallTablePointsAtTallBlock(t *testing.T) {
+	for _, tm := range []string{"light", "report"} {
+		found := false
+		for n := 1; n <= 30 && !found; n++ {
+			src := splitFitTable(splitFitRange(0, n), false, false)
+			src += "\n:::takeaway\n移す順番は利用の少ない仕組みから始め、最後に基幹の仕組みを移す。\n:::\n"
+			res := Check("x.bx.md", splitFitDeck(src), CheckOptions{Template: tm})
+			var over []Issue
+			for _, w := range res.Warnings {
+				if w.Code == codeLayoutOverflow {
+					over = append(over, w)
+				}
+			}
+			if len(over) == 0 {
+				continue
+			}
+			bs := res.Capacity[0].Blocks
+			if bs[0].Overflow > 0 || bs[0].Need <= bs[1].Need {
+				break // 表そのものがはみ出した:この形の試験にならない
+			}
+			found = true
+			if bs[0].Split != nil {
+				t.Errorf("%s: split proposed for a table that fits: %+v", tm, bs[0].Split)
+			}
+			if len(over) != 1 || over[0].Path != "/slides/1/body/1" {
+				t.Fatalf("%s: want one overflow on the takeaway: %+v", tm, over)
+			}
+			h := over[0].Hint
+			if strings.Contains(h, "枚に分けられます") || !strings.Contains(h, "前の /slides/1/body/0(table") || !strings.Contains(h, "continues") {
+				t.Errorf("%s: hint %q", tm, h)
+			}
+		}
+		if !found {
+			t.Errorf("%s: no row count made only the takeaway overflow", tm)
+		}
+	}
 }
