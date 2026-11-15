@@ -1083,6 +1083,9 @@ func warningIssue(file, w string) Issue {
 	if figure && strings.Contains(m[3], "has no legend text") {
 		rule = "figure-legend" // 図の箱の状態を使ったのに凡例の文が無い
 	}
+	if m[2] == "SUBSYSTEM" && strings.Contains(inBlock, "cycle: titles are cramped outside the ring") {
+		rule = "cycle-cramped" // 題を輪の外に置いた輪・題の枠が窮屈(#155)
+	}
 	if figure && strings.Contains(m[3], "a funnel is for values that decrease") {
 		rule = "funnel-increase" // funnel の数が前の段より増えた
 	}

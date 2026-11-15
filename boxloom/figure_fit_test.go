@@ -45,7 +45,8 @@ func TestCycleLongTitlesDoNotBreakPerChar(t *testing.T) {
 			t.Errorf("%s: natural size warns %v", tm, ws)
 		}
 		// 最小の大きさ(Min)では題が読める(扇に入るか輪の外。#112)。
-		if ws := sub.Lint(LBox{Width: m.Min.Width, Height: sub.Measure(Constraint{Width: m.Min.Width}).Natural.Height}); len(ws) != 0 {
+		// 輪の外に置く最小の輪は窮屈なので cycle-cramped(#155)だけは出る。
+		if ws := withoutCramped(sub.Lint(LBox{Width: m.Min.Width, Height: sub.Measure(Constraint{Width: m.Min.Width}).Natural.Height})); len(ws) != 0 {
 			t.Errorf("%s: min size warns %v", tm, ws)
 		}
 		// それより小さい最小の輪では入らない題があり、警告になる(題は塊の幅のまま)。

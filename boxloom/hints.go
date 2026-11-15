@@ -27,6 +27,8 @@ const (
 		"(文のまとまりを main にする)か、図のまとまりに文を足して縦を使ってください。字や図を大きくはしません"
 	sparePairHint = "対の側の図(画像)が側の幅を使い切らず、横が空きます。図の余りは、同じ列のどの対も高くならない分だけもう片側へ回してあり、" +
 		"残りは同じ列の別の対の文がそれ以上狭められない分です。図のある対を別の対の並びに分けるか、図の側に文を足して縦を使ってください"
+	cycleCrampedHint = "循環の図の題が長く、扇の中にも輪の横にも楽に入りません。題を短くする(全文は横の文に書く)か、" +
+		"図の列を広くする(図のまとまりを role=main にする)かで直してください。字や輪は小さくしません"
 	statValueHint = "数と単位はそれぞれ途中で折らないので、カードの幅に入らないと単位が次の行に落ちるか、数がカードからはみ出します。" +
 		"値を短くする(桁を丸める・大きな単位にする)・" +
 		"単位や補足は label に移す・同じ stat の数を減らしてカードを広くする、のどれかで直してください。字は小さくしません"
@@ -72,6 +74,10 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 		case codeFitEmergency:
 			if w.Hint == "" {
 				w.Hint = fitEmergencyHint
+			}
+		case "cycle-cramped":
+			if w.Hint == "" {
+				w.Hint = cycleCrampedHint
 			}
 		case "stat-value":
 			if w.Hint == "" {

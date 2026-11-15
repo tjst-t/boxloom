@@ -790,10 +790,9 @@ phases の `numberStyle` は数でなく箱の番号の形で、`arabic`(1. 2.)�
 cycle は輪の太さ `ringFraction`(外の半径に対する割合)・扇の間 `gapAngle`(度)・番号の丸
 `numberDiameter`・補足の幅 `labelMinWidth`〜`labelMaxWidth`・輪の直径 `naturalDiameter`・
 `minDiameter`(扇の中に題が入らなければ、自然の直径は `naturalDiameter` の 1.75 倍まで
-大きく申告する)・`outsideMinDiameter`(題が扇に入らず輪の外に置くときの輪の直径の下限)・輪の下に題を並べる置き方
-(#154)の輪と並びの間 `listGap`・項目の間 `listItemGap`・並びの番号の丸 `listNumberDiameter`・番号の丸と
-題の間 `listNumberGap`・濃淡 `shadeRange`(最後の段を地の色に寄せる割合)・`mutedShade`(強調が
-あるとき、強調でない段を寄せる割合)を持つ。凡例の寸法は上と同じ。
+大きく申告する)・`outsideMinDiameter`(題が扇に入らず輪の外に置くときの輪の直径の下限)・濃淡 `shadeRange`(最後の段を地の色に寄せる割合)・`mutedShade`(強調が
+あるとき、強調でない段を寄せる割合)を持つ。凡例の寸法は上と同じ。題を輪の外に置いたとき、輪の直径が
+`minDiameter` を下回るか題の枠が `labelMinWidth` より狭ければ check の警告 `cycle-cramped`(#155)。
 pillars は屋根の斜めの辺 `roofSlant`・屋根/柱/土台の高さ(`roof…`・`pillar…`・`foundation…` の
 `MinHeight`・`NaturalHeight`・`MaxHeight`。最小 ≤ 自然 ≤ 上限)・柱の間 `pillarGap`・屋根と土台の
 張り出し `pillarOverhang`・柱の幅の下限 `pillarMinWidth`・名前の丸 `labelDiameter`・塗りの淡さ

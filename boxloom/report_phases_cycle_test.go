@@ -41,8 +41,8 @@ func TestReportPhasesBandFilled(t *testing.T) {
 }
 
 // 列の中の cycle に 20 字前後の題が5つ:題は扇に入らないので輪の外に置き、輪を
-// 小さくして置き場を取る(外の題の枠が潰れる狭い列では輪の下に並べる、#154)。題どうし・題と輪(番号の丸を含む正方形)が重ならず、
-// どれも図の矩形の中にあり、警告は出ない。
+// 小さくして置き場を取る。題どうし・題と輪(番号の丸を含む正方形)が重ならず、
+// どれも図の矩形の中にあり、輪が小さいことの cycle-cramped(#155)のほかに警告は出ない。
 func TestReportCycleTitlesOutsideInColumn(t *testing.T) {
 	src := "---\ntitle: T\ntemplate: report\n---\n\n# 輪と説明\n\n" +
 		"架空の町の拠点づくりは、五つの段を一年かけて回し、毎年ふり返って次の担い手へ渡していく。\n\n" +
@@ -74,24 +74,6 @@ func TestReportCycleTitlesOutsideInColumn(t *testing.T) {
 	// 輪が小さくなる列:本文の3分の1ほどの幅の列と、半分の幅で低い列(上に表などがある)。
 	for _, box := range []LBox{{X: 50, Y: 82.8, Width: 300, Height: 391.2}, {X: 50, Y: 82.8, Width: 340, Height: 391.2},
 		{X: 50, Y: 200, Width: 418, Height: 260}} {
-		// 本文の3分の1ほどの幅の列では、外の題の枠が潰れるので、題を輪の下に並べる
-		// (#154)。輪は外に置くときより大きい。
-		if box.Width == 300 {
-			pl := sub.place(box)
-			if !pl.below {
-				t.Fatalf("%v: titles must go below the ring", box)
-			}
-			if out := sub.labelSizes(sub.labelCap(box.Width, true), true); 2*pl.r < 2*sub.radiusFor(box.Width, 0, out, true) {
-				t.Errorf("%v: below ring r=%.1f is smaller than the outside ring", box, pl.r)
-			}
-			if o := cycleShapesOverlap(pl, box); o != "" {
-				t.Errorf("%v: %s", box, o)
-			}
-			if ws := sub.Lint(box); len(ws) != 0 {
-				t.Errorf("%v: warns %v", box, ws)
-			}
-			continue
-		}
 		inside := sub.layoutFor(box.Width, box.Height, 0)
 		if inside.outside != true {
 			t.Fatalf("%v: titles must go outside the ring", box)
@@ -122,7 +104,12 @@ func TestReportCycleTitlesOutsideInColumn(t *testing.T) {
 				}
 			}
 		}
-		if ws := sub.Lint(box); len(ws) != 0 {
+		// 輪が minDiameter より小さいので cycle-cramped(#155)が出る。ほかの警告は無い。
+		ws := sub.Lint(box)
+		if !hasCramped(ws) {
+			t.Errorf("%v: no cycle-cramped (ring %.1f)", box, 2*pl.r)
+		}
+		if ws = withoutCramped(ws); len(ws) != 0 {
 			t.Errorf("%v: warns %v", box, ws)
 		}
 		// 輪は扇に題を入れるときより小さい。

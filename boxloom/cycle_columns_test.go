@@ -48,9 +48,10 @@ func findSubsystem(n *LayoutNode, name string) *LayoutNode {
 }
 
 // columns の狭い列に 20 字前後の題5つの cycle、横に role=main の箇条:題は扇に
-// 入らないので輪の外に置く。列の幅は題を外に置くのに要る幅(Min)まで広がる。その幅では
-// 外の題の枠が潰れるので、題は輪の下に並べる(#154)。題どうし・題と輪は重ならず、警告も出ない。列がさらに狭くて外にも
-// 入らなければ、警告(figure-text-overflow か subsystem-min)が出る。
+// 入らないので輪の外に置く。列の幅は題を外に置くのに要る幅(Min)まで広がり、題どうし・
+// 題と輪(番号の丸を含む正方形)は重ならず、警告も出ない。列がさらに狭くて外にも
+// 入らなければ、警告(figure-text-overflow か subsystem-min)が出る。輪が最小まで縮むので
+// cycle-cramped(#155)も出る。
 func TestCycleTitlesOutsideInNarrowColumn(t *testing.T) {
 	for _, tmpl := range []string{"report", "dark", "light"} {
 		for _, extra := range []int{0, 1} {
@@ -64,8 +65,11 @@ func TestCycleTitlesOutsideInNarrowColumn(t *testing.T) {
 			if len(errs) > 0 {
 				t.Fatalf("%s: errors %+v", name, errs)
 			}
-			warned := false
+			warned, cramped := false, 0
 			for _, w := range warns {
+				if w.Code == "cycle-cramped" {
+					cramped++
+				}
 				if w.Code == "figure-text-overflow" || w.Code == "subsystem-min" {
 					warned = true
 				}
@@ -87,13 +91,15 @@ func TestCycleTitlesOutsideInNarrowColumn(t *testing.T) {
 			restore()
 			overlap := cycleTitlesOverlap(sub, pl)
 			if extra == 0 {
-				// 2つの列:列が広がり、題は輪の外に重ならずに入る。
-				// 列は Min の幅(題を外に置く最小の輪の幅)なので、外の題の枠は潰れる。
-				// 題は輪の下に並べる(#154)。
-				if !pl.below {
-					t.Errorf("%s: titles must go below the ring (box %+v)", name, box)
+				// 2つの列:列が広がり、題は輪の外に重ならずに入る。ただし輪は最小まで縮むので
+				// cycle-cramped が1件出る(#155。題が長すぎることを知らせる)。
+				if !pl.outside {
+					t.Errorf("%s: titles must go outside the ring (box %+v)", name, box)
 				}
-				if overlap != "" || warned || len(lint) > 0 {
+				if cramped != 1 || !hasCramped(lint) {
+					t.Errorf("%s: cycle-cramped %d times (lint %v), want 1", name, cramped, lint)
+				}
+				if overlap != "" || warned || len(withoutCramped(lint)) > 0 {
 					t.Errorf("%s: box %+v overlap=%q warns=%+v lint=%v", name, box, overlap, warns, lint)
 				}
 				continue
@@ -109,10 +115,6 @@ func TestCycleTitlesOutsideInNarrowColumn(t *testing.T) {
 // cycleTitlesOverlap は置いた題どうし・題と輪が重なるかを書く(重ならなければ "")。
 // 題を扇の中に置いたときは、扇に入らなかった題があれば重なりとみなす。
 func cycleTitlesOverlap(sub *CycleSubsystem, pl *cyclePlaced) string {
-	if pl.below {
-		// 図形どうしの重なりだけを見る(枠からのはみ出しは見ない)。
-		return cycleShapesOverlap(pl, LBox{X: -1e6, Y: -1e6, Width: 2e6, Height: 2e6})
-	}
 	if !pl.outside {
 		for i, r := range pl.titleRoom {
 			if r.Width > 0 || r.Height > 0 {
@@ -148,6 +150,10 @@ func TestCycleTitlesAnyWidth(t *testing.T) {
 				box := LBox{X: 40, Y: 80, Width: w, Height: h}
 				pl := sub.place(box)
 				lint := sub.Lint(box)
+				if pl.outside && 2*pl.r < sub.vals().MinDiameter && !hasCramped(lint) {
+					t.Errorf("%s %.0fx%.0f: ring %.1f under minDiameter without cycle-cramped", tmpl, w, h, 2*pl.r)
+				}
+				lint = withoutCramped(lint) // 窮屈さは別に知らせる(#155)。ここでは重なりの警告を見る
 				overlap := cycleTitlesOverlap(sub, pl)
 				if overlap != "" && len(lint) == 0 {
 					t.Errorf("%s %.0fx%.0f: %s without a warning", tmpl, w, h, overlap)
