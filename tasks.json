@@ -3757,7 +3757,7 @@
       "number": 166,
       "kind": "task",
       "title": "数・表・図のある本文のスライドに出典が無ければ警告する",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3771,7 +3771,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:53:27.100Z",
-      "updatedAt": "2026-11-15T14:53:27.100Z",
+      "updatedAt": "2026-11-15T23:52:36.735Z",
       "closedAt": null,
       "extra": {}
     },
