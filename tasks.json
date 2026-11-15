@@ -3485,6 +3485,29 @@
       "updatedAt": "2026-11-13T15:14:09.073Z",
       "closedAt": "2026-11-13T15:14:09.073Z",
       "extra": {}
+    },
+    {
+      "id": "below",
+      "number": 155,
+      "kind": "task",
+      "title": "サイクル図の「輪の下に題を並べる」置き方(below)をやめ、中・横で収まらなければ警告にする",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [
+        "cycle"
+      ],
+      "body": "## なぜ\n#154(commit 3abfbb7)で、縦長で狭い枠では「輪を上に置き、番号つきの題を下に並べる」置き方(below)を足した。だがこれは普通の資料で見ない独自の型で、題が長すぎるという本当の問題を隠すだけだった。サイクル図の普通の型は「題を輪の扇の中に入れる(in)」「題を輪の周りの横に置く(outside)」の2つ。人が決めた方針:below はやめ、2つで収まらないときは警告を出して作者に題を短くしてもらう(内容の良し悪しは判定せず、測れるものは警告して作者に促す)。\n\n## やること\n- boxloom/cycle.go から below の置き方を外す(cycleBelow・belowList・belowSize・belowSteps・belowLayout・placeBelow・cycleBelowMargin、layoutFor・Measure の Min・描画・警告の below の分岐)。cycle_below_test.go は消すか、新しい警告の試験に書き換える。cycle_columns_test.go・report_phases_cycle_test.go の #154 で変えた期待も戻す。\n- subsystems/cycle.json から listGap・listItemGap・listNumberDiameter・listNumberGap を外す(知らないキーは誤りなので値の表の型からも外す)。\n- 置き方の選び方は #154 より前に戻す(in で入らなければ outside。outside は枠に合わせて輪を縮める)。\n- 新しい警告 `cycle-cramped`(1つの図に1件、path は図のブロック):outside で輪の直径が minDiameter を下回る、または題の枠が labelMinWidth を下回るとき。message に輪の直径と題の枠の幅(pt)を、hint に「題を短くする(全文は横の文に書く)か、図の列を広くする(role=main)」を書く。figure-text-overflow(題が枠に入らない)は今のまま別に出る。\n- -fit:cycle-cramped は警告だけで、-fit の「収まった」の判定(図の崩れ)には入れない。\n- docs/subsystem.md の cycle の節・docs/template-values.md・CLAUDE.md の #154 の記述を直し、警告を書く。SKILL.md に警告一覧があれば足す。\n\n## 確かめ方\n- 幅 279pt・高さ 326pt の枠に題が20〜40字の5ステップを置くと cycle-cramped が1件出て、PPTX に題の並び(輪の外の下の一覧)が無い。\n- 題が短い(8字程度)5ステップを同じ枠に置くと cycle-cramped は出ない。\n- 例・試験の題は架空のもの・名前の無いものだけを使う。",
+      "doneWhen": "below の置き方とその値の表のキーが無くなり、上の2つの確かめ方の試験が通り、tools/ci.sh が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-15T13:24:28.704Z",
+      "updatedAt": "2026-11-15T13:24:28.704Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
