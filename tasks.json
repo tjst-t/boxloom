@@ -3935,6 +3935,29 @@
       "updatedAt": "2026-11-15T14:54:05.811Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "table-groups-1",
+      "number": 174,
+      "kind": "task",
+      "title": "table-groups の「群の名前が空」の誤りを1件にまとめる",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "low",
+      "labels": [
+        "eval-161"
+      ],
+      "body": "#161 の評価(E13・R5):群の列の頭が空のとき、空の行ごとに同じ「最初の行の群の名前が空」が出る。しかも2件目は2行目を指していて、文と場所が合わない。最初の行が空なら1件だけにし、ほかの行の空(前の群の続き)は誤りにしない。",
+      "doneWhen": "群の列の頭が空の表で table-groups が1件だけ出る試験が通り、tools/ci.sh が通る",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-15T14:54:10.779Z",
+      "updatedAt": "2026-11-15T14:54:10.779Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
