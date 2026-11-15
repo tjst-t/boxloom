@@ -3583,7 +3583,7 @@
       "number": 159,
       "kind": "task",
       "title": "Mochiy Pop P One の字体の寸法(#147)を外す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3597,7 +3597,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T13:33:00.161Z",
-      "updatedAt": "2026-11-15T13:33:00.161Z",
+      "updatedAt": "2026-11-15T13:50:48.492Z",
       "closedAt": null,
       "extra": {}
     },
