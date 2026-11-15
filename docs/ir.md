@@ -876,6 +876,12 @@ check でも断られるもの。
   (`…/columns/C`)・`need`・`lines`・`top`・`bottom`・`overflow` と、中のブロックの
   `blocks`(path は `…/columns/C/body/K`))。ブロックの `need`・`lines` は一番高い
   まとまりのもの。
+  まとまりの中の図(サブシステム)が列の幅に押されて縦に伸びているとき(columns の全幅に
+  置けば低くなるとき)、その図のブロックには `subsystem`(図の名前)と `fullWidthNeed`
+  (図を columns から出して全幅に置いたときに要る高さ)が付く(#163)。その列で
+  `layout-overflow` が出たら、hint は dense を勧めず、図を columns から出して全幅に置くか
+  図の列を `role=main` にして広げることを言う(原因は図を狭い列に詰めたことで、dense は
+  参照用に詰めて読ませるページのためのもの)。
 - **横に同じ幅のカードを並べるブロック**(`compare` の選択肢・`stat` の数)には
   `cards` が付く(カードごとに `path`(`…/options/K`、stat は `…/items/K`)・`need`・
   `lines` と、ブロックの高さを決める一番高いカードにだけ `"tallest": true`)。

@@ -63,8 +63,12 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 		case "layout-overflow":
 			if w.Hint == "" {
 				w.Hint = joinHints(densityHint(w.Path, capOf), tableSplitHint(w.Path, capOf))
+				fig := columnFigureHint(w.Path, capOf)
+				if fig != "" {
+					w.Hint = fig // 図が狭い列に詰まった:dense は勧めない(#163)
+				}
 				if h := fitShortHint(slideCapOf(w.Path, capOf)); h != "" {
-					w.Hint = h // -fit でも収まらなかった:dense の案は言わない
+					w.Hint = joinHints(fig, h) // -fit でも収まらなかった:dense の案は言わない
 				}
 			}
 		case "figure-text-overflow", "subsystem-min", "column-floor":
@@ -136,6 +140,35 @@ func densityHint(path string, capOf map[string]SlideCapacity) string {
 			"そうでなければスライドを分けるか、文を短くしてください", math.Max(0, *r))
 	}
 	return fmt.Sprintf("dense にしても %.1fpt 足りません。スライドを分けるか、文を短くしてください", -*r)
+}
+
+// columnFigureHint は、はみ出したのが並列のまとまり(/slides/S/body/N/columns/C/…)の中で、
+// その列に列の幅に押されて縦に伸びた図(容量の subsystem・fullWidthNeed)があるときの
+// 直し方。原因は図を狭い列に詰めたことなので、dense ではなく図を列から出すか図の列を
+// 広げることを言う(#163)。当たらなければ空。
+func columnFigureHint(path string, capOf map[string]SlideCapacity) string {
+	var s, n, c int
+	if _, err := fmt.Sscanf(path, "/slides/%d/body/%d/columns/%d", &s, &n, &c); err != nil {
+		return ""
+	}
+	cp := fmt.Sprintf("/slides/%d/body/%d/columns/%d", s, n, c)
+	for _, b := range capOf[fmt.Sprintf("/slides/%d", s)].Blocks {
+		for _, col := range b.Columns {
+			if col.Path != cp {
+				continue
+			}
+			for _, ib := range col.Blocks {
+				if ib.Subsystem == "" || ib.FullWidthNeed == nil {
+					continue
+				}
+				return fmt.Sprintf("%s の図(%s)は列の幅に押されて縦に伸びています(列の中で %.1fpt、columns の全幅なら %.1fpt)。"+
+					"図を columns から出して全幅に置く(説明の文は図の前か後のブロックにする)か、図の列を role=main にして広げてください。"+
+					"dense は参照用に詰めて読ませるページ(表・一覧)のためのもので、図の詰まりは直しません",
+					ib.Path, ib.Subsystem, ib.Need, *ib.FullWidthNeed)
+			}
+		}
+	}
+	return ""
 }
 
 // slideCapOf は場所 path(/slides/S/…)のスライドの容量。

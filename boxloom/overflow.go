@@ -41,6 +41,11 @@ type BlockMeasure struct {
 	Bottom   float64 // Top + Need
 	Overflow float64 // 本文の領域の下端を越えた高さ(越えなければ 0)
 	Type     string  // IR の type(並列のまとまりの中のブロックだけ。本文のブロックは kinds で渡す)
+	// Figure・FullWidthNeed は並列のまとまりの中の図(サブシステム)のブロックで、まとまりの
+	// 列の幅に押されて縦に伸びているときだけ:図の名前と、columns の全幅に置いたときに
+	// 要る高さ(#163。はみ出しの hint が dense ではなく図を列から出すことを勧める)。
+	Figure        string
+	FullWidthNeed float64
 
 	// Columns は並列のまとまり(columns)のときだけ、まとまりごとの測り値。
 	// ブロックの Need は一番高いまとまりの Need。
@@ -123,7 +128,7 @@ func measureBody(root, body *Spec) (blocks []BlockMeasure, capacity, need float6
 		m := BlockMeasure{Index: i, Need: h, Lines: lines, Top: start, Bottom: end}
 		m.Overflow = overflowOf(start, end, capacity)
 		if b.columns != nil {
-			m.Columns = measureColumns(b.columns, start, capacity)
+			m.Columns = measureColumns(b.columns, start, capacity, max0(widths[b]-2*b.padX()))
 		}
 		if b.cards != "" {
 			m.CardsKey, m.Cards = b.cards, measureCards(b)
@@ -203,7 +208,8 @@ func overflowOf(start, end, capacity float64) float64 {
 
 // measureColumns は並列のまとまりを1つずつ、題と本文のブロックを縮めずに積んで
 // 測る(top はブロックの上端)。まとまりの幅は requiredMeasure が並べた Box から読む。
-func measureColumns(info *columnsInfo, top, capacity float64) []ColumnMeasure {
+// full は columns のブロックの中の幅で、図のブロックを全幅に置いたときの高さを測るのに使う。
+func measureColumns(info *columnsInfo, top, capacity, full float64) []ColumnMeasure {
 	var out []ColumnMeasure
 	for ci, col := range info.cols {
 		w := col.spec.Box.Width
@@ -220,6 +226,13 @@ func measureColumns(info *columnsInfo, top, capacity float64) []ColumnMeasure {
 			}
 			h, n := requiredMeasure(b, w)
 			bm := BlockMeasure{Index: bi, Need: h, Lines: n, Top: cursor, Bottom: cursor + h, Type: b.irType}
+			if name := subsystemName(b); b.irType == "subsystem" && name != "" && full > w+overflowEps {
+				wide, _ := requiredMeasure(b, full)
+				requiredMeasure(b, w) // 行の Box を列の幅で並べ直した形に戻す
+				if wide < h-overflowEps {
+					bm.Figure, bm.FullWidthNeed = name, wide
+				}
+			}
 			bm.Overflow = overflowOf(bm.Top, bm.Bottom, capacity)
 			cm.Blocks = append(cm.Blocks, bm)
 			cm.Lines += n
@@ -230,6 +243,22 @@ func measureColumns(info *columnsInfo, top, capacity float64) []ColumnMeasure {
 		out = append(out, cm)
 	}
 	return out
+}
+
+// subsystemName はブロック s の中の最初のサブシステムの名前(無ければ空)。
+func subsystemName(s *Spec) string {
+	if s == nil {
+		return ""
+	}
+	if s.Kind == KindSubsystem && s.Subsystem != nil {
+		return s.Subsystem.Name()
+	}
+	for _, c := range s.Children {
+		if n := subsystemName(c); n != "" {
+			return n
+		}
+	}
+	return ""
 }
 
 // measureBodyOverflow は本文の各ブロックのはみ出しと、本文の領域の高さ・

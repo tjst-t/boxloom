@@ -69,6 +69,11 @@ type BlockCapacity struct {
 	RemainingWidth float64 `json:"remainingWidth,omitempty"`
 	// Columns は並列のまとまり(columns)のときだけ、まとまりごとの測り値。
 	Columns []ColumnCapacity `json:"columns,omitempty"`
+	// Subsystem・FullWidthNeed は並列のまとまりの中の図(サブシステム)のブロックが、
+	// 列の幅に押されて縦に伸びているときだけ:図の名前と、図を columns から出して全幅に
+	// 置いたときに要る高さ(#163)。
+	Subsystem     string   `json:"subsystem,omitempty"`
+	FullWidthNeed *float64 `json:"fullWidthNeed,omitempty"`
 	// Cards は横に同じ幅のカードを並べるブロック(compare の選択肢・stat の数)の
 	// ときだけ、カードごとの測り値。ブロックの need を決めるのは一番高いカード
 	// (tallest)で、ほかのカードに文を足しても need は増えない。
@@ -160,6 +165,10 @@ func blockCapacity(b BlockMeasure, path, typ string) BlockCapacity {
 		Top:      round1(b.Top),
 		Bottom:   round1(b.Bottom),
 		Overflow: round1(b.Overflow),
+	}
+	if b.Figure != "" {
+		fw := round1(b.FullWidthNeed)
+		bc.Subsystem, bc.FullWidthNeed = b.Figure, &fw
 	}
 	for _, p := range b.Pairs {
 		bc.Pairs = append(bc.Pairs, pairCapacity(p, path))
