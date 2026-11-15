@@ -67,7 +67,6 @@ func matrixDataFromYAML(p *mdParser, n *yNode, path string) any {
 		{"rows", gSeq(gObject(matrixRowFields), 1), true},
 		{"legend", gStatusLegend, false},
 		{"emphasis", gString, false},
-		{"detailColumn", gInline, false},
 	})(p, n, path)
 }
 

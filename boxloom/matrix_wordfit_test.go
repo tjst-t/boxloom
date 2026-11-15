@@ -20,12 +20,12 @@ func TestMatrixShortWordNoCliff(t *testing.T) {
     {"label": "設備", %s "cells": [{"status": "none", "text": "p.35"}, {"status": "danger", "text": "p.12"}, {"status": "support"},
       {"status": "none"}, {"status": "none", "text": "p.135"}, {"status": "none"}]}]}`
 	plain := []any{"", "", ""}
-	detail := []any{`"detailColumn": "説明",`, `"detail": "採用が遅れて窓口の人手が足りない",`, `"detail": "機械が古い",`}
+	detail := []any{"", `"detail": "採用が遅れて窓口の人手が足りない",`, `"detail": "機械が古い",`}
 	cases := []struct {
 		name string
 		args []any
 		mark bool
-	}{{"filled", plain, false}, {"mark", plain, true}, {"detailColumn", detail, false}}
+	}{{"filled", plain, false}, {"mark", plain, true}, {"detail", detail, false}}
 	for _, c := range cases {
 		d, err := matrixFromIR(json.RawMessage(fmt.Sprintf(data, c.args...)))
 		if err != nil {
