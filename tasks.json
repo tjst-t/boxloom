@@ -3514,7 +3514,7 @@
       "number": 156,
       "kind": "task",
       "title": "-fit で columns を列ごとに別のスライドへ分ける動き(#152)を外す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3528,7 +3528,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T13:32:44.497Z",
-      "updatedAt": "2026-11-15T13:32:44.497Z",
+      "updatedAt": "2026-11-15T13:33:41.584Z",
       "closedAt": null,
       "extra": {}
     },
