@@ -64,7 +64,6 @@ ascent・descent。
 | BIZ UDGothic | 実測 | OFL-1.1 | ○ | 1.001em | 同上(欧文が半角の等幅。MS ゴシックと同じ振る舞い) |
 | IPAexGothic | 実測(太字なし) | IPA | ○ | 1.001em | moji.or.jp |
 | IPAPGothic | 実測(太字なし) | IPA | ○ | 1.001em | この環境の `/usr/share/fonts/opentype/ipafont-gothic/ipagp.ttf`(仮名・約物がプロポーショナル。9章) |
-| Mochiy Pop P One | 実測(太字なし) | OFL-1.1 | ○ | 1.448em | google/fonts の `ofl/mochiypoppone`(仮名がプロポーショナルのポップ体。9章) |
 | Liberation Sans | 実測 | OFL-1.1 | × | 1.118em | この環境。**Arial と同じ幅に作られた字体** |
 | DejaVu Sans | 実測 | Bitstream Vera | × | 1.165em | この環境。欧文の広い字体 |
 
@@ -247,7 +246,7 @@ Noto Sans CJK JP を置き換わり得る字体5つのいちばん広い幅で�
 | **BIZ UDPGothic** | **0.947em** | **0.916em** |
 | (参考)元の資料の字体 | 約 0.86em | — |
 
-#102 の時点で、同梱の字体で仮名と約物が詰まっているのは BIZ UDPGothic だけだった(漢字はどれも 1em)。#147 で IPAPGothic などの候補を足した(9章)。
+#102 の時点で、同梱の字体で仮名と約物が詰まっているのは BIZ UDPGothic だけだった(漢字はどれも 1em)。#147 で IPAPGothic を足した(9章)。
 測るときの送り(置き換わり得る字体の最大と `widthMargin` を掛けた値)は、変更前 1.000em、
 変更後 **0.968em**(BIZ UDPGothic の仮名・約物は全角より狭いので余裕 1.05 が掛かる)。
 元の 0.86em にはまだ届かない。もっと狭い字体の実測の寸法が手に入れば寄せられる。
@@ -354,9 +353,9 @@ report が BIZUDPGothic-Regular・Bold だけ、dark・light が NotoSansCJKjp-R
 
 ## 9. 和文の送りが狭い自由な字体の候補(#147)
 
-report(6章)は BIZ UDPGothic で和文1字が平均 0.947em(見積もり 0.968em)。元の資料の字体は
-約 0.85em で、残りの差(約 16%)を埋められる自由な字体を探した。**report の既定は変えていない**
-(変えるかは人が決める)。寸法を同梱した字体は値の表の `fonts.eastAsian` に書けば選べる。
+幅の狭い和文の字体の候補の調べ。report(6章)は BIZ UDPGothic で和文1字が平均 0.947em
+(見積もり 0.968em)。同じ行により多くの字を入れられる、和文の送りがこれより狭い自由な字体を探した。
+**report の既定は変えていない**(変えるかは人が決める)。寸法を同梱した字体は値の表の `fonts.eastAsian` に書けば選べる。
 
 ### 9.1 測り方
 
@@ -367,7 +366,7 @@ report(6章)は BIZ UDPGothic で和文1字が平均 0.947em(見積もり 0.968e
   「見積もり」は report の設定で和文の字体だけを替えて組むときの値(全角より狭い文字に
   `widthMargin` 1.05 を掛ける)。要る高さは 6.3 と同じ 244 字・14pt・行送り 1.2。
   同梱した字体の数は試験 `TestNarrowFontCandidates`(`go test -run TestNarrowFontCandidates -v`)が出す。
-- 漢字は調べたどの字体でも 1em(IPAPGothic・Mochiy Pop P One は CJK 統合漢字の全部が「一」と同じ幅)。
+- 漢字は調べたどの字体でも 1em(IPAPGothic は CJK 統合漢字の全部が「一」と同じ幅)。
   詰まるのは仮名と約物だけなので、漢字の多い文では差が小さい。
 
 ### 9.2 比べの表
@@ -376,7 +375,6 @@ report(6章)は BIZ UDPGothic で和文1字が平均 0.947em(見積もり 0.968e
 |---|---|---|---|---|---|---|---|---|
 | BIZ UDPGothic(いまの report) | 0.947em | 0.916em | 0.968em | 8行 134.4pt / 4行 67.2pt | OFL-1.1 | ○(10 以降) | × | 同梱 |
 | **IPAPGothic** | **0.902em** | **0.845em** | **0.929em** | 8行 134.4pt / 4行 67.2pt | IPA | × | × | **同梱**(`ipapgothic.json`) |
-| Mochiy Pop P One | 0.910em | 0.858em | 0.934em | 8行 134.4pt / 4行 67.2pt | OFL-1.1 | × | × | 同梱(`mochiy-pop-p-one.json`)。丸いポップ体で、読む資料の本文には向かない |
 | UmePlus P Gothic | 0.985em | 0.977em | 1.016em | 9行 / 5行 | M+FONTS・BSD-3-Clause | × | × | 入れない(BIZ UDPGothic より広い) |
 | Zen Kaku Gothic New・Antique | 1.000em | 1.000em | — | — | OFL-1.1 | × | × | 入れない(既定の送りは全角。`palt` でだけ詰まる) |
 | IBM Plex Sans JP | 1.000em | 1.000em | — | — | OFL-1.1 | × | × | 同上 |
@@ -396,10 +394,10 @@ Mplus1(fonts-mplus の新しい M PLUS 1)は一部の漢字が 1em より狭く(
 ### 9.3 分かったこと
 
 - 自由な字体で BIZ UDPGothic より狭いのは **IPAPGothic** だけ(読む資料の本文に使える字面のもの)。
-  見積もりは 0.968em → 0.929em で約 4% 狭い。元の資料の約 0.85em との差(約 16%)の4分の1ほど。
+  見積もりは 0.968em → 0.929em で約 4% 狭い。
   6.3 の段落では行の数は変わらなかった(1行の余りの中に収まる差)。
-- 漢字が 1em のままなので、既定の送りが詰まった字体を替えるだけでは 0.85em に届かない。
-  元の資料の字体は漢字か約物の送りも詰まっていると思われる(確かめていない)。
+- 漢字が 1em のままなので、既定の送りが詰まった字体を替えるだけでは、平均の送りは 0.9em ほどより
+  狭くならない。
 - **置き換わり**:IPAPGothic は Windows にも Mac にも標準で入っていない。PPTX は字体を埋め込まない
   ので、見る人の PC では別の字体(多くは全角の仮名)に置き換わり、詰めて組んだ行が描く側で広がる
   (6.2 の BIZ UDPGothic の無い環境と同じ問題が、Windows でも起きる)。選ぶなら、読む人の環境に

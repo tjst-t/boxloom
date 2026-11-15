@@ -7,7 +7,7 @@ import (
 
 // narrowFontCandidates は和文の送りが全角より狭い自由な字体の候補(#147、docs/fonts.md の9章)。
 // 寸法は実測で同梱し、値の表の fonts から選べる。report の既定は BIZ UDPGothic のまま。
-var narrowFontCandidates = []string{"IPAPGothic", "Mochiy Pop P One"}
+var narrowFontCandidates = []string{"IPAPGothic"}
 
 // reportFontsWithEastAsian は report の fonts の和文の字体だけを替えた一式。
 func reportFontsWithEastAsian(t *testing.T, ea string) *FontSet {
