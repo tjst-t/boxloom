@@ -35,7 +35,7 @@
     "coverAuthor": 12,
     "slideTitle": 24,
     "leadText": 18,
-    "leadMaxLines": 0,
+    "leadMaxLines": 2,
     "body": 16,
     "subPoint": 14,
     "optionLabel": 16,
