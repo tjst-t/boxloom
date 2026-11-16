@@ -3803,7 +3803,7 @@
       "number": 168,
       "kind": "task",
       "title": "title-wrap・lead-wrap・milestone-overlap に直し方の hint を付ける",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3817,7 +3817,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:53:36.837Z",
-      "updatedAt": "2026-11-15T14:53:36.837Z",
+      "updatedAt": "2026-11-16T00:12:29.670Z",
       "closedAt": null,
       "extra": {}
     },
