@@ -4010,7 +4010,7 @@
       "number": 174,
       "kind": "task",
       "title": "table-groups の「群の名前が空」の誤りを1件にまとめる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4024,7 +4024,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:54:10.779Z",
-      "updatedAt": "2026-11-15T14:54:10.779Z",
+      "updatedAt": "2026-11-16T01:31:02.265Z",
       "closedAt": null,
       "extra": {}
     },
