@@ -4115,6 +4115,30 @@
       "updatedAt": "2026-11-16T11:44:31.300Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "eval-f3",
+      "number": 182,
+      "kind": "task",
+      "title": "画像を見られない作り手で密度の評価をやり直す(eval F3)",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [
+        "report-libreoffice-2-eval-f1",
+        "report-fill-ratio-eval-f2"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "docs/eval.md の5.1節・6節 F3。#16 の評価では作り手がどちらの側も画像を見て直せたため、仮説(2)「見た目を確かめられない AI が安全のために薄くする」を試せていない。#16 と同じ10の架空の題・同じ数え方(tools/density_metrics.py)で、作り手に画像(PNG への変換・スクリーンショット)を見せない条件でやり直す。Boxloom 側は check の警告(F1・F2 を直した後のもの)だけを頼りにする。\n\n結果は docs/eval.md に節を足して、#16 の結果と並べて書く(結論・限り・見つかったこと)。資料は examples/density-eval の下に別のフォルダで置く。題・人・組織・地名はすべて架空か名前なし。実在の名前を出力・文書に書かない。",
+      "doneWhen": "画像なしの条件で python-pptx と Boxloom 各10本を作り、要素数・字数・埋まり・作り直し・重なりとはみ出しの平均を #16 と並べた表が docs/eval.md にあり、仮説(2)が支持されるかの結論が書かれている。go test ./... が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-16T11:44:42.568Z",
+      "updatedAt": "2026-11-16T11:44:42.568Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
