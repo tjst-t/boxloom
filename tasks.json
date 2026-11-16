@@ -4033,7 +4033,7 @@
       "number": 175,
       "kind": "task",
       "title": "fill-ratio の「隣とまとめる」hint の向きを連なる薄い枚でそろえる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4047,7 +4047,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:54:15.525Z",
-      "updatedAt": "2026-11-15T14:54:15.525Z",
+      "updatedAt": "2026-11-16T01:45:15.453Z",
       "closedAt": null,
       "extra": {}
     },
