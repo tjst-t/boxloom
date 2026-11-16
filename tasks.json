@@ -3872,7 +3872,7 @@
       "number": 171,
       "kind": "bug",
       "title": "フッターの作者名が長いと2行に折れてはみ出す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3886,7 +3886,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:53:56.442Z",
-      "updatedAt": "2026-11-15T14:53:56.442Z",
+      "updatedAt": "2026-11-16T00:29:15.490Z",
       "closedAt": null,
       "extra": {}
     },
