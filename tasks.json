@@ -3849,7 +3849,7 @@
       "number": 170,
       "kind": "bug",
       "title": "表の行の群の縦書きの帯が群の行より高いと行が伸び、合計の名前が細い列で折れる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3863,7 +3863,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:53:51.286Z",
-      "updatedAt": "2026-11-15T14:53:51.286Z",
+      "updatedAt": "2026-11-16T00:25:33.750Z",
       "closedAt": null,
       "extra": {}
     },
