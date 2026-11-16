@@ -4187,7 +4187,7 @@
       "number": 185,
       "kind": "bug",
       "title": "題・リードが桁区切りの「,」の後で折れる(eval F6)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4199,7 +4199,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-16T12:43:17.376Z",
-      "updatedAt": "2026-11-16T12:43:17.376Z",
+      "updatedAt": "2026-11-16T12:43:38.820Z",
       "closedAt": null,
       "extra": {}
     },
