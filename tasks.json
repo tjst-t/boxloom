@@ -4166,7 +4166,7 @@
       "number": 184,
       "kind": "bug",
       "title": "process の段の補足が1字だけ折れる(eval F5)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4178,7 +4178,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-16T12:43:12.295Z",
-      "updatedAt": "2026-11-16T12:43:12.295Z",
+      "updatedAt": "2026-11-16T12:43:37.330Z",
       "closedAt": null,
       "extra": {}
     },
