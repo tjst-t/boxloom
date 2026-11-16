@@ -4139,6 +4139,27 @@
       "updatedAt": "2026-11-16T12:41:45.187Z",
       "closedAt": "2026-11-16T12:41:45.187Z",
       "extra": {}
+    },
+    {
+      "id": "report-pairs-libreoffice-1-eval-f4",
+      "number": 183,
+      "kind": "bug",
+      "title": "report の pairs で側の字が LibreOffice で1字折れて罫線と重なる(eval F4)",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "docs/eval.md の7.3節・7.7節 F4。examples/density-eval/noimage の boxloom t05 2枚目で、pairs の対応の側の字が枠の幅にちょうど1行のとき、LibreOffice では最後の1字が2行目に折れ、下の罫線と重なる。check は何も出さない。物差しは同じ形を5か所で「はみ出し」と数え、うち4か所は画像では1行に入っていた。F1(#180、フッターの枠に字の幅の余裕を足した)と同じく、枠の幅に余裕が無いことが原因と思われる。\n\n方針:#180 のやり方を参考に、字の幅ちょうどの枠で折れが起きる所(pairs に限らず、同じ測り方をしている部品があれば)に余裕を持たせるか、行の数の見積もりを LibreOffice の折り方に合わせる。check が崩れを見逃さないこと。dark・light の出力は作りの上で変えない(変わる場合は理由を書く)。\n\n確かめ方:noimage の t01・t02・t04・t05 を build して LibreOffice で PNG にし、pairs の字が罫線と重ならないことを見る。tools/density_metrics.py のはみ出しの数も見る。ゴールデンは go test -run Golden ./ -update-golden(boxloom/ で、/usr/local/go/bin/go)。例・試験の名前は架空か名前なし。",
+      "doneWhen": "noimage の boxloom t05 2枚目を LibreOffice で描いて pairs の字が罫線と重ならず、同じ条件(字の幅が枠の幅ちょうど)を作る試験が通る。go test ./... と go vet が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-16T12:43:06.818Z",
+      "updatedAt": "2026-11-16T12:43:06.818Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
