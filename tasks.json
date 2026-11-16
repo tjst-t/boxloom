@@ -1417,7 +1417,7 @@
       "number": 178,
       "kind": "task",
       "title": "本文のスライドの題の上に、属する部(section)の名前の札を出す(テンプレートの組み方で)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "tokens-template",
       "dependsOn": [],
       "milestone": null,
@@ -1431,7 +1431,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-16T01:12:14.765Z",
-      "updatedAt": "2026-11-16T01:12:14.765Z",
+      "updatedAt": "2026-11-16T02:28:46.626Z",
       "closedAt": null,
       "extra": {}
     },
