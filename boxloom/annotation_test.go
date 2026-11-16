@@ -96,3 +96,31 @@ func TestLintSubsystemsIncludesSubsystemLint(t *testing.T) {
 		t.Fatal("lintSubsystems did not include the gantt annotation warning")
 	}
 }
+
+// 注釈の箱は文の幅ちょうどにせず、行全体に余裕(fonts.widthMargin)を取る(#172)。
+// examples/eval/brief.bx.md の注釈は、余裕が全角の文字に掛からなかったため文の
+// 幅ちょうどの箱になり、LibreOffice では和文と数字の間の空きで最後の字が2行目に
+// 落ちた(LibreOffice で1行に入るには、測った幅より 2pt ほど広い枠が要った)。
+func TestAnnotationBoxLeavesRoomForAppWidth(t *testing.T) {
+	gv := defaultGanttValues()
+	for _, text := range []string{"本人確認の作り直しで2か月の遅れ", "ここまでに全利用者を\nBoard B/C へ移行予定"} {
+		w, h := annBoxSize(gv, autoAnn(d(2027, 1, 1), text))
+		inner := w - 2*gv.AnnPadX
+		lines := strings.Split(text, "\n")
+		for _, line := range lines {
+			measured := runWidthPt(line, gv.AnnText, false)
+			if want := measured * measureSafetyMargin(); inner+1e-9 < want {
+				t.Errorf("%q: text area %.2fpt, want at least %.2fpt (measured %.2fpt x widthMargin)", line, inner, want, measured)
+			}
+			if inner-measured < 2 {
+				t.Errorf("%q: text area %.2fpt leaves %.2fpt over the measured width, want at least 2pt", line, inner, inner-measured)
+			}
+		}
+		if got := len(wrapText(text, gv.AnnText, inner, false)); got != len(lines) {
+			t.Errorf("%q: wraps into %d lines in its own box, want %d", text, got, len(lines))
+		}
+		if want := float64(len(lines))*gv.AnnText*lineHeightMult() + 2*gv.AnnPadY; !near(h, want) {
+			t.Errorf("%q: box height %.2f, want %.2f", text, h, want)
+		}
+	}
+}

@@ -1236,17 +1236,29 @@ type annPlacement struct {
 // annBoxSize は注釈の箱の大きさ。手で置いた注釈は従来の固定の大きさ。
 // 自動の注釈は、文の一番長い行が収まる幅(gv.AnnBoxMinW〜gv.AnnBoxMaxW)にし、
 // 収まらなければ折り返して、その行数ぶんの高さにする。
+//
+// 箱は文の幅ちょうどなので、アプリの描く幅が測った幅を少しでも越えると最後の
+// 字が次の行に落ちる(#172。LibreOffice は和文と数字の間に空きを足す)。そこで
+// 行の幅には、全角の文字も含めて行全体に値の表の余裕(fonts.widthMargin)を掛ける
+// (charEmWidth は全角の文字に余裕を掛けない。折り返す本文はそれで足りるが、
+// 1行で収めたい箱にはゆとりが無い)。
 func annBoxSize(gv *GanttValues, ann Annotation) (w, h float64) {
 	if ann.Direction != "" {
 		return gv.AnnBoxW, gv.AnnBoxH
 	}
 	textW := 0.0
 	for _, line := range strings.Split(ann.Text, "\n") {
-		textW = math.Max(textW, runWidthPt(line, gv.AnnText, false))
+		textW = math.Max(textW, annLineWidth(line, gv.AnnText))
 	}
 	inner := clamp(textW, gv.AnnBoxMinW-2*gv.AnnPadX, gv.AnnBoxMaxW-2*gv.AnnPadX)
 	h = measureTextHeight(ann.Text, gv.AnnText, inner, false) + 2*gv.AnnPadY
 	return inner + 2*gv.AnnPadX, h
+}
+
+// annLineWidth は注釈の1行を1行のまま描くのに取る幅(pt)。測った幅に行全体の
+// 余裕を掛け、折り返しの測り(wrapText)の幅を下回らない。
+func annLineWidth(line string, size float64) float64 {
+	return runWidthPt(line, size, false) * measureSafetyMargin()
 }
 
 // planAnnotations は注釈の置き場所を決める。x0・w はチャートの内側の左端と幅

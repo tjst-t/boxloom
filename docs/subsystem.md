@@ -201,7 +201,9 @@ Gantt の Factory は `ganttFromIR`(`gantt_ir.go`)で読み、`GanttChart` を
 
 **箱の大きさ**(`annBoxSize`):自動の注釈の箱は文に合わせる。幅は文の一番
 長い行が収まる幅で、96〜240pt に収める(数は `subsystems/gantt.json`。
-`docs/template-values.md`)。240pt に収まらない文は折り返し、その
+`docs/template-values.md`)。行の幅は、測った幅に全角の文字も含めて行全体に
+値の表の余裕(`fonts.widthMargin`)を掛けたもの(#172。文の幅ちょうどの箱では、
+LibreOffice が和文と数字の間に空きを足して最後の字が2行目に落ちた)。240pt に収まらない文は折り返し、その
 行数ぶん高くする。レーンの高さは、そのレーンに置く箱のうち一番高いものに
 合わせる。上のレーンは箱の下端を揃え(チャートに近い側)、下のレーンは上端を
 揃える。手で置いた注釈は従来どおり 176×38pt の固定。
