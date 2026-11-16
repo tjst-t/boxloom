@@ -4208,7 +4208,7 @@
       "number": 186,
       "kind": "task",
       "title": "小さいモデル・測る道具を書かせない条件で密度の評価をする(eval F7)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [
         "report-pairs-libreoffice-1-eval-f4",
@@ -4224,7 +4224,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-16T12:43:30.131Z",
-      "updatedAt": "2026-11-16T12:43:30.131Z",
+      "updatedAt": "2026-11-16T13:19:37.899Z",
       "closedAt": null,
       "extra": {}
     }
