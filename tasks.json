@@ -4202,6 +4202,31 @@
       "updatedAt": "2026-11-16T12:43:17.376Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "eval-f7",
+      "number": 186,
+      "kind": "task",
+      "title": "小さいモデル・測る道具を書かせない条件で密度の評価をする(eval F7)",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [
+        "report-pairs-libreoffice-1-eval-f4",
+        "process-1-eval-f5",
+        "eval-f6"
+      ],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "docs/eval.md の7.5節の最後・7.7節 F7。#182 では直書きの作り手(Opus 5.5)が字の幅を測る道具を自分で書けたので、密度に差が出なかった。道具を書けない、または書く手間を惜しむ作り手で同じ評価をする。\n\n条件:#16・#182 と同じ10の架空の題材・同じ物差し(tools/density_metrics.py)・画像なし。作り手は (a) 小さいモデル(サブエージェントで選べるもの。listSubagents で候補を見る)、(b) 測る道具(字の幅の計測・自作の検査)を書くことを禁じた Opus 5.5、のどちらかか両方。どちらをやったかと理由を書く。Boxloom 側は check の警告(F4〜F6 を直した後)だけを頼りにする。\n\n結果は docs/eval.md に節を足し、#16・#182 と並べた表と、仮説(2)の結論・限り・見つかったことを書く。資料は examples/density-eval の下に別のフォルダで置く。題・人・組織・地名はすべて架空か名前なし。実在の名前を出力・文書に書かない。",
+      "doneWhen": "新しい条件で python-pptx と Boxloom 各10本を作り、要素数・字数・埋まり・作り直し・重なりとはみ出しの平均を #16・#182 と並べた表と仮説(2)の結論が docs/eval.md にある。go test ./... が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-16T12:43:30.131Z",
+      "updatedAt": "2026-11-16T12:43:30.131Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
