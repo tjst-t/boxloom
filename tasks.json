@@ -107,7 +107,7 @@
       "number": 16,
       "kind": "task",
       "title": "評価:AI に同じ題材を python-pptx 直書きと Boxloom で作らせて比べる",
-      "status": "in-progress",
+      "status": "done",
       "parent": "verify-hypothesis",
       "dependsOn": [
         "skill-doc"
@@ -117,12 +117,12 @@
       "labels": [],
       "body": "仮説(2)「破綻の心配が無ければ AI は密度の高い図に挑む」を数字で確かめる。架空の題材を10ほど用意し、サブエージェントに2つのやり方で作らせる。比べるもの:重なりの数・はみ出しの数・1枚あたりの要素の数と文字数・埋まり具合・作り直しの回数。業務の固有名は使わない。",
       "doneWhen": "docs/eval.md に題材・手順・2つのやり方の数字の表があり、仮説が支持されたかどうかが書いてある",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/density-eval）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:02:58.763Z",
-      "updatedAt": "2026-11-16T02:06:10.822Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-16T02:28:30.530Z",
+      "closedAt": "2026-11-16T02:28:30.530Z",
       "extra": {}
     },
     {
