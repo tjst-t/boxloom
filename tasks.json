@@ -107,7 +107,7 @@
       "number": 16,
       "kind": "task",
       "title": "評価:AI に同じ題材を python-pptx 直書きと Boxloom で作らせて比べる",
-      "status": "ready",
+      "status": "in-progress",
       "parent": "verify-hypothesis",
       "dependsOn": [
         "skill-doc"
@@ -121,7 +121,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:02:58.763Z",
-      "updatedAt": "2026-11-11T02:02:58.763Z",
+      "updatedAt": "2026-11-16T02:06:10.822Z",
       "closedAt": null,
       "extra": {}
     },
