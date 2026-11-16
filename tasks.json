@@ -4056,7 +4056,7 @@
       "number": 176,
       "kind": "task",
       "title": "組織図の細い箱で名前が3行以上に折れるとき警告する",
-      "status": "in-progress",
+      "status": "done",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4066,12 +4066,12 @@
       ],
       "body": "#161 の評価(E15・R7):orgchart の箱の名前が長いと、細い箱の中で4行に折れて読みにくい。はみ出しは無いので何も出ない。箱の題が3行以上に折れたら警告(例 orgchart-label-wrap)を出し、hint で名前を短くするよう促す。cycle-cramped と同じ考え方。",
       "doneWhen": "細い箱で4行に折れる名前に警告が1件出て、2行以内なら出ない試験が通り、tools/ci.sh が通る",
-      "resolution": null,
+      "resolution": "Factory が取り込みました（factory/3）",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:54:21.098Z",
-      "updatedAt": "2026-11-16T01:46:58.242Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-16T02:14:36.301Z",
+      "closedAt": "2026-11-16T02:14:36.301Z",
       "extra": {}
     }
   ]
