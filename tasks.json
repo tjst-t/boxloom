@@ -4145,7 +4145,7 @@
       "number": 183,
       "kind": "bug",
       "title": "report の pairs で側の字が LibreOffice で1字折れて罫線と重なる(eval F4)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4157,7 +4157,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-16T12:43:06.818Z",
-      "updatedAt": "2026-11-16T12:43:06.818Z",
+      "updatedAt": "2026-11-16T12:43:35.848Z",
       "closedAt": null,
       "extra": {}
     },
