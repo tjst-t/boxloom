@@ -143,8 +143,11 @@ func TestPPTXFontsAndFixedLineSpacing(t *testing.T) {
 
 // fonts コマンドの測り方:BIZ UDPGothic に置き換わると従来の余裕では右に
 // はみ出す行があり、置き換わり得る字体に入れれば無くなる。
+//
+// 文書は表の続き(セルの文が測った行の数ちょうどの枠)。デモの文書で行が増えて
+// はみ出したのはフッターだけで、フッターは折り返さない1行になった(#171)。
 func TestFontCheckFallbacksRemoveOverflow(t *testing.T) {
-	d, err := readDeck("../examples/ir/demo-deck.json")
+	d, err := readDeck("../examples/ir/table-continues.json")
 	if err != nil {
 		t.Fatal(err)
 	}
