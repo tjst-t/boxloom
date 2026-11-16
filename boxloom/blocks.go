@@ -534,7 +534,13 @@ func (t *tableLeaf) Render(ctx RenderContext, box LBox) {
 // 区切り・小数・後ろの単位(% と短い単位の語)を許す。
 var numericCellRe = regexp.MustCompile(`^[+\-−±]?[¥$€£]?[0-9][0-9,]*(\.[0-9]+)?[ ]?(%|pt|px|ms|s|h|件|台|人|円|万|億|倍|年|月|日|時間|分|秒|個|回|社|名|点|割)?$`)
 
-// numericColumns は列ごとに、本体のセルがすべて数(空のセルは数えない)か。
+// timePointCellRe は時点だけのセル(「1月」「2026年」「2026年4月」「3月15日」)。数と
+// 単位の形をしていても量ではなく名前なので、数の列にしない(#173)。年は4桁のときだけ
+// 時点(「3年」は期間で量)、日は月と組んだときだけ時点(「3日」は期間で量)。
+var timePointCellRe = regexp.MustCompile(`^(?:[0-9]{4}年(?:[0-9]{1,2}月(?:[0-9]{1,2}日)?)?|[0-9]{1,2}月(?:[0-9]{1,2}日)?)$`)
+
+// numericColumns は列ごとに、本体のセルがすべて数(空のセルは数えない)で、時点だけの
+// 列ではないか。
 func numericColumns(rows [][]IRTableCell, n int) []bool {
 	out := make([]bool, n)
 	for c := 0; c < n; c++ {
@@ -551,9 +557,26 @@ func numericColumns(rows [][]IRTableCell, n int) []bool {
 				break
 			}
 		}
-		out[c] = seen && ok
+		out[c] = seen && ok && !timePointColumn(rows, c)
 	}
 	return out
+}
+
+// timePointColumn は列 c の本体のセルがすべて時点だけ(空のセルは数えない)か。時点の
+// 列は左に揃え、幅を中身に合わせる(余りの幅を配らない。#173)。
+func timePointColumn(rows [][]IRTableCell, c int) bool {
+	seen := false
+	for _, r := range rows {
+		s := strings.TrimSpace(r[c].Plain())
+		if s == "" {
+			continue
+		}
+		if r[c].Points != nil || !timePointCellRe.MatchString(s) {
+			return false
+		}
+		seen = true
+	}
+	return seen
 }
 
 // tableLook は表の見た目(役割名と値の表の名前)。標準の部品は standardTableLook、
@@ -667,6 +690,24 @@ func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 					leaf.floor[c] = math.Max(leaf.floor[c], floor)
 				}
 			}
+		}
+	}
+	// 時点の列(「1月」「2026年」)は中身の幅のまま、余りの幅は文の列へ回す(#173)。
+	// 全部の列が幅を決めた列になるときは決めない(表の幅を埋める列が無くなる)。
+	var timeCols []int
+	for c := range header {
+		if !slices.Contains(groupCols, c) && timePointColumn(body, c) {
+			timeCols = append(timeCols, c)
+		}
+	}
+	if len(timeCols) > 0 {
+		fixed := make([]bool, len(header))
+		copy(fixed, leaf.fixed)
+		for _, c := range timeCols {
+			fixed[c] = true
+		}
+		if slices.Contains(fixed, false) {
+			leaf.fixed = fixed
 		}
 	}
 	if band {

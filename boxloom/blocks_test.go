@@ -412,3 +412,57 @@ func TestBlocksExampleBuilds(t *testing.T) {
 		t.Fatal("the IR example needs its own images/ (src cannot leave the deck's folder)")
 	}
 }
+
+// 時点だけの列(「1月」「2026年」)は数の列にしない(左に揃え、幅は中身のまま)。金額・
+// 件数・期間の列は右に揃えたまま(#173)。
+func TestTimePointColumns(t *testing.T) {
+	cells := func(ss ...string) []IRTableCell {
+		var out []IRTableCell
+		for _, x := range ss {
+			out = append(out, IRTableCell{Text: plainInline(x)})
+		}
+		return out
+	}
+	rows := [][]IRTableCell{
+		cells("1月", "2026年", "2026年4月", "3月15日", "¥3,200", "120件", "3年", "3日"),
+		cells("12月", "2027年", "", "4月1日", "¥800", "8件", "10年", "14日"),
+	}
+	got := numericColumns(rows, 8)
+	want := []bool{false, false, false, false, true, true, true, true}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("column %d: %v, want %v", i, got[i], want[i])
+		}
+	}
+
+	tm, _ := LookupTemplate("light")
+	d, err := ReadIR("t.json", []byte(oneSlide(`{"type": "table", "header": ["時期", "すること", "費用"], "rows": [["1月", "北と東の住民の会", "¥120,000"], ["3月", "置き場の一覧を議会に報告", "¥0"], ["7月", "置き場の工事に入る", "¥3,200,000"]]}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	built, err := tm.BuildDeck(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := built[0]
+	computeLayout(b.Root, 0, 0, tm.Values.PageW, tm.Values.PageH)
+	node := b.Body.Children[0]
+	leaf := node.Subsystem.(*tableLeaf)
+	if a := leaf.cells[1][0].Align; a != "left" {
+		t.Errorf("時期 aligned %q, want left", a)
+	}
+	if a := leaf.cells[1][2].Align; a != "right" {
+		t.Errorf("費用 aligned %q, want right", a)
+	}
+	ws := leaf.colWidths(node.Box.Width)
+	if math.Abs(ws[0]-leaf.natural[0]) > 0.01 {
+		t.Errorf("時期 column %.1fpt, want its content width %.1fpt", ws[0], leaf.natural[0])
+	}
+	sum := 0.0
+	for _, w := range ws {
+		sum += w
+	}
+	if math.Abs(sum-node.Box.Width) > 0.01 {
+		t.Errorf("columns sum to %.1fpt, table is %.1fpt", sum, node.Box.Width)
+	}
+}
