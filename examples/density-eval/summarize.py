@@ -3,6 +3,8 @@
 
   python3 summarize.py            results.json を書き、Markdown の表を出す(docs/eval.md の3節)
   python3 summarize.py noimage    noimage/ の下(画像なしの作り手、#182)を同じく測る(docs/eval.md の7節)
+  python3 summarize.py f7-haiku   小さいモデル(Haiku 5.5)の作り手、画像なし(#186、docs/eval.md の8節)
+  python3 summarize.py f7-notool  測る道具を書くことを禁じた Opus 5.5、画像なし(#186、8節)
 
 本文の3枚(表紙の1枚目を除く)を測る。作り直しの回数は run.sh を流した回数 − 1。
 """

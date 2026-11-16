@@ -19,7 +19,7 @@ OSSとして公開する価値があると判断し、その前提で設計し�
 
 方向性(AI が作るスライドの3つの弱さへの答え方・3層の構想・立ち位置・リスク)と
 その実装の状態は `docs/vision.md`。check・build が作者を導くかの評価(架空の資料3本と誤りを入れた版、`examples/eval/`)は
-`docs/evaluation.md`。AI に同じ題材を python-pptx の直書きと Boxloom で作らせて密度を比べた評価(仮説(2)、`examples/density-eval/`。作り手に画像を見せない版は `noimage/`、7節)は
+`docs/evaluation.md`。AI に同じ題材を python-pptx の直書きと Boxloom で作らせて密度を比べた評価(仮説(2)、`examples/density-eval/`。作り手に画像を見せない版は `noimage/`、7節。小さいモデルと測る道具を禁じた版は `f7-haiku/`・`f7-notool/`、8節)は
 `docs/eval.md`。内容の型の語彙と、内容から型を選ぶ規則
 (ブロックかサブシステムかの線引きを含む)は `docs/patterns.md`。
 

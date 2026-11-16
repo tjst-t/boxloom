@@ -1,0 +1,1165 @@
+[
+ {
+  "method": "pptx",
+  "topic": "t01",
+  "slides": 3,
+  "elements": 16.7,
+  "chars": 303,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.504,
+  "minFont": 10.0,
+  "meanFont": 13.6,
+  "rebuilds": 2,
+  "detail": [
+   {
+    "elements": 16,
+    "chars": 257,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.563,
+    "minFont": 10.0,
+    "meanFont": 14.2,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 12,
+    "chars": 415,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.564,
+    "minFont": 10.0,
+    "meanFont": 13.1,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 22,
+    "chars": 236,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.386,
+    "minFont": 10.0,
+    "meanFont": 13.8,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "pptx",
+  "topic": "t02",
+  "slides": 3,
+  "elements": 23.3,
+  "chars": 262,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.508,
+  "minFont": 10.0,
+  "meanFont": 14.1,
+  "rebuilds": 1,
+  "detail": [
+   {
+    "elements": 22,
+    "chars": 233,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.535,
+    "minFont": 10.0,
+    "meanFont": 14.3,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 25,
+    "chars": 289,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.566,
+    "minFont": 10.0,
+    "meanFont": 14.5,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 23,
+    "chars": 263,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.422,
+    "minFont": 10.0,
+    "meanFont": 13.6,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "pptx",
+  "topic": "t03",
+  "slides": 3,
+  "elements": 23.3,
+  "chars": 276,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.515,
+  "minFont": 10.0,
+  "meanFont": 13.8,
+  "rebuilds": 1,
+  "detail": [
+   {
+    "elements": 30,
+    "chars": 178,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.582,
+    "minFont": 10.0,
+    "meanFont": 15.2,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 11,
+    "chars": 315,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.582,
+    "minFont": 10.0,
+    "meanFont": 13.2,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 29,
+    "chars": 334,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.38,
+    "minFont": 10.0,
+    "meanFont": 13.5,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "pptx",
+  "topic": "t04",
+  "slides": 3,
+  "elements": 20.3,
+  "chars": 251,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.577,
+  "minFont": 10.0,
+  "meanFont": 14.0,
+  "rebuilds": 1,
+  "detail": [
+   {
+    "elements": 25,
+    "chars": 174,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.598,
+    "minFont": 10.0,
+    "meanFont": 14.4,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 25,
+    "chars": 293,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.556,
+    "minFont": 10.0,
+    "meanFont": 13.6,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 11,
+    "chars": 285,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.578,
+    "minFont": 10.0,
+    "meanFont": 14.1,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "pptx",
+  "topic": "t05",
+  "slides": 3,
+  "elements": 29.3,
+  "chars": 241,
+  "overlaps": 7,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.432,
+  "minFont": 10.0,
+  "meanFont": 14.3,
+  "rebuilds": 3,
+  "detail": [
+   {
+    "elements": 36,
+    "chars": 250,
+    "overlaps": 7,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.475,
+    "minFont": 10.0,
+    "meanFont": 14.3,
+    "overlapPairs": [
+     [
+      "TextBox 25",
+      "Rectangle 35"
+     ],
+     [
+      "TextBox 25",
+      "TextBox 36"
+     ],
+     [
+      "TextBox 28",
+      "Rectangle 35"
+     ],
+     [
+      "TextBox 28",
+      "TextBox 36"
+     ],
+     [
+      "TextBox 31",
+      "Rectangle 35"
+     ],
+     [
+      "TextBox 31",
+      "TextBox 36"
+     ],
+     [
+      "TextBox 34",
+      "Rectangle 35"
+     ]
+    ],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 40,
+    "chars": 217,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.264,
+    "minFont": 10.0,
+    "meanFont": 14.7,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 12,
+    "chars": 257,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.557,
+    "minFont": 10.0,
+    "meanFont": 13.9,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "pptx",
+  "topic": "t06",
+  "slides": 3,
+  "elements": 15.0,
+  "chars": 269,
+  "overlaps": 1,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.564,
+  "minFont": 10.0,
+  "meanFont": 15.7,
+  "rebuilds": 1,
+  "detail": [
+   {
+    "elements": 13,
+    "chars": 169,
+    "overlaps": 1,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.53,
+    "minFont": 10.0,
+    "meanFont": 17.3,
+    "overlapPairs": [
+     [
+      "TextBox 12",
+      "TextBox 13"
+     ]
+    ],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 14,
+    "chars": 264,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.517,
+    "minFont": 10.0,
+    "meanFont": 16.4,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 18,
+    "chars": 373,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.644,
+    "minFont": 10.0,
+    "meanFont": 14.4,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "pptx",
+  "topic": "t07",
+  "slides": 3,
+  "elements": 16.7,
+  "chars": 223,
+  "overlaps": 3,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.603,
+  "minFont": 10.0,
+  "meanFont": 15.7,
+  "rebuilds": 0,
+  "detail": [
+   {
+    "elements": 9,
+    "chars": 174,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.609,
+    "minFont": 10.0,
+    "meanFont": 16.5,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 22,
+    "chars": 237,
+    "overlaps": 3,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.617,
+    "minFont": 10.0,
+    "meanFont": 15.2,
+    "overlapPairs": [
+     [
+      "TextBox 11",
+      "TextBox 12"
+     ],
+     [
+      "TextBox 16",
+      "TextBox 17"
+     ],
+     [
+      "TextBox 21",
+      "TextBox 22"
+     ]
+    ],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 19,
+    "chars": 257,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.584,
+    "minFont": 10.0,
+    "meanFont": 15.5,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "pptx",
+  "topic": "t08",
+  "slides": 3,
+  "elements": 14.7,
+  "chars": 256,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.57,
+  "minFont": 10.0,
+  "meanFont": 15.4,
+  "rebuilds": 1,
+  "detail": [
+   {
+    "elements": 11,
+    "chars": 327,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.617,
+    "minFont": 10.0,
+    "meanFont": 14.6,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 13,
+    "chars": 230,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.531,
+    "minFont": 10.0,
+    "meanFont": 16.4,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 20,
+    "chars": 212,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.561,
+    "minFont": 10.0,
+    "meanFont": 15.4,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "pptx",
+  "topic": "t09",
+  "slides": 3,
+  "elements": 14.7,
+  "chars": 229,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.58,
+  "minFont": 10.0,
+  "meanFont": 16.1,
+  "rebuilds": 1,
+  "detail": [
+   {
+    "elements": 14,
+    "chars": 199,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.538,
+    "minFont": 10.0,
+    "meanFont": 16.9,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 11,
+    "chars": 204,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.552,
+    "minFont": 10.0,
+    "meanFont": 16.2,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 19,
+    "chars": 283,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.651,
+    "minFont": 10.0,
+    "meanFont": 15.4,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "pptx",
+  "topic": "t10",
+  "slides": 3,
+  "elements": 18.7,
+  "chars": 285,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.593,
+  "minFont": 10.0,
+  "meanFont": 15.1,
+  "rebuilds": 1,
+  "detail": [
+   {
+    "elements": 12,
+    "chars": 231,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.574,
+    "minFont": 10.0,
+    "meanFont": 15.6,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 22,
+    "chars": 294,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.641,
+    "minFont": 10.0,
+    "meanFont": 14.9,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 22,
+    "chars": 331,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.563,
+    "minFont": 10.0,
+    "meanFont": 14.8,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "boxloom",
+  "topic": "t01",
+  "slides": 3,
+  "elements": 37.7,
+  "chars": 267,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.561,
+  "minFont": 8.0,
+  "meanFont": 14.0,
+  "rebuilds": 0,
+  "detail": [
+   {
+    "elements": 15,
+    "chars": 251,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.48,
+    "minFont": 8.0,
+    "meanFont": 15.9,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 50,
+    "chars": 295,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.598,
+    "minFont": 8.0,
+    "meanFont": 13.5,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 48,
+    "chars": 256,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.604,
+    "minFont": 8.0,
+    "meanFont": 12.7,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "boxloom",
+  "topic": "t02",
+  "slides": 3,
+  "elements": 18.0,
+  "chars": 275,
+  "overlaps": 0,
+  "overflows": 1,
+  "shrunk": 0,
+  "fill": 0.47,
+  "minFont": 8.0,
+  "meanFont": 15.1,
+  "rebuilds": 2,
+  "detail": [
+   {
+    "elements": 16,
+    "chars": 214,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.435,
+    "minFont": 8.0,
+    "meanFont": 14.9,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 19,
+    "chars": 334,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.421,
+    "minFont": 8.0,
+    "meanFont": 15.8,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 19,
+    "chars": 277,
+    "overlaps": 0,
+    "overflows": 1,
+    "shrunk": 0,
+    "fill": 0.554,
+    "minFont": 8.0,
+    "meanFont": 14.4,
+    "overlapPairs": [],
+    "overflowItems": [
+     {
+      "kind": "text",
+      "shape": "TextBox 2",
+      "text": "東線は残し、西線は便を減らして病院に寄せ、山手線は予約の乗合",
+      "over": 25.9
+     }
+    ],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "boxloom",
+  "topic": "t03",
+  "slides": 3,
+  "elements": 16.0,
+  "chars": 293,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.486,
+  "minFont": 8.0,
+  "meanFont": 14.8,
+  "rebuilds": 1,
+  "detail": [
+   {
+    "elements": 18,
+    "chars": 229,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.527,
+    "minFont": 8.0,
+    "meanFont": 16.4,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 9,
+    "chars": 313,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.527,
+    "minFont": 8.0,
+    "meanFont": 13.2,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 21,
+    "chars": 336,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.404,
+    "minFont": 8.0,
+    "meanFont": 15.1,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "boxloom",
+  "topic": "t04",
+  "slides": 3,
+  "elements": 25.7,
+  "chars": 318,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.506,
+  "minFont": 8.0,
+  "meanFont": 14.8,
+  "rebuilds": 2,
+  "detail": [
+   {
+    "elements": 15,
+    "chars": 296,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.492,
+    "minFont": 8.0,
+    "meanFont": 15.5,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 44,
+    "chars": 345,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.426,
+    "minFont": 8.0,
+    "meanFont": 14.7,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 18,
+    "chars": 314,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.6,
+    "minFont": 8.0,
+    "meanFont": 14.3,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "boxloom",
+  "topic": "t05",
+  "slides": 3,
+  "elements": 24.0,
+  "chars": 367,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.454,
+  "minFont": 8.0,
+  "meanFont": 14.4,
+  "rebuilds": 2,
+  "detail": [
+   {
+    "elements": 10,
+    "chars": 441,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.423,
+    "minFont": 8.0,
+    "meanFont": 13.6,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 27,
+    "chars": 305,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.611,
+    "minFont": 8.0,
+    "meanFont": 14.5,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 35,
+    "chars": 355,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.327,
+    "minFont": 8.0,
+    "meanFont": 15.2,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "boxloom",
+  "topic": "t06",
+  "slides": 3,
+  "elements": 19.7,
+  "chars": 259,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.369,
+  "minFont": 8.0,
+  "meanFont": 15.2,
+  "rebuilds": 2,
+  "detail": [
+   {
+    "elements": 16,
+    "chars": 233,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.43,
+    "minFont": 8.0,
+    "meanFont": 15.7,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 12,
+    "chars": 203,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.355,
+    "minFont": 8.0,
+    "meanFont": 14.9,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 31,
+    "chars": 341,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.323,
+    "minFont": 8.0,
+    "meanFont": 15.1,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "boxloom",
+  "topic": "t07",
+  "slides": 3,
+  "elements": 32.3,
+  "chars": 247,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.467,
+  "minFont": 8.0,
+  "meanFont": 14.6,
+  "rebuilds": 3,
+  "detail": [
+   {
+    "elements": 16,
+    "chars": 233,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.342,
+    "minFont": 8.0,
+    "meanFont": 16.5,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 50,
+    "chars": 279,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.565,
+    "minFont": 8.0,
+    "meanFont": 13.8,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 31,
+    "chars": 229,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.495,
+    "minFont": 8.0,
+    "meanFont": 13.7,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "boxloom",
+  "topic": "t08",
+  "slides": 3,
+  "elements": 27.0,
+  "chars": 328,
+  "overlaps": 2,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.426,
+  "minFont": 8.0,
+  "meanFont": 13.6,
+  "rebuilds": 3,
+  "detail": [
+   {
+    "elements": 16,
+    "chars": 456,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.387,
+    "minFont": 8.0,
+    "meanFont": 13.4,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 15,
+    "chars": 336,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.348,
+    "minFont": 8.0,
+    "meanFont": 13.9,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 50,
+    "chars": 193,
+    "overlaps": 2,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.544,
+    "minFont": 8.0,
+    "meanFont": 13.8,
+    "overlapPairs": [
+     [
+      "Shape 39",
+      "Dot 43"
+     ],
+     [
+      "Shape 41",
+      "Dot 43"
+     ]
+    ],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "boxloom",
+  "topic": "t09",
+  "slides": 3,
+  "elements": 15.0,
+  "chars": 298,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.342,
+  "minFont": 8.0,
+  "meanFont": 14.3,
+  "rebuilds": 2,
+  "detail": [
+   {
+    "elements": 17,
+    "chars": 270,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.305,
+    "minFont": 8.0,
+    "meanFont": 14.5,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 15,
+    "chars": 253,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.342,
+    "minFont": 8.0,
+    "meanFont": 15.5,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 13,
+    "chars": 372,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.379,
+    "minFont": 8.0,
+    "meanFont": 13.4,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ },
+ {
+  "method": "boxloom",
+  "topic": "t10",
+  "slides": 3,
+  "elements": 26.7,
+  "chars": 243,
+  "overlaps": 0,
+  "overflows": 0,
+  "shrunk": 0,
+  "fill": 0.486,
+  "minFont": 8.0,
+  "meanFont": 14.6,
+  "rebuilds": 1,
+  "detail": [
+   {
+    "elements": 16,
+    "chars": 235,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.333,
+    "minFont": 8.0,
+    "meanFont": 15.8,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 2
+   },
+   {
+    "elements": 45,
+    "chars": 211,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.646,
+    "minFont": 8.0,
+    "meanFont": 14.2,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 3
+   },
+   {
+    "elements": 19,
+    "chars": 284,
+    "overlaps": 0,
+    "overflows": 0,
+    "shrunk": 0,
+    "fill": 0.48,
+    "minFont": 8.0,
+    "meanFont": 14.0,
+    "overlapPairs": [],
+    "overflowItems": [],
+    "slide": 4
+   }
+  ]
+ }
+]
