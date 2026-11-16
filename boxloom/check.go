@@ -1032,6 +1032,9 @@ func figureWarnPointer(loc string) string {
 	return ptr
 }
 
+// warnFooterRe はフッターの欄の警告の頭(footer /meta/author: …)。
+var warnFooterRe = regexp.MustCompile(`^footer (/meta/[a-z]+): (.*)$`)
+
 func warningIssue(file, w string) Issue {
 	// 目次・終わりのスライド(IR に無い)の警告は文書の頭の toc・closing を指す。
 	for _, gen := range []int{tocSlide, closingSlide} {
@@ -1104,7 +1107,10 @@ func warningIssue(file, w string) Issue {
 	path, msg := fmt.Sprintf("/slides/%d", n-1), m[3]
 	// 題の警告(title: ...)は題を、リード文の警告(lead: ...)はリード文を、主張の
 	// 警告(statement: ...)は主張の1文を指す。
-	if rest, ok := strings.CutPrefix(msg, "title: "); ok {
+	if fm := warnFooterRe.FindStringSubmatch(msg); fm != nil {
+		// フッターの欄(footer-wrap)は文書の頭の値(作者・機密区分)を指す(#171)。
+		path, msg = fm[1], fm[2]
+	} else if rest, ok := strings.CutPrefix(msg, "title: "); ok {
 		path, msg = path+"/title", rest
 	} else if rest, ok := strings.CutPrefix(msg, "lead: "); ok {
 		path, msg = path+"/lead", rest

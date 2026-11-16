@@ -59,7 +59,10 @@ type shape struct {
 	runs     []TextRun // 空でなければ text・color・bold の代わりに使う
 	// lineMult は行送りの倍率(0 なら fonts.lineHeight。葉の LineHeight、#146)。
 	lineMult float64
-	wrap     bool // true: このGo版の自前ロジックで幅に収まるよう折り返す。false: "\n"のみを境界として扱い、幅では折り返さない(本物のwrap=Falseに相当)。
+	// noWrap は幅で折り返さない1行の文字(フッターの欄、#171)。装飾つきの文字でも
+	// wrap="none" で書き、"\n" だけを段落の境目にする。
+	noWrap bool
+	wrap   bool // true: このGo版の自前ロジックで幅に収まるよう折り返す。false: "\n"のみを境界として扱い、幅では折り返さない(本物のwrap=Falseに相当)。
 
 	x1, y1, x2, y2 float64
 	lineColor      string
@@ -401,6 +404,8 @@ func (p *PPTXBuilder) textLines(s *shape) [][]TextRun {
 	}
 	var lines [][]TextRun
 	switch {
+	case s.noWrap:
+		lines = noWrapLines(s)
 	case len(s.runs) > 0:
 		lines = wrapRuns(s.runs, s.fontSize, s.box.Width)
 	case s.wrap:
@@ -410,6 +415,29 @@ func (p *PPTXBuilder) textLines(s *shape) [][]TextRun {
 	default:
 		for _, l := range strings.Split(s.text, "\n") {
 			lines = append(lines, []TextRun{{Text: l, Color: s.color, Bold: s.bold}})
+		}
+	}
+	return lines
+}
+
+// noWrapLines は折り返さない文字(noWrap)の行:"\n" の境目だけで分ける。
+func noWrapLines(s *shape) [][]TextRun {
+	runs := s.runs
+	if len(runs) == 0 {
+		runs = []TextRun{{Text: s.text, Color: s.color, Bold: s.bold}}
+	}
+	lines := [][]TextRun{nil}
+	for _, r := range runs {
+		parts := strings.Split(r.Text, "\n")
+		for k, part := range parts {
+			if k > 0 {
+				lines = append(lines, nil)
+			}
+			if part != "" || len(parts) == 1 {
+				rr := r
+				rr.Text = part
+				lines[len(lines)-1] = append(lines[len(lines)-1], rr)
+			}
 		}
 	}
 	return lines
@@ -482,6 +510,9 @@ func (p *PPTXBuilder) shapeXML(s *shape) string {
 		var paras string
 		wrap := "square"
 		switch {
+		case s.noWrap && len(s.list) == 0:
+			wrap = "none"
+			paras = p.parasXML(s, noWrapLines(s))
 		case len(s.list) > 0:
 			paras = p.listXML(s)
 		case len(s.runs) > 0:

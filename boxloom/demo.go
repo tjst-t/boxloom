@@ -95,6 +95,7 @@ func renderSpec(ctx RenderContext, s *Spec) {
 			p.Shapes[len(p.Shapes)-1].ph = s.Placeholder
 		}
 		p.Shapes[len(p.Shapes)-1].lineMult = s.LineHeight
+		p.Shapes[len(p.Shapes)-1].noWrap = s.noWrap
 		return
 	case KindSubsystem:
 		if s.Subsystem != nil {

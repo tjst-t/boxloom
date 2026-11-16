@@ -389,6 +389,9 @@ func requiredMeasure(s *Spec, width float64) (float64, int) {
 
 // textLinesFor は文字の葉を幅 width で折り返したときの行の数。
 func textLinesFor(s *Spec, width float64) int {
+	if s.noWrap {
+		width = noWrapWidth // 折り返さない葉は1行(#171)
+	}
 	if len(s.Runs) > 0 {
 		return len(wrapRuns(s.Runs, s.FontSize, width))
 	}

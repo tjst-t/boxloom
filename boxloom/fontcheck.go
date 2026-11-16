@@ -187,7 +187,7 @@ func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []T
 	for _, l := range lines {
 		w := lineWidthPt(alt, l, size)
 		if over := w - box.Width; over > eps {
-			st.Over = append(st.Over, overLine{Text: runsText(l), OverPt: over, BoxW: box.Width, Wrapped: s.wrap || len(runs) > 0, Align: s.align})
+			st.Over = append(st.Over, overLine{Text: runsText(l), OverPt: over, BoxW: box.Width, Wrapped: (s.wrap || len(runs) > 0) && !s.noWrap, Align: s.align})
 			st.WidthOver++
 			if over > st.WorstOverPt {
 				st.WorstOverPt = over
@@ -198,7 +198,7 @@ func measureUnit(st *fontStats, alt *FontSet, p *PPTXBuilder, s *shape, runs []T
 	}
 	// 折り返し直したら行の数が変わるか(描く側が自分で折り返すときの目安)。
 	n := len(lines)
-	if s.wrap || len(runs) > 0 {
+	if (s.wrap || len(runs) > 0) && !s.noWrap {
 		// 描く側は余裕を掛けずに測る(置き換わった字体そのものの幅)。行の頭に
 		// 閉じの約物を置かない禁則(追い出し)も真似る。
 		bare := *alt

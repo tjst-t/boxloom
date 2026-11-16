@@ -92,6 +92,7 @@ type LayoutMarks struct {
 	PairRows     int    `json:"pairRows,omitempty"`     // 対の並びの対の数
 	TopicRows    int    `json:"topicRows,omitempty"`    // 印つきの塊の並びの塊の数
 	KeepLine     string `json:"keepLine,omitempty"`
+	NoWrap       bool   `json:"noWrap,omitempty"` // 幅で折り返さない1行の文字(フッターの欄、#171)
 	NestedSlack  bool   `json:"nestedSlack,omitempty"`
 	NoShrink     bool   `json:"noShrink,omitempty"`
 	List         bool   `json:"list,omitempty"`
@@ -329,7 +330,7 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 		}
 		n.Placeholder = s.Placeholder
 	}
-	m := LayoutMarks{IRType: s.irType, CardRow: s.cards, KeepLine: s.keepLine, NestedSlack: s.nestedSlack, NoShrink: s.noShrink, List: s.List, Card: s.card, Dense: s.dense}
+	m := LayoutMarks{IRType: s.irType, CardRow: s.cards, KeepLine: s.keepLine, NoWrap: s.noWrap, NestedSlack: s.nestedSlack, NoShrink: s.noShrink, List: s.List, Card: s.card, Dense: s.dense}
 	m.Frame = frameNames[s.frame]
 	if s.columns != nil {
 		m.ColumnGroups = len(s.columns.cols)

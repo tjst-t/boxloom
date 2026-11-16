@@ -111,6 +111,9 @@ type Spec struct {
 	// keepLine は、1行に収めたい文字の葉(Keep の塊だけの葉)の名前(警告の文に
 	// 使う。例 "stat: items[1]")。幅に入りきらなければ stat-value の警告(keepline.go)。
 	keepLine string
+	// noWrap は、幅で折り返さない文字の葉(フッターの欄、#171)。PPTX では wrap="none" の
+	// 1行に書き、高さも1行で測る。欄の幅に入りきらなければ footer-wrap の警告。
+	noWrap bool
 	// frame は骨組みの部品が付ける枠の印(frameBody・frameMain。skeleton.go)。
 	// コアはこの印で本文の箱(容量・はみ出し・埋まり具合を測る)と、本文を持たない
 	// スライドのページに収まるべき箱を見つける。
@@ -215,6 +218,13 @@ func measureTopicRows(info *topicsInfo) SpecOpt { return func(s *Spec) { s.topic
 // keepLine は文字の葉の属性: 1行に収めたい文字。name は警告の文に使う名前。
 func keepLine(name string) SpecOpt { return func(s *Spec) { s.keepLine = name } }
 
+// noWrap は文字の葉の属性: 幅で折り返さず1行に書く(フッターの欄。アプリの字の幅が
+// 測った幅より少し広くても2行目に折れてはみ出さない、#171)。
+func noWrap() SpecOpt { return func(s *Spec) { s.noWrap = true } }
+
+// noWrapWidth は折り返さない葉の行を測るときの幅(どの文字も入る幅)。
+const noWrapWidth = 1e9
+
 // nestedSlack は箱の属性: 列の中で足りないとき、中の図を文字より先に縮める。
 func nestedSlack() SpecOpt { return func(s *Spec) { s.nestedSlack = true } }
 
@@ -273,6 +283,9 @@ func textNaturalWidth(s *Spec) float64 {
 }
 
 func textHeightFor(s *Spec, width float64) float64 {
+	if s.noWrap {
+		width = noWrapWidth // 折り返さない葉は1行(#171)
+	}
 	if s.LineHeight > 0 {
 		return float64(textLinesFor(s, width)) * s.FontSize * s.LineHeight
 	}

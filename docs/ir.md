@@ -724,6 +724,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 |---|---|
 | `title-wrap` | 本文のスライドの題が、題の幅で2行以上に折り返す。題は短い見出しにして1行に収め、言いたいことの文は `lead` に書く。path は題(`/slides/S/title`、.md なら「# 題」の行)、文に行の数と幅 |
 | `lead-wrap` | 本文のスライドのリード文(`lead`)が、テンプレートの上限(値の表の `leadMaxLines`。report・dark・light とも2行)より多くの行に折り返す。リード文を短くする(言いたいことを1文に絞る)。path はリード文(`/slides/S/lead`、.md なら `:::lead` の行)、文に行の数・上限・幅 |
+| `footer-wrap` | フッターの欄(作者・機密区分)が、頁番号と並べた欄の幅に1行で入らない(#171)。フッターの文は幅で折り返さない1行(`wrap="none"`)に書くので2行目に折れてはみ出すことはないが、隣の欄に重なる。作者名・機密区分を短くする。文書に1件、path は文書の頭の値(`/meta/author`、.md なら頭の `author:` の行)、文に要る幅と欄の幅 |
 | `takeaway-count` | 本文のスライドの一番外に `takeaway` が2つ以上ある(#165)。takeaway はそのスライドで強調する1文なので1枚に1つまで。Schema と IR の読み込みは数を縛らず、2つ目も組めるので誤りではなく警告にする(1枚の強調が2つでも資料は壊れないが、どちらが言いたいことか読み手に伝わらない)。スライドごとに1件で、path は2つ目の takeaway(`/slides/S/body/N`、.md なら その `:::takeaway` の行)、文に数。`hint` は1文だけを残し、ほかを段落・箇条かリード文(`lead`)にすること。はみ出しとは別に出る(例 `examples/ir/check-warnings/takeaway-count.json`) |
 | `statement-wrap` | 主張のスライド(`type=statement`)の1文が、テンプレートの上限(値の表の `statementMaxLines`。report・dark・light とも3行)より多くの行に折り返す。1文を短くする(言い切る主張だけにし、理由は前後の本文のスライドへ)。path は主張の1文(`/slides/S/content`、.md なら `#` の行)、文に行の数・上限・幅 |
 | `source-missing` | 数・数の表・グラフを見せる本文のスライド(`chart`・`funnel`・`stat`・数だけのセルのある表を、並列のまとまり・`pairs` などの中も含めて持つ)に、スライドの `source` が無い(#166、上の11節)。スライドに1件で、path はスライド(`/slides/S`、.md なら「# 題」の行)、文に最初に見つけたブロックの場所。`hint` は `:::source` を書くこと、架空の数の資料なら `meta` の `fictional: true`。`fictional: true` の文書では出ない |

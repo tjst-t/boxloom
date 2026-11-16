@@ -368,6 +368,9 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 		if m.KeepLine != "" {
 			opts = append(opts, keepLine(m.KeepLine))
 		}
+		if m.NoWrap {
+			opts = append(opts, noWrap())
+		}
 		if m.ColumnGroups > 0 {
 			opts = append(opts, measureColumnGroups(&columnsInfo{}))
 		}

@@ -341,16 +341,20 @@ func (t *Template) leadText(in Inline) *Spec {
 // 無いので「/ 全部」は組み立てたときの数の文字のまま。左の欄はフッターの置き場(ftr。
 // 作者と機密区分の両方があれば作者の側)。
 func (t *Template) footer(d *IRDeck, page, total int) *Spec {
+	// フッターの欄は幅で折り返さない1行(noWrap)。アプリの字の幅が測った幅より少し
+	// 広くても2行目に折れてフッターの下へはみ出さない。欄の幅に入りきらなければ
+	// footer-wrap の警告(#171)。足りないときに縮めるのは左の欄だけ(頁番号は縮めない)。
 	left := ""
 	if d.Meta != nil && d.Meta.Author != nil {
 		left = d.Meta.Author.Plain()
 	}
-	leftSpec := TextNode(left, tokSize("footerText"), tokColor("text_muted"))
+	leftSpec := TextNode(left, tokSize("footerText"), tokColor("text_muted"), noWrap())
 	if left != "" {
 		leftSpec.Placeholder = "ftr"
+		leftSpec.irPath = "/meta/author"
 	}
 	if d.Meta != nil && d.Meta.Confidential != nil {
-		var opts []SpecOpt
+		opts := []SpecOpt{noWrap(), fromIR("/meta/confidential")}
 		if left == "" {
 			opts = append(opts, WithPlaceholder("ftr"))
 		}
@@ -366,7 +370,7 @@ func (t *Template) footer(d *IRDeck, page, total int) *Spec {
 		RichTextNode([]TextRun{
 			{Text: fmt.Sprint(page + 1), role: "text_muted", Field: "slidenum"},
 			{Text: fmt.Sprintf(" / %d", total), role: "text_muted"},
-		}, tokSize("footerText"), WithAlign("right"), WithPlaceholder("sldNum")),
+		}, tokSize("footerText"), WithAlign("right"), WithPlaceholder("sldNum"), noWrap(), noShrink()),
 	}, WithJustify(JustifySpaceBetween))
 }
 
@@ -690,6 +694,7 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 	caps := []SlideCapacity{}
 	// -fit の段は組(続きの表のひと続き。fitGroupOf)ごとに1度だけ選ぶ。
 	fitBuilt, fitChosen, fitDone := map[int]*BuiltSlide{}, map[int]*fitChoice{}, map[int]bool{}
+	footerWarned := false // footer-wrap は文書に1件(どの枚も同じフッター、#171)
 	for _, b := range built {
 		// 警告と容量の場所は IR のスライドの番号(目次のスライドは IR に無いので
 		// 警告の頭は "table of contents"、容量は出さない)。
@@ -761,6 +766,13 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 			if n := textLinesFor(b.Statement, b.Statement.Box.Width); n > v.StatementMaxLines {
 				warnings = append(warnings, fmt.Sprintf("[STATEMENT-WRAP WARNING] statement: the statement wraps to %d lines, more than the template's limit of %d (width %.1fpt at %.0fpt); shorten it",
 					n, v.StatementMaxLines, b.Statement.Box.Width, b.Statement.FontSize))
+			}
+		}
+
+		if !footerWarned {
+			if w := footerWrapWarnings(b.Root); len(w) > 0 {
+				warnings = append(warnings, w...)
+				footerWarned = true
 			}
 		}
 
