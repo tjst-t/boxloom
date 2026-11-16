@@ -4079,7 +4079,7 @@
       "number": 180,
       "kind": "bug",
       "title": "report のフッターの作者名が短くても LibreOffice で2行に折れる(eval F1)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4091,7 +4091,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-16T11:44:26.020Z",
-      "updatedAt": "2026-11-16T11:44:26.020Z",
+      "updatedAt": "2026-11-16T11:44:49.639Z",
       "closedAt": null,
       "extra": {}
     },
