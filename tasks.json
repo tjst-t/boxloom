@@ -4121,7 +4121,7 @@
       "number": 182,
       "kind": "task",
       "title": "画像を見られない作り手で密度の評価をやり直す(eval F3)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [
         "report-libreoffice-2-eval-f1",
@@ -4136,7 +4136,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-16T11:44:42.568Z",
-      "updatedAt": "2026-11-16T11:44:42.568Z",
+      "updatedAt": "2026-11-16T12:19:54.392Z",
       "closedAt": null,
       "extra": {}
     }
