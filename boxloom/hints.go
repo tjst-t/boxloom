@@ -338,35 +338,97 @@ func cardsHint(c SlideCapacity) string {
 	return strings.Join(parts, "。") + "。ほかのカード・まとまりに文を足しても本文の高さは増えないので、根拠を足すならそこに足すか、別のブロックとして足してください"
 }
 
-// mergeHint は、隣(前か後ろ)のスライドも薄く、2枚の本文を1枚にまとめると
-// 本文の領域に収まるとき、その見込みを1文にする。両方収まるなら、まとめた
-// 割合が大きい(ちょうど埋まる)ほうを選ぶ。無ければ空。
+// mergeHint は、隣り合う薄いスライドの本文をまとめると本文の領域に収まるとき、
+// その見込みを1文にする。連なる薄いスライド(本文を持ち、どれも fill-ratio で薄い
+// 並び)は前から順に組む:先頭から、まとめても本文の領域に収まる限り次の枚を足して
+// 1枚にし、収まらなくなったらそこから次の1枚を始める(#175)。どの枚の hint も同じ
+// 組み分けから作るので、案が互いに食い違わない(15→16・16→17・17→16 のような
+// ばらばらの向きにならない)。2枚の並びなら相手と見込みの割合、3枚以上なら並び全体の
+// 組み分けと枚数を書く。まとめられる組が無ければ空。
 func mergeHint(s int, thin map[int]float64, capOf map[string]SlideCapacity) string {
-	a, ok := capOf[fmt.Sprintf("/slides/%d", s)]
-	if !ok {
-		return ""
-	}
-	best, bestRatio := -1, 0.0
-	for _, t := range []int{s - 1, s + 1} {
+	body := func(t int) (SlideCapacity, bool) {
 		if _, ok := thin[t]; !ok {
-			continue
+			return SlideCapacity{}, false
 		}
-		b, ok := capOf[fmt.Sprintf("/slides/%d", t)]
-		if !ok || len(a.Blocks) == 0 || len(b.Blocks) == 0 {
-			continue
+		c, ok := capOf[fmt.Sprintf("/slides/%d", t)]
+		if !ok || len(c.Blocks) == 0 || c.BodyArea <= 0 {
+			return SlideCapacity{}, false
 		}
-		area := min(a.BodyArea, b.BodyArea)
-		if area <= 0 {
-			continue
-		}
-		r := (a.Need + a.BlockGap + b.Need) / area
-		if r <= 1 && r > bestRatio {
-			best, bestRatio = t, r
-		}
+		return c, true
 	}
-	if best < 0 {
+	if _, ok := body(s); !ok {
 		return ""
 	}
-	return fmt.Sprintf("隣の /slides/%d も本文が少なく(%.1f%%)、2枚の本文を1枚にまとめると本文の領域の約 %.0f%% で収まる見込みです(題は1つにします)",
-		best, thin[best], bestRatio*100)
+	first, last := s, s
+	for {
+		if _, ok := body(first - 1); !ok {
+			break
+		}
+		first--
+	}
+	for {
+		if _, ok := body(last + 1); !ok {
+			break
+		}
+		last++
+	}
+	groups := mergeGroups(first, last, body)
+	merged := false
+	for _, g := range groups {
+		if g.to > g.from {
+			merged = true
+		}
+	}
+	if !merged {
+		return ""
+	}
+	if last-first == 1 {
+		// 2枚の並び:相手を名指しする。
+		other := first
+		if s == first {
+			other = last
+		}
+		return fmt.Sprintf("隣の /slides/%d も本文が少なく(%.1f%%)、2枚の本文を1枚にまとめると本文の領域の約 %.0f%% で収まる見込みです(題は1つにします)",
+			other, thin[other], groups[0].ratio*100)
+	}
+	parts := make([]string, 0, len(groups))
+	for _, g := range groups {
+		if g.to == g.from {
+			parts = append(parts, fmt.Sprintf("/slides/%d はそのまま", g.from))
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("/slides/%d〜/slides/%d を1枚に(本文の領域の約 %.0f%%)", g.from, g.to, g.ratio*100))
+	}
+	return fmt.Sprintf("/slides/%d〜/slides/%d の %d 枚はどれも本文が少なく、前から順にまとめると %d 枚になる見込みです:%s(題はまとめた枚ごとに1つにします。どの枚にも同じ案を出しています)",
+		first, last, last-first+1, len(groups), strings.Join(parts, "、"))
+}
+
+// mergeGroup は連なる薄いスライドを前から組んだ1つの組(from〜to)と、まとめたときの
+// 本文の割合。
+type mergeGroup struct {
+	from, to int
+	ratio    float64
+}
+
+// mergeGroups は first〜last の薄いスライドを前から順に組む。まとめた本文は
+// 各枚の need と枚の間の blockGap の和、本文の領域は組の中で小さいほう。
+func mergeGroups(first, last int, body func(int) (SlideCapacity, bool)) []mergeGroup {
+	var out []mergeGroup
+	for t := first; t <= last; {
+		c, _ := body(t)
+		g := mergeGroup{from: t, to: t, ratio: c.Need / c.BodyArea}
+		need, area, gap := c.Need, c.BodyArea, c.BlockGap
+		for u := t + 1; u <= last; u++ {
+			d, _ := body(u)
+			n, a := need+gap+d.Need, min(area, d.BodyArea)
+			if n/a > 1 {
+				break
+			}
+			need, area, gap = n, a, d.BlockGap
+			g.to, g.ratio = u, n/a
+		}
+		out = append(out, g)
+		t = g.to + 1
+	}
+	return out
 }

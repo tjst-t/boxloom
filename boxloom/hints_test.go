@@ -153,8 +153,55 @@ func TestMergeHintNeedsFit(t *testing.T) {
 	if h := mergeHint(2, thin, capOf); !strings.Contains(h, "/slides/3") || !strings.Contains(h, "約 79%") {
 		t.Errorf("slide 2: %q", h)
 	}
-	if h := mergeHint(1, thin, capOf); h != "" {
+	// 1〜3 は連なる薄い枚なので、1 にも同じ組み分け(1 はそのまま、2〜3 を1枚)を出す。
+	if h := mergeHint(1, thin, capOf); h != mergeHint(2, thin, capOf) || !strings.Contains(h, "/slides/1 はそのまま") {
 		t.Errorf("slide 1: %q", h)
+	}
+	// 2 と 3 の並び(1 が薄くない)なら、2枚の組として相手を名指しする。
+	delete(thin, 1)
+	if h := mergeHint(2, thin, capOf); !strings.Contains(h, "隣の /slides/3") || !strings.Contains(h, "約 79%") {
+		t.Errorf("pair, slide 2: %q", h)
+	}
+	if h := mergeHint(1, thin, capOf); h != "" {
+		t.Errorf("not thin, slide 1: %q", h)
+	}
+}
+
+// 連なる薄い3枚では、どの枚の hint も前から順に組んだ同じ案を出し、向きが食い違わない(#175)。
+func TestMergeHintRunConsistent(t *testing.T) {
+	sc := func(p string, need float64) SlideCapacity {
+		return SlideCapacity{Path: p, BodyArea: 400, Need: need, BlockGap: 16, Blocks: []BlockCapacity{{}}}
+	}
+	capOf := map[string]SlideCapacity{
+		"/slides/15": sc("/slides/15", 150),
+		"/slides/16": sc("/slides/16", 120),
+		"/slides/17": sc("/slides/17", 140),
+	}
+	thin := map[int]float64{15: 37.5, 16: 30, 17: 35}
+	// 前から:15+16 = 150+16+120 = 286(収まる)、+17 = 286+16+140 = 442(越える)。
+	// 組は 15〜16 と 17 の2枚。
+	h15 := mergeHint(15, thin, capOf)
+	for _, s := range []int{16, 17} {
+		if h := mergeHint(s, thin, capOf); h != h15 {
+			t.Errorf("slide %d: %q differs from slide 15: %q", s, h, h15)
+		}
+	}
+	for _, want := range []string{"/slides/15〜/slides/17 の 3 枚", "2 枚になる", "/slides/15〜/slides/16 を1枚に(本文の領域の約 72%)", "/slides/17 はそのまま"} {
+		if !strings.Contains(h15, want) {
+			t.Errorf("hint %q lacks %q", h15, want)
+		}
+	}
+	// 3枚とも1枚に収まるなら1つの組。
+	capOf["/slides/17"] = sc("/slides/17", 80)
+	if h := mergeHint(17, thin, capOf); !strings.Contains(h, "1 枚になる") || !strings.Contains(h, "/slides/15〜/slides/17 を1枚に") {
+		t.Errorf("all fit: %q", h)
+	}
+	// どの組も収まらなければ案は無い。
+	for p := range capOf {
+		capOf[p] = sc(p, 300)
+	}
+	if h := mergeHint(16, thin, capOf); h != "" {
+		t.Errorf("none fit: %q", h)
 	}
 }
 
