@@ -4181,6 +4181,27 @@
       "updatedAt": "2026-11-16T12:43:12.295Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "eval-f6",
+      "number": 185,
+      "kind": "bug",
+      "title": "題・リードが桁区切りの「,」の後で折れる(eval F6)",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "docs/eval.md の7.3節・7.7節 F6。examples/density-eval/noimage の boxloom t10 4枚目で、リードの見出しが数の途中で折れる(「1,」/「000 万円」)。Boxloom の折り返し(行の数え方・a:br を入れる所)が数を1つの塊として扱っているか、LibreOffice の折り方と合うかを確かめて直す。\n\n方針:数(桁区切り・小数点・単位を含む)の途中で折れないようにする。行の数え方を LibreOffice・PowerPoint の折り方と合わせる。必要なら check で知らせる。\n\n確かめ方:noimage の t10 を build して LibreOffice で PNG にして見る。例・試験の名前は架空か名前なし。",
+      "doneWhen": "桁区切りを含む数が題・リード・本文で途中から折れない(または折れる見積もりが描画と一致し check が知らせる)ことを試験で確かめ、noimage の t10 4枚目で確かめる。go test ./... と go vet が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-16T12:43:17.376Z",
+      "updatedAt": "2026-11-16T12:43:17.376Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
