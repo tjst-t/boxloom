@@ -2,6 +2,7 @@
 """out/<やり方>/tNN.pptx を tools/density_metrics.py で測り、runs.log の回数と合わせて表にする。
 
   python3 summarize.py            results.json を書き、Markdown の表を出す(docs/eval.md の3節)
+  python3 summarize.py noimage    noimage/ の下(画像なしの作り手、#182)を同じく測る(docs/eval.md の7節)
 
 本文の3枚(表紙の1枚目を除く)を測る。作り直しの回数は run.sh を流した回数 − 1。
 """
@@ -16,9 +17,9 @@ TOPICS = ["t%02d" % i for i in range(1, 11)]
 METHODS = ["pptx", "boxloom"]
 
 
-def runs():
+def runs(base):
     n = {}
-    with open(os.path.join(HERE, "runs.log"), encoding="utf-8") as f:
+    with open(os.path.join(base, "runs.log"), encoding="utf-8") as f:
         for line in f:
             parts = line.rstrip("\n").split("\t")
             if len(parts) >= 3:
@@ -27,15 +28,16 @@ def runs():
 
 
 def main():
-    counts = runs()
-    files = [os.path.join(HERE, "out", m, t + ".pptx") for m in METHODS for t in TOPICS]
+    base = os.path.join(HERE, sys.argv[1]) if len(sys.argv) > 1 else HERE
+    counts = runs(base)
+    files = [os.path.join(base, "out", m, t + ".pptx") for m in METHODS for t in TOPICS]
     missing = [f for f in files if not os.path.exists(f)]
     if missing:
         print("無い PPTX:", missing, file=sys.stderr)
         return 1
     out = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "density_metrics.py"), "-skip-first"] + files,
                          check=True, capture_output=True, text=True).stdout
-    measured = {os.path.relpath(d["file"], os.path.join(HERE, "out")): d for d in json.loads(out)}
+    measured = {os.path.relpath(d["file"], os.path.join(base, "out")): d for d in json.loads(out)}
     results = []
     for m in METHODS:
         for t in TOPICS:
@@ -56,7 +58,7 @@ def main():
                 "rebuilds": counts.get((m, t), 0) - 1,
                 "detail": sl,
             })
-    with open(os.path.join(HERE, "results.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(base, "results.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=1)
         f.write("\n")
     head = "| 題材 | やり方 | 本文の枚 | 要素/枚 | 文字/枚 | 重なり | はみ出し | 埋まり | 字の最小/平均(pt) | 作り直し |"
