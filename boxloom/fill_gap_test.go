@@ -69,7 +69,9 @@ func TestFillGapDensityEvalReport(t *testing.T) {
 		file string
 		thin []bool // 本文のスライド(/slides/1〜3)ごとに fill-ratio が出るか
 	}{
-		{"t01", []bool{true, true, true}},  // 空き 92・124・119pt(埋まり 77・66・67%)
+		// t01 の1枚目は #181 の時点で空き 92pt(埋まり 77%)。#183 で和文と欧文の境目の空きを
+		// 数えるようになり、リード(「…週に 140 人いる。」)が2行で組まれて空きが上限以下になった。
+		{"t01", []bool{false, true, true}}, // 2・3枚目は空き 124・119pt(埋まり 66・67%)
 		{"t03", []bool{true, true, false}}, // 3枚目はグラフが伸びて 97%
 		{"t07", []bool{false, false, false}},
 		{"t10", []bool{false, true, false}}, // 3枚目は空き 78pt

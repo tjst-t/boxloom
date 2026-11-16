@@ -36,10 +36,11 @@ func TestOrgChartLabelWrapWarning(t *testing.T) {
 	  {"title": "駅前館", "detail": "8 人", "members": [{"title": "貸し出し"}, {"title": "予約の受け取り"}]},
 	  {"title": "地区館", "detail": "28 人", "members": [{"title": "北館と東館", "detail": "15 人"}, {"title": "%s", "detail": "15 人"}]},
 	  {"title": "事務局", "detail": "2 人"}]}`
-	// 4行に折れる名前(report は係の字が小さいので長めの名前)。
+	// 4行に折れる名前(report は係の字が小さいので長めの名前。和文と欧文の境目の空き
+	// を数えるので、括弧のある名前は空きの分だけ長く測る、#183)。
 	longName := map[string]string{
 		"light": "西館と南館(学習室と子どもの本の多い館)", "dark": "西館と南館(学習室と子どもの本の多い館)",
-		"report": "西館と南館(学習室と子どもの本の利用の多い二つの館)"}
+		"report": "西館と南館(学習室と子どもの本の利用の多い館)"}
 	short := strings.Replace(data, "%s", "西館と南館", 1)
 	const width = 912.0
 	for _, tmpl := range []string{"light", "dark", "report"} {

@@ -136,6 +136,7 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 `widthMargin` 1.05、`lineHeight` 1.2 にした。架空の和文の段落(14pt)の要る高さは、変更前の
 **0.790 倍**(幅 420pt、9行→8行)・**0.889 倍**(幅 860pt、4行のまま)。測り方と、字体が置き換わった
 ときの余裕は `docs/fonts.md` の6章(試験 `TestReportFontDensity`)。もっと狭い自由な字体の候補(IPAPGothic など。既定は変えていない)は同じ文書の9章。
+和文と欧文の境目ごとに LibreOffice が足す空きは `asianLatinSpacingEm` 0.25 で測りに数える(#183。dark・light は 0。`docs/fonts.md` の表)。
 
 | 値 | light | report |
 |---|---|---|

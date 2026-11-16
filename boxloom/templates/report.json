@@ -130,7 +130,8 @@
     ],
     "widthMargin": 1.05,
     "fixedLineSpacing": true,
-    "lineHeight": 1.2
+    "lineHeight": 1.2,
+    "asianLatinSpacingEm": 0.25
   },
   "dense": {
     "body": 11,

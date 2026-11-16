@@ -212,7 +212,8 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `text.go` = テキスト計測(Pillowの代わりに、事前計測した「1emあたりの
     グリフ幅」を使う。字体ごとに `boxloom/fonts/<slug>.json`、
     `tools/export_font_metrics.py` で作る。どの字体で測るかはテンプレートの
-    値の表の `fonts`、`fonts.go`)
+    値の表の `fonts`、`fonts.go`)。和文と欧文の境目ごとに LibreOffice が足す空き(`fonts.asianLatinSpacingEm`、report は 0.25em、#183)も
+    幅に数える(行の頭・終わりの境目と箇条の印の後ろは数えない)
   - `fontcheck.go` = `go run ./cmd/boxloom fonts`:字体が置き換わったときのはみ出しを測る
   - `gantt.go` = inner canvas sub-engineの移植(render_gantt()相当)。
     `GanttSubsystem` として `Subsystem` interface を満たす。値の表の `axisStyle`(`monthGrid` で

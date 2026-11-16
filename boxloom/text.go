@@ -21,6 +21,8 @@ package boxloom
 import (
 	"regexp"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // defaultLineHeight は既定の行の送り(字の大きさに掛ける倍率)。box_engine.py の
@@ -84,24 +86,48 @@ func charEmWidth(ch rune, bold bool) float64 {
 	return w
 }
 
-// runWidthPt は文字列全体の幅(pt)を安全マージン込みで返す(トークン化せず、
-// 本物の get_font().getlength(label) 相当の単純合計。凡例ラベルの幅計算に使う)。
-func runWidthPt(s string, fontSizePt float64, bold bool) float64 {
+// asianLatinGapPt は、同じ行で prev の次に ch が来るとき、描く側が2つの字の間に足す
+// 空き(pt。#183)。和文の字と欧文の字(空白を除く)の境目にだけ、値の表の
+// fonts.asianLatinSpacingEm × 字の大きさ。prev が 0(行の頭)なら足さない。
+func asianLatinGapPt(prev, ch rune, fontSizePt float64) float64 {
+	em := activeFonts.AsianLatinSpacing
+	if em == 0 || prev == 0 {
+		return 0
+	}
+	if (isEastAsianRune(prev) && isLatinSpaced(ch)) || (isLatinSpaced(prev) && isEastAsianRune(ch)) {
+		return em * fontSizePt
+	}
+	return 0
+}
+
+// isLatinSpaced は和文との境目に空きが入る欧文の字(数字・英字・半角の記号)。
+// 空白・改行は境目を作らない。
+func isLatinSpaced(ch rune) bool {
+	return !isEastAsianRune(ch) && !unicode.IsSpace(ch) && unicode.IsGraphic(ch)
+}
+
+// spacedWidthPt は文字列の幅(pt)。字の幅(安全マージン込み)に、和文と欧文の境目の
+// 空き(asianLatinGapPt)を足す。prev は直前の字(行の頭なら 0)。
+func spacedWidthPt(s string, prev rune, fontSizePt float64, bold bool) float64 {
 	total := 0.0
 	for _, ch := range s {
-		total += charEmWidth(ch, bold) * fontSizePt
+		total += charEmWidth(ch, bold)*fontSizePt + asianLatinGapPt(prev, ch, fontSizePt)
+		prev = ch
 	}
 	return total
+}
+
+// runWidthPt は文字列全体の幅(pt)を安全マージン込みで返す(トークン化せず、
+// 本物の get_font().getlength(label) 相当の単純合計。凡例ラベルの幅計算に使う)。
+// 和文と欧文の境目の空きも数える(#183)。
+func runWidthPt(s string, fontSizePt float64, bold bool) float64 {
+	return spacedWidthPt(s, 0, fontSizePt, bold)
 }
 
 // tokenWidthPt は1トークン分の幅(pt)。安全マージン込み。
 // box_engine.py の wrap_text() 内の width_of() に相当。
 func tokenWidthPt(tok string, fontSizePt float64, bold bool) float64 {
-	total := 0.0
-	for _, ch := range tok {
-		total += charEmWidth(ch, bold) * fontSizePt
-	}
-	return total
+	return spacedWidthPt(tok, 0, fontSizePt, bold)
 }
 
 // naturalTextWidth はテキストノードの「折り返さない場合の自然な幅」。
@@ -114,7 +140,21 @@ func naturalTextWidth(s *Spec) float64 {
 			total += charEmWidth(ch, s.Bold)
 		}
 	}
-	return total * s.FontSize
+	return total*s.FontSize + textGapsPt(s.Text, s.FontSize)
+}
+
+// textGapsPt は文の中の和文と欧文の境目の空きの合計(pt。#183)。改行の前後は数えない。
+func textGapsPt(text string, fontSizePt float64) float64 {
+	if activeFonts.AsianLatinSpacing == 0 {
+		return 0
+	}
+	total := 0.0
+	var prev rune
+	for _, ch := range text {
+		total += asianLatinGapPt(prev, ch, fontSizePt)
+		prev = ch
+	}
+	return total
 }
 
 // wrapText はテキストを maxWidthPt に収まるよう折り返す。
@@ -129,8 +169,14 @@ func wrapText(text string, fontSizePt, maxWidthPt float64, bold bool) []string {
 		var cur strings.Builder
 		curWidth := 0.0
 		curLen := 0
+		var prev rune // 直前の字(和文と欧文の境目の空きを測る。#183)
 		for _, tok := range toks {
-			tokW := tokenWidthPt(tok, fontSizePt, bold)
+			lead := 0.0 // 行の頭に来たら足さない、前の字との境目の空き
+			if first, _ := utf8.DecodeRuneInString(tok); prev != 0 {
+				lead = asianLatinGapPt(prev, first, fontSizePt)
+			}
+			tokW := tokenWidthPt(tok, fontSizePt, bold) + lead
+			prev, _ = utf8.DecodeLastRuneInString(tok)
 			isSpace := strings.TrimSpace(tok) == ""
 			// maxWidthPt自体がnaturalTextWidth()(同じトークンの合計)から来ることが多く、
 			// 浮動小数点の加算順序の違いだけで curWidth+tokW がごく僅かに上回り、最後の
@@ -141,6 +187,7 @@ func wrapText(text string, fontSizePt, maxWidthPt float64, bold bool) []string {
 				cur.Reset()
 				curWidth = 0
 				curLen = 0
+				tokW -= lead
 			}
 			cur.WriteString(tok)
 			curWidth += tokW
@@ -251,12 +298,21 @@ func richRunes(runs []TextRun) ([]rune, []int) {
 }
 
 // naturalRunsWidth は折り返さないときの幅(安全マージン込み)。
+// 和文と欧文の境目の空きも数える(#183)。箇条の印(Mark)は段落の印として書くので、
+// 印と本文の間には数えない。
 func naturalRunsWidth(runs []TextRun, fontSizePt float64) float64 {
 	total := 0.0
+	var prev rune
 	for _, r := range runs {
 		first := true
 		for _, ch := range r.Text {
 			total += runRuneWidth(ch, r, first, fontSizePt)
+			if r.Mark || r.Width > 0 || ch == '\n' {
+				prev = 0
+			} else {
+				total += asianLatinGapPt(prev, ch, runSize(r, fontSizePt))
+				prev = ch
+			}
 			first = false
 		}
 	}
@@ -293,11 +349,19 @@ func wrapRuns(runs []TextRun, fontSizePt, maxWidthPt float64) [][]TextRun {
 		pos := markEnd
 		for _, tok := range keepTokens(rs[markEnd:paraEnd], style[markEnd:paraEnd], runs) {
 			n := len([]rune(tok))
-			tokW := 0.0
+			tokW, lead := 0.0, 0.0
 			for k := pos; k < pos+n; k++ {
-				tokW += charEmWidth(rs[k], runs[style[k]].Bold) * runSize(runs[style[k]], fontSizePt)
+				size := runSize(runs[style[k]], fontSizePt)
+				tokW += charEmWidth(rs[k], runs[style[k]].Bold) * size
+				if k > markEnd { // 印と本文の間には空きを数えない
+					g := asianLatinGapPt(rs[k-1], rs[k], size)
+					tokW += g
+					if k == pos {
+						lead = g // 行の頭に来たら引く
+					}
+				}
 			}
-			t := wrapTok{pos: pos, n: n, w: tokW, space: strings.TrimSpace(tok) == "", text: tok}
+			t := wrapTok{pos: pos, n: n, w: tokW, lead: lead, space: strings.TrimSpace(tok) == "", text: tok}
 			pos += n
 			// 禁則の追い出し(fonts の測り直しだけ):行の頭に来てはいけない閉じの約物は
 			// 前のトークンにつなげ、前の字と一緒に次の行へ送る。
@@ -378,6 +442,7 @@ var kinsokuGlue bool
 type wrapTok struct {
 	pos, n int
 	w      float64
+	lead   float64 // w のうち、前の字との和文と欧文の境目の空き(行の頭なら描かれない。#183)
 	space  bool
 	text   string
 }
@@ -392,11 +457,16 @@ func greedyBreaks(toks []wrapTok, from int, maxW float64) []int {
 	curW, curLen := 0.0, 0
 	for i := from; i < len(toks); i++ {
 		t := toks[i]
-		if curLen > 0 && curW+t.w > maxW+wrapEps && !t.space {
+		w := t.w
+		if curLen == 0 {
+			w -= t.lead // 行の頭の字の前には空きが入らない
+		}
+		if curLen > 0 && curW+w > maxW+wrapEps && !t.space {
 			breaks = append(breaks, i)
 			curW, curLen = 0, 0
+			w -= t.lead
 		}
-		curW += t.w
+		curW += w
 		curLen += t.n
 	}
 	return breaks

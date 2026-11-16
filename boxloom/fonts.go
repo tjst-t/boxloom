@@ -173,6 +173,12 @@ type TemplateFonts struct {
 	// LineHeight は行の送り(字の大きさに掛ける倍率)。行の高さの見積もりにも、
 	// fixedLineSpacing のとき PPTX に書く送りにも使う。dark・light は 1.35。
 	LineHeight float64 `json:"lineHeight"`
+	// AsianLatinSpacingEm は、和文の字と欧文の字(数字・英字・半角の括弧など)が同じ行で
+	// 隣り合うところに、描く側が足す空き(字の大きさの倍。#183)。LibreOffice は
+	// 「アジア言語と欧文の間隔」で境目ごとに 0.25em を足すので、字の幅ちょうどの枠では
+	// 最後の字が次の行に折れる。測るときに境目ごとにこの空きを数える(行の頭・終わりの
+	// 境目は数えない)。0 なら数えない。0 から 0.5 まで。
+	AsianLatinSpacingEm float64 `json:"asianLatinSpacingEm"`
 }
 
 // FontSet は測るときと書き出すときに使う字体の一式。
@@ -182,6 +188,8 @@ type FontSet struct {
 	WidthMargin      float64
 	FixedLineSpacing bool
 	LineHeight       float64 // 0 なら既定(defaultLineHeight)
+	// AsianLatinSpacing は和文と欧文の境目の空き(em。TemplateFonts.AsianLatinSpacingEm)。
+	AsianLatinSpacing float64
 }
 
 // lineHeight は行の送りの倍率。値の無い一式(試験で組むもの)は既定。
@@ -211,7 +219,11 @@ func resolveFonts(f TemplateFonts) (*FontSet, error) {
 	if !(f.LineHeight >= 1 && f.LineHeight <= 2) {
 		return nil, fmt.Errorf("fonts.lineHeight: must be between 1 and 2 (got %v)", f.LineHeight)
 	}
-	fs := &FontSet{Latin: lat, EastAsian: ea, WidthMargin: f.WidthMargin, FixedLineSpacing: f.FixedLineSpacing, LineHeight: f.LineHeight}
+	if !(f.AsianLatinSpacingEm >= 0 && f.AsianLatinSpacingEm <= 0.5) {
+		return nil, fmt.Errorf("fonts.asianLatinSpacingEm: must be between 0 and 0.5 (got %v)", f.AsianLatinSpacingEm)
+	}
+	fs := &FontSet{Latin: lat, EastAsian: ea, WidthMargin: f.WidthMargin, FixedLineSpacing: f.FixedLineSpacing, LineHeight: f.LineHeight,
+		AsianLatinSpacing: f.AsianLatinSpacingEm}
 	seen := map[string]bool{}
 	for i, fam := range f.FallbackFonts {
 		if seen[fam] {

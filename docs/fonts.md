@@ -31,7 +31,8 @@ Boxloom は文字の幅を自分で測って折り返し、行の数から枠の
   "fallbackFonts": [],
   "widthMargin": 1.05,
   "fixedLineSpacing": false,
-  "lineHeight": 1.35
+  "lineHeight": 1.35,
+  "asianLatinSpacingEm": 0
 }
 ```
 
@@ -43,6 +44,7 @@ Boxloom は文字の幅を自分で測って折り返し、行の数から枠の
 | `widthMargin` | 測った幅に掛ける余裕(1.05 なら 5% 広めに見積もる)。**全角より狭い文字(欧文・数字・詰めた仮名など)にだけ掛ける**。漢字・仮名・全角の約物はどの和文の字体でも 1em の正方形なので掛けない | 1〜1.5 |
 | `fixedLineSpacing` | true なら段落に行の送りを pt で書く(字の大きさ×`lineHeight`)。字体が替わっても行の高さが組んだとおりになる | 真偽値 |
 | `lineHeight` | 行の送り(字の大きさに掛ける倍率)。組むときの行の高さの見積もりと、`fixedLineSpacing` のとき書く送りの両方に使う。dark・light は 1.35(box_engine.py の LINE_HEIGHT_MULT)、report は 1.2(6章) | 1〜2 |
+| `asianLatinSpacingEm` | 同じ行で和文の字と欧文の字(数字・英字・半角の括弧など。空白は除く)が隣り合う境目ごとに、測った幅へ足す空き(字の大きさの倍)。LibreOffice は「アジア言語と欧文の間隔」で境目ごとに 0.25em を足すので、字の幅ちょうどの枠では最後の字が次の行に折れる(#183、`docs/eval.md` の F4。BIZ UDPGothic 14pt で、空きを数えた幅との差が 0.5pt 以内で折れ目が一致)。行の頭・終わりの境目と、箇条の印と本文の間には数えない。report は 0.25、dark・light は 0(出力を変えないため。同じ空きは入るので、合わせるなら 0.25) | 0〜0.5 |
 
 **文字の振り分け**:U+2000 より前(ASCII・ラテン文字)は欧文の字体、それ以降
 (一般句読点・記号・仮名・漢字・全角形)は和文の字体で測る。PowerPoint は文の
