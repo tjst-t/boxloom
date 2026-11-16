@@ -31,6 +31,8 @@ const (
 		"図の列を広くする(図のまとまりを role=main にする)かで直してください。字や輪は小さくしません"
 	orgLabelWrapHint = "組織図の箱の名前が細い箱の中で3行以上に折れ、読みにくくなっています。名前を短くする" +
 		"(正式名は補足 detail か横の文に書く)か、横に並ぶ部門を減らして箱を広くしてください。字や箱は自動では変えません"
+	processOrphanHint = "段の補足が箱の幅で折れて、最後の行に1〜2字だけ残ります。補足を少し短くするか言い換えて1行に収める、" +
+		"または切れ目のよい所で改行して2行に分けてください。字や箱は自動では変えません"
 	tableGroupLabelHint = "群の名前が縦書きの帯に2行で折り返しても群の行に入らず、群の行を高くしました。" +
 		"名前を短くする(帯の縦の1行に入るのは群の行の高さの分の字)か、行の少ない群を隣の群とまとめてください。字は小さくしません"
 	statValueHint = "数と単位はそれぞれ途中で折らないので、カードの幅に入らないと単位が次の行に落ちるか、数がカードからはみ出します。" +
@@ -112,6 +114,10 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity, v TemplateValues) {
 		case "orgchart-label-wrap":
 			if w.Hint == "" {
 				w.Hint = orgLabelWrapHint
+			}
+		case "process-detail-orphan":
+			if w.Hint == "" {
+				w.Hint = processOrphanHint
 			}
 		case "table-group-label":
 			if w.Hint == "" {

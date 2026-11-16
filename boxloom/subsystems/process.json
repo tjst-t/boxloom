@@ -8,6 +8,7 @@
   "naturalBoxHeight": 64,
   "maxBoxHeight": 88,
   "detailGap": 8,
+  "detailSlack": 12,
   "minRowGap": 16,
   "naturalRowGap": 24,
   "maxRowGap": 40,

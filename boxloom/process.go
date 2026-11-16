@@ -13,19 +13,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
+	"unicode/utf8"
 )
 
 // ProcessValues は process の寸法(pt)。既定は subsystems/process.json。
 type ProcessValues struct {
-	Padding       float64 `json:"padding" scale:"space"`
-	CaptionGap    float64 `json:"captionGap" scale:"space"` // 説明の文と箱の間
-	ArrowGap      float64 `json:"arrowGap" scale:"space"`   // 箱と箱の間(矢印の長さ)の最小
-	MinStepW      float64 `json:"minStepWidth"`             // これより狭くなるなら次の行へ折り返す
-	MaxStepW      float64 `json:"maxStepWidth"`             // 箱の幅の上限(余りは矢印を長くする)
-	MinBoxH       float64 `json:"minBoxHeight"`
-	NaturalBoxH   float64 `json:"naturalBoxHeight"`
-	MaxBoxH       float64 `json:"maxBoxHeight"`
-	DetailGap     float64 `json:"detailGap" scale:"space"` // 箱と補足の間
+	Padding     float64 `json:"padding" scale:"space"`
+	CaptionGap  float64 `json:"captionGap" scale:"space"` // 説明の文と箱の間
+	ArrowGap    float64 `json:"arrowGap" scale:"space"`   // 箱と箱の間(矢印の長さ)の最小
+	MinStepW    float64 `json:"minStepWidth"`             // これより狭くなるなら次の行へ折り返す
+	MaxStepW    float64 `json:"maxStepWidth"`             // 箱の幅の上限(余りは矢印を長くする)
+	MinBoxH     float64 `json:"minBoxHeight"`
+	NaturalBoxH float64 `json:"naturalBoxHeight"`
+	MaxBoxH     float64 `json:"maxBoxHeight"`
+	DetailGap   float64 `json:"detailGap" scale:"space"` // 箱と補足の間
+	// DetailSlack は補足の枠を箱の幅より右へ広げる分(#184)。補足の下(矢印の下)は
+	// 空いているので、箱の幅にわずかに入らない補足が最後の1字だけ次の行へ折れない
+	// ように、枠を広げ、折り返しと高さもその枠の幅で測る。右の箱の補足・図の端
+	// (padding)には届かない(processGeom.detailSlack で切り詰める)。
+	DetailSlack   float64 `json:"detailSlack" scale:"space"`
 	MinRowGap     float64 `json:"minRowGap" scale:"space"` // 折り返した行の間
 	NaturalRowG   float64 `json:"naturalRowGap" scale:"space"`
 	MaxRowGap     float64 `json:"maxRowGap" scale:"space"`
@@ -172,7 +179,7 @@ func (s *ProcessSubsystem) geom(width float64) *processGeom {
 		if len(st.Detail) == 0 {
 			continue
 		}
-		_, h := runsBox(itemRuns(st.Detail, "", nil), tx.Detail, g.boxW)
+		_, h := runsBox(itemRuns(st.Detail, "", nil), tx.Detail, g.detailW(v, i, len(s.Data.Steps)))
 		r := i / g.perRow
 		g.detailH[r] = math.Max(g.detailH[r], h)
 	}
@@ -225,6 +232,23 @@ type processPlaced struct {
 	legend  LBox // 凡例の左上(幅は内側の幅)
 }
 
+// detailSlack は行の k 番目の箱の補足の枠を箱の幅より広げる分(値の表の detailSlack)。
+// 行の終わりの箱(last)は図の内側の余白(padding)の半分まで、ほかの箱は次の箱との間
+// (矢印の長さ)の半分まで。
+func (g *processGeom) detailSlack(v *ProcessValues, last bool) float64 {
+	limit := v.Padding / 2
+	if !last {
+		limit = g.gap / 2
+	}
+	return math.Max(0, math.Min(v.DetailSlack, limit))
+}
+
+// detailW は i 番目の段(全部で n 段)の補足の枠の幅(箱の幅+detailSlack)。
+func (g *processGeom) detailW(v *ProcessValues, i, n int) float64 {
+	last := i%g.perRow == g.perRow-1 || i == n-1
+	return g.boxW + g.detailSlack(v, last)
+}
+
 func (s *ProcessSubsystem) place(box LBox) (*processGeom, *processPlaced) {
 	v := s.vals()
 	g := s.geom(box.Width)
@@ -250,7 +274,7 @@ func (s *ProcessSubsystem) place(box LBox) (*processGeom, *processPlaced) {
 			}
 			x := x0 + float64(k)*(g.boxW+g.gap)
 			pl.boxes = append(pl.boxes, LBox{X: x, Y: y, Width: g.boxW, Height: bh})
-			pl.details = append(pl.details, LBox{X: x, Y: y + bh + v.DetailGap, Width: g.boxW, Height: g.detailH[r]})
+			pl.details = append(pl.details, LBox{X: x, Y: y + bh + v.DetailGap, Width: g.detailW(v, i, len(s.Data.Steps)), Height: g.detailH[r]})
 		}
 		y += bh
 		if g.detailH[r] > 0 {
@@ -320,10 +344,40 @@ func (s *ProcessSubsystem) Lint(box LBox) []string {
 			if !textFits(needW, 0, d.Width, 0) {
 				out = append(out, overflowWarning("process", fmt.Sprintf("steps[%d].detail", i), st.Detail, needW, d.Height, d.Width, d.Height))
 			}
+			if w := processDetailOrphanWarning(i, st.Detail, tx.Detail, d.Width); w != "" {
+				out = append(out, w)
+			}
 		}
 	}
 	_, missing := s.legend()
 	return append(out, legendMissingWarnings("process", missing)...)
+}
+
+// processOrphanRunes は補足の折り返した最後の行がこの字数以下なら警告する数(#184)。
+const processOrphanRunes = 2
+
+// processDetailOrphanWarning は段の補足が箱の幅で折れて、最後の行が processOrphanRunes 字
+// 以下しか残らないときの警告(process-detail-orphan、#184。1つの段に1件)。はみ出しは無いが
+// 「…デマン/ド」のように1字だけ次の行に残ると読みにくい。折り返しは補足の枠の幅(箱の幅+
+// detailSlack)で測る。作者が改行で分けた行の短さは数えない(折り返しで
+// 残ったときだけ)。Boxloom は文を縮めたり箱を広げたりしない(orgchart-label-wrap と同じ考え方)。
+func processDetailOrphanWarning(i int, detail Inline, size, width float64) string {
+	runs := itemRuns(detail, "", nil)
+	lines := wrapRuns(runs, size, math.Max(width, 0))
+	forced := wrapRuns(runs, size, math.Inf(1))
+	if len(lines) <= len(forced) || len(lines) == 0 || len(forced) == 0 {
+		return ""
+	}
+	last := strings.TrimSpace(runsText(lines[len(lines)-1]))
+	if last == strings.TrimSpace(runsText(forced[len(forced)-1])) {
+		return "" // 最後の段落は折れていない
+	}
+	n := utf8.RuneCountInString(strings.ReplaceAll(last, " ", ""))
+	if n == 0 || n > processOrphanRunes {
+		return ""
+	}
+	return fmt.Sprintf("[SUBSYSTEM WARNING] process: steps[%d].detail (%q): the last line keeps only %d character(s) (%q) when wrapped at the detail width (%.1fpt)",
+		i, firstLine(detail), n, last, width)
 }
 
 // --- IR から読む ---
