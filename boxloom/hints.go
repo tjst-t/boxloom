@@ -41,8 +41,9 @@ const (
 var fillUnderRe = regexp.MustCompile(`^underfilled: ([0-9.]+)%`)
 
 // addLayoutHints は警告の fill-ratio・spare-width・stat-value・title-wrap・lead-wrap・milestone-overlap などに hint を足す。caps は同じ
-// 組み立ての容量(path が /slides/S)。
-func addLayoutHints(warns []Issue, caps []SlideCapacity) {
+// 組み立ての容量(path が /slides/S)。fillMin は値の表の fillRatioMin(表の分け方の案で
+// 薄くなる枚を言うため)。
+func addLayoutHints(warns []Issue, caps []SlideCapacity, fillMin float64) {
 	capOf := map[string]SlideCapacity{}
 	for _, c := range caps {
 		capOf[c.Path] = c
@@ -66,7 +67,7 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 		switch w.Code {
 		case "layout-overflow":
 			if w.Hint == "" {
-				split := tableSplitHint(w.Path, capOf)
+				split := tableSplitHint(w.Path, capOf, fillMin)
 				tall := ""
 				if split == "" {
 					tall = precedingTallHint(w.Path, capOf)
@@ -214,8 +215,9 @@ func joinHints(hs ...string) string {
 
 // tableSplitHint は、はみ出した本文の表の分け方の案(容量の split)を1文にする。
 // 案は表そのものがはみ出したときだけあり(#164)、その表と後のブロック(注記など。
-// #140)の警告に付ける。案が無ければ空。
-func tableSplitHint(path string, capOf map[string]SlideCapacity) string {
+// #140)の警告に付ける。案は各枚の行をならしてある(#169)。それでも fillMin を下回る枚が
+// あれば、分けるとその枚が fill-ratio を出すことと、ほかの直し方を言う。案が無ければ空。
+func tableSplitHint(path string, capOf map[string]SlideCapacity, fillMin float64) string {
 	var s, k int
 	if _, err := fmt.Sscanf(path, "/slides/%d/body/%d", &s, &k); err != nil {
 		return ""
@@ -236,10 +238,25 @@ func tableSplitHint(path string, capOf map[string]SlideCapacity) string {
 		for _, n := range b.Split.Rows {
 			rows = append(rows, strconv.Itoa(n))
 		}
-		return rest + fmt.Sprintf("この表は %d 枚に分けられます。%s の前で分けます(表ごとの本体の行の数 %s。合計の行は最後の表)。"+
+		var fills []string
+		thin := 0
+		for k, f := range b.Split.Fill {
+			fills = append(fills, fmt.Sprintf("%g%%", f))
+			if f < fillMin*100 && (thin == 0 || f < b.Split.Fill[thin-1]) {
+				thin = k + 1
+			}
+		}
+		h := rest + fmt.Sprintf("この表は %d 枚に分けられます。%s の前で分けます(表ごとの本体の行の数 %s、各枚の本文の埋まりの見込み %s。"+
+			"どの枚も薄くならないように行をならしてあり、群の表は群の境で分けます。合計の行は最後の表)。"+
 			"分けた表はすぐ次のスライドに置き、続きの表には continues: true(Markdown は説明の行の {continues})を書いて見出しの行を書きません。"+
 			"見出しの行と「n/m」の印・列の幅は Boxloom がそろえます。字は小さくしません",
-			b.Split.Tables, strings.Join(at, "・"), strings.Join(rows, "・"))
+			b.Split.Tables, strings.Join(at, "・"), strings.Join(rows, "・"), strings.Join(fills, "・"))
+		if thin > 0 {
+			h += fmt.Sprintf("。ただし、行をならしても %d 枚目の埋まりが %g%% で fill-ratio の下限(%g%%)を下回ります。"+
+				"分けるならその枚に根拠(数・出典・注記)を足すか、分けずに行や文を削る・dense で収まるなら dense にするほうが合います",
+				thin, b.Split.Fill[thin-1], fillMin*100)
+		}
+		return h
 	}
 	return ""
 }

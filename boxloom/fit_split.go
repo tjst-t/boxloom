@@ -11,7 +11,8 @@
 //   - 分け方:前から詰め、各枚が入る最小の枚数。枚数は梯子の最後の段で決め、その枚数で
 //     入る最も上の段(元の密度 → dense → fit.shrink[0] → …)で全部の枚を組む(字の大きさが
 //     枚の間でそろう)。最後の段でも1つの単位(1行・1項目・分けないブロック)が1枚に
-//     入らなければ分けない(元のまま。layout-overflow が残る)
+//     入らなければ分けない(元のまま。layout-overflow が残る)。区切りは枚数を変えずに
+//     ならし、最後の枚だけが薄くならないようにする(balancePlan。#169)
 //   - 続きの枚:題とリード・出典・隅の印(marker)は各枚に。2枚目からの題は値の表の
 //     marks.continuedTitle、各枚の題の隣に marks.tableContinued の「n/m」。ノートは最初の
 //     枚だけ。番号つきの箇条は前の枚の続きの番号から。目次・頁番号は分けた後の枚で数える
@@ -290,16 +291,21 @@ func (t *Template) splitPieces(s *IRSlide, from int, us []splitUnit, plan [][2]i
 // splitFits は i 枚目の続きに、前の枚 prev と候補 cand を並べた写しで cand が収まるか
 // (梯子と同じ測り measureFitStep。#145 の判定)。
 func (t *Template) splitFits(d *IRDeck, i int, prev []IRSlide, cand IRSlide) (bool, error) {
+	m, err := t.splitMeasure(d, i, prev, cand)
+	return m.ok && !m.bad(), err
+}
+
+// splitMeasure は splitFits の測り値。
+func (t *Template) splitMeasure(d *IRDeck, i int, prev []IRSlide, cand IRSlide) (fitMeasure, error) {
 	dd := *d
 	dd.Slides = make([]IRSlide, 0, i+len(prev)+1)
 	dd.Slides = append(dd.Slides, d.Slides[:i]...)
 	dd.Slides = append(dd.Slides, prev...)
 	dd.Slides = append(dd.Slides, cand)
 	if err := linkTableChains(&dd); err != nil {
-		return false, err
+		return fitMeasure{}, err
 	}
-	m, err := t.measureFitStep(&dd, len(dd.Slides)-1)
-	return m.ok && !m.bad(), err
+	return t.measureFitStep(&dd, len(dd.Slides)-1)
 }
 
 // splitPlan は i 枚目の単位 us を、段 set で前から詰めて分ける区切り(各枚は入る限り
@@ -370,6 +376,67 @@ func (t *Template) splitPlan(d *IRDeck, i int, us []splitUnit, set func(*IRSlide
 	}
 	if limit > 0 && len(plan) > limit {
 		return nil, nil
+	}
+	if len(plan) < 2 {
+		return plan, nil
+	}
+	return t.balancePlan(d, i, us, set, plan)
+}
+
+// balancePlan は前から詰めた区切り plan を、枚数を変えずにならす(#169。check の表の分け方の
+// 案 evenCuts と同じ規則):前から詰めると最後の枚が薄くなり fill-ratio が出るので、区切りを
+// 1単位ずつ前へ寄せる(前の枚の最後の単位を次の枚へ送る)。送るのは次の枚が前の枚より薄く、
+// 送った後も次の枚が収まり、その埋まり(本文の高さ÷領域)が前の枚の元の埋まりを越えない
+// ときだけ(2枚の厚いほうは厚くならず、薄いほうは薄くならない)。単位は後ろへしか動かない
+// ので必ず止まる。後ろの区切りから順に、変わらなくなるまで繰り返す(前から詰めた
+// 10・10・10・4 行も 8・8・9・9 にならす)。
+func (t *Template) balancePlan(d *IRDeck, i int, us []splitUnit, set func(*IRSlide), plan [][2]int) ([][2]int, error) {
+	s := &d.Slides[i]
+	piecesOf := func(plan [][2]int) ([]IRSlide, error) {
+		ps, err := t.splitPieces(s, i, us, plan, len(plan), set)
+		return ps, err
+	}
+	// fills は枚 k と k+1 の埋まり(どちらかが収まらなければ ok が false)。
+	fills := func(plan [][2]int, k int) (a, b float64, ok bool, err error) {
+		ps, err := piecesOf(plan)
+		if err != nil {
+			return 0, 0, false, err
+		}
+		var f [2]float64
+		for j := 0; j < 2; j++ {
+			m, err := t.splitMeasure(d, i, ps[:k+j], ps[k+j])
+			if err != nil || !m.ok || m.bad() || m.area <= 0 {
+				return 0, 0, false, err
+			}
+			f[j] = m.need / m.area
+		}
+		return f[0], f[1], true, nil
+	}
+	plan = append([][2]int(nil), plan...)
+	for changed, round := true, 0; changed && round < len(us); round++ {
+		changed = false
+		for k := len(plan) - 2; k >= 0; k-- {
+			a, b, ok, err := fills(plan, k)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				continue
+			}
+			for plan[k][1]-plan[k][0] > 1 && b < a-1e-6 {
+				next := append([][2]int(nil), plan...)
+				next[k][1]--
+				next[k+1][0]--
+				na, nb, ok, err := fills(next, k)
+				if err != nil {
+					return nil, err
+				}
+				if !ok || nb > a+1e-6 {
+					break
+				}
+				plan, a, b, changed = next, na, nb, true
+			}
+		}
 	}
 	return plan, nil
 }

@@ -19,6 +19,7 @@ package boxloom
 import (
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 )
 
@@ -214,6 +215,9 @@ type tableSplit struct {
 	Tables      int   // 分けた後の表の数
 	SplitBefore []int // 2つ目からの表が始まる本体の行(IR の rows の番号)
 	Rows        []int // 表ごとの本体の行の数
+	// Fill は分けた後の枚ごとの本文の埋まりの見込み(0〜1。bodyFillRatio と同じ割合。最初の
+	// 枚は表の上と後のブロックを含み、続きの枚は本文が表だけ)。#169
+	Fill []float64
 }
 
 // leftmostMergedColumn は縦に結合したセルのある、いちばん左の列(無ければ -1)。
@@ -280,26 +284,105 @@ func (t *tableLeaf) split(width, firstAvail, laterAvail float64) *tableSplit {
 		}
 		expanded = append(expanded, u)
 	}
-	s := &tableSplit{}
-	avail := firstAvail - over
-	if len(expanded) == 0 || height(expanded[0]) > avail+overflowEps {
+	firstRoom, laterRoom := firstAvail-over, laterAvail-over
+	if len(expanded) == 0 || height(expanded[0]) > firstRoom+overflowEps {
 		// 最初の枚に本体の行が1つも入らない(表の上か後のブロックだけで埋まる)。
 		return nil
 	}
-	cur, start := 0.0, 0
+	// 枚数は前から詰めたときの数(最小の枚数)。
+	parts, cur := 1, 0.0
+	room := firstRoom
 	for _, u := range expanded {
 		h := height(u)
-		if cur > 0 && cur+h > avail+overflowEps {
-			s.Rows = append(s.Rows, u[0]-start)
-			s.SplitBefore = append(s.SplitBefore, u[0])
-			start, cur, avail = u[0], 0, laterAvail-over
+		if cur > 0 && cur+h > room+overflowEps {
+			parts, cur, room = parts+1, 0, laterRoom
 		}
 		cur += h
 	}
-	s.Rows = append(s.Rows, len(body)-start)
+	if parts < 2 {
+		return nil
+	}
+	cuts := evenCuts(expanded, height, parts, firstRoom, laterRoom)
+	if cuts == nil {
+		return nil
+	}
+	s := &tableSplit{}
+	room, prev := firstRoom, 0
+	for _, c := range append(cuts, len(expanded)) {
+		h := 0.0
+		for _, u := range expanded[prev:c] {
+			h += height(u)
+		}
+		s.Fill = append(s.Fill, min(1, 1-(room-h)/laterAvail))
+		r := len(body)
+		if c < len(expanded) {
+			r = expanded[c][0]
+			s.SplitBefore = append(s.SplitBefore, r)
+		}
+		start := 0
+		if prev > 0 {
+			start = expanded[prev][0]
+		}
+		s.Rows = append(s.Rows, r-start)
+		room, prev = laterRoom, c
+	}
 	s.Tables = len(s.Rows)
 	if s.Tables < 2 {
 		return nil
 	}
 	return s
+}
+
+// evenCuts は単位 us を parts 枚に分ける区切り(2枚目からの枚が始まる単位の番号)を、
+// 各枚が収まる範囲で、枚の空き(room から行の高さを引いたもの)の最大がいちばん小さく
+// なるように選ぶ(#169。前から詰めると最後の枚が薄くなり fill-ratio が出るため、行を
+// ならす)。単位は群の表なら群なので、群の境が優先される。最初の枚の空きは firstRoom、
+// 続きの枚は laterRoom から引く。空きが同じなら前の枚を多くする。
+func evenCuts(us [][2]int, height func([2]int) float64, parts int, firstRoom, laterRoom float64) []int {
+	n := len(us)
+	pre := make([]float64, n+1)
+	for k, u := range us {
+		pre[k+1] = pre[k] + height(u)
+	}
+	inf := math.Inf(1)
+	// best[p][j] は単位 [0, j) を p 枚に分けたときの空きの最大の最小、from はその区切り。
+	best := make([][]float64, parts+1)
+	from := make([][]int, parts+1)
+	for p := range best {
+		best[p] = make([]float64, n+1)
+		from[p] = make([]int, n+1)
+		for j := range best[p] {
+			best[p][j] = inf
+		}
+	}
+	best[0][0] = math.Inf(-1)
+	for p := 1; p <= parts; p++ {
+		room := laterRoom
+		if p == 1 {
+			room = firstRoom
+		}
+		for j := p; j <= n; j++ {
+			for i := j - 1; i >= p-1; i-- {
+				if best[p-1][i] == inf {
+					continue
+				}
+				left := room - (pre[j] - pre[i])
+				if left < -overflowEps {
+					break // i を前へ寄せるほど枚が高くなる
+				}
+				if v := math.Max(best[p-1][i], left); v < best[p][j]-overflowEps {
+					best[p][j], from[p][j] = v, i
+				}
+			}
+		}
+	}
+	if best[parts][n] == inf {
+		return nil
+	}
+	cuts := make([]int, parts-1)
+	for p, j := parts, n; p > 1; p-- {
+		j = from[p][j]
+		cuts[p-2] = j
+	}
+	return cuts
 }

@@ -243,7 +243,8 @@ func TestMarkdownTableContinues(t *testing.T) {
 }
 
 // はみ出した表に、check は分け方の案(枚数と分ける行)を hint と容量に出す。案に
-// 従って分けると、どの枚もはみ出さない。
+// 従って分けると、どの枚もはみ出さない。案は各枚の行をならす(前から詰めた 7・7・4 ではなく
+// 6・6・6。#169)。
 func TestTableOverflowSplitProposal(t *testing.T) {
 	for _, f := range []string{"../examples/ir/check-warnings/table-overflow.json", "../examples/md/warnings/table-overflow.bx.md"} {
 		errs, warns, caps := CheckFileCapacity(f, "")
@@ -256,7 +257,7 @@ func TestTableOverflowSplitProposal(t *testing.T) {
 				hint = w.Hint
 			}
 		}
-		if !strings.Contains(hint, "3 枚に分けられます") || !strings.Contains(hint, "rows[7]") || !strings.Contains(hint, "continues") {
+		if !strings.Contains(hint, "3 枚に分けられます") || !strings.Contains(hint, "rows[6]") || !strings.Contains(hint, "continues") {
 			t.Errorf("%s: hint %q", f, hint)
 		}
 		var split *TableSplitCapacity
@@ -267,8 +268,8 @@ func TestTableOverflowSplitProposal(t *testing.T) {
 				}
 			}
 		}
-		if split == nil || split.Tables != 3 || len(split.SplitBefore) != 2 || split.SplitBefore[0] != 7 || split.SplitBefore[1] != 14 ||
-			jsonOf(split.Rows) != "[7,7,4]" {
+		if split == nil || split.Tables != 3 || len(split.SplitBefore) != 2 || split.SplitBefore[0] != 6 || split.SplitBefore[1] != 12 ||
+			jsonOf(split.Rows) != "[6,6,6]" {
 			t.Errorf("%s: split %+v", f, split)
 		}
 	}
@@ -288,7 +289,7 @@ func TestTableOverflowSplitProposal(t *testing.T) {
 	rows := tbl["rows"].([]any)
 	total := tbl["total"]
 	delete(tbl, "total")
-	tbl["rows"] = rows[:7]
+	tbl["rows"] = rows[:6]
 	mk := func(rs []any, last bool) map[string]any {
 		t := map[string]any{"type": "table", "continues": true, "rows": rs}
 		if last {
@@ -296,14 +297,14 @@ func TestTableOverflowSplitProposal(t *testing.T) {
 		}
 		return map[string]any{"type": "content", "title": slide["title"], "body": []any{t}}
 	}
-	doc["slides"] = append(slides, mk(rows[7:14], false), mk(rows[14:], true))
+	doc["slides"] = append(slides, mk(rows[6:12], false), mk(rows[12:], true))
 	b, _ := json.Marshal(doc)
 	errs, warns := CheckIR("split.json", b, "")
 	if len(errs) > 0 {
 		t.Fatalf("%+v", errs)
 	}
 	for _, w := range warns {
-		if w.Code == "layout-overflow" || w.Code == "subsystem-min" {
+		if w.Code == "layout-overflow" || w.Code == "subsystem-min" || w.Code == "fill-ratio" {
 			t.Errorf("the split table still overflows: %+v", w)
 		}
 	}

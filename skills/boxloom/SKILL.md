@@ -551,13 +551,17 @@ slide yourself where the content changes and title each part.
 
 Boxloom never moves table rows to the next slide by itself. When a table overflows, the
 `layout-overflow` hint and `capacity` give a proposal, e.g.
-`"split": {"tables": 3, "splitBefore": [7, 14], "rows": [7, 7, 4]}`
-(`splitBefore` counts body rows from 0: `7` is the 8th body row).
+`"split": {"tables": 3, "splitBefore": [6, 12], "rows": [6, 6, 6], "fill": [78.2, 74.5, 74.5]}`
+(`splitBefore` counts body rows from 0: `6` is the 7th body row). The proposal already
+evens the rows out (group boundaries in a grouped table) so no part is left thin, and
+`fill` is each part's expected fill ratio (%). If the hint says a part stays under the
+fill-ratio limit however you split, the table is only a little too long: prefer
+`{density=dense}` or cutting rows, or give that part more evidence.
 
 1. Keep rows before the first `splitBefore` in the original table. Move each following
    run of rows into a new table on a new slide placed **right after** the previous one
-   (no other slide between). You may split a little earlier at a natural break (a new
-   group or category); never later than proposed. Blocks after the table on that slide
+   (no other slide between). You may move a split by a row to a natural break (a new
+   group or category) if every part still fits; keep the parts about as even as proposed. Blocks after the table on that slide
    (a `:::note`, a paragraph) stay on the first slide: the proposal already leaves room for
    them. It is given only when the table itself overflows; when only a block after the table
    overflows, the hint points at the tallest earlier block instead (step 2 above).

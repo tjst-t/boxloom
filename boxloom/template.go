@@ -734,8 +734,8 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 			warnings = append(warnings, fitAppliedWarning(fitted))
 		}
 		if b.Body != nil && split == nil {
-			// 分けた枚は測らない(前から詰めるので最後の枚が薄いのは分けた常。知らせの
-			// fit-split が作者に題で分けることを勧める)。
+			// 分けた枚は測らない(各枚はならしてあるが(#169)、1枚を少し越えるだけの本文を
+			// 分ければ薄くなるのは分けた常。知らせの fit-split が作者に題で分けることを勧める)。
 			ratio := bodyFillRatio(b.Body)
 			if w := lintFillRatioMin(ratio, v.FillRatioMin); w != "" {
 				warnings = append(warnings, w)

@@ -95,6 +95,10 @@ type TableSplitCapacity struct {
 	Tables      int   `json:"tables"`
 	SplitBefore []int `json:"splitBefore"`
 	Rows        []int `json:"rows"` // 表ごとの本体の行の数
+	// Fill は分けた後の枚ごとの本文の埋まりの見込み(%。fill-ratio と同じ割合)。分け方は
+	// 枚数を最小にしたうえで、いちばん薄い枚が最も厚くなるように行をならす(#169)。
+	// 値の表の fillRatioMin を下回る枚があれば、この枚数で(群の表は群の境で)どう分けてもその枚は fill-ratio を出す。
+	Fill []float64 `json:"fill"`
 }
 
 // CardCapacity は横に並ぶカードの1枚の測り値。
@@ -178,6 +182,9 @@ func blockCapacity(b BlockMeasure, path, typ string) BlockCapacity {
 	}
 	if s := b.TableSplit; s != nil {
 		bc.Split = &TableSplitCapacity{Tables: s.Tables, SplitBefore: s.SplitBefore, Rows: s.Rows}
+		for _, f := range s.Fill {
+			bc.Split.Fill = append(bc.Split.Fill, round1(f*100))
+		}
 	}
 	tall := tallestCard(b.Cards)
 	for i, c := range b.Cards {
