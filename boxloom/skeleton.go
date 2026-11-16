@@ -274,6 +274,9 @@ func (t *Template) buildSkeleton(d *IRDeck, i int) (*BuiltSlide, error) {
 			return nil, fmt.Errorf("%s: a %s slide needs exactly one main box (markFrame(frameMain)) and no body box; found %d and %d", name, s.Type, len(mains), len(bodies))
 		}
 		out.Main, out.MainWhat = mains[0], mainWhat
+		if s.Type == "statement" {
+			out.Statement = irLeaf(root, "content")
+		}
 	default:
 		if len(bodies)+len(mains) != 0 {
 			return nil, fmt.Errorf("%s: a %s slide has no body or main box", name, s.Type)

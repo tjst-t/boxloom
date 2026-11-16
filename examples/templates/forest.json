@@ -45,6 +45,7 @@
     "slideTitle": 24,
     "leadText": 18,
     "leadMaxLines": 0,
+    "statementMaxLines": 0,
     "body": 16,
     "subPoint": 14,
     "optionLabel": 16,

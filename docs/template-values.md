@@ -492,6 +492,7 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `slideTitle` | 本文のスライドの題(短い見出し。折り返すと `title-wrap` の警告) |
 | `leadText` | リード文(`lead`。題の直下、色は `text_primary`、太字にしない) |
 | `leadMaxLines` | リード文の行の数の上限(整数)。超えると `lead-wrap` の警告。0 は上限なし(dark・light・report とも 2) |
+| `statementMaxLines` | 主張(statement)の1文の行の数の上限(整数)。超えると `statement-wrap` の警告。0 は上限なし(dark・light・report とも 3。主張の字で 3 行は1文に収まる長さで、5 行の文でもページには収まるので、はみ出しとは別に知らせる) |
 | `body` | 段落・箇条 |
 | `leadLineHeight` `listLineHeight` | リード文と箇条(入れ子も)の行送り(字の大きさに掛ける倍率、#146)。1 から `fonts.lineHeight` まで(越えれば読み込みの誤り)。段落の行送りは `fonts.lineHeight` のまま。dark / light は `fonts.lineHeight` と同じ 1.35、report は 1.08 |
 | `footerText` | フッター(作者・機密区分・頁番号)の字(#146。dark / light は `small` と同じ 10、report は 8) |

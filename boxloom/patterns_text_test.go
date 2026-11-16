@@ -294,12 +294,16 @@ func TestTextPatternsCapacity(t *testing.T) {
 
 // 主張の1文が長すぎると、そのスライドに layout-overflow の警告(本文の無い
 // スライドなので path はスライド)。区切り・主張は fill-ratio を出さない。
+// 行の上限も越えるので、主張の1文を指す statement-wrap も出る(#167)。
 func TestStatementOverflowWarning(t *testing.T) {
 	errs, warns := CheckFile("../examples/ir/check-warnings/statement-overflow.json", "")
-	if len(errs) != 0 || len(warns) != 1 {
+	if len(errs) != 0 || len(warns) != 2 {
 		t.Fatalf("errs %v warns %v", errs, warns)
 	}
-	w := warns[0]
+	if w := warns[0]; w.Code != "statement-wrap" || w.Path != "/slides/4/content" {
+		t.Fatalf("warning = %+v", w)
+	}
+	w := warns[1]
 	if w.Code != "layout-overflow" || w.Path != "/slides/4" || !strings.HasPrefix(w.Message, "statement overflows the slide by ") {
 		t.Fatalf("warning = %+v", w)
 	}

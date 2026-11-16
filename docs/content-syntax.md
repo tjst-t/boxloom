@@ -156,6 +156,8 @@ closing: true
   :::
   ```
 
+  - 主張の1文の行の数の上限はテンプレートが値の表の `statementMaxLines` で持ち(report・dark・light
+    とも3行)、越えると警告 `statement-wrap`(#167)。
   - `section`・`statement` の後ろに本文(段落・箇条・囲み・コードブロック)を書くと
     `misplaced-content`。区切りに目次を足す・主張に理由の箇条を足すのは、
     `docs/patterns.md` の R1・R2 の悪い例なので、記法で止める。

@@ -85,6 +85,9 @@ type BuiltSlide struct {
 	// Lead は本文のスライドのリード文の葉(行の数を値の表の leadMaxLines と比べる。
 	// リード文の無いスライドとほかでは nil)。
 	Lead *Spec
+	// Statement は主張のスライドの1文の葉(行の数を値の表の statementMaxLines と比べる。
+	// ほかでは nil)。
+	Statement *Spec
 	// SlideIndex は組んだ元の IR のスライドの番号(d.Slides の添字)。組み立てで作った
 	// 目次のスライド(meta.toc)は tocSlide。
 	SlideIndex int
@@ -751,6 +754,13 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 			if n := textLinesFor(b.Lead, b.Lead.Box.Width); n > v.LeadMaxLines {
 				warnings = append(warnings, fmt.Sprintf("[LEAD-WRAP WARNING] lead: the lead wraps to %d lines, more than the template's limit of %d (width %.1fpt at %.0fpt); shorten it",
 					n, v.LeadMaxLines, b.Lead.Box.Width, b.Lead.FontSize))
+			}
+		}
+		if b.Statement != nil && v.StatementMaxLines > 0 {
+			// 主張の1文は値の表の上限の行の数まで(超えたら短くする)。
+			if n := textLinesFor(b.Statement, b.Statement.Box.Width); n > v.StatementMaxLines {
+				warnings = append(warnings, fmt.Sprintf("[STATEMENT-WRAP WARNING] statement: the statement wraps to %d lines, more than the template's limit of %d (width %.1fpt at %.0fpt); shorten it",
+					n, v.StatementMaxLines, b.Statement.Box.Width, b.Statement.FontSize))
 			}
 		}
 

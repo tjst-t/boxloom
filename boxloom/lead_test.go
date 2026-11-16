@@ -248,3 +248,55 @@ func TestLeadWrapWarning(t *testing.T) {
 		}
 	}
 }
+
+// 主張(statement)の1文が値の表の上限(dark・light・report とも 3 行)を超えたときだけ
+// statement-wrap の警告(主張の1文を指す)。3 行に収まる文では出ない(#167)。
+func TestStatementWrapWarning(t *testing.T) {
+	doc := func(s string) []byte {
+		return []byte("---\ntitle: 例\n---\n\n# " + s + " {type=statement}\n")
+	}
+	count := func(tmpl string, src []byte) []Issue {
+		_, warns, _ := checkCapacity("statement.bx.md", src, tmpl, nil, nil)
+		var got []Issue
+		for _, w := range warns {
+			if w.Code == "statement-wrap" {
+				got = append(got, w)
+			}
+		}
+		return got
+	}
+	for _, name := range []string{"dark", "light", "report"} {
+		tm, _ := LookupTemplate(name)
+		v := tm.Values
+		if v.StatementMaxLines != 3 {
+			t.Fatalf("%s statementMaxLines = %d, want 3", name, v.StatementMaxLines)
+		}
+		// 行の数を測ってから文を選ぶ(字の幅の変更で試験が崩れないように)。文の幅は
+		// 外周と主張の内側の余白を引いたもの。
+		w := v.PageW - 2*v.PagePadding - 2*v.StatementInset
+		three, four := "", ""
+		for k := 1; k < 40 && (three == "" || four == ""); k++ {
+			s := strings.Repeat("新しい事業は来年度に始める。", k)
+			switch len(wrapText(s, v.StatementText, w, true)) {
+			case 3:
+				if three == "" {
+					three = s
+				}
+			case 4:
+				if four == "" {
+					four = s
+				}
+			}
+		}
+		if three == "" || four == "" {
+			t.Fatalf("%s: could not make 3- and 4-line statements", name)
+		}
+		got := count(name, doc(four))
+		if len(got) != 1 || got[0].Path != "/slides/1/content" || !strings.Contains(got[0].Message, "4 lines") || !strings.Contains(got[0].Message, "limit of 3") {
+			t.Fatalf("%s 4-line statement: %+v", name, got)
+		}
+		if got := count(name, doc(three)); len(got) != 0 {
+			t.Fatalf("%s 3-line statement warned: %+v", name, got)
+		}
+	}
+}
