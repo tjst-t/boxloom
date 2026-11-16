@@ -44,6 +44,7 @@ type ChartSeries struct {
 	XValues     []float64 // 散布図だけ
 	Color       string
 	PointColors map[int]string
+	LabelFmts   []string // 点ごとの値のラベルの書式(空・欠けは ChartData.LabelNumFmt)
 }
 
 // ChartData は1つのグラフの中身と見た目(解決済み)。0 の寸法は既定の値
@@ -53,15 +54,21 @@ type ChartData struct {
 	Kind       ChartKind
 	Categories []string
 	Series     []ChartSeries
-	NumFmt     string // 値の書式(Excel の書式。空なら "General")
-	XNumFmt    string // 散布図の X の書式(空なら "General")
-	FontSize   float64
-	TextColor  string
-	GridColor  string
-	AxisColor  string
-	Legend     bool
-	DataLabels bool
-	Latin, EA  string // 字体(空ならテーマの字体)
+	NumFmt     string // 値の軸の書式(Excel の書式。空なら "General")
+	// LabelNumFmt は値のラベルの書式(空なら NumFmt)。点ごとに違う桁は ChartSeries.LabelFmts。
+	LabelNumFmt string
+	// UnitTitle は値の単位。空でなければ図の左上に1回だけ書く(目盛り・ラベルには付けない)。
+	UnitTitle string
+	// NoValueAxis は値の軸(目盛りと格子)を消す。値のラベルが棒ごとに値を出すとき(1系列の横棒)。
+	NoValueAxis bool
+	XNumFmt     string // 散布図の X の書式(空なら "General")
+	FontSize    float64
+	TextColor   string
+	GridColor   string
+	AxisColor   string
+	Legend      bool
+	DataLabels  bool
+	Latin, EA   string // 字体(空ならテーマの字体)
 
 	XTitle, YTitle string // 軸の題(散布図。空なら書かない)
 
@@ -189,7 +196,7 @@ func (d *ChartData) ChartXML(rid string) string {
 			}
 			fmt.Fprintf(&dpts, `<c:bubble3D val="0"/><c:spPr>%s<a:ln><a:noFill/></a:ln></c:spPr></c:dPt>`, solidFill(c))
 		}
-		dl := d.dLbls()
+		dl := d.dLbls(s)
 		switch d.Kind {
 		case ChartLine:
 			fmt.Fprintf(&sers, `<c:ser><c:idx val="%d"/><c:order val="%d"/>%s<c:spPr><a:ln w="%d" cap="rnd">%s<a:round/></a:ln></c:spPr><c:marker><c:symbol val="circle"/><c:size val="%d"/><c:spPr>%s<a:ln><a:noFill/></a:ln></c:spPr></c:marker>%s<c:cat>%s</c:cat><c:val>%s</c:val><c:smooth val="0"/></c:ser>`,
@@ -243,19 +250,23 @@ func (d *ChartData) ChartXML(rid string) string {
 			fmt.Sprintf(`<c:gapWidth val="%d"/>`, gap) + overlap + `<c:axId val="1001"/><c:axId val="1002"/></c:barChart>` + d.catAx(catPos) + d.valAx(valPos)
 	}
 
+	autoDel := "1"
+	if d.UnitTitle != "" {
+		autoDel = "0"
+	}
 	legend := ""
 	if d.Legend {
 		legend = `<c:legend><c:legendPos val="b"/><c:overlay val="0"/>` + d.txPr() + `</c:legend>`
 	}
 	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace xmlns:c="` + nsC + `" xmlns:a="` + nsA + `" xmlns:r="` + nsR + `"><c:date1904 val="0"/><c:lang val="ja-JP"/><c:roundedCorners val="0"/>` +
-		`<c:chart><c:autoTitleDeleted val="1"/><c:plotArea><c:layout/>` + plot + `<c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr></c:plotArea>` + legend +
+		`<c:chart>` + d.unitTitle() + `<c:autoTitleDeleted val="` + autoDel + `"/><c:plotArea><c:layout/>` + plot + `<c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr></c:plotArea>` + legend +
 		`<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart>` +
 		`<c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>` + d.txPr() +
 		`<c:externalData r:id="` + rid + `"><c:autoUpdate val="0"/></c:externalData></c:chartSpace>`
 }
 
-func (d *ChartData) dLbls() string {
+func (d *ChartData) dLbls(s ChartSeries) string {
 	if !d.DataLabels {
 		return ""
 	}
@@ -276,8 +287,37 @@ func (d *ChartData) dLbls() string {
 	if cat == "1" {
 		sep = "<c:separator>\n</c:separator>" // 項目の名前と値を2行に
 	}
-	return `<c:dLbls><c:numFmt formatCode="` + escapeXML(d.numFmt()) + `" sourceLinked="0"/><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>` + d.labelTxPr() + pos +
-		`<c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="` + cat + `"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/>` + sep + `</c:dLbls>`
+	base := d.labelNumFmt()
+	group := func(f string) string {
+		return `<c:numFmt formatCode="` + escapeXML(f) + `" sourceLinked="0"/><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>` + d.labelTxPr() + pos +
+			`<c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="` + cat + `"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/>` + sep
+	}
+	// 桁の違う点だけ、点ごとのラベル(c:dLbl)で書式を上書きする。
+	var pts strings.Builder
+	for i, f := range s.LabelFmts {
+		if f != "" && f != base {
+			fmt.Fprintf(&pts, `<c:dLbl><c:idx val="%d"/>%s</c:dLbl>`, i, group(f))
+		}
+	}
+	return `<c:dLbls>` + pts.String() + group(base) + `</c:dLbls>`
+}
+
+func (d *ChartData) labelNumFmt() string {
+	if d.LabelNumFmt == "" {
+		return d.numFmt()
+	}
+	return d.LabelNumFmt
+}
+
+// unitTitle は値の単位を図の左上に1回だけ書く題(c:title。手で置いた位置)。
+func (d *ChartData) unitTitle() string {
+	if d.UnitTitle == "" {
+		return ""
+	}
+	sz := int(math.Round(d.FontSize * 100))
+	return fmt.Sprintf(`<c:title><c:tx><c:rich><a:bodyPr wrap="none"/><a:lstStyle/><a:p><a:pPr algn="l"><a:defRPr sz="%d" b="0"/></a:pPr><a:r><a:rPr lang="ja-JP" sz="%d" b="0">%s</a:rPr><a:t>%s</a:t></a:r></a:p></c:rich></c:tx>`+
+		`<c:layout><c:manualLayout><c:xMode val="edge"/><c:yMode val="edge"/><c:x val="0"/><c:y val="0"/></c:manualLayout></c:layout><c:overlay val="0"/></c:title>`,
+		sz, sz, solidFill(d.TextColor)+d.fontRefs(), escapeXML("("+d.UnitTitle+")"))
 }
 
 func (d *ChartData) catAx(pos string) string {
@@ -291,6 +331,9 @@ func (d *ChartData) catAx(pos string) string {
 }
 
 func (d *ChartData) valAx(pos string) string {
+	if d.NoValueAxis {
+		return d.valAxID(1002, 1001, pos, false, "", d.numFmt())
+	}
 	return d.valAxID(1002, 1001, pos, true, "", d.numFmt())
 }
 
@@ -344,7 +387,11 @@ func (d *ChartData) valAxID(id, cross int, pos string, grid bool, title, numFmt 
 	if d.Kind == ChartScatter {
 		between = `<c:crossBetween val="midCat"/>`
 	}
-	return fmt.Sprintf(`<c:valAx><c:axId val="%d"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="%s"/>%s%s`+
+	del := "0"
+	if d.NoValueAxis && id == 1002 {
+		del = "1"
+	}
+	return fmt.Sprintf(`<c:valAx><c:axId val="%d"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="`+del+`"/><c:axPos val="%s"/>%s%s`+
 		`<c:numFmt formatCode="%s" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>`+
 		`<c:spPr><a:ln><a:noFill/></a:ln></c:spPr>%s<c:crossAx val="%d"/><c:crosses val="%s"/>%s</c:valAx>`,
 		id, pos, g, d.axisTitle(title, pos), escapeXML(numFmt), d.txPr(), cross, crosses, between)

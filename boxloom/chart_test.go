@@ -94,7 +94,7 @@ func TestChartsExampleBuilds(t *testing.T) {
 		ch := func(i int) string { return files[fmt.Sprintf("ppt/charts/chart%d.xml", i)] }
 		// 1: 項目の比較 → 横棒。上から書いた順(maxMin)、値の軸は下。強調した「印刷」(5番目)だけ accent。
 		if c := ch(1); !strings.Contains(c, `<c:barDir val="bar"/>`) || !strings.Contains(c, `<c:orientation val="maxMin"/>`) ||
-			!strings.Contains(c, `<c:dPt><c:idx val="4"/>`) || strings.Count(c, accent) != 1 || !strings.Contains(c, `formatCode="#,##0.0&quot;点&quot;"`) {
+			!strings.Contains(c, `<c:dPt><c:idx val="4"/>`) || strings.Count(c, accent) != 1 || !strings.Contains(c, `<a:t>(点)</a:t>`) || strings.Contains(c, `&quot;点&quot;`) {
 			t.Errorf("%s: chart 1 (item) is not a bar chart with one emphasized bar:\n%s", name, c)
 		}
 		// 2: 時系列(1系列・6点) → 縦棒。3: 9点・2系列 → 折れ線。
@@ -240,11 +240,44 @@ func TestChartYAMLErrors(t *testing.T) {
 // 目盛り・凡例の書式は今までどおり(アプリの折り返しに任せる)。
 func TestChartDataLabelsDoNotWrap(t *testing.T) {
 	cd := &ChartData{Kind: ChartBar, DataLabels: true, FontSize: 10, TextColor: "000000", NumFmt: `#,##0"億ドル"`}
-	dl := cd.dLbls()
+	dl := cd.dLbls(ChartSeries{})
 	if !strings.Contains(dl, `<c:txPr><a:bodyPr wrap="none"/>`) {
 		t.Fatalf("data labels must not wrap: %s", dl)
 	}
 	if strings.Contains(cd.txPr(), "wrap=") {
 		t.Fatalf("axis/legend text keeps the app's wrapping: %s", cd.txPr())
+	}
+}
+
+// 値の軸の目盛りと値のラベルに単位を付けず、図の左上に1回だけ書く。小数は要る桁だけ(#177)。
+func TestChartUnitOnceAndDecimals(t *testing.T) {
+	for _, c := range []struct {
+		extent float64
+		want   int
+	}{{650, 0}, {50, 0}, {19, 0}, {10, 0}, {4.5, 1}, {1.98, 1}, {0.3, 2}, {0, 0}} {
+		if got := axisDecimals(c.extent); got != c.want {
+			t.Errorf("axisDecimals(%v) = %d, want %d", c.extent, got, c.want)
+		}
+	}
+	sub := func(compare, unit string, vals []float64) *ChartSubsystem {
+		return &ChartSubsystem{Data: &ChartContent{Compare: compare, Unit: unit, Categories: []string{"a", "b", "c", "d"},
+			Series: []ChartSeriesData{{Name: "s", Values: vals}}}}
+	}
+	cd := sub("item", "ドル", []float64{50, 40, 10, 1.98}).chartData(mustTemplate("light").Theme, nil)
+	if cd.NumFmt != "#,##0" || cd.LabelNumFmt != "#,##0" || cd.UnitTitle != "ドル" {
+		t.Errorf("bar: NumFmt %q LabelNumFmt %q UnitTitle %q", cd.NumFmt, cd.LabelNumFmt, cd.UnitTitle)
+	}
+	if got := cd.Series[0].LabelFmts; got[0] != "#,##0" || got[3] != "#,##0.00" {
+		t.Errorf("bar label formats = %q", got)
+	}
+	x := cd.ChartXML("rId1")
+	if strings.Count(x, "ドル") != 1 || !strings.Contains(x, `<c:dLbl><c:idx val="3"/><c:numFmt formatCode="#,##0.00"`) ||
+		strings.Contains(x, `<c:dLbl><c:idx val="0"/>`) || !strings.Contains(x, `<c:autoTitleDeleted val="0"/>`) ||
+		!cd.NoValueAxis || strings.Contains(x, "<c:majorGridlines>") {
+		t.Errorf("bar chart xml: unit must appear once, decimals only on 1.98:\n%s", x)
+	}
+	pie := sub("component", "%", []float64{55, 9, 31, 5}).chartData(mustTemplate("light").Theme, nil)
+	if pie.UnitTitle != "" || pie.LabelNumFmt != `#,##0"%"` {
+		t.Errorf("pie keeps the unit on its labels: %q %q", pie.UnitTitle, pie.LabelNumFmt)
 	}
 }

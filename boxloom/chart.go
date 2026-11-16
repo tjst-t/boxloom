@@ -161,6 +161,31 @@ func chartDecimals(vals []float64) int {
 	return min(dec, 2)
 }
 
+// valueDecimals は1つの値に要る小数の桁の数(2まで)。
+func valueDecimals(v float64) int { return chartDecimals([]float64{v}) }
+
+// axisDecimals は値の軸の目盛りに要る小数の桁の数。目盛りの刻みはアプリが決めるので、
+// 一番大きな値の 1/10 を 1・2・5 の刻みに丸めたもの(アプリの刻みより細かめ)から見積もる。
+// 刻みが1以上なら0桁(整数だけの系列の目盛りに小数点を出さない)。
+func axisDecimals(extent float64) int {
+	if extent <= 0 || math.IsInf(extent, 0) || math.IsNaN(extent) {
+		return 0
+	}
+	raw := extent / 10
+	mag := math.Pow10(int(math.Floor(math.Log10(raw))))
+	step := 10 * mag
+	for _, k := range []float64{1, 2, 5} {
+		if raw <= k*mag*(1+1e-9) {
+			step = k * mag
+			break
+		}
+	}
+	if step >= 1-1e-9 {
+		return 0
+	}
+	return min(int(math.Ceil(-math.Log10(step)-1e-9)), 3)
+}
+
 // chartNumFmt は Excel の書式(3桁の区切り・小数の桁・後ろに単位)。
 func chartNumFmt(dec int, unit string) string {
 	f := "#,##0"
@@ -247,9 +272,10 @@ const (
 
 // tickLabelWidth は値の軸の目盛りの文字の幅(一番長いもの)の見積もり。
 // アプリは一番大きな値より1刻み上まで目盛りを振るので、桁が1つ増える分を見込む。
-func (s *ChartSubsystem) tickLabelWidth(vals []float64, extent float64, unit string) float64 {
-	dec := chartDecimals(vals)
-	txt := chartFormat(extent*chartAxisHeadroom, dec, unit)
+// 単位は目盛りに付けない(図の左上に1回だけ書く)。
+func (s *ChartSubsystem) tickLabelWidth(extent float64) float64 {
+	dec := axisDecimals(extent)
+	txt := chartFormat(extent*chartAxisHeadroom, dec, "")
 	if strings.HasPrefix(txt, "-") {
 		txt = txt[1:]
 	}
@@ -302,6 +328,9 @@ func (s *ChartSubsystem) maxLabelWidth() float64 {
 func (s *ChartSubsystem) geom(width float64) chartGeom {
 	v, lh, d := s.vals(), s.lineH(), s.Data
 	extra := 2 * v.Padding
+	if s.unitTitle() != "" {
+		extra += lh // 左上の単位の行
+	}
 	if s.legend() {
 		extra += lh + v.Padding
 	}
@@ -316,7 +345,9 @@ func (s *ChartSubsystem) geom(width float64) chartGeom {
 		}
 		need := float64(g.labelLines)*lh + v.Padding/2
 		n := float64(len(d.Categories))
-		extra += lh // 下の目盛りの行
+		if !s.noValueAxis() {
+			extra += lh // 下の目盛りの行
+		}
 		g.min = n*math.Max(v.MinBarSlot*k, need) + extra
 		g.nat = n*math.Max(v.NaturalBarSlot*k, need) + extra
 		g.max = n*math.Max(v.MaxBarSlot*k, need) + extra
@@ -328,7 +359,7 @@ func (s *ChartSubsystem) geom(width float64) chartGeom {
 		// 下に目盛りの行と軸の題、左に軸の題。
 		g.min = v.MinPlotHeight + chartScatterAxisLines*lh + extra
 	default:
-		yW := s.tickLabelWidth(s.allValues(), s.valueExtent(), d.Unit)
+		yW := s.tickLabelWidth(s.valueExtent())
 		plotW := width - 2*v.Padding - yW - v.Padding
 		g.slot = plotW / float64(max(len(d.Categories), 1))
 		g.labelLines = s.labelLinesAt(g.slot * chartCategoryLabelFrac)
@@ -385,13 +416,12 @@ func (s *ChartSubsystem) pieWidth(h float64) float64 {
 // 隙間を左右に1つずつ+内側の余白。
 func (s *ChartSubsystem) pieSide() float64 {
 	v, lh, fs := s.vals(), s.lineH(), s.fontSize()
-	dec := chartDecimals(s.allValues())
 	lw := 0.0
 	for i, c := range s.Data.Categories {
 		lw = math.Max(lw, runsNaturalWidth(plainRuns(c), fs))
 		for _, se := range s.Data.Series {
 			if i < len(se.Values) {
-				lw = math.Max(lw, runsNaturalWidth(plainRuns(chartFormat(se.Values[i], dec, s.Data.Unit)), fs))
+				lw = math.Max(lw, runsNaturalWidth(plainRuns(chartFormat(se.Values[i], valueDecimals(se.Values[i]), s.Data.Unit)), fs))
 			}
 		}
 	}
@@ -440,8 +470,17 @@ func (s *ChartSubsystem) chartData(roles Roles, fonts *FontSet) *ChartData {
 	if fonts != nil && fonts.Latin != nil && fonts.EastAsian != nil {
 		cd.Latin, cd.EA = fonts.Latin.Family, fonts.EastAsian.Family
 	}
-	// 値の書式(目盛りと値のラベル)に単位を付ける。散布図の単位は軸の題に書く。
-	cd.NumFmt = chartNumFmt(chartDecimals(s.allValues()), d.Unit)
+	// 値の軸の目盛りは数だけ(小数は刻みに要る桁)、値のラベルは点ごとに要る桁。
+	// 単位は図の左上に1回だけ書く。円は軸が無いので扇の値に単位を付ける。
+	// 散布図の単位は軸の題に書く。
+	cd.NumFmt = chartNumFmt(axisDecimals(s.valueExtent()), "")
+	cd.UnitTitle = s.unitTitle()
+	cd.NoValueAxis = s.noValueAxis()
+	labelUnit := ""
+	if form == ChartPie {
+		labelUnit = d.Unit
+	}
+	cd.LabelNumFmt = chartNumFmt(0, labelUnit)
 	switch form {
 	case ChartHistogram:
 		cd.GapWidth = v.HistogramGap
@@ -456,6 +495,9 @@ func (s *ChartSubsystem) chartData(roles Roles, fonts *FontSet) *ChartData {
 		for _, p := range se.Points {
 			cs.XValues = append(cs.XValues, p[0])
 			cs.Values = append(cs.Values, p[1])
+		}
+		for _, v := range cs.Values {
+			cs.LabelFmts = append(cs.LabelFmts, chartNumFmt(valueDecimals(v), labelUnit))
 		}
 		switch {
 		case form == ChartPie:
@@ -484,6 +526,18 @@ func (s *ChartSubsystem) chartData(roles Roles, fonts *FontSet) *ChartData {
 		cd.Series = append(cd.Series, cs)
 	}
 	return cd
+}
+
+// noValueAxis:1系列の横棒は棒ごとに値のラベルが出るので、値の軸(下の目盛りと格子)を消す。
+// 目盛りの行の代わりに左上の単位の行を置くので、高さは変わらない。
+func (s *ChartSubsystem) noValueAxis() bool { return s.Form() == ChartBar && s.dataLabels() }
+
+// unitTitle は図の左上に1回だけ書く単位(値の軸を持つ形だけ。円は扇の値に、散布図は軸の題に書く)。
+func (s *ChartSubsystem) unitTitle() string {
+	if f := s.Form(); f == ChartPie || f == ChartScatter {
+		return ""
+	}
+	return s.Data.Unit
 }
 
 func axisTitle(a *ChartAxis) string {
