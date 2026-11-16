@@ -60,6 +60,8 @@ import (
 // (loadTemplate が読み込みの後に呼ぶ)。
 var bundledTemplateParts = map[string]func(t *Template) error{
 	"report": registerReportParts,
+	"dark":   registerSectionLabelParts,
+	"light":  registerSectionLabelParts,
 }
 
 func registerReportParts(t *Template) error {

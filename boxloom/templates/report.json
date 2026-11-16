@@ -39,6 +39,7 @@
     "pagePadding": 50,
     "pagePaddingY": 42,
     "pagePaddingBottom": 20,
+    "sectionLabelPaddingTop": 42,
     "coverPadding": 50,
     "sectionGap": 12,
     "blockGap": 18,

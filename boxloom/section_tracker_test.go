@@ -89,11 +89,15 @@ func TestSectionTrackerListsChaptersAndMarksCurrent(t *testing.T) {
 			}
 		}
 	}
-	// 本文のスライドには出ない
+	// 本文のスライドには章の一覧は出ない(出るのは属する部の札だけ。#178)
+	var chapters []string
 	for _, l := range trackerLines(slides[2].Root) {
 		if strings.HasPrefix(l.text, "第") {
-			t.Errorf("content slide has tracker line %q", l.text)
+			chapters = append(chapters, l.text)
 		}
+	}
+	if len(chapters) != 1 || chapters[0] != "第1部 背景" {
+		t.Errorf("content slide chapter lines %q, want only the section label", chapters)
 	}
 }
 

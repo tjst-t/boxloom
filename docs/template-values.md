@@ -140,6 +140,7 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 | 値 | light | report |
 |---|---|---|
 | `pagePadding` / `pagePaddingY` / `pagePaddingBottom` | 40 / 24 / 24 | 50 / 42 / 20 |
+| `sectionLabelPaddingTop` | 12 | 42(使わない) |
 | `coverPadding` | 64 | 50 |
 | `sectionGap` / `blockGap` | 20 / 20 | 12 / 18 |
 | `itemGap` / `headerGap` | 8 / 8 | 2 / 8 |
@@ -331,7 +332,7 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
 
 | 種類 | values | subsystems/gantt.json | subsystems/shapes.json |
 |---|---|---|---|
-| 余白 | `pagePadding` `pagePaddingY` `pagePaddingBottom` `coverPadding` `sectionGap` `blockGap` `itemGap` `headerGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `pairsRowGap` `pairMarkSize` `captionGap` `sectionTrackerPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap`、#70 で移した `legendSwatchGap` `milestonePaddingX` `milestoneAxisGap` `groupBoxGap` `subgroupInsetRight` `rowLabelGap` `annotationFixedPaddingX` `annotationFixedPaddingY` `annotationGap` `annotationShift`、箱の大きさ `milestoneMinWidth` `tickLabelWidth` `tickSubLabelOffset` `tickSubLabelWidth` `tickSubLabelHeight` | `padding` `textInsetX` `textInsetY` |
+| 余白 | `pagePadding` `pagePaddingY` `pagePaddingBottom` `sectionLabelPaddingTop` `coverPadding` `sectionGap` `blockGap` `itemGap` `headerGap` `cardPadding` `statementInset` `columnGap` `tableCellPaddingX` `tableCellPaddingY` `pairsRowGap` `pairMarkSize` `captionGap` `sectionTrackerPadding` | `padding` `legendGap` `groupGap` `annotationPaddingX` `annotationPaddingY` `annotationLaneGap`、#70 で移した `legendSwatchGap` `milestonePaddingX` `milestoneAxisGap` `groupBoxGap` `subgroupInsetRight` `rowLabelGap` `annotationFixedPaddingX` `annotationFixedPaddingY` `annotationGap` `annotationShift`、箱の大きさ `milestoneMinWidth` `tickLabelWidth` `tickSubLabelOffset` `tickSubLabelWidth` `tickSubLabelHeight` | `padding` `textInsetX` `textInsetY` |
 | 字 | `coverTitle` `coverSubtitle` `coverAuthor` `slideTitle` `leadText` `body` `subPoint` `optionLabel` `optionItem` `small` `footerText` `figureDetail` `matrixRowTitle` `captionText` `sectionTitle` `sectionTrackerText` `statementText` `takeawayText` `statValue` `statUnit` `statLabel` `quoteText` `quoteMark` `quoteSource` `columnTitle` `tableText` | `annotationText` `labelText` `smallText` | (字は values の段の名前で引く) |
 
 ページの大きさ・角の丸み・線の太さ・行の高さ・欄の幅・倍率、図の中の細部の寸法は
@@ -487,6 +488,7 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `pagePadding` | 本文・主張のスライドの左右の外周 |
 | `pagePaddingY` | 本文・主張のスライドの上の外周(題の上)。`pagePaddingBottom` と同じなら下も |
 | `pagePaddingBottom` | 本文・主張のスライドの下の外周(フッターの下、#146)。dark / light は `pagePaddingY` と同じ 24、report は 20 |
+| `sectionLabelPaddingTop` | 部の札(#178)を出す本文のスライドの上の外周(札の上)。札(属する level 1 の区切りの題、`small`・`accent`)の高さを題の上の余白から取る。dark / light は 12(札の行 13.5pt と合わせて題の位置は札の無いときとほぼ同じ)。report は札を出さず使わない(`pagePaddingY` と同じ 42) |
 | `coverPadding` | 表紙の外周 |
 | `sectionGap` | 題(とリード文)・本文・出典・フッターの間 |
 | `blockGap` | 本文のブロックの間、比較のカードの間 |

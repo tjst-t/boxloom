@@ -46,11 +46,14 @@ type TemplateValues struct {
 	// PagePaddingBottom は本文・主張のスライドの下の外周(フッターの下。#146)。
 	// pagePaddingY と同じなら上下が同じ余白。
 	PagePaddingBottom float64 `json:"pagePaddingBottom" scale:"space"`
-	CoverPadding      float64 `json:"coverPadding" scale:"space"` // 表紙の外周
-	SectionGap        float64 `json:"sectionGap" scale:"space"`   // 見出し・本文・フッターの間
-	BlockGap          float64 `json:"blockGap" scale:"space"`     // 本文のブロックの間
-	ItemGap           float64 `json:"itemGap" scale:"space"`      // 箇条の項目の間
-	HeaderGap         float64 `json:"headerGap" scale:"space"`    // 題とリード文の間
+	// SectionLabelPaddingTop は部の札(#178)を出す本文のスライドの上の外周(札の上)。
+	// 札の高さを題の上の余白から取る。札を出さないテンプレート(report)では使わない。
+	SectionLabelPaddingTop float64 `json:"sectionLabelPaddingTop" scale:"space"`
+	CoverPadding           float64 `json:"coverPadding" scale:"space"` // 表紙の外周
+	SectionGap             float64 `json:"sectionGap" scale:"space"`   // 見出し・本文・フッターの間
+	BlockGap               float64 `json:"blockGap" scale:"space"`     // 本文のブロックの間
+	ItemGap                float64 `json:"itemGap" scale:"space"`      // 箇条の項目の間
+	HeaderGap              float64 `json:"headerGap" scale:"space"`    // 題とリード文の間
 
 	CoverTitle    float64 `json:"coverTitle" scale:"type"`
 	CoverSubtitle float64 `json:"coverSubtitle" scale:"type"`
