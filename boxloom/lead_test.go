@@ -300,3 +300,39 @@ func TestStatementWrapWarning(t *testing.T) {
 		}
 	}
 }
+
+// title-wrap・lead-wrap・milestone-overlap は直し方の hint を持つ(#168)。
+// title-wrap は題を削るだけでなく主張を :::lead に移す案、lead-wrap は根拠を本文へ、
+// milestone-overlap は節目をまとめるか注釈にする案。
+func TestWrapAndMilestoneHints(t *testing.T) {
+	want := map[string]string{
+		"title-wrap":        ":::lead",
+		"lead-wrap":         "本文へ",
+		"milestone-overlap": "注釈",
+	}
+	got := map[string]string{}
+	collect := func(warns []Issue) {
+		for _, w := range warns {
+			if _, ok := want[w.Code]; ok {
+				got[w.Code] = w.Hint
+			}
+		}
+	}
+	for _, f := range []string{"../examples/md/warnings/title-wrap.bx.md", "../examples/md/warnings/milestone-overlap.bx.md"} {
+		_, warns := CheckFile(f, "")
+		collect(warns)
+	}
+	lead := "---\ntitle: 例\n---\n\n# 題\n\n:::lead\n" + strings.Repeat("言いたいことを長く書きすぎたリード文です。", 20) + "\n:::\n\n- 箇条\n"
+	_, warns, _ := checkCapacity("lead.bx.md", []byte(lead), "report", nil, nil)
+	collect(warns)
+	for code, sub := range want {
+		h, ok := got[code]
+		if !ok {
+			t.Errorf("no %s warning", code)
+			continue
+		}
+		if !strings.Contains(h, sub) {
+			t.Errorf("%s hint %q, want it to mention %q", code, h, sub)
+		}
+	}
+}

@@ -32,11 +32,15 @@ const (
 	statValueHint = "数と単位はそれぞれ途中で折らないので、カードの幅に入らないと単位が次の行に落ちるか、数がカードからはみ出します。" +
 		"値を短くする(桁を丸める・大きな単位にする)・" +
 		"単位や補足は label に移す・同じ stat の数を減らしてカードを広くする、のどれかで直してください。字は小さくしません"
+	titleWrapHint = "題は話題の短い見出しにし、言いたいこと(主張)は :::lead に移してください。" +
+		"題を削って1行に詰めるだけでは主張が消えます"
+	leadWrapHint         = "リード文は言いたいことを1文にし、根拠(数・理由・例)は本文へ移してください"
+	milestoneOverlapHint = "近い日付の節目を1つにまとめるか、片方を節目ではなく注釈(annotations)にしてください"
 )
 
 var fillUnderRe = regexp.MustCompile(`^underfilled: ([0-9.]+)%`)
 
-// addLayoutHints は警告の fill-ratio・spare-width・stat-value に hint を足す。caps は同じ
+// addLayoutHints は警告の fill-ratio・spare-width・stat-value・title-wrap・lead-wrap・milestone-overlap などに hint を足す。caps は同じ
 // 組み立ての容量(path が /slides/S)。
 func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 	capOf := map[string]SlideCapacity{}
@@ -83,6 +87,18 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity) {
 		case codeFitEmergency:
 			if w.Hint == "" {
 				w.Hint = fitEmergencyHint
+			}
+		case "title-wrap":
+			if w.Hint == "" {
+				w.Hint = titleWrapHint
+			}
+		case "lead-wrap":
+			if w.Hint == "" {
+				w.Hint = leadWrapHint
+			}
+		case "milestone-overlap":
+			if w.Hint == "" {
+				w.Hint = milestoneOverlapHint
 			}
 		case "cycle-cramped":
 			if w.Hint == "" {
