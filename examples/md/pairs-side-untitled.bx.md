@@ -3,6 +3,7 @@ title: 対の側に見出し無しで複数のブロックを置く例
 subtitle: 側の見出しの文を省いても、中に1〜4個のブロックを書ける
 author: Boxloom デモ
 template: light
+fictional: true
 ---
 
 # 図書館の夜の利用を増やす

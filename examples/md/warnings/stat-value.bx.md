@@ -2,6 +2,7 @@
 title: 数と単位がカードに入らない例
 author: Boxloom デモ
 template: light
+fictional: true
 ---
 
 # 架空の市場は 3 年で大きく伸びた

@@ -77,8 +77,8 @@ func TestStatValueWarning(t *testing.T) {
 				t.Errorf("%s %s: stat-value = %+v", f, tpl, got)
 				continue
 			}
-			if strings.HasSuffix(f, ".md") && got[0].Line != 10 {
-				t.Errorf("%s %s: line = %d, want 10", f, tpl, got[0].Line)
+			if strings.HasSuffix(f, ".md") && got[0].Line != 11 {
+				t.Errorf("%s %s: line = %d, want 11", f, tpl, got[0].Line)
 			}
 		}
 	}

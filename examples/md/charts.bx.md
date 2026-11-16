@@ -3,6 +3,7 @@ title: 数値のグラフの見本
 subtitle: 比べ方の5分類ごとに1枚(数字はすべて架空)
 author: Boxloom デモ
 template: light
+fictional: true
 ---
 
 # 機能の満足度は検索が最も高く、印刷が最も低い

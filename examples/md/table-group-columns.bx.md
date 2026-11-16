@@ -3,6 +3,7 @@ title: 事業者の支援の制度を比べる
 subtitle: 2列目以降の群の列({groups=列名})の例(制度・組織・数字はすべて架空)
 author: Boxloom デモ
 date: 2026-11-13
+fictional: true
 ---
 
 # 国・県・市の支援は、支援事業ごとに制度が分かれる

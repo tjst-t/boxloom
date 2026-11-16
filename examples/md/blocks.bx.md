@@ -3,6 +3,7 @@ title: 並列・表・画像のブロック
 subtitle: columns・table・image・gallery の例(架空のデータ)
 author: Boxloom デモ
 template: light
+fictional: true
 ---
 
 # 今期は3つに絞り、残りは来期に回す

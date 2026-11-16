@@ -277,6 +277,9 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     敷いて `p:bg` の写真に書く。縦横比が違えば端を切る)と終わりのスライド(`meta.closing`。IR に
     書かず組み立てで最後に足す。骨組みの `closing`)。report は表紙を写真+基調色の箱(幅 0.53・
     高さ 0.45。左は pagePadding 離す)に白い字、終わりは同じ写真と箱だけ。`docs/ir.md` の9.3
+  - `source.go` = 出典の無い本文のスライドの警告 `source-missing`(#166)。chart・funnel・stat・数だけのセルの
+    ある表を(columns・pairs などの中も)持つ本文のスライドに `source` が無ければスライドに1件。架空の数の資料は
+    文書の頭の `fictional: true`(IR の `meta.fictional`)で切る。テンプレートでは切らない(`docs/ir.md` の11節)
   - `density.go` = 本文の密度(content の `density`: normal・dense、Markdown は `# 題 {density=dense}`、#116)。
     dense のスライドは本文の部品・サブシステムが値の表の `dense` の組(本文・入れ子・表・小さい字・
     blockGap・itemGap、#136 で表のセルの余白・pairs の対の行の間と印・matrix の行の題の字)を使う(題・リード・フッターはそのまま)。切り替えは本文のブロックを組む口と

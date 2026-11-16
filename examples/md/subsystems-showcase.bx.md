@@ -3,6 +3,7 @@ title: 新サービス「Kumo」立ち上げ計画
 subtitle: パターンとサブシステムをひととおり使ったデモ(すべて架空)
 author: Boxloom デモ
 template: light
+fictional: true
 ---
 
 :::notes

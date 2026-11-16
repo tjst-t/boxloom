@@ -1343,14 +1343,14 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 				continue
 			}
 			cover = b
-		case "toc":
+		case "toc", "fictional":
 			b, ok := yBool(v)
 			if !ok {
-				p.fail(line, v.col, path, codeInvalidValue, "toc は true か false で書いてください", []string{"true", "false"}, "")
+				p.fail(line, v.col, path, codeInvalidValue, key+" は true か false で書いてください", []string{"true", "false"}, "")
 				continue
 			}
 			if b {
-				meta.set("toc", true)
+				meta.set(key, true)
 			}
 		case "closing":
 			// true / false か、終わりのスライドに置く1行の文(#104)。YAML 1.1 の真偽の
@@ -1385,9 +1385,9 @@ func (p *mdParser) frontMatter(n *yNode, root *jobj) (*jobj, bool) {
 		return nil, cover
 	}
 	// meta の中の順を IR の例と揃える(title, subtitle, author, date, confidential, disclaimer, toc,
-	// coverImage, closing)。
+	// fictional, coverImage, closing)。
 	ordered := &jobj{}
-	for _, k := range []string{"title", "subtitle", "author", "date", "confidential", "disclaimer", "toc", "coverImage", "closing"} {
+	for _, k := range []string{"title", "subtitle", "author", "date", "confidential", "disclaimer", "toc", "fictional", "coverImage", "closing"} {
 		for i, kk := range meta.keys {
 			if kk == k {
 				ordered.set(k, meta.vals[i])

@@ -273,6 +273,8 @@ func (tm *Template) layoutIssues(file string, deck *IRDeck, warnings []string, c
 	}
 	addLayoutHints(warns, caps)
 	warns = append(warns, takeawayCountIssues(file, deck)...)
+	// 数・表・グラフのある本文のスライドに出典が無い(#166。組み立てに依らない IR の検査)。
+	warns = insertBySlide(warns, sourceIssues(file, deck))
 	return warns, nil
 }
 

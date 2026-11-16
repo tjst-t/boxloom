@@ -3,6 +3,7 @@ title: 図のサブシステムの見本
 subtitle: プロセス・組織図・マトリクス・ファネル(すべて架空)
 author: Boxloom デモ
 template: light
+fictional: true
 ---
 
 # 申請は7段階で、審査と承認が一番長い

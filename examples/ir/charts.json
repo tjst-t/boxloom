@@ -4,7 +4,8 @@
   "meta": {
     "title": "数値のグラフの見本",
     "subtitle": "比べ方の5分類ごとに1枚(数字はすべて架空)",
-    "author": "Boxloom デモ"
+    "author": "Boxloom デモ",
+    "fictional": true
   },
   "slides": [
     {

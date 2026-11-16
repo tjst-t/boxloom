@@ -63,7 +63,7 @@ LibreOffice(PDF→PNG)で全ての枚を見た。崩れは次の4つ(check は�
 | P5 | process の下の箇条を増やしてはみ出す | `layout-overflow` → -fit で `fit-applied` | 1 / 0 | 分かる | 消えた |
 | P6 | compare の下の段落と takeaway を消す | `fill-ratio`(48.8%)→ -fit で `fit-applied` だけ | 0 / 0 | 分かる(一番高いカードの名前も出る) | 消えた。-fit では警告が info に変わり、`-strict` でも通る |
 | P7 | chart の項目の名前が長い(「2024年度の上期」) | 出ない | 0 / 0 | — | —(名前は2行に折れて読める。警告は要らないと判断) |
-| P8 | 数の表のスライドに出典が無い | 出ない | 0 / 0 | — | — |
+| P8 | 数の表のスライドに出典が無い | 出ない(#166 で `source-missing` が出るようにした) | 0 / 0 | — | — |
 | R1 | リードが4行(report) | `lead-wrap` | 0 / 0 | 分かる(「短く」) | 消えた |
 | R2 | リードの無いスライドの題が2行に折れる | `title-wrap` | 0 / 0 | あいまい(「1行に」だけ。主張を `:::lead` に移す直し方は SKILL.md にしか無く、題を削るだけの直しに誘う) | 消えた(lead を足した) |
 | R3 | groups・points の表が長すぎる(13行) | `layout-overflow`、分け方の案 rows[9] の前で 9・3 行 → -fit で `fit-applied` | 1 / 0 | 分かる(どこで分けるか・continues の書き方まで) | 消えたが、案のとおりに分けると続きの枚(3行)に `fill-ratio` が出る。1回目の直しで合計の行を最初の表に残して `table-continues` の誤りになったが、誤りの文で直せた |
@@ -105,7 +105,7 @@ R7・B1 と、B7 の「takeaway は1枚に1つ」の決まりは出るべき(4�
 | E2 | #163 | hint | 列の中の図(matrix・phases など)のはみ出しでは、dense を勧めず「図を列から出す・図の列を広げる(role=main を図の側に)」を言う(#163 で直した。容量の `subsystem`・`fullWidthNeed`) | P4・R4 | 高 |
 | E3 | #164 | hint | はみ出すブロックが表・本文の後の小さいブロック(takeaway・箇条)だけのとき、表を分ける案を出さない。伸びたのが前のブロックなら、そのブロックを短くする・分けると言う | D1・B5 | 高 |
 | E4 | #165 | 警告が出ない | 1枚に `:::takeaway` が2つ以上あれば誤り(または警告)にする(SKILL.md の「1枚に1つまで」) | B7 | 中 |
-| E5 | #166 | 警告が出ない | 数・表・図・引用のある本文のスライドに `:::source` が無ければ警告する | P8 | 中 |
+| E5 | #166 | 警告が出ない | 数・表・図・引用のある本文のスライドに `:::source` が無ければ警告する(#166 で直した。数・数の表・グラフ(chart・funnel・stat)が対象、引用は `quote` の source が必須なので見ない。架空の数の資料は `meta.fictional`。report の要約の stat に出典を足した) | P8 | 中 |
 | E6 | #167 | 警告が出ない | statement の文の行の上限(3行、`statementMaxLines`)を超えたら `statement-wrap` を警告する(#167 で直した) | B1 | 中 |
 | E7 | #168 | hint | `title-wrap`・`lead-wrap`・`milestone-overlap` に hint を付ける(title-wrap は「主張を `:::lead` に移し、題は話題の短い見出しに」。#168 で直した。lead-wrap は「言いたいことを1文にし、根拠は本文へ」、milestone-overlap は「近い節目をまとめるか、片方を注釈に」) | P1・R2・B3 | 中 |
 | E8 | #169 | hint | 表を分ける案を、最後の表が薄くならないように行をならす(R3 なら 9・3 ではなく群の境で 5・7 など)。または分けた後の fill-ratio を見込む | R3 | 中 |

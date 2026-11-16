@@ -3,6 +3,7 @@ title: 窓口システム刷新の振り返り
 subtitle: 区切り・主張・結論・統計強調・引用の例
 author: Boxloom デモ
 template: light
+fictional: true
 ---
 
 # 第1部 何が変わったか {type=section}

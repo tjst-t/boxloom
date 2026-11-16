@@ -4,7 +4,8 @@
   "meta": {
     "title": "並列・表・画像のブロック",
     "subtitle": "columns・table・image・gallery の例(架空のデータ)",
-    "author": "Boxloom デモ"
+    "author": "Boxloom デモ",
+    "fictional": true
   },
   "slides": [
     {

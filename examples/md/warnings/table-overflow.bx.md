@@ -3,6 +3,7 @@ title: 業務の仕組みを移す
 subtitle: はみ出した表に、check が分け方の案を出す例(組織・数字はすべて架空)
 author: Boxloom デモ
 date: 2026-11-12
+fictional: true
 ---
 
 # 移す仕組みは 18 個で、3 回に分けて移す

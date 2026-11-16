@@ -60,7 +60,7 @@ python3 tools/validate_ir.py --self-test       # 例が通り、断られるべ�
 
 ```
 文書   { boxloom: "0.1", template?, meta?, slides: [スライド] }
-meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc?, coverImage?, closing? }   日付・機密区分・免責は文書に1回。toc: true で表紙の直後に目次、closing: true で最後に終わりのスライド(どちらも組み立てで作る)。coverImage は表紙(と終わりのスライド)に敷く写真
+meta   { title, subtitle?, author?, date?, confidential?, disclaimer?, toc?, fictional?, coverImage?, closing? }   日付・機密区分・免責は文書に1回。fictional: true は数が架空(出典の警告を出さない)。toc: true で表紙の直後に目次、closing: true で最後に終わりのスライド(どちらも組み立てで作る)。coverImage は表紙(と終わりのスライド)に敷く写真
 スライド  { type: "cover",     variant?, title?, subtitle?, author?, notes? }
          { type: "content",   variant?, title, lead?, marker?, density?, body: [ブロック], source?, notes? }  題は短い見出し、言いたいことの文は lead、marker は隅の印(2字まで)、density は本文の密度(normal・dense)
          { type: "section",   variant?, title, level?, notes? }  章の区切り(本文なし。level は 1 章・2 節・3 項目、既定 1)
@@ -477,6 +477,21 @@ Schema は `schema/types/people.schema.json`、例は `examples/ir/people.json`
   `marks.slideSource` を付けた小さな控えめな字)。本文のスライドと主張のスライドが持てる。
   表紙と区切りは持たない(Schema が断る)。1枚に1つで、複数の出どころは1つの文に書く
   (改行は `br`)。他人の言葉の出どころは従来どおり `quote` の `source`、但し書きは `note`。
+- **数を見せる本文のスライドに出典が無ければ警告 `source-missing`(#166)。** 出典が要るのは、
+  数・数の表・グラフを見せる本文のスライド:`chart`・`funnel`(数を持つ図)・`stat`・数の表
+  (本体か合計の行に、数だけのセル(`12,000件`・`47%`・`¥3,200` のような、右に揃える数の列と
+  同じ形)が1つでもある表。`1月`・`2026年` のような時点だけのセルは数えない)。並列のまとまり・
+  `pairs`・`topics` などの中のブロックも見る。予定・リスク・比べのような文字だけの表、
+  process・cycle などの数を持たない図、Gantt(予定)は出典を求めない。引用は `quote` の
+  `source` が必須なので見ない。警告はスライドに1件で、path はスライド(`/slides/S`)、文に
+  最初に見つけたブロックの場所。主張のスライドは本文を持たないので見ない。
+  - **切り方は `meta` の `fictional`(真偽、既定 false)。** 例・練習・デモのために作った架空の
+    数の資料は、出どころが無いのが正しい。`fictional: true` は「この資料の数は架空」という
+    意味で、check はそのとき `source-missing` を出さない(見た目は変えない。読み手に架空と
+    伝えるなら `disclaimer` に書く)。架空の資料でも出どころの欄を書くこと自体は止めない。
+  - **テンプレートでは切らない。** 出典が要るかは資料の内容(数がどこから来たか)の意味で、
+    見た目の方針ではないため。スライドごとに切る印も持たない(数の表のスライドで出典を
+    書かないことを許すと、決まりが無いのと同じになる。数の無い表なら初めから出ない)。
 - **日付・機密区分・免責は `meta`。** `date`(`YYYY-MM-DD` か `YYYY-MM`)・`confidential`
   (機密区分の短い文。例「社外秘」)・`disclaimer`(文書全体の免責・但し書き)。文書に1回だけ
   書き、どこに出すかはテンプレートが決める(dark / light は日付・機密区分・免責を表紙の下に、
@@ -704,6 +719,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `lead-wrap` | 本文のスライドのリード文(`lead`)が、テンプレートの上限(値の表の `leadMaxLines`。report・dark・light とも2行)より多くの行に折り返す。リード文を短くする(言いたいことを1文に絞る)。path はリード文(`/slides/S/lead`、.md なら `:::lead` の行)、文に行の数・上限・幅 |
 | `takeaway-count` | 本文のスライドの一番外に `takeaway` が2つ以上ある(#165)。takeaway はそのスライドで強調する1文なので1枚に1つまで。Schema と IR の読み込みは数を縛らず、2つ目も組めるので誤りではなく警告にする(1枚の強調が2つでも資料は壊れないが、どちらが言いたいことか読み手に伝わらない)。スライドごとに1件で、path は2つ目の takeaway(`/slides/S/body/N`、.md なら その `:::takeaway` の行)、文に数。`hint` は1文だけを残し、ほかを段落・箇条かリード文(`lead`)にすること。はみ出しとは別に出る(例 `examples/ir/check-warnings/takeaway-count.json`) |
 | `statement-wrap` | 主張のスライド(`type=statement`)の1文が、テンプレートの上限(値の表の `statementMaxLines`。report・dark・light とも3行)より多くの行に折り返す。1文を短くする(言い切る主張だけにし、理由は前後の本文のスライドへ)。path は主張の1文(`/slides/S/content`、.md なら `#` の行)、文に行の数・上限・幅 |
+| `source-missing` | 数・数の表・グラフを見せる本文のスライド(`chart`・`funnel`・`stat`・数だけのセルのある表を、並列のまとまり・`pairs` などの中も含めて持つ)に、スライドの `source` が無い(#166、上の11節)。スライドに1件で、path はスライド(`/slides/S`、.md なら「# 題」の行)、文に最初に見つけたブロックの場所。`hint` は `:::source` を書くこと、架空の数の資料なら `meta` の `fictional: true`。`fictional: true` の文書では出ない |
 | `fill-ratio` | 本文の箱のうち 65% より少なくしか使っていない(テンプレートの方針)。本文を持たない表紙・区切り・主張には出さない。`hint` に直し方(隣の薄いスライドとまとめる・根拠を足す・主張のスライドにする)を書き、隣り合うスライドも薄く、2枚の本文を1枚にまとめると本文の領域に収まるときは、その相手と見込みの割合も書く(下の「薄いスライドの hint」) |
 | `spare-width` | 本文のブロックの中の図・画像が、縦横比(または横の上限)を保ったために、ブロックの幅の 20% 以上を横に空けた。path はそのブロック、文に空いた幅(pt と %)。容量の `remainingWidth` と同じ数字。並列のまとまり(columns)の中のグラフ・循環の図・画像は、まとまりの幅に対して同じく測り、path は `/slides/S/body/N/columns/C/body/K`。対の並び(pairs)の側の中の図は、側の中の幅に対して測り(もう片側へ回せなかった余りだけが残る。`docs/layers.md` の 8.1)、path は `/slides/S/body/N/pairs/K/subject`(見出しと複数のブロックの側は `…/subject/body/I`) |
 | `stat-value` | `stat` の数と単位が、カードの幅に1行で入らない。数と単位はそれぞれ途中で折らない(「億ド / ル」「12,345, / 678」と折れると読み違えるため)ので、入らなければ単位が次の行に落ち、数そのものが入らなければ1行のままカードからはみ出す。path はその数(`/slides/S/body/N/items/K`、.md なら `:::value` の行)、文に要る幅と有る幅(pt)。字は縮めない |

@@ -277,6 +277,10 @@
           "description": "文書全体の免責・但し書き(1回だけ書く)。テンプレートが表紙に出す。",
           "$ref": "#/$defs/inline"
         },
+        "fictional": {
+          "description": "資料の数・表・グラフが架空(例・練習・デモのために作った数)で、出どころが無い(既定 false)。true なら、数・表・グラフのある本文のスライドに source が無いときの警告 source-missing を出さない。見た目は変えない(架空であることを読み手に伝えるなら disclaimer に書く)。",
+          "type": "boolean"
+        },
         "toc": {
           "description": "表紙の直後に目次のスライドを置くか(既定 false)。目次は IR に書かず、組み立てで作る(level 1・2 の区切りと、組み立てたあとの頁番号)。",
           "type": "boolean"

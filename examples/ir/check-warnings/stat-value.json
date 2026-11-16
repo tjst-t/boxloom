@@ -3,7 +3,8 @@
   "template": "light",
   "meta": {
     "title": "数と単位がカードに入らない例",
-    "author": "Boxloom デモ"
+    "author": "Boxloom デモ",
+    "fictional": true
   },
   "slides": [
     {
