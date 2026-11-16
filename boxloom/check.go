@@ -272,6 +272,7 @@ func (tm *Template) layoutIssues(file string, deck *IRDeck, warnings []string, c
 		return nil, err
 	}
 	addLayoutHints(warns, caps)
+	warns = append(warns, takeawayCountIssues(file, deck)...)
 	return warns, nil
 }
 
