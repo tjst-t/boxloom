@@ -250,6 +250,9 @@ func (p *mdParser) tableBlock(it *mdItem, path string) any {
 					st.cur = obj("label", p.parseInline(row[c], at+"/label"))
 					st.rows = 0
 					started = true
+				case st.cur == nil && st.rows > 0:
+					// 最初の行の空はもう1件だけ報告した。続きの空の行は(名前の無い)群の続きで、
+					// 同じ誤りを重ねない(#174)。
 				case st.cur == nil:
 					p.fail(tl.line, tl.col, gp+"/0/label", codeTableGroups, fmt.Sprintf("最初の行の群の名前(列 %q のセル)が空です", string(header[c].r)), nil, "群の列では、最初の行のセルに群の名前を書きます。空のセルは上の群の続きです")
 					bad = true

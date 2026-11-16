@@ -71,6 +71,26 @@ func TestMarkdownTableGroupsErrors(t *testing.T) {
 	}
 }
 
+// 群の列の頭が空の表は、空の行がいくつ続いても table-groups を1件だけ出す(最初の行を指す)。
+// 後の空の行は群の続きで、誤りにしない(#174)。
+func TestMarkdownTableGroupsFirstEmptyOnce(t *testing.T) {
+	for _, src := range []string{
+		"# 題\n\n| 群 | b |\n| --- | --- |\n| | 1 |\n| | 2 |\n| | 3 |\n| x | 4 |\n: {groups=first}\n",
+		"# 題\n\n| 区分 | 事業 | b |\n| --- | --- | --- |\n| x | | 1 |\n| | | 2 |\n| | | 3 |\n: {groups=区分,事業}\n",
+	} {
+		_, errs := mdToAny(t, src)
+		var got []Issue
+		for _, e := range errs {
+			if e.Code == codeTableGroups {
+				got = append(got, e)
+			}
+		}
+		if len(got) != 1 || got[0].Line != 5 || !strings.HasSuffix(got[0].Path, "/groups/0/label") {
+			t.Errorf("want one table-groups at line 5 on the first group label, got %+v", errs)
+		}
+	}
+}
+
 // IR の groups の形の誤り:読み込み(ParseIR)は断り、check は場所つきの table-groups を出す。
 func TestIRTableGroupsErrors(t *testing.T) {
 	cases := []struct {
