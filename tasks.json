@@ -3987,7 +3987,7 @@
       "number": 173,
       "kind": "task",
       "title": "「1月」のような短い数+単位の列を数の列として右寄せにしない",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4001,7 +4001,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:54:05.811Z",
-      "updatedAt": "2026-11-15T14:54:05.811Z",
+      "updatedAt": "2026-11-16T01:31:00.952Z",
       "closedAt": null,
       "extra": {}
     },
