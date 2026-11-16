@@ -4100,7 +4100,7 @@
       "number": 181,
       "kind": "bug",
       "title": "report の本文の下の大きな空きに fill-ratio が出ない(eval F2)",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4112,7 +4112,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-16T11:44:31.300Z",
-      "updatedAt": "2026-11-16T11:44:31.300Z",
+      "updatedAt": "2026-11-16T11:44:51.045Z",
       "closedAt": null,
       "extra": {}
     },
