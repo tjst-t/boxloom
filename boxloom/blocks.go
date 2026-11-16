@@ -242,50 +242,125 @@ func (c TableCell) lines(size, width float64) int {
 	return n
 }
 
-// rowHeights は行ごとの高さと、文の行の数の和。縦に結合したセル(行の群の名前)は
-// 行ごとの高さに入れず、結合した行の高さの和に収まらなければ、足りない分の行を
-// 群の最後の行に足す(群の境目は行の境目なので、行ごとに測ったまま)。
-func (t *tableLeaf) rowHeights(widths []float64) ([]float64, int) {
-	hs := make([]float64, len(t.cells))
-	lineH := t.size * lineHeightMult()
+// cellWidth は行 row の列 c のセルの幅(横に結合したセルは結合した列の和)。
+func cellWidth(row []TableCell, widths []float64, c int) float64 {
+	w := widths[c]
+	for k := 1; k < row[c].GridSpan && c+k < len(widths); k++ {
+		w += widths[c+k]
+	}
+	return w
+}
+
+// baseLines は行ごとの文の行の数(結合したセル・縦書きのセルは数えない。少なくとも1行)。
+func (t *tableLeaf) baseLines(widths []float64) []int {
 	rowLines := make([]int, len(t.cells))
 	for r, row := range t.cells {
 		lines := 1
 		for c, cell := range row {
-			if cell.VMerge || cell.RowSpan > 1 || cell.Vert {
+			if cell.VMerge || cell.HMerge || cell.RowSpan > 1 || cell.Vert {
 				continue
 			}
-			if n := cell.lines(t.size, widths[c]-2*t.padX); n > lines {
+			if n := cell.lines(t.size, cellWidth(row, widths, c)-2*t.padX); n > lines {
 				lines = n
 			}
 		}
 		rowLines[r] = lines
 	}
+	return rowLines
+}
+
+// spanHave は行 r から span 行を結合したセルの中の文の高さ(上下の余白を除く)。
+func (t *tableLeaf) spanHave(rowLines []int, extra []float64, r, span int) float64 {
+	lineH := t.size * lineHeightMult()
+	have := -2 * t.padY
+	for k := r; k < r+span; k++ {
+		have += float64(rowLines[k])*lineH + 2*t.padY
+		if extra != nil {
+			have += extra[k]
+		}
+	}
+	return have
+}
+
+// vertBandMaxLines は縦書きの帯の列が持てる縦の行の数の上限(#170)。群の名前が結合した
+// 行の高さに入らなければ、字を縮めずに縦の行を増やす(帯の列が広がる)。上限を越える分は
+// 群の行の高さを等しく足して入れる(table-group-label の警告)。
+const vertBandMaxLines = 2
+
+// vertCapacity は縦書きのセルの列の幅 w に入る縦の行の数(少なくとも1)。
+func (t *tableLeaf) vertCapacity(w float64) int {
+	lineH := t.size * lineHeightMult()
+	n := int(math.Floor((w-2*t.padX)/lineH + 1e-6))
+	if n < 1 {
+		n = 1
+	}
+	return n
+}
+
+// vertNeed は縦書きのセルの文を縦の行 lines 本以内に収めるのに要る高さ(上下の余白を除く)。
+func (t *tableLeaf) vertNeed(cell TableCell, have float64, lines int) float64 {
+	need := math.Max(have, 0)
+	limit := cell.vertLength(t.size)
+	for need < limit && cell.lines(t.size, need) > lines {
+		need += 0.5
+	}
+	return math.Min(math.Max(need, have), math.Max(limit, have))
+}
+
+// bandLines は縦書きのセルを今の行の高さで折り返したときの縦の行の数の最大(上限 vertBandMaxLines)。
+func (t *tableLeaf) bandLines(widths []float64) int {
+	rowLines := t.baseLines(widths)
+	n := 1
+	for r, row := range t.cells {
+		for _, cell := range row {
+			if !cell.Vert || cell.VMerge {
+				continue
+			}
+			span := max(cell.RowSpan, 1)
+			if r+span > len(t.cells) {
+				continue
+			}
+			n = max(n, cell.lines(t.size, t.spanHave(rowLines, nil, r, span)))
+		}
+	}
+	return min(n, vertBandMaxLines)
+}
+
+// rowHeights は行ごとの高さと、文の行の数の和。縦に結合したセル(行の群の名前)は
+// 行ごとの高さに入れず、結合した行の高さの和に収まらなければ、足りない分の行を
+// 群の最後の行に足す(群の境目は行の境目なので、行ごとに測ったまま)。縦書きの帯の
+// 名前は、帯の幅に入る縦の行に折り返しても入らない分だけ、群の行に等しく高さを足す
+// (最後の行の下だけが空かないように。#170)。
+func (t *tableLeaf) rowHeights(widths []float64) ([]float64, int) {
+	hs, total, _ := t.rowHeightsExtra(widths)
+	return hs, total
+}
+
+// rowHeightsExtra は rowHeights と、縦書きの帯の名前のために行に足した高さ(行ごと)。
+func (t *tableLeaf) rowHeightsExtra(widths []float64) ([]float64, int, []float64) {
+	hs := make([]float64, len(t.cells))
+	lineH := t.size * lineHeightMult()
+	rowLines := t.baseLines(widths)
+	extra := make([]float64, len(t.cells))
 	for r, row := range t.cells {
 		for c, cell := range row {
 			if cell.Vert && !cell.VMerge {
-				// 縦書きのセル:文は縦の1行。結合した行の高さに収まらなければ、足りない分の
-				// 行を群の最後の行に足す。
-				span := cell.RowSpan
-				if span < 1 {
-					span = 1
-				}
+				span := max(cell.RowSpan, 1)
 				if r+span > len(t.cells) {
 					continue
 				}
-				have := -2 * t.padY
-				for k := r; k < r+span; k++ {
-					have += float64(rowLines[k])*lineH + 2*t.padY
-				}
-				if short := cell.vertLength(t.size) - have; short > 0 {
-					rowLines[r+span-1] += int(math.Ceil(short/lineH - 1e-9))
+				have := t.spanHave(rowLines, extra, r, span)
+				if short := t.vertNeed(cell, have, t.vertCapacity(widths[c])) - have; short > 1e-9 {
+					for k := r; k < r+span; k++ {
+						extra[k] += short / float64(span)
+					}
 				}
 				continue
 			}
 			if cell.RowSpan < 2 || r+cell.RowSpan > len(t.cells) {
 				continue
 			}
-			need := cell.lines(t.size, widths[c]-2*t.padX)
+			need := cell.lines(t.size, cellWidth(row, widths, c)-2*t.padX)
 			// 結合した行が持つ文の行の数(行ごとの上下の余白も文の行に数える)。
 			have := 0.0
 			for k := r; k < r+cell.RowSpan; k++ {
@@ -300,9 +375,34 @@ func (t *tableLeaf) rowHeights(widths []float64) ([]float64, int) {
 	total := 0
 	for r, lines := range rowLines {
 		total += lines
-		hs[r] = float64(lines)*lineH + 2*t.padY
+		hs[r] = float64(lines)*lineH + 2*t.padY + extra[r]
 	}
-	return hs, total
+	return hs, total, extra
+}
+
+// vertOverflow は縦書きの帯の名前のうち、帯の縦の行に折り返しても群の行に入らず、行を
+// 高くしたもの(最初の1つの名前と、群に足した高さ pt。無ければ "" と 0)。
+func (t *tableLeaf) vertOverflow(widths []float64) (string, float64) {
+	_, _, extra := t.rowHeightsExtra(widths)
+	for r, row := range t.cells {
+		for _, cell := range row {
+			if !cell.Vert || cell.VMerge {
+				continue
+			}
+			add := 0.0
+			for k := r; k < r+max(cell.RowSpan, 1) && k < len(extra); k++ {
+				add += extra[k]
+			}
+			if add > 0.01 {
+				name := ""
+				for _, run := range cell.Runs {
+					name += run.Text
+				}
+				return name, add
+			}
+		}
+	}
+	return "", 0
 }
 
 // labelWidths は説明の文の行の、説明の文の幅と印の幅(印が無ければ 0)。印は右端に
@@ -361,7 +461,21 @@ func (t *tableLeaf) Measure(c Constraint) Measurement {
 // 列の幅を語を割らない最小の幅で配ったこと(table-col-width)を警告にする。
 // 名指しするのは、floor より狭くなった最初の列。
 func (t *tableLeaf) Lint(box LBox) []string {
-	if t.floor == nil || box.Width <= 0 {
+	if box.Width <= 0 {
+		return nil
+	}
+	var out []string
+	if name, add := t.vertOverflow(t.colWidths(box.Width)); name != "" {
+		// 縦書きの帯の名前が、帯の縦の行に折り返しても群の行に入らない(#170)。
+		out = append(out, fmt.Sprintf("[SUBSYSTEM WARNING] table: group label %q does not fit its rows in the vertical band even on %d lines; the group's rows were made %.1fpt taller",
+			name, vertBandMaxLines, add))
+	}
+	return append(out, t.colWidthLint(box)...)
+}
+
+// colWidthLint は table-col-width の警告(Lint の説明を参照)。
+func (t *tableLeaf) colWidthLint(box LBox) []string {
+	if t.floor == nil {
 		return nil
 	}
 	sumN, sumF := 0.0, t.floorSum()
@@ -503,6 +617,7 @@ func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 	leaf.minimum = make([]float64, len(header))
 	leaf.floor = make([]float64, len(header))
 	band := grouped && look.groupVertical
+	var spanTotal []TableCell // 帯の列と次の列にまたぐ合計の行の名前(#170)
 	if band {
 		leaf.fixed = make([]bool, len(header))
 		leaf.fixed[0] = true
@@ -519,9 +634,18 @@ func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 				if band && c == 0 {
 					// 帯の列:縦書きのセルは幅を決めず(縦の1行)、横書きのセル(見出しの行・
 					// 合計の行)の文は最小の幅だけを求める(折り返して帯の幅に合わせる)。
+					if cell.GridSpan > 1 {
+						// 次の列にまたぐ合計の行の名前:幅は下でまたいだ列の和として求める。
+						spanTotal = append(spanTotal, cell)
+						continue
+					}
 					if !cell.Vert {
 						for _, runs := range cell.paras() {
 							w := minRunsWidth(runs, leaf.size) + 2*leaf.padX
+							if r > 0 {
+								// 合計の行の名前は折らない(#170。またげないとき帯の列が広がる)。
+								w = maxLineWidth(runs, leaf.size) + 2*leaf.padX
+							}
 							leaf.natural[0] = math.Max(leaf.natural[0], w)
 							leaf.minimum[0] = math.Max(leaf.minimum[0], w)
 							leaf.floor[0] = math.Max(leaf.floor[0], w)
@@ -542,6 +666,22 @@ func (t *Template) tableStyled(b *IRBlock, look tableLook) *Spec {
 					leaf.minimum[c] = math.Max(leaf.minimum[c], minimum)
 					leaf.floor[c] = math.Max(leaf.floor[c], floor)
 				}
+			}
+		}
+	}
+	if band {
+		// 縦書きの帯の名前が群の行に入らなければ、縦の行を増やして帯を広げる(上限
+		// vertBandMaxLines。#170)。行の高さは折り返さない幅で測る(一番低い行の高さ)。
+		k := leaf.bandLines(leaf.colWidths(0))
+		w := float64(k)*leaf.size*lineHeightMult() + 2*leaf.padX
+		leaf.natural[0], leaf.minimum[0], leaf.floor[0] = math.Max(leaf.natural[0], w), math.Max(leaf.minimum[0], w), math.Max(leaf.floor[0], w)
+		for _, cell := range spanTotal {
+			// またいだ2列の和で、合計の行の名前を折らない幅を守る。
+			for _, runs := range cell.paras() {
+				need := maxLineWidth(runs, leaf.size) + 2*leaf.padX
+				leaf.natural[1] = math.Max(leaf.natural[1], need-leaf.natural[0])
+				leaf.floor[1] = math.Max(leaf.floor[1], need-leaf.floor[0])
+				leaf.minimum[1] = math.Max(leaf.minimum[1], minRunsWidth(runs, leaf.size)+2*leaf.padX-leaf.minimum[0])
 			}
 		}
 	}
@@ -672,9 +812,26 @@ func (t *Template) tableCells(b *IRBlock, header []Inline, numeric []bool, look 
 		}
 	}
 	if b.Total != nil {
-		rows = append(rows, cellRow(b.Total, true))
+		tr := cellRow(b.Total, true)
+		if totalSpansBand(b, look) {
+			// 合計の行の名前は、縦書きの帯の列と次の(空の)列をまたいで横書きの1行に置く
+			// (細い帯の列で「合/計」と折らない。#170)。
+			tr[0].GridSpan = 2
+			tr[1] = TableCell{HMerge: true, Align: tr[1].Align}
+		}
+		rows = append(rows, tr)
 	}
 	return rows
+}
+
+// totalSpansBand は合計の行の名前を、縦書きの帯の列(先頭の群の列)と次の列にまたいで
+// 置くか:縦書きの帯の表で、合計の行の2つ目のセルが空のとき(#170)。
+func totalSpansBand(b *IRBlock, look tableLook) bool {
+	if !look.groupVertical || b.Total == nil || len(b.Total) < 2 || !slices.Contains(b.tableGroupCols(), 0) {
+		return false
+	}
+	c := b.Total[1]
+	return c.Points == nil && strings.TrimSpace(c.Text.Plain()) == ""
 }
 
 // --- 画像 ---

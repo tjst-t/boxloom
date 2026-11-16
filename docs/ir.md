@@ -528,7 +528,8 @@ Schema は `schema/types/people.schema.json`、例は `examples/ir/people.json`
   `rows` の和が本体の行の数と違う、群の列のほかに列が無い(どれも path は `…/groups`)。
   群があるときの行のセルの数の違いは従来どおり `table-shape`。`rows` が 1 未満は Schema。
 - はみ出しと容量は行ごとに測る(群の境目は行の境目)。群の名前が結合した行の高さに
-  収まらなければ、群の最後の行を伸ばす。
+  収まらなければ、群の最後の行を伸ばす。report の縦書きの帯は、まず縦の行を2行まで増やして
+  帯を広げ、それでも入らない分だけ群の行に等しく高さを足す(警告 `table-group-label`、#170)。
 - **2列目以降の群の列は `groupColumns`(#123)。** `[{column, groups}]` で、`column` は
   `header` の列の番号(0 から。先頭の列は `groups` で書くので 1 以上)、`groups` は先頭の
   列と同じ `{label, rows}` の並び。列は左から(`column` は増えていく)。`groups` を広げずに
@@ -744,6 +745,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `funnel-increase` | funnel の数の値が前の段より増えた。path はその段の `value` |
 | `figure-legend` | process・orgchart・funnel・phases・cycle で `status` を使ったのに、その状態の文が `legend` に無い(読み手は枠線の色の意味が分からない)。path は `…/data/legend` |
 | `chart-labels` | chart の項目の名前が、アプリが置く場所(縦の形は1項目の幅、横棒は枠の幅の30%)に2行で収まらない(アプリが斜めにする・間引く)。path は最初の項目(`…/data/categories/N`)、文に残りの数 |
+| `table-group-label` | report の縦書きの帯の群の名前が、帯を縦の2行に広げても群の行の高さに入らず、群の行を高くした(#170)。path は表のブロック、文に名前と足した高さ(pt)。hint は名前を短くする・群をまとめる |
 | `table-col-width` | 表の列の守りたい最小の幅(見出しの文字列・折れない語の幅。15章)の合計が表の幅に入らず、短い列が語の途中で折れうる幅で配った。path は表のブロック(並列のまとまりの中は `…/columns/C/body/K`)、文に最初に削られた列の見出し(`header[C]`)と要る幅・有る幅(pt) |
 | `theme-role` | テーマに値の無い役割名をサブシステムが使った |
 | `fit-emergency` | `-fit` のとき、梯子でも分けても収まらない本文のスライド(分けられない columns・図・画像、または分けた後も1枚に入らない1つの単位)を値の表の非常用の段(`fit.emergency[K]`)で組んだ(#150)。字がテンプレートの決まりより小さい。path はそのスライド(`/slides/S`)、文に段の名前・本文の字の大きさと blockGap。`hint` は内容で分ける・図や列を自分のスライドに移す・削ること。容量の `fit` と同じ段。非常用の段でも入らなければ出ず、`layout-overflow` が残る |

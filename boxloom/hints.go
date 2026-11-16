@@ -29,6 +29,8 @@ const (
 		"残りは同じ列の別の対の文がそれ以上狭められない分です。図のある対を別の対の並びに分けるか、図の側に文を足して縦を使ってください"
 	cycleCrampedHint = "循環の図の題が長く、扇の中にも輪の横にも楽に入りません。題を短くする(全文は横の文に書く)か、" +
 		"図の列を広くする(図のまとまりを role=main にする)かで直してください。字や輪は小さくしません"
+	tableGroupLabelHint = "群の名前が縦書きの帯に2行で折り返しても群の行に入らず、群の行を高くしました。" +
+		"名前を短くする(帯の縦の1行に入るのは群の行の高さの分の字)か、行の少ない群を隣の群とまとめてください。字は小さくしません"
 	statValueHint = "数と単位はそれぞれ途中で折らないので、カードの幅に入らないと単位が次の行に落ちるか、数がカードからはみ出します。" +
 		"値を短くする(桁を丸める・大きな単位にする)・" +
 		"単位や補足は label に移す・同じ stat の数を減らしてカードを広くする、のどれかで直してください。字は小さくしません"
@@ -104,6 +106,10 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity, fillMin float64) {
 		case "cycle-cramped":
 			if w.Hint == "" {
 				w.Hint = cycleCrampedHint
+			}
+		case "table-group-label":
+			if w.Hint == "" {
+				w.Hint = tableGroupLabelHint
 			}
 		case "stat-value":
 			if w.Hint == "" {

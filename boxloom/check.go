@@ -1095,6 +1095,9 @@ func warningIssue(file, w string) Issue {
 	if m[2] == "SUBSYSTEM" && strings.Contains(m[3], "table: header[") && strings.Contains(m[3], "the columns do not fit at their minimum widths") {
 		rule = "table-col-width" // 表の列の守りたい最小の幅の合計が表の幅に入らない
 	}
+	if m[2] == "SUBSYSTEM" && strings.Contains(m[3], "table: group label") && strings.Contains(m[3], "does not fit its rows") {
+		rule = "table-group-label" // 縦書きの帯の群の名前が群の行に入らず、行を高くした(#170)
+	}
 	if rule == "" {
 		rule = strings.ToLower(m[2])
 	}

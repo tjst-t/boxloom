@@ -45,6 +45,11 @@ type TableCell struct {
 	// VMerge は上のセルに結合された続きのセル(a:tc の vMerge。文字は持たない)。
 	RowSpan int
 	VMerge  bool
+	// GridSpan は横に結合する列の数(2 以上で結合の始まり。a:tc の gridSpan)。
+	// HMerge は左のセルに結合された続きのセル(a:tc の hMerge。文字は持たない)。
+	// 合計の行の名前を縦書きの帯の列と次の列にまたいで置くのに使う(#170)。
+	GridSpan int
+	HMerge   bool
 	// Fill はこのセルの面(""なら行の面。行の群の名前のセルを濃い面にするなど)。
 	Fill string
 	// Vert はセルの文を縦書きにする(a:tcPr の vert="eaVert"。字は上から下へ、行は右から左へ)。
@@ -173,6 +178,12 @@ func (p *PPTXBuilder) tableXML(s *shape) string {
 				if r+1 < len(t.Cells) && ci < len(t.Cells[r+1]) && t.Cells[r+1][ci].VMerge {
 					lnB = noLine("lnB")
 				}
+			}
+			if c.GridSpan > 1 {
+				span += fmt.Sprintf(` gridSpan="%d"`, c.GridSpan)
+			}
+			if c.HMerge {
+				span += ` hMerge="1"`
 			}
 			fillXML := rowFill
 			if c.Fill != "" {

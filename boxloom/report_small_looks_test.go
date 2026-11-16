@@ -63,11 +63,12 @@ func TestReportTableGroupVertical(t *testing.T) {
 			}
 		}
 	}
-	// 帯の列の幅は縦の1行(tableText × 行の高さ + 左右の余白)で、余りの幅を受け取らない。
+	// 帯の列の幅は縦の行の数(tableText × 行の高さ + 左右の余白)で、余りの幅を受け取らない。
+	// 「手続き」(3字)は群の2行の高さに縦の1行で入らないので、縦の2行(#170)。
 	tm, _ := LookupTemplate("report")
 	v := tm.Values
 	restore := useFonts(tm.Fonts) // 行の高さは report の fonts.lineHeight
-	want := ptToEMU(vertBandWidth(v.TableText, v.TableCellPadX))
+	want := ptToEMU(vertBandWidth(v.TableText, v.TableCellPadX) + v.TableText*lineHeightMult())
 	restore()
 	m := regexp.MustCompile(`<a:gridCol w="(\d+)"/>`).FindAllStringSubmatch(slide, -1)
 	if len(m) != 3 {

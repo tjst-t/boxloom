@@ -228,6 +228,10 @@ func TestTableGroupColumnsInPPTX(t *testing.T) {
 			{`<a:tc vMerge="1">`, `<a:tc vMerge="1">`},
 			{`<a:tc>`, `<a:tc>`},
 		}
+		if name == "report" {
+			// report の合計の行の名前は、帯の列と次の空の列をまたぐ(#170)。
+			want[6] = [2]string{`<a:tc gridSpan="2">`, `<a:tc hMerge="1">`}
+		}
 		for i, tr := range trs {
 			tcs := tcRe.FindAllString(tr, -1)
 			if len(tcs) != 4 {
