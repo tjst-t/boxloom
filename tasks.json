@@ -669,6 +669,29 @@
       "extra": {}
     },
     {
+      "id": "pairs-matrix",
+      "number": 179,
+      "kind": "task",
+      "title": "pairs と matrix の見た目:対の色分けと矢印、格子の判定を文字の札で出す",
+      "status": "backlog",
+      "parent": "slide-patterns",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [
+        "eval-compare"
+      ],
+      "body": "## なぜ\n作例の比較で、Boxloom の pairs(リスクと規制)は左右の文が並ぶだけで、対だと読み取りにくかった。HTML 版は左を淡い赤・右を淡い緑の帯にして間に矢印、python-pptx 版は青い矢印でつないでいた。\nmatrix(差を決める要因・仕事ごとの使い分け)の判定は Boxloom では小さな色の点と凡例だけ。HTML 版は「有利」「条件つき」「不利」の文字の札をセルの頭に付け、凡例なしで読めた。色だけで意味を伝えない点でもこちらがよい。\n\n## やること(案・設計を決めてから ready にする)\n- pairs:対の側(Memory #1472291 で IR に足した「対の側」)ごとの帯の色と、左右をつなぐ矢印をテンプレートの組み方で出す。色は役割名だけ。\n- matrix:判定(marks)の名前を文字の札としてセルに出す組み方をテンプレートが選べるようにする。札の文字はテンプレートの marks の表から。\n- どちらもコアの部品に条件分岐を足さず、テンプレートの override で持つ(#1472291)。dark・light の既定をどちらにするかは決めること。\n- 札・矢印の分の幅を Measure に入れ、layout-overflow と食い違わないこと。\n\n## 確かめ方\n作例の該当3枚を build して描画で比べる。check の警告と描画が一致する。",
+      "doneWhen": "作例の pairs の1枚と matrix の2枚で、対が色と矢印でつながり、判定が文字の札で読める(凡例なしで意味が分かる)。check の警告と描画が一致し、go test と tools/ci.sh が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-16T01:12:19.558Z",
+      "updatedAt": "2026-11-16T01:12:19.558Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "canvas-patterns",
       "number": 4,
       "kind": "story",
