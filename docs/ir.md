@@ -759,6 +759,7 @@ go run ./cmd/boxloom check -template dark deck.json                  # IR の te
 | `shapes-connector-angle` | shapes のコネクタが、どの辺の組でも辺と 30°未満の浅い角度でしか繋げない(角で終わったように見える)。path はそのコネクタ |
 | `figure-text-overflow` | process・orgchart・matrix・funnel・phases・cycle・pillars の箱・セル・注記の文が収まらない(折り返せない語が箱より広い・高さが足りない)。path はその要素(`…/data/steps/2` など) |
 | `cycle-cramped` | cycle の題が扇に入らず輪の横(外)に置いたが、輪の直径が `minDiameter` を下回るか、題の枠が `labelMinWidth` より狭い(1つの図に1件)。path は図のブロック、文に輪の直径と題の枠の幅(pt)。題を短くする(全文は横の文に書く)か、図の列を広くする(role=main)。題が枠に入らなければ `figure-text-overflow` も別に出る。`-fit` の「収まった」の判定には入らない(`docs/subsystem.md` の11節) |
+| `orgchart-label-wrap` | orgchart の箱の名前(題)が細い箱の中で3行以上に折れる(はみ出しは無いが読みにくい。#176。1つの箱に1件、作者が改行で分けた行は数えない)。path はその箱(`…/data/units/U/members/M` など)、文に行の数と箱の幅(pt)。hint は名前を短くする(正式名は detail に)・横に並ぶ部門を減らす。`-fit` の「収まった」の判定には入らない |
 | `funnel-increase` | funnel の数の値が前の段より増えた。path はその段の `value` |
 | `figure-legend` | process・orgchart・funnel・phases・cycle で `status` を使ったのに、その状態の文が `legend` に無い(読み手は枠線の色の意味が分からない)。path は `…/data/legend` |
 | `chart-labels` | chart の項目の名前が、アプリが置く場所(縦の形は1項目の幅、横棒は枠の幅の30%)に2行で収まらない(アプリが斜めにする・間引く)。path は最初の項目(`…/data/categories/N`)、文に残りの数 |

@@ -489,6 +489,9 @@ func (s *OrgChartSubsystem) Lint(box LBox) []string {
 		if !textFits(needW, needH, b.Width, b.Height) {
 			out = append(out, overflowWarning("orgchart", where, n.Title, needW, needH, b.Width, b.Height))
 		}
+		if w := orgLabelWrapWarning(where, n, t1, b.Width, fv); w != "" {
+			out = append(out, w)
+		}
 	}
 	check("root", &s.Data.Root, pl.root, tx.Title, tx.Sub, s.boxValues("rect"))
 	for i := range s.Data.Units {
@@ -503,6 +506,25 @@ func (s *OrgChartSubsystem) Lint(box LBox) []string {
 	}
 	_, missing := s.legend()
 	return append(out, legendMissingWarnings("orgchart", missing)...)
+}
+
+// orgLabelWrapLines は箱の題(名前)がこの行数以上に折れたら警告する数(#176)。
+const orgLabelWrapLines = 3
+
+// orgLabelWrapWarning は箱の題が細い箱の中で orgLabelWrapLines 行以上に折れるときの警告
+// (orgchart-label-wrap、#176。1つの箱に1件)。はみ出さなくても、名前が3行・4行に細切れに
+// 折れると読みにくい。作者が改行で分けた行は数えない(折り返しが起きたときだけ)。
+// 名前が長いことを知らせるだけで、Boxloom は名前を縮めたり箱を広げたりしない。
+// cycle-cramped(#155)と同じ考え方。
+func orgLabelWrapWarning(where string, n *FigureNode, size, width float64, fv figureBoxValues) string {
+	runs := itemRuns(n.Title, "", nil)
+	lines := len(wrapRuns(runs, size, math.Max(width-2*fv.insetX, 0)))
+	forced := len(wrapRuns(runs, size, math.Inf(1)))
+	if lines < orgLabelWrapLines || lines <= forced {
+		return ""
+	}
+	return fmt.Sprintf("[SUBSYSTEM WARNING] orgchart: %s (%q): name wraps to %d lines in a narrow box (%.1fpt wide)",
+		where, firstLine(n.Title), lines, width)
 }
 
 // --- IR から読む ---

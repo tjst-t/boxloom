@@ -70,7 +70,7 @@ LibreOffice(PDF→PNG)で全ての枚を見た。崩れは次の4つ(check は�
 | R4 | phases を columns の狭い列に置く | `layout-overflow`(列1、52.2pt)→ -fit で `fit-applied` | 1 / 0 | 誤導(hint は「{density=dense} で収まります」と勧める。図を狭い列に詰めたことが原因で、dense は読ませる参照のページのためのもの) | 消えた(phases を列から出した) |
 | R5 | 群の列の頭が空、`points=` の列名の誤り | 誤り `table-groups` ×2、`table-points` | 1 / 1 | 分かる。ただし空の行ごとに同じ「最初の行の群の名前が空」が出て、2件目は2行目を指す | 消えた |
 | R6 | 提言の表を消す | `fill-ratio`(40.9%。-fit でも 52.1%) | 0 / 0 | 分かる | 消えた |
-| R7 | orgchart の箱の名前が長い | 出ない | 0 / 0 | — | —(細い箱の中で4行に折れて読みにくいが、はみ出しはしない) |
+| R7 | orgchart の箱の名前が長い | 出ない(#176 で `orgchart-label-wrap` が出るようにした) | 0 / 0 | — | —(細い箱の中で4行に折れて読みにくいが、はみ出しはしない) |
 | B1 | statement の文が長い(5行) | 出ない(#167 で `statement-wrap` が出るようにした) | 0 / 0 | — | — |
 | B2 | Gantt の帯の名前が長い | 出ない | 0 / 0 | — | —(帯の中で2行に折れて読める。決まりどおり) |
 | B3 | 節目を3つ近くに置く | `milestone-overlap` | 0 / 0 | 分かる(hint は空だが message で分かる) | 消えた |

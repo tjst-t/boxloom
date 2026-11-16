@@ -1086,6 +1086,9 @@ func warningIssue(file, w string) Issue {
 	if figure && strings.Contains(m[3], "label does not fit its place on the category axis") {
 		rule = "chart-labels" // グラフの項目の名前がアプリの置く場所に入りきらない
 	}
+	if figure && strings.Contains(m[3], "name wraps to") && strings.Contains(m[3], "lines in a narrow box") {
+		rule = "orgchart-label-wrap" // 組織図の箱の名前が細い箱で3行以上に折れる(#176)
+	}
 	if figure && strings.Contains(m[3], "has no legend text") {
 		rule = "figure-legend" // 図の箱の状態を使ったのに凡例の文が無い
 	}
