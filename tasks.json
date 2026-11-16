@@ -1390,6 +1390,29 @@
       "extra": {}
     },
     {
+      "id": "section",
+      "number": 178,
+      "kind": "task",
+      "title": "本文のスライドの題の上に、属する部(section)の名前の札を出す(テンプレートの組み方で)",
+      "status": "ready",
+      "parent": "tokens-template",
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [
+        "eval-compare"
+      ],
+      "body": "## なぜ\n作例を HTML で作らせた版は、本文の各スライドの題の上に「第2部 クローズドの強み」の小さな札を出していて、28枚のどこにいるかが分かりやすかった。Boxloom 版には無い。\n\n## やること(案)\n- 本文のスライドが、直前の section スライドの題(と番号)を知れるようにする。IR は変えず、組み立ての側で直前の section から引く(意味は既にある)。\n- 出すかどうか・形はテンプレートが決める(#95 の部品にした骨組み contentHeader の差し替え。Memory #1472291:コアの部品に条件分岐を足さない)。dark・light で出す。\n- 札の分の高さは題の領域から引き、本文の領域(容量の計測・layout-overflow)と食い違わないこと。\n- section が無い資料では何も出さない。\n\n## 確かめ方\n作例を build して、第1〜4部の本文スライドに札が出て、表紙・目次・区切り・結びには出ないこと。check の capacity が札の分だけ減って、警告の判定と描画が一致すること。",
+      "doneWhen": "作例の本文スライドの全部に属する部の札が出て、区切りの無い資料では出ない。check の警告0のまま(または増えた警告が描画と一致)。go test と tools/ci.sh が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-16T01:12:14.765Z",
+      "updatedAt": "2026-11-16T01:12:14.765Z",
+      "closedAt": null,
+      "extra": {}
+    },
+    {
       "id": "oss-release-prep",
       "number": 6,
       "kind": "story",
