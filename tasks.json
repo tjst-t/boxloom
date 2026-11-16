@@ -3826,7 +3826,7 @@
       "number": 169,
       "kind": "task",
       "title": "表の分け方の案で、続きの表が薄くならないように行をならす",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -3840,7 +3840,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:53:41.452Z",
-      "updatedAt": "2026-11-15T14:53:41.452Z",
+      "updatedAt": "2026-11-16T00:13:42.697Z",
       "closedAt": null,
       "extra": {}
     },
