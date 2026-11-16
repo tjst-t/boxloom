@@ -4073,6 +4073,27 @@
       "updatedAt": "2026-11-16T02:14:36.301Z",
       "closedAt": "2026-11-16T02:14:36.301Z",
       "extra": {}
+    },
+    {
+      "id": "report-libreoffice-2-eval-f1",
+      "number": 180,
+      "kind": "bug",
+      "title": "report のフッターの作者名が短くても LibreOffice で2行に折れる(eval F1)",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "high",
+      "labels": [],
+      "body": "docs/eval.md の3.1節・6節 F1。report の8本すべてで、フッターの作者名(「総務部」のような短い名前)が LibreOffice では2行に折れ、2行目がフッターの下に落ちる。字の幅は正しく測れていて check は何も出さない。枠の幅が字の幅ちょうどで、wrap=\"none\" のプレースホルダーなのに LibreOffice が折る。#171 で長い名前は直したが短い名前で残る。light(t04・t05)では折れない。\n\n方針:枠の幅に余裕を足す(字の幅ちょうどにしない)か、wrap=\"none\" に頼らない書き方にする。dark・light の出力は作りの上で変えない。\n\n確かめ方:examples/density-eval の report の資料を LibreOffice で PNG にして、フッターが1行であることを目で確かめる。ゴールデンの更新は go test -run Golden ./ -update-golden(boxloom/ で)。例・試験の名前は架空か名前なしにする。",
+      "doneWhen": "report の短い作者名(全角2〜6字)・長い作者名のフッターが LibreOffice の描画で1行に収まる(試験で枠の幅が字の幅より余裕を持つことを確かめる)。go test ./... と go vet が通る。",
+      "resolution": null,
+      "refs": [],
+      "threads": [],
+      "createdAt": "2026-11-16T11:44:26.020Z",
+      "updatedAt": "2026-11-16T11:44:26.020Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
