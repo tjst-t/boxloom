@@ -4056,7 +4056,7 @@
       "number": 176,
       "kind": "task",
       "title": "組織図の細い箱で名前が3行以上に折れるとき警告する",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4070,7 +4070,7 @@
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-15T14:54:21.098Z",
-      "updatedAt": "2026-11-15T14:54:21.098Z",
+      "updatedAt": "2026-11-16T01:46:58.242Z",
       "closedAt": null,
       "extra": {}
     }
