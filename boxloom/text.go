@@ -46,9 +46,29 @@ const fullWidthEm = 0.99
 // それ以外は1文字ずつトークン化する。
 var tokenRe = regexp.MustCompile(`(?s)[A-Za-z0-9._%+\-]+|[ \t]+|.`)
 
+// Go 版だけの追加(#185):桁区切りの「,」を挟んだ数字(1,000・1,234,567.8)は
+// 1つのトークンにする。LibreOffice(ICU の行分割 UAX #14 の LB25)も PowerPoint も
+// 数の途中では折らないので、行の数え方をそれに合わせる。読点として扱わないので、
+// リード文(Phrase)が「1,」の後ろで強制の改行を入れることもない。
+// 数のすぐ後ろの和文の単位(万円など)はつなげない:アプリは数と単位の間で折り得るので、
+// つなげると見積もりと描画がずれる。
 func tokenizeLine(s string) []string {
-	return tokenRe.FindAllString(s, -1)
+	toks := tokenRe.FindAllString(s, -1)
+	out := toks[:0]
+	for i := 0; i < len(toks); i++ {
+		t := toks[i]
+		if t == "," && len(out) > 0 && i+1 < len(toks) && endsWithDigit(out[len(out)-1]) && startsWithDigit(toks[i+1]) {
+			out[len(out)-1] += t + toks[i+1]
+			i++
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
 }
+
+func endsWithDigit(s string) bool   { return s != "" && s[len(s)-1] >= '0' && s[len(s)-1] <= '9' }
+func startsWithDigit(s string) bool { return s != "" && s[0] >= '0' && s[0] <= '9' }
 
 // charEmWidth は1文字分の「フォントサイズ1ptあたりの幅(pt)」を返す。
 // 全角より狭い文字には幅の余裕(measureSafetyMargin)を掛けた値。
