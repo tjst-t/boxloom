@@ -348,13 +348,16 @@ func (t *Template) footer(d *IRDeck, page, total int) *Spec {
 	if d.Meta != nil && d.Meta.Author != nil {
 		left = d.Meta.Author.Plain()
 	}
-	leftSpec := TextNode(left, tokSize("footerText"), tokColor("text_muted"), noWrap())
+	// 欄の枠には値の表の footerSlackEm の余裕を足す(字の幅ちょうどの枠を LibreOffice が
+	// 折らないように、#180)。
+	slack := t.footerSlack()
+	leftSpec := TextNode(left, tokSize("footerText"), tokColor("text_muted"), noWrap(), slack)
 	if left != "" {
 		leftSpec.Placeholder = "ftr"
 		leftSpec.irPath = "/meta/author"
 	}
 	if d.Meta != nil && d.Meta.Confidential != nil {
-		opts := []SpecOpt{noWrap(), fromIR("/meta/confidential")}
+		opts := []SpecOpt{noWrap(), slack, fromIR("/meta/confidential")}
 		if left == "" {
 			opts = append(opts, WithPlaceholder("ftr"))
 		}
@@ -370,8 +373,14 @@ func (t *Template) footer(d *IRDeck, page, total int) *Spec {
 		RichTextNode([]TextRun{
 			{Text: fmt.Sprint(page + 1), role: "text_muted", Field: "slidenum"},
 			{Text: fmt.Sprintf(" / %d", total), role: "text_muted"},
-		}, tokSize("footerText"), WithAlign("right"), WithPlaceholder("sldNum"), noWrap(), noShrink()),
+		}, tokSize("footerText"), WithAlign("right"), WithPlaceholder("sldNum"), noWrap(), slack, noShrink()),
 	}, WithJustify(JustifySpaceBetween))
+}
+
+// footerSlack はフッターの欄の枠に足す余裕(値の表の footerSlackEm。#180)。
+func (t *Template) footerSlack() SpecOpt {
+	em := t.Values.FooterSlackEm
+	return func(s *Spec) { s.noWrapSlackEm = em }
 }
 
 // slideSource はスライドの出典。本文の箱の外(本文の下・フッターの上)に、控えめな

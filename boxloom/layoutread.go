@@ -371,6 +371,10 @@ func (r *layoutReader) node(n *LayoutNode, at string) *Spec {
 		if m.NoWrap {
 			opts = append(opts, noWrap())
 		}
+		if m.NoWrapSlackEm != 0 {
+			em := m.NoWrapSlackEm
+			opts = append(opts, func(s *Spec) { s.noWrapSlackEm = em })
+		}
 		if m.ColumnGroups > 0 {
 			opts = append(opts, measureColumnGroups(&columnsInfo{}))
 		}

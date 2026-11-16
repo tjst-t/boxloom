@@ -75,6 +75,7 @@
     "quoteSource": 12,
     "leadLineHeight": 1.08,
     "listLineHeight": 1.08,
+    "footerSlackEm": 0.5,
     "pointIndentEm": 1.5,
     "orderedStyle": "arabicPeriod",
     "cardPadding": 12,

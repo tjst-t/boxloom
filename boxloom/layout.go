@@ -11,6 +11,8 @@
 
 package boxloom
 
+import "strings"
+
 type AlignItems int
 
 const (
@@ -114,6 +116,9 @@ type Spec struct {
 	// noWrap は、幅で折り返さない文字の葉(フッターの欄、#171)。PPTX では wrap="none" の
 	// 1行に書き、高さも1行で測る。欄の幅に入りきらなければ footer-wrap の警告。
 	noWrap bool
+	// noWrapSlackEm は折り返さない葉の幅に足す余裕(字の大きさの倍。値の表の
+	// footerSlackEm、#180)。アプリが字の幅ちょうどの枠を折らないように。
+	noWrapSlackEm float64
 	// frame は骨組みの部品が付ける枠の印(frameBody・frameMain。skeleton.go)。
 	// コアはこの印で本文の箱(容量・はみ出し・埋まり具合を測る)と、本文を持たない
 	// スライドのページに収まるべき箱を見つける。
@@ -276,10 +281,23 @@ func RichTextNode(runs []TextRun, opts ...SpecOpt) *Spec {
 
 // textNaturalWidth / textHeightFor は、文字の葉の幅と、幅を決めたときの高さ。
 func textNaturalWidth(s *Spec) float64 {
+	return textInkWidth(s) + footerSlackPt(s)
+}
+
+// textInkWidth は文字の葉の字そのものの幅(余裕を足さない)。
+func textInkWidth(s *Spec) float64 {
 	if len(s.Runs) > 0 {
 		return naturalRunsWidth(s.Runs, s.FontSize)
 	}
 	return naturalTextWidth(s)
+}
+
+// footerSlackPt は折り返さない葉の枠に足す余裕(pt。#180)。字の無い葉には足さない。
+func footerSlackPt(s *Spec) float64 {
+	if !s.noWrap || s.noWrapSlackEm == 0 || strings.TrimSpace(s.Text) == "" {
+		return 0
+	}
+	return s.noWrapSlackEm * s.FontSize
 }
 
 func textHeightFor(s *Spec, width float64) float64 {

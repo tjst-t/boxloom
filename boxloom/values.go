@@ -97,6 +97,10 @@ type TemplateValues struct {
 	LeadLineHeight float64 `json:"leadLineHeight" unit:"lineHeight"`
 	ListLineHeight float64 `json:"listLineHeight" unit:"lineHeight"`
 
+	// FooterSlackEm はフッターの欄(作者・機密区分・頁番号)の枠に、測った字の幅へ足す
+	// 余裕(フッターの字の大きさの倍。#180)。字の幅ちょうどの枠は、wrap="none" の
+	// プレースホルダーでも LibreOffice が2行に折ることがある。0 なら足さない。0 から 2 まで。
+	FooterSlackEm float64 `json:"footerSlackEm" unit:"em" zero:"allowed"`
 	PointIndentEm float64 `json:"pointIndentEm" unit:"em"` // 入れ子の箇条の字下げ(親の字の大きさの倍)。番号つきの箇条の番号の幅も
 	// OrderedStyle は番号つきの箇条(points の ordered)の1段目の番号の形
 	// (orderedStyles のどれか。PPTX の a:buAutoNum の type)。入れ子の段は arabicPeriod。
@@ -697,6 +701,9 @@ func parseTemplateFile(name string, data []byte) (*Template, error) {
 	}
 	if _, ok := orderedStyles[f.Values.OrderedStyle]; !ok {
 		return nil, fmt.Errorf("values.orderedStyle: %q is not a numbering style (known: %v)", f.Values.OrderedStyle, sortedKeys(orderedStyles))
+	}
+	if x := f.Values.FooterSlackEm; x < 0 || x > 2 {
+		return nil, fmt.Errorf("values.footerSlackEm: %v must be between 0 and 2", x)
 	}
 	fonts, err := resolveFonts(f.Fonts)
 	if err != nil {

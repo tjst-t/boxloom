@@ -146,6 +146,7 @@ report は**読む資料**(手元や画面で読む報告書)のためのテン�
 | `itemGap` / `headerGap` | 8 / 8 | 2 / 8 |
 | `leadLineHeight` / `listLineHeight` | 1.35 / 1.35 | 1.08 / 1.08 |
 | `footerText` | 10 | 8 |
+| `footerSlackEm` | 0 | 0.5 |
 | `leadText`(上の見出し) | 18 | 24 |
 | `slideTitle`(話題) | 24 | 16 |
 | `body` | 16 | 14 |
@@ -516,6 +517,7 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `takeawayText` | 結論(takeaway)の1文 |
 | `statValue` `statUnit` `statLabel` | 統計強調(stat)の数・単位・説明 |
 | `quoteText` `quoteMark` `quoteSource` | 引用(quote)の言葉・頭の印・出どころ |
+| `footerSlackEm` | フッターの欄(作者・機密区分・頁番号)の枠に、測った字の幅へ足す余裕。`footerText` に掛ける倍率で、0 から 2 まで(0 なら足さない)。字の幅ちょうどの枠は、`wrap="none"` のプレースホルダーでも LibreOffice が2行に折ることがある(#180。report の 8pt の短い作者名で起きた)。report は 0.5、dark / light は 0(10pt で折れていない) |
 | `pointIndentEm` | 入れ子の箇条の字下げ。親の字の大きさに掛ける倍率。番号つきの箇条の番号の分の幅にも使う |
 | `orderedStyle` | 番号つきの箇条(`ordered`)の1段目の番号の形。`arabicPeriod`(1.)・`romanLcPeriod`(i.)・`circleNumDbPlain`(①)のどれか(PPTX の `a:buAutoNum` の type)。入れ子の段は `arabicPeriod` に決めてある。dark / light / report は `arabicPeriod`。ほかの名前は読み込みで誤り |
 | `cardPadding` `cardRadius` | 比較のカード |

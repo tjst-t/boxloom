@@ -93,11 +93,13 @@ type LayoutMarks struct {
 	TopicRows    int    `json:"topicRows,omitempty"`    // 印つきの塊の並びの塊の数
 	KeepLine     string `json:"keepLine,omitempty"`
 	NoWrap       bool   `json:"noWrap,omitempty"` // 幅で折り返さない1行の文字(フッターの欄、#171)
-	NestedSlack  bool   `json:"nestedSlack,omitempty"`
-	NoShrink     bool   `json:"noShrink,omitempty"`
-	List         bool   `json:"list,omitempty"`
-	Card         bool   `json:"card,omitempty"`
-	Dense        bool   `json:"dense,omitempty"` // 密なスライドの本文の箱(この下のトークンは dense の組)
+	// NoWrapSlackEm は折り返さない葉の枠に足す余裕(字の大きさの倍。値の表の footerSlackEm、#180)
+	NoWrapSlackEm float64 `json:"noWrapSlackEm,omitempty"`
+	NestedSlack   bool    `json:"nestedSlack,omitempty"`
+	NoShrink      bool    `json:"noShrink,omitempty"`
+	List          bool    `json:"list,omitempty"`
+	Card          bool    `json:"card,omitempty"`
+	Dense         bool    `json:"dense,omitempty"` // 密なスライドの本文の箱(この下のトークンは dense の組)
 	// Frame は骨組みの枠の印("body" = 本文の箱、"main" = 本文を持たないスライドの箱)。
 	// 枠は縮むときの下限を持たず、中のブロックが枠の外へ押し出される(#133)。
 	Frame string `json:"frame,omitempty"`
@@ -330,7 +332,7 @@ func (d *layoutDumper) node(s *Spec, path string) *LayoutNode {
 		}
 		n.Placeholder = s.Placeholder
 	}
-	m := LayoutMarks{IRType: s.irType, CardRow: s.cards, KeepLine: s.keepLine, NoWrap: s.noWrap, NestedSlack: s.nestedSlack, NoShrink: s.noShrink, List: s.List, Card: s.card, Dense: s.dense}
+	m := LayoutMarks{IRType: s.irType, CardRow: s.cards, KeepLine: s.keepLine, NoWrap: s.noWrap, NoWrapSlackEm: s.noWrapSlackEm, NestedSlack: s.nestedSlack, NoShrink: s.noShrink, List: s.List, Card: s.card, Dense: s.dense}
 	m.Frame = frameNames[s.frame]
 	if s.columns != nil {
 		m.ColumnGroups = len(s.columns.cols)

@@ -95,3 +95,54 @@ func TestFooterWrap(t *testing.T) {
 		}
 	}
 }
+
+// TestFooterSlack(#180):report のフッターの作者の欄は、字の幅ちょうどの枠にしない。
+// 字の幅ちょうどの枠は wrap="none" のプレースホルダーでも LibreOffice が2行に折る
+// (短い名前でも)。枠は字の幅に値の表の footerSlackEm を足した幅。dark・light は
+// footerSlackEm が 0 で、枠は字の幅のまま(出力を変えない)。
+func TestFooterSlack(t *testing.T) {
+	authors := []string{"総務", "経理部", "企画調整", "情報システ", "情報システム部", "図書館の運営の見直しの作業部会"}
+	cxRe := regexp.MustCompile(`<a:ext cx="(\d+)"`)
+	for _, name := range []string{"dark", "light", "report"} {
+		tmpl, err := LookupTemplate(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		em := tmpl.Values.FooterSlackEm
+		if name == "report" && em < 0.25 {
+			t.Fatalf("report: footerSlackEm %v leaves too little room", em)
+		}
+		if name != "report" && em != 0 {
+			t.Fatalf("%s: footerSlackEm must stay 0 (output unchanged), got %v", name, em)
+		}
+		for _, author := range authors {
+			deck, _, err := ParseMarkdown("f.bx.md", []byte(footerDoc(author)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var buf bytes.Buffer
+			if _, err := Build(&buf, deck, BuildOptions{Template: name}); err != nil {
+				t.Fatal(err)
+			}
+			var ftr string
+			for _, sp := range footerShapes(zipFiles(t, buf.Bytes())["ppt/slides/slide2.xml"]) {
+				if strings.Contains(sp, `type="ftr"`) {
+					ftr = sp
+				}
+			}
+			m := cxRe.FindStringSubmatch(ftr)
+			if m == nil || !strings.Contains(ftr, author) {
+				t.Fatalf("%s %q: author footer not found: %s", name, author, ftr)
+			}
+			cx, _ := strconv.Atoi(m[1])
+			restore := useFonts(tmpl.Fonts)
+			ink := textInkWidth(TextNode(author, WithFontSize(tmpl.Values.FooterText)))
+			restore()
+			room := float64(cx)/12700 - ink
+			want := em * tmpl.Values.FooterText
+			if room < want-0.01 || room > want+0.01 {
+				t.Errorf("%s %q: footer box is %.2fpt wider than the text, want %.2fpt", name, author, room, want)
+			}
+		}
+	}
+}
