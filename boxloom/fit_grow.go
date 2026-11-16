@@ -2,7 +2,8 @@
 //
 // 既定では薄いスライドは fill-ratio の警告を出すだけで広げない(本文の下の余りをブロックの
 // 間に配ることもしない)。BuildOptions.Fit・CheckOptions.Fit のときだけ、fill-ratio が
-// 値の表の fillRatioMin を下回る normal の本文のスライドを値の表の梯子 fit.grow で広げる:
+// 値の表の埋まりの下限(fillRatioMin と下の空きの上限 fillGapMax。fillTarget)を下回る normal の
+// 本文のスライドを値の表の梯子 fit.grow で広げる:
 //
 //   - fit.grow[0] → fit.grow[1] → … と1段ずつ上り、各段で組み直して詰めと同じ測り
 //     (measureFitStep)ではみ出しと fill-ratio を見る
@@ -19,11 +20,17 @@
 
 package boxloom
 
+import "math"
+
 // fitGrowGroup は、元の組み方の測り値 base(group の枚ごと)で薄い組を fit.grow で広げる。
 // 組の全部の枚に同じ段を当て、fill-ratio は一番低い枚で見る(いまは1枚の組だけを渡す。
 // fitGroup)。
 func (t *Template) fitGrowGroup(d *IRDeck, group []int, base []fitMeasure) (map[int]*BuiltSlide, map[int]*fitChoice, error) {
+	// 目標は枚ごとの下限(fillTarget。下の空きの上限も含む、#181)。組の中で一番届いていない枚で見る。
 	target := t.Values.FillRatioMin
+	for _, m := range base {
+		target = math.Max(target, t.Values.fillTarget(m.area))
+	}
 	ratio := minRatio(base)
 	if len(t.Fit.Grow) == 0 || !(ratio < target) {
 		return nil, nil, nil

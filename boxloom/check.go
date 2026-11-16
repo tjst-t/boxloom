@@ -271,7 +271,7 @@ func (tm *Template) layoutIssues(file string, deck *IRDeck, warnings []string, c
 	if err := tm.addDenseRemaining(deck, caps); err != nil {
 		return nil, err
 	}
-	addLayoutHints(warns, caps, tm.Values.FillRatioMin)
+	addLayoutHints(warns, caps, tm.Values)
 	warns = append(warns, takeawayCountIssues(file, deck)...)
 	// 数・表・グラフのある本文のスライドに出典が無い(#166。組み立てに依らない IR の検査)。
 	warns = insertBySlide(warns, sourceIssues(file, deck))

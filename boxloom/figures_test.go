@@ -56,7 +56,8 @@ func boxesOverlap(a, b LBox) bool {
 	return a.X+eps < b.X+b.Width && b.X+eps < a.X+a.Width && a.Y+eps < b.Y+b.Height && b.Y+eps < a.Y+a.Height
 }
 
-// 例の IR(Markdown の例と同じ)を dark・light で組める。警告は出ない。図の箱は
+// 例の IR(Markdown の例と同じ)を dark・light で組める。警告は出ない(本文の埋まりは見ない。
+// 機能を見せる例で、図だけの枚の下は空く。#181 の fillGapMax で fill-ratio が出る)。図の箱は
 // 本物の図形、矢印・組織図の線は図形に繋がったコネクタ(組織図は曲がる線)。
 func TestFiguresExampleBuilds(t *testing.T) {
 	d := mustReadIR(t, figuresPath)
@@ -66,7 +67,7 @@ func TestFiguresExampleBuilds(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
-		if len(warnings) != 0 {
+		if warnings = dropFillRatio(warnings); len(warnings) != 0 {
 			t.Errorf("%s: unexpected warnings %v", name, warnings)
 		}
 		process := slideXML(t, out, "ppt/slides/slide2.xml")
@@ -576,4 +577,26 @@ func TestMatrixEmphasisColumn(t *testing.T) {
 	if _, err := matrixFromIR(json.RawMessage(`{"columns": ["A"], "emphasis": "Z", "rows": [{"label": "x", "cells": [{"status": "support"}]}]}`)); err == nil || !strings.Contains(err.Error(), `emphasis "Z" is not one of the columns`) {
 		t.Errorf("err = %v", err)
 	}
+}
+
+// dropFillRatio は組み立ての警告から本文の埋まり(fill-ratio)を除く。図そのものを見る試験用。
+func dropFillRatio(ws []string) []string {
+	var out []string
+	for _, w := range ws {
+		if !strings.Contains(w, "[FILL-RATIO WARNING]") {
+			out = append(out, w)
+		}
+	}
+	return out
+}
+
+// dropFillRatioIssues は check の警告から fill-ratio を除く。
+func dropFillRatioIssues(ws []Issue) []Issue {
+	var out []Issue
+	for _, w := range ws {
+		if w.Code != "fill-ratio" {
+			out = append(out, w)
+		}
+	}
+	return out
 }

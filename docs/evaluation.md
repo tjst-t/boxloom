@@ -32,6 +32,9 @@
 - layout-overflow は3件出た。どれも「表の後のブロックがはみ出す」形で、hint が小さい表を
   分ける案を出した(3節の D1)。
 - 隣とまとめる hint は、report の3枚の続きで向きがそろわなかった(D2)。
+- #181 で fill-ratio に下の空きの上限(`fillGapMax`、80pt)を足すと、正しい版の13枚(proposal 4、report 8、
+  brief 1。下に 90〜119pt の空き)に fill-ratio が出た。hint のとおり根拠の1文か箇条を足して(1〜3行ずつ)消し、
+  誤った版も `faults.py` で作り直した。この節の他の数(作る途中の警告・誤った版の判定)は #181 の前のもの。
 
 LibreOffice(PDF→PNG)で全ての枚を見た。崩れは次の4つ(check は何も出さない):
 

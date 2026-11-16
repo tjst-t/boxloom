@@ -303,8 +303,10 @@ func TestTableOverflowSplitProposal(t *testing.T) {
 	if len(errs) > 0 {
 		t.Fatalf("%+v", errs)
 	}
+	// fill-ratio は見ない:6 行ずつの枚は下に 84pt 空き、fillGapMax(80pt、#181)を少し越える
+	// (案の hint もその枚が下限を下回ると言う)。薄い枚の扱いは table_split_even_test.go。
 	for _, w := range warns {
-		if w.Code == "layout-overflow" || w.Code == "subsystem-min" || w.Code == "fill-ratio" {
+		if w.Code == "layout-overflow" || w.Code == "subsystem-min" {
 			t.Errorf("the split table still overflows: %+v", w)
 		}
 	}

@@ -632,6 +632,23 @@ func bodyFillRatio(body *Spec) float64 {
 	return 1
 }
 
+// lintBodyFill は本文の埋まりの警告(#181)。割合が fillRatioMin を下回るか、最後の
+// ブロックの下の空きが fillGapMax を越えれば underfilled(文の頭は「underfilled: N%」で
+// hints.go が読む)。入りすぎは lintFillRatioMin と同じ。
+func lintBodyFill(body *Spec, v TemplateValues) string {
+	ratio := bodyFillRatio(body)
+	if w := lintFillRatioMin(ratio, v.FillRatioMin); w != "" {
+		return w
+	}
+	if body == nil || body.Box.Height <= 0 {
+		return ""
+	}
+	if gap := body.Box.Height * (1 - ratio); ratio < v.fillTarget(body.Box.Height) {
+		return fmt.Sprintf("[FILL-RATIO WARNING] underfilled: %.1f%% (%.0fpt left blank below the body, > %.0fpt)", ratio*100, gap, v.FillGapMax)
+	}
+	return ""
+}
+
 // lintBlockSubsystems はサブシステムの検査(lintSubsystems)を本文のブロックごとに
 // 行い、警告の文に本文の中の場所(body[N]: …)を付ける。check はこれで警告の
 // path をそのブロックにし、.md なら行を添える。本文の無いスライドは丸ごと見る。
@@ -750,8 +767,7 @@ func (t *Template) renderPages(d *IRDeck, fit bool) ([]*PPTXBuilder, []string, [
 		if b.Body != nil && split == nil {
 			// 分けた枚は測らない(各枚はならしてあるが(#169)、1枚を少し越えるだけの本文を
 			// 分ければ薄くなるのは分けた常。知らせの fit-split が作者に題で分けることを勧める)。
-			ratio := bodyFillRatio(b.Body)
-			if w := lintFillRatioMin(ratio, v.FillRatioMin); w != "" {
+			if w := lintBodyFill(b.Body, v); w != "" {
 				warnings = append(warnings, w)
 			}
 		}

@@ -71,7 +71,7 @@ func TestChartsExampleBuilds(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
-		if len(warnings) != 0 {
+		if warnings = dropFillRatio(warnings); len(warnings) != 0 { // 埋まり(#181)は見ない
 			t.Errorf("%s: unexpected warnings %v", name, warnings)
 		}
 		raw, err := os.ReadFile(out)

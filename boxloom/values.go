@@ -117,6 +117,10 @@ type TemplateValues struct {
 	AccentBarWidth float64 `json:"accentBarWidth"`               // 結論の左の帯の幅
 
 	FillRatioMin float64 `json:"fillRatioMin" unit:"ratio"` // 本文の埋まりがこれ未満なら警告
+	// FillGapMax は本文の最後のブロックの下に残してよい空きの上限(pt。#181)。これを越える
+	// 空きは、割合が fillRatioMin 以上でも fill-ratio の警告にする(fillTarget)。割合だけでは、
+	// 本文の領域の 1/3 近い空きの帯(report で 100〜120pt)を見逃すため。
+	FillGapMax float64 `json:"fillGapMax"`
 
 	ColumnTitle      float64 `json:"columnTitle" scale:"type"`      // 並列のまとまりの題
 	ColumnGap        float64 `json:"columnGap" scale:"space"`       // まとまりの間
@@ -1142,4 +1146,15 @@ func (m TemplateMarks) formatDate(s string) string {
 		f = strings.NewReplacer("{DD}", fmt.Sprintf("%02d", n[2]), "{D}", strconv.Itoa(n[2])).Replace(f)
 	}
 	return f
+}
+
+// fillTarget は本文の領域の高さが area(pt)のスライドの埋まりの下限(0〜1。#181)。
+// fillRatioMin と、下の空きを fillGapMax に収める割合(1 − fillGapMax/area)の大きいほう。
+// fill-ratio の警告・-fit の広げの目標・分け方の案の薄い枚は、どれもこれで見る。
+func (v TemplateValues) fillTarget(area float64) float64 {
+	t := v.FillRatioMin
+	if v.FillGapMax > 0 && area > 0 {
+		t = math.Max(t, 1-v.FillGapMax/area)
+	}
+	return t
 }

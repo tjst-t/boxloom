@@ -90,7 +90,7 @@ go run ./cmd/boxloom                                                      # 従�
   `-fit` でも収まらなかったスライドの `layout-overflow`・図の崩れの hint は、最後の段で組んでも「あと N pt
   足りません」と直し方(内容で分ける・columns の列を別のスライドに分ける・図を別のスライドに移す・文を削る。
   エンジンは columns を分けない)で、容量の `fitShort` が同じ N(`fit_short.go`)。
-- **`-fit` の広げ(#128)**:同じ `-fit` で、収まっていて fill-ratio が値の表の `fillRatioMin` を
+- **`-fit` の広げ(#128)**:同じ `-fit` で、収まっていて fill-ratio が値の表の埋まりの下限(`fillRatioMin` と `fillGapMax`)を
   下回る本文のスライド(normal のものだけ。dense は広げない)は、梯子 `fit.grow` を
   `fit.grow[0]` → `fit.grow[1]` と上る。各段で組み直して詰めと同じ測りではみ出し・図の崩れと fill-ratio を見て、
   はみ出す(図が崩れる)段の手前で止め、fill-ratio が目標に届いたらその段で止める。fill-ratio が前の段より
@@ -184,8 +184,9 @@ IR (JSON) ──ReadIR──▶ IRDeck ──Template.BuildDeck──▶ Spec �
   スライドの出典(source)は本文の下・フッターの上に「出典:」を頭に小さく控えめな色で。
   表の合計の行(total)は太字で、上に濃い線。日付・機密区分・免責は表紙の下、機密区分は
   フッターの作者の右にも(`docs/template-values.md` の marks の節)。
-- **方針**:本文が少なくても引き伸ばして埋めない。本文の箱のうち `fillRatioMin`(dark / light は 65%)より少なくしか
-  使っていなければ `[FILL-RATIO WARNING] underfilled` を出す(例のデッキの
+- **方針**:本文が少なくても引き伸ばして埋めない。本文の箱のうち `fillRatioMin`(dark / light / report は 65%)より少なくしか
+  使っていないか、最後のブロックの下に `fillGapMax`(80pt)を越える空きがあれば `[FILL-RATIO WARNING] underfilled` を出す
+  (測り方は `docs/ir.md` の「本文の埋まりの測り方」)(例のデッキの
   2・3枚目はこれが出る)。本文を持たない表紙・区切り・主張には出さない(区切り・主張は
   ページに収まるかだけを `layout-overflow` で見る)。
 - 文字のパターン(区切り・主張・結論・統計強調・引用)の見た目は

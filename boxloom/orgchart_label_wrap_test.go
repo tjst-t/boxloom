@@ -56,7 +56,7 @@ func TestOrgChartLabelWrapWarning(t *testing.T) {
 			t.Errorf("%s: message %q", tmpl, w.Message)
 		}
 		hinted := []Issue{w}
-		addLayoutHints(hinted, nil, 0)
+		addLayoutHints(hinted, nil, TemplateValues{})
 		if !strings.Contains(hinted[0].Hint, "名前を短く") {
 			t.Errorf("%s: hint %q", tmpl, hinted[0].Hint)
 		}

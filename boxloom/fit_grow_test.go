@@ -11,20 +11,27 @@ import (
 const fitThinMD = "../examples/md/warnings/fill-ratio.bx.md"
 
 // 薄いスライドは -fit で fit.grow を上って広がり、info の fit-applied・容量の fit が出て
-// fill-ratio が上がる。fill-ratio の警告は組んだ後の値(light は目標に届いて消え、report は
-// 届かないまま上がった値で残る)。
+// fill-ratio が上がる。fill-ratio の警告は組んだ後の値(どのテンプレートも、下の空きの上限
+// fillGapMax(#181)まで届かないまま上がった値で残る。下の空きの上限を外した light・dark は
+// 割合の目標 65% に届いて消える)。
 func TestFitGrowWidensThinSlide(t *testing.T) {
 	file, data := readFitDeck(t, fitThinMD, nil)
 	for _, c := range []struct {
 		tmpl, step string
 		reached    bool
-	}{{"light", "fit.grow[1]", true}, {"dark", "fit.grow[1]", true}, {"report", "fit.grow[1]", false}} {
-		plain := Check(file, data, CheckOptions{Template: c.tmpl})
+		noGap      bool // 値の表の fillGapMax を 0 にする(割合だけで見る)
+	}{{"light", "fit.grow[1]", false, false}, {"dark", "fit.grow[1]", false, false}, {"report", "fit.grow[1]", false, false},
+		{"light", "fit.grow[1]", true, true}, {"dark", "fit.grow[1]", true, true}} {
+		tm := mustTemplate(c.tmpl)
+		if c.noGap {
+			tm.Values.FillGapMax = 0
+		}
+		plain := Check(file, data, CheckOptions{Values: tm})
 		before := fitIssues(plain.Warnings, "fill-ratio")
 		if len(before) != 1 || plain.Info != nil || plain.Capacity[0].Fit != "" {
 			t.Fatalf("%s: without -fit the example should be underfilled with no info: %+v", c.tmpl, plain)
 		}
-		res := Check(file, data, CheckOptions{Template: c.tmpl, Fit: true})
+		res := Check(file, data, CheckOptions{Values: tm, Fit: true})
 		if len(res.Info) != 1 || res.Info[0].Code != codeFitApplied || res.Info[0].Path != "/slides/1" ||
 			!strings.Contains(res.Info[0].Message, c.step+" step") || !strings.Contains(res.Info[0].Message, "underfilled") || res.Info[0].Line != 7 {
 			t.Fatalf("%s: info = %+v", c.tmpl, res.Info)
@@ -39,8 +46,8 @@ func TestFitGrowWidensThinSlide(t *testing.T) {
 		if c.reached != (len(after) == 0) {
 			t.Fatalf("%s: fill-ratio after -fit = %+v", c.tmpl, after)
 		}
-		if !c.reached && after[0].Message <= before[0].Message[:len(after[0].Message)] {
-			// "underfilled: NN.N% (< 65%)" の値は上がる(同じ桁なので文字列で比べられる)
+		if !c.reached && fillUnderRe.FindString(after[0].Message) <= fillUnderRe.FindString(before[0].Message) {
+			// "underfilled: NN.N%" の値は上がる(同じ桁なので文字列で比べられる)
 			t.Fatalf("%s: fill-ratio did not rise: %q -> %q", c.tmpl, before[0].Message, after[0].Message)
 		}
 

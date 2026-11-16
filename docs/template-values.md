@@ -526,6 +526,7 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `statementInset` | 主張のスライドの文を、本文のスライドの外周(`pagePadding`)よりさらに内へ下げる幅 |
 | `accentBarWidth` | 結論(takeaway)の左のアクセントの帯の幅 |
 | `fillRatioMin` | 本文の埋まりがこの割合(0〜1)未満なら `fill-ratio` の警告 |
+| `fillGapMax` | 本文の最後のブロックの下に残してよい空き(pt。#181)。これを越えれば、割合が `fillRatioMin` 以上でも `fill-ratio` の警告。dark / light / report は 80(本文の領域 340〜390pt の約 20〜24%、report の本文の行で約5行)。埋まりの下限は `max(fillRatioMin, 1 − fillGapMax ÷ 本文の領域の高さ)`(`fillTarget`)で、`-fit` の広げの目標と分け方の案の薄い枚もこれで見る |
 | `columnTitle` | 並列のまとまりの題(dark / light は 16) |
 | `columnGap` | 並列のまとまりの間(32) |
 | `columnMainWeight` | 主のまとまり(`role: main`)の幅の比。ほかのまとまりは 1(2。倍率なので段階に載せない) |
@@ -645,7 +646,7 @@ report の表のセルの上下の余白は刻み(2pt)の下が 0 しか無い�
 進む。梯子の端が下限・上限で、任意の倍率では縮めない。`shrink` は `build -fit`・`check -fit`
 (#127、`docs/build.md`)が使う:はみ出す本文のスライドは今の密度から(normal は dense の組から、
 dense は `shrink[0]` から)下り、最初に収まった段で組む。`grow` も同じ `-fit`(#128)が使う:
-収まっていて fill-ratio が `fillRatioMin` を下回る normal の本文のスライドは `grow[0]` から上り、
+収まっていて fill-ratio が埋まりの下限(`fillRatioMin` と `fillGapMax`)を下回る normal の本文のスライドは `grow[0]` から上り、
 はみ出さない最も上の段(fill-ratio が目標に届いたらその段)で組む。
 
 各段は dense と同じく本文の値の一部を重ねる組で、書いた名前だけを前の段から替える

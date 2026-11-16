@@ -61,7 +61,7 @@ func pillarsData(t *testing.T, n int) string {
 }
 
 // 3本・5本の柱を、1枚に置いても columns の中に置いても(3つのテンプレート):誤り・
-// 警告が無く、屋根・名前の丸・柱・土台は図の矩形の中で互いに重ならない。描いた図形の
+// 警告が無く(本文の埋まりは見ない)、屋根・名前の丸・柱・土台は図の矩形の中で互いに重ならない。描いた図形の
 // 文字の枠も重ならず、図の矩形の中。
 func TestPillarsShapesApartInsideFigure(t *testing.T) {
 	for _, tmpl := range []string{"report", "dark", "light"} {
@@ -74,7 +74,7 @@ func TestPillarsShapesApartInsideFigure(t *testing.T) {
 					t.Fatal(err)
 				}
 				errs, warns, _ := CheckFileCapacity(path, tmpl)
-				if len(errs) > 0 || len(warns) > 0 {
+				if warns = dropFillRatioIssues(warns); len(errs) > 0 || len(warns) > 0 {
 					t.Errorf("%s: errors %+v warnings %+v", name, errs, warns)
 				}
 				dump, err := Layout(path, src, BuildOptions{})

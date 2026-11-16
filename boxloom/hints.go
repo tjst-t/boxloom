@@ -45,9 +45,9 @@ const (
 var fillUnderRe = regexp.MustCompile(`^underfilled: ([0-9.]+)%`)
 
 // addLayoutHints は警告の fill-ratio・spare-width・stat-value・title-wrap・lead-wrap・milestone-overlap などに hint を足す。caps は同じ
-// 組み立ての容量(path が /slides/S)。fillMin は値の表の fillRatioMin(表の分け方の案で
-// 薄くなる枚を言うため)。
-func addLayoutHints(warns []Issue, caps []SlideCapacity, fillMin float64) {
+// 組み立ての容量(path が /slides/S)。v は値の表(表の分け方の案で薄くなる枚を言うため。
+// 下限は fillTarget)。
+func addLayoutHints(warns []Issue, caps []SlideCapacity, v TemplateValues) {
 	capOf := map[string]SlideCapacity{}
 	for _, c := range caps {
 		capOf[c.Path] = c
@@ -71,7 +71,7 @@ func addLayoutHints(warns []Issue, caps []SlideCapacity, fillMin float64) {
 		switch w.Code {
 		case "layout-overflow":
 			if w.Hint == "" {
-				split := tableSplitHint(w.Path, capOf, fillMin)
+				split := tableSplitHint(w.Path, capOf, v)
 				tall := ""
 				if split == "" {
 					tall = precedingTallHint(w.Path, capOf)
@@ -227,14 +227,16 @@ func joinHints(hs ...string) string {
 
 // tableSplitHint は、はみ出した本文の表の分け方の案(容量の split)を1文にする。
 // 案は表そのものがはみ出したときだけあり(#164)、その表と後のブロック(注記など。
-// #140)の警告に付ける。案は各枚の行をならしてある(#169)。それでも fillMin を下回る枚が
-// あれば、分けるとその枚が fill-ratio を出すことと、ほかの直し方を言う。案が無ければ空。
-func tableSplitHint(path string, capOf map[string]SlideCapacity, fillMin float64) string {
+// #140)の警告に付ける。案は各枚の行をならしてある(#169)。それでも埋まりの下限
+// (fillTarget)を下回る枚があれば、分けるとその枚が fill-ratio を出すことと、ほかの直し方を言う。案が無ければ空。
+func tableSplitHint(path string, capOf map[string]SlideCapacity, v TemplateValues) string {
 	var s, k int
 	if _, err := fmt.Sscanf(path, "/slides/%d/body/%d", &s, &k); err != nil {
 		return ""
 	}
-	blocks := capOf[fmt.Sprintf("/slides/%d", s)].Blocks
+	sc := capOf[fmt.Sprintf("/slides/%d", s)]
+	blocks := sc.Blocks
+	fillMin := v.fillTarget(sc.BodyArea) // 分けた枚の本文の領域は元の枚と同じと見込む
 	for bk, b := range blocks {
 		if b.Split == nil || bk > k {
 			continue
@@ -264,7 +266,7 @@ func tableSplitHint(path string, capOf map[string]SlideCapacity, fillMin float64
 			"見出しの行と「n/m」の印・列の幅は Boxloom がそろえます。字は小さくしません",
 			b.Split.Tables, strings.Join(at, "・"), strings.Join(rows, "・"), strings.Join(fills, "・"))
 		if thin > 0 {
-			h += fmt.Sprintf("。ただし、行をならしても %d 枚目の埋まりが %g%% で fill-ratio の下限(%g%%)を下回ります。"+
+			h += fmt.Sprintf("。ただし、行をならしても %d 枚目の埋まりが %g%% で fill-ratio の下限(%.0f%%)を下回ります。"+
 				"分けるならその枚に根拠(数・出典・注記)を足すか、分けずに行や文を削る・dense で収まるなら dense にするほうが合います",
 				thin, b.Split.Fill[thin-1], fillMin*100)
 		}

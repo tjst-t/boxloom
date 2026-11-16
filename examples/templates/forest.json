@@ -81,6 +81,7 @@
     "statementInset": 24,
     "accentBarWidth": 4,
     "fillRatioMin": 0.65,
+    "fillGapMax": 80,
     "columnTitle": 16,
     "columnGap": 32,
     "columnMainWeight": 2,

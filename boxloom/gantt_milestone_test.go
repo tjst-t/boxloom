@@ -87,6 +87,7 @@ func TestCheckMilestoneOverlapExample(t *testing.T) {
 	const want = "/slides/0/body/0/data/milestones/2"
 	for _, f := range []string{"../examples/ir/check-warnings/milestone-overlap.json", "../examples/md/warnings/milestone-overlap.bx.md"} {
 		errs, warns := CheckFile(f, "")
+		warns = dropFillRatioIssues(warns) // Gantt だけの枚の下の空き(#181)は見ない
 		var got []Issue
 		for _, w := range warns {
 			if w.Code == "milestone-overlap" {

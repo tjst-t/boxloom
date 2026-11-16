@@ -408,8 +408,9 @@ Targets that read well (not hard limits):
 - `compare`: 2–3 options, 1–3 pros and 1–3 cons each, each ≤ 1 column line.
 - A slide with a figure (`gantt`, `process`, `phases`, `orgchart`, `matrix`, `funnel`, `cycle`, `pillars`, `chart`, `shapes`) gets at most 1–2 short lines of text
   besides the figure.
-- `fill-ratio` warns when less than 65% of the body is used. A slide with only text
-  needs about 13 lines to pass, so short text slides will get it. **Always respond to
+- `fill-ratio` warns when less than 65% of the body is used, or when more than 80pt is
+  left blank below the last block (so about 4/5 of the body must be used). A slide with only text
+  needs about 16 lines to pass, so short text slides will get it. **Always respond to
   it — do not ship a deck with `fill-ratio` warnings left.** Pick one:
   1. **Merge** with a neighbouring thin slide. When the neighbour is also thin and both
      bodies fit on one slide, the warning's `hint` names that slide and the expected

@@ -74,17 +74,18 @@ func evenTableSplit(t *testing.T, res *CheckResult) *TableSplitCapacity {
 	return nil
 }
 
-// 13行の表がはみ出すと、分け方の案は前から詰めず(8・5 で続きの枚が薄くなる)、各枚の行を
-// ならす。案のとおりに分けた2枚は、はみ出さず、どちらも fill-ratio を出さない(#169)。
+// 15行の表がはみ出すと、分け方の案は前から詰めず(続きの枚が薄くなる)、各枚の行を
+// ならす(8・7)。案のとおりに分けた2枚は、はみ出さず、どちらも fill-ratio を出さない(#169)。
+// 13行(7・6)だと続きの枚の下に 95pt 空き、fillGapMax(#181)で fill-ratio が出る。
 func TestTableSplitEvensRows(t *testing.T) {
-	groups := []int{13}
+	groups := []int{15}
 	res := Check("x.bx.md", evenTableDeck(groups, 3, false, nil), CheckOptions{})
 	split := evenTableSplit(t, res)
 	if split.Tables != 2 || len(split.Fill) != 2 {
 		t.Fatalf("split = %+v, want 2 tables", split)
 	}
 	if split.Rows[0]-split.Rows[1] > 1 || split.Rows[1]-split.Rows[0] > 1 {
-		t.Errorf("rows = %v, want even rows (7・6), not the greedy 8・5", split.Rows)
+		t.Errorf("rows = %v, want even rows (8・7)", split.Rows)
 	}
 	for _, f := range split.Fill {
 		if f < 65 {
@@ -127,18 +128,19 @@ func TestTableSplitEvensGroupsAndWarnsThin(t *testing.T) {
 			hint = w.Hint
 		}
 	}
-	if !strings.Contains(hint, "1 枚目の埋まりが") || !strings.Contains(hint, "fill-ratio の下限(65%)を下回ります") {
+	if !strings.Contains(hint, "1 枚目の埋まりが") || !strings.Contains(hint, "fill-ratio の下限(") || !strings.Contains(hint, "%)を下回ります") {
 		t.Errorf("hint does not tell the thin slide: %s", hint)
 	}
-	// 群を 3・3・3・4 行にすると、6・7 で分けてどちらも下限に届き、hint は薄い枚を言わない。
-	res = Check("x.bx.md", evenTableDeck([]int{3, 3, 3, 4}, 3, false, nil), CheckOptions{})
+	// 群を 3・4・3・4 行にすると、7・7 で分けてどちらも下限に届き、hint は薄い枚を言わない
+	// (3・3・3・4 の 6・7 は最初の枚の下に 95pt 空き、下限(fillTarget、#181)に届かない)。
+	res = Check("x.bx.md", evenTableDeck([]int{3, 4, 3, 4}, 3, false, nil), CheckOptions{})
 	split = evenTableSplit(t, res)
 	for _, w := range res.Warnings {
 		if w.Code == codeLayoutOverflow && strings.Contains(w.Hint, "下回ります") {
 			t.Errorf("hint tells a thin slide for %+v: %s", split, w.Hint)
 		}
 	}
-	after := Check("x.bx.md", evenTableDeck([]int{3, 3, 3, 4}, 3, false, split.SplitBefore), CheckOptions{})
+	after := Check("x.bx.md", evenTableDeck([]int{3, 4, 3, 4}, 3, false, split.SplitBefore), CheckOptions{})
 	for _, w := range append(after.Errors, after.Warnings...) {
 		t.Errorf("after the split %v: %s %s: %s", split.SplitBefore, w.Code, w.Path, w.Message)
 	}
