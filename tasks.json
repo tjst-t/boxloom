@@ -4233,7 +4233,7 @@
       "number": 187,
       "kind": "bug",
       "title": "F8: 桁区切りの「,」を含む値を引用符なしで書いた誤りに、直し方の hint を出す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4247,7 +4247,7 @@
       ],
       "threads": [],
       "createdAt": "2026-11-17T01:38:57.046Z",
-      "updatedAt": "2026-11-17T01:38:57.046Z",
+      "updatedAt": "2026-11-17T01:39:10.066Z",
       "closedAt": null,
       "extra": {}
     },
