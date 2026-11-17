@@ -60,6 +60,8 @@ type yamlDeckReader struct {
 	file string
 	errs []Issue
 	pos  yamlSourceMap
+	// splits は hint を添える範囲 → 桁区切りの「,」で分かれた値(thousands.go)。
+	splits map[string]string
 }
 
 func (r *yamlDeckReader) fail(line, col int, path, code, msg, hint string) {
@@ -82,6 +84,14 @@ func (r *yamlDeckReader) value(n *yNode, path string) any {
 		}
 		return o
 	case 'q':
+		if n.split != "" {
+			if r.splits == nil {
+				r.splits = map[string]string{}
+			}
+			if _, ok := r.splits[splitScope(path)]; !ok {
+				r.splits[splitScope(path)] = n.split
+			}
+		}
 		a := make([]any, 0, len(n.items))
 		for i, it := range n.items {
 			ip := path + "/" + strconv.Itoa(i)
@@ -114,12 +124,14 @@ func (r *yamlDeckReader) value(n *yNode, path string) any {
 // (ParseIR。知らないキー・型の違い・足りない欄)を通らないものは、行と列
 // つきの Issue で返す(そのときの JSON は使わないこと)。
 func YAMLToIR(file string, src []byte) ([]byte, []Issue) {
-	out, errs, pos := parseYAMLDeck(file, src)
+	out, errs, pos, splits := parseYAMLDeckSplits(file, src)
 	if len(errs) > 0 {
 		return out, errs
 	}
 	if _, err := ParseIR(out); err != nil {
-		return out, []Issue{yamlIRIssue(file, err, pos)}
+		is := []Issue{yamlIRIssue(file, err, pos)}
+		addThousandsHints(is, splits)
+		return out, is
 	}
 	return out, nil
 }
@@ -127,6 +139,13 @@ func YAMLToIR(file string, src []byte) ([]byte, []Issue) {
 // parseYAMLDeck は YAMLToIR に、IR の場所 → YAML の行と列の対応を足したもの。
 // ParseIR は通さない(check は意味の検査を先に見るため)。
 func parseYAMLDeck(file string, src []byte) ([]byte, []Issue, yamlSourceMap) {
+	out, errs, pos, _ := parseYAMLDeckSplits(file, src)
+	return out, errs, pos
+}
+
+// parseYAMLDeckSplits は parseYAMLDeck に、桁区切りの「,」で分かれた値のある範囲
+// (thousands.go)を足したもの。
+func parseYAMLDeckSplits(file string, src []byte) ([]byte, []Issue, yamlSourceMap, map[string]string) {
 	r := &yamlDeckReader{file: file, pos: yamlSourceMap{"": {1, 1}}}
 	text := strings.TrimPrefix(string(src), "\ufeff")
 	text = strings.ReplaceAll(text, "\r\n", "\n")
@@ -137,18 +156,18 @@ func parseYAMLDeck(file string, src []byte) ([]byte, []Issue, yamlSourceMap) {
 	}
 	if len(r.errs) > 0 {
 		sortErrors(r.errs)
-		return nil, r.errs, r.pos
+		return nil, r.errs, r.pos, r.splits
 	}
 	if node.kind != 'm' {
 		r.fail(node.line, node.col, "", codeSchema, "YAML の deck の一番外側は対応表(boxloom: \"0.1\" と slides: …)にしてください", "JSON の IR と同じキーで書きます(docs/ir.md)")
-		return nil, r.errs, r.pos
+		return nil, r.errs, r.pos, r.splits
 	}
 	out, err := marshalIndent(r.value(node, ""))
 	if err != nil {
 		r.fail(1, 1, "", codeSchema, err.Error(), "")
-		return nil, r.errs, r.pos
+		return nil, r.errs, r.pos, r.splits
 	}
-	return out, nil, r.pos
+	return out, nil, r.pos, r.splits
 }
 
 // yamlIRIssue は ParseIR の誤りを、YAML の行と列つきの Issue にする。
@@ -169,13 +188,15 @@ func yamlTypeHint(msg string) string {
 // ParseYAMLDeck は YAML の deck(src)を読んで IR にする。誤りは行と列つきの
 // Issue の一覧で返し、そのとき deck は nil(ParseMarkdown と同じ形)。
 func ParseYAMLDeck(file string, src []byte) (*IRDeck, []Issue) {
-	out, errs, pos := parseYAMLDeck(file, src)
+	out, errs, pos, splits := parseYAMLDeckSplits(file, src)
 	if len(errs) > 0 {
 		return nil, errs
 	}
 	d, err := ParseIR(out)
 	if err != nil {
-		return nil, []Issue{yamlIRIssue(file, err, pos)}
+		is := []Issue{yamlIRIssue(file, err, pos)}
+		addThousandsHints(is, splits)
+		return nil, is
 	}
 	return d, nil
 }

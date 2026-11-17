@@ -162,6 +162,9 @@ Speaker notes go here. Plain paragraphs and bullets only.
   **Quote any value that starts with `*`, `&`, `!` or contains `": "`**, e.g.
   `text: ["**Slowest step**", 5 days on average]` — an unquoted `**…**` at the start of
   a flow item is read as a YAML alias and rejected.
+  **Quote any value that contains a thousands comma** inside `[…]`/`{…}`, e.g.
+  `categories: ["1,400万円", "7,980円"]` — unquoted, `1,400万円` splits into `1` and
+  `400万円`. Chart `values` are numbers: write `1400`, not `1,400`.
 
 ## 3. Choosing a pattern for each piece of content
 

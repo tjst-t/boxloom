@@ -35,6 +35,9 @@ type yNode struct {
 	vals    []*yNode
 
 	items []*yNode
+	// split は流れの列([…])の中で、桁区切りの「,」で分かれたと見られる値を
+	// つなぎ直したもの(例 1,400万円)。無ければ ""(thousands.go)。
+	split string
 }
 
 type yLine struct {
@@ -394,7 +397,13 @@ func (f *yFlow) value(isKey bool) *yNode {
 			}
 			f.skip()
 			if f.i >= len(f.r) || f.r[f.i] != ':' {
-				f.p.fail(f.line, f.at(), "{…} の中は「キー: 値」で書いてください", "")
+				hint := ""
+				if m := len(n.vals); m > 0 {
+					if j := thousandsSplit([]*yNode{n.vals[m-1], k}); j != "" {
+						hint = thousandsHint(j)
+					}
+				}
+				f.p.fail(f.line, f.at(), "{…} の中は「キー: 値」で書いてください", hint)
 				return nil
 			}
 			f.i++
@@ -433,6 +442,7 @@ func (f *yFlow) value(isKey bool) *yNode {
 			f.skip()
 			if f.i < len(f.r) && f.r[f.i] == ']' {
 				f.i++
+				n.split = thousandsSplit(n.items)
 				return n
 			}
 			v := f.value(false)
@@ -447,6 +457,7 @@ func (f *yFlow) value(isKey bool) *yNode {
 			}
 			if f.i < len(f.r) && f.r[f.i] == ']' {
 				f.i++
+				n.split = thousandsSplit(n.items)
 				return n
 			}
 			f.p.fail(f.line, f.at(), "[…] が閉じていません", "1行の中で ] まで書いてください(複数行にまたがる […] は使えません)")

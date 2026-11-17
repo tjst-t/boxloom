@@ -117,11 +117,12 @@ func checkCapacityFit(file string, b []byte, templateOverride string, values *Te
 	if !isMarkdownPath(file) {
 		return checkIRCapacity(file, b, templateOverride, values, assets, fit)
 	}
-	ir, mdErrs, lines := ParseMarkdownWithMap(b, file)
+	ir, mdErrs, lines, splits := parseMarkdownSplits(b, file)
 	if len(mdErrs) > 0 {
 		return mdErrs, nil, nil
 	}
 	errs, warns, caps = checkIRCapacity(file, ir, templateOverride, values, assets, fit)
+	addThousandsHints(errs, splits)
 	for _, list := range [][]Issue{errs, warns} {
 		for i := range list {
 			list[i].Line = lines.Line(list[i].Path)
@@ -134,11 +135,12 @@ func checkCapacityFit(file string, b []byte, templateOverride string, values *Te
 // checkYAMLCapacity は YAML の deck の check。記法の誤りはそのまま返し、
 // 無ければ IR として検査して、誤りと警告に YAML の行と列を、容量に行を添える。
 func checkYAMLCapacity(file string, b []byte, templateOverride string, values *Template, assets fs.FS, fit bool) (errs, warns []Issue, caps []SlideCapacity) {
-	ir, yErrs, pos := parseYAMLDeck(file, b)
+	ir, yErrs, pos, splits := parseYAMLDeckSplits(file, b)
 	if len(yErrs) > 0 {
 		return yErrs, nil, nil
 	}
 	errs, warns, caps = checkIRCapacity(file, ir, templateOverride, values, assets, fit)
+	addThousandsHints(errs, splits)
 	for _, list := range [][]Issue{errs, warns} {
 		for i := range list {
 			list[i].Line, list[i].Column = pos.Pos(list[i].Path)

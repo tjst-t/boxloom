@@ -222,6 +222,8 @@ type mdParser struct {
 	// lastTable は直前に読んだ表(続きの表 {continues} が見出しの列・groups・points を
 	// 引き継ぐ。md_blocks.go)。
 	lastTable *mdTableShape
+	// splits はサブシステムの data の場所 → 桁区切りの「,」で分かれた値(thousands.go)。
+	splits map[string]string
 }
 
 // mark は IR の場所が Markdown の何行目から来たかを覚える(boxloom check が
@@ -1026,9 +1028,16 @@ func MarkdownToIR(file string, src []byte) ([]byte, []Issue) {
 // ParseMarkdownWithMap は MarkdownToIR と同じで、IR の場所 → Markdown の行の
 // 対応も返す。
 func ParseMarkdownWithMap(src []byte, file string) ([]byte, []Issue, SourceMap) {
+	out, errs, lines, _ := parseMarkdownSplits(src, file)
+	return out, errs, lines
+}
+
+// parseMarkdownSplits は ParseMarkdownWithMap に、桁区切りの「,」で分かれた値の
+// ある範囲(data の場所 → 値)を足したもの(check が IR の誤りに hint を添える)。
+func parseMarkdownSplits(src []byte, file string) ([]byte, []Issue, SourceMap, map[string]string) {
 	p := &mdParser{file: file}
 	out, errs := p.parseMarkdown(src)
-	return out, errs, SourceMap(p.lines)
+	return out, errs, SourceMap(p.lines), p.splits
 }
 
 func (p *mdParser) parseMarkdown(src []byte) ([]byte, []Issue) {
@@ -1052,6 +1061,7 @@ func (p *mdParser) parseMarkdown(src []byte) ([]byte, []Issue) {
 			}
 		}
 	}
+	addThousandsHints(p.errs, p.splits)
 	sortErrors(p.errs)
 	return out, p.errs
 }
@@ -1821,6 +1831,12 @@ func (p *mdParser) codeBlock(it *mdItem, path string) any {
 	}
 	p.mark(path+"/data", it.line)
 	node, yerrs := parseYAML(it.code, it.codeLine)
+	if j := yamlSplitIn(node); j != "" {
+		if p.splits == nil {
+			p.splits = map[string]string{}
+		}
+		p.splits[path+"/data"] = j
+	}
 	for _, e := range yerrs {
 		p.fail(e.line, e.col, path+"/data", codeYAML, e.msg, nil, e.hint)
 	}
