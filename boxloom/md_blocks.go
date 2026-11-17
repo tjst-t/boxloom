@@ -633,16 +633,18 @@ func (p *mdParser) columnsBlock(f *mdFenceBlk, path string) any {
 		}
 		var allowed []*mdItem
 		for _, sub := range c.items {
-			ok := sub.kind == mdPara || sub.kind == mdList || sub.kind == mdTable || (sub.kind == mdFence && (sub.fence.name == "note" || sub.fence.name == pairsType || sub.fence.name == peopleType || sub.fence.name == topicsType)) ||
+			ok := sub.kind == mdPara || sub.kind == mdList || sub.kind == mdTable || (sub.kind == mdFence && sub.fence.name != "subsystem" && contains(columnBlockTypes, sub.fence.name)) ||
 				(sub.kind == mdCode && contains(columnSubsystems, codeLang(sub.info)))
 			if !ok {
-				what := "コードブロック"
+				what, fence, lang := "コードブロック", "", ""
 				if sub.kind == mdFence {
-					what = ":::" + sub.fence.name
+					fence = sub.fence.name
+					what = ":::" + fence
 				} else if l := codeLang(sub.info); l != "" {
+					lang = l
 					what = "```" + l
 				}
-				p.fail(sub.line, 1, cp, codeMisplaced, fmt.Sprintf(":::column の中に %s は書けません", what), columnContains, "")
+				p.fail(sub.line, 1, cp, codeMisplaced, fmt.Sprintf(":::column の中に %s は書けません", what), columnContains, columnPlaceHint(fence, lang))
 				continue
 			}
 			allowed = append(allowed, sub)

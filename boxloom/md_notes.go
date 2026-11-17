@@ -70,7 +70,7 @@ func (p *mdParser) notesText(fs []*mdFenceBlk, path string) (string, bool) {
 		}
 	}
 	if len(lines) == 0 {
-		p.fail(f.line, 1, path, codeMisplaced, ":::notes の中が空です", nil, "")
+		p.fail(f.line, 1, path, codeMisplaced, ":::notes の中が空です", nil, oneLineFenceHint(f))
 		return "", false
 	}
 	return strings.Join(lines, "\n"), true

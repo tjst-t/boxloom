@@ -13,6 +13,7 @@ package boxloom
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"sort"
 )
 
@@ -52,10 +53,36 @@ type BlockDecl struct {
 	IR string `json:"ir"`
 }
 
-// columnContains は :::column の中に書けるもの(ir.go の columnBlockTypes・
-// columnSubsystems と同じ範囲を Markdown の言い方で)。
-var columnContains = []string{"段落", "箇条", "表", "画像", "画像の並び", "note", "pairs", "people(1〜2人)", "topics",
-	"```chart", "```cycle", "```phases", "```matrix", "```orgchart", "```pillars"}
+// columnContains は :::column の中に書けるもの。ir.go の columnBlockTypes・
+// columnSubsystems から Markdown の言い方で作る(手で書いた一覧と食い違わないように。#188)。
+var columnContains = makeColumnContains()
+
+// columnBlockWords は columnBlockTypes の型の Markdown での言い方。
+var columnBlockWords = map[string]string{
+	"paragraph": "段落", "points": "箇条", "table": "表", "image": "画像", "gallery": "画像の並び",
+	"note": "note", "pairs": "pairs", peopleType: "people(1〜2人)", topicsType: "topics",
+}
+
+// makeColumnContains は columnBlockTypes の順に言い方を並べ、サブシステムは最後に
+// columnSubsystems の順でコードブロックの言語名として足す。言い方の無い型は誤り
+// (columnBlockTypes に足したら columnBlockWords にも足す)。
+func makeColumnContains() []string {
+	var out []string
+	for _, t := range columnBlockTypes {
+		if t == "subsystem" {
+			continue
+		}
+		w, ok := columnBlockWords[t]
+		if !ok {
+			panic(fmt.Sprintf("columnBlockWords: no Markdown word for the column block type %q", t))
+		}
+		out = append(out, w)
+	}
+	for _, s := range columnSubsystems {
+		out = append(out, "```"+s)
+	}
+	return out
+}
 
 // defaultBlocks は第一版の囲み(docs/content-syntax.md の3.4)。名前の順。
 func defaultBlocks() []BlockDecl {

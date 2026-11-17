@@ -414,9 +414,12 @@ func (p *mdParser) parseBlocks(src string) *mdDoc {
 	closeAllFences := func(atLine int, why string) {
 		for k := len(stack) - 1; k >= 0; k-- {
 			f := stack[k]
+			hint := fmt.Sprintf("中身の終わりに %s の行を置いてください", strings.Repeat(":", f.colons))
+			if h := oneLineFenceHint(f); h != "" {
+				hint = h
+			}
 			p.fail(f.line, 1, "", codeUnclosedBlock,
-				fmt.Sprintf("囲み :::%s(%d 行目)が閉じていません%s", f.name, f.line, why), nil,
-				fmt.Sprintf("中身の終わりに %s の行を置いてください", strings.Repeat(":", f.colons)))
+				fmt.Sprintf("囲み :::%s(%d 行目)が閉じていません%s", f.name, f.line, why), nil, hint)
 		}
 		for len(stack) > 0 {
 			f := stack[len(stack)-1]
@@ -1610,7 +1613,7 @@ func (p *mdParser) onePara(f *mdFenceBlk, path string) *mdItem {
 		p.fail(it.line, 1, path, codeMisplaced, fmt.Sprintf(":::%s の中には段落を1つだけ書けます", f.name), nil, "改行したいなら行末に \\ を付けてください")
 	}
 	if para == nil {
-		p.fail(f.line, 1, path, codeMisplaced, fmt.Sprintf(":::%s の中が空です", f.name), nil, "")
+		p.fail(f.line, 1, path, codeMisplaced, fmt.Sprintf(":::%s の中が空です", f.name), nil, oneLineFenceHint(f))
 	}
 	return para
 }
@@ -1703,7 +1706,7 @@ func (p *mdParser) fenceAttrs(f *mdFenceBlk, path string, allowed []string) map[
 
 func (p *mdParser) noLabel(f *mdFenceBlk, path string) {
 	if len(f.label.r) > 0 {
-		p.fail(f.line, f.label.pos[0].col, path, codeMisplaced, fmt.Sprintf("囲み :::%s には見出しの文を付けられません", f.name), nil, "")
+		p.fail(f.line, f.label.pos[0].col, path, codeMisplaced, fmt.Sprintf("囲み :::%s には見出しの文を付けられません", f.name), nil, oneLineFenceHint(f))
 	}
 }
 
