@@ -4227,6 +4227,29 @@
       "updatedAt": "2026-11-16T13:40:36.134Z",
       "closedAt": "2026-11-16T13:40:36.134Z",
       "extra": {}
+    },
+    {
+      "id": "f8-hint",
+      "number": 187,
+      "kind": "bug",
+      "title": "F8: 桁区切りの「,」を含む値を引用符なしで書いた誤りに、直し方の hint を出す",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "docs/eval.md 8.7 の F8。\n\n桁区切りの「,」を含む値(`1,400万円`・`7,980円` など)を、サブシステムの YAML の流れの形(`[…]`)や値に引用符なしで書くと、値が分かれて誤りになる。#16・#182・#186 の3回の評価で毎回出た。#186 では、グラフの項目の数が合わない誤りとして出た例もある。\n\n直し方:\n- YAML を読んだ結果に、桁区切りで分かれたと見られる形がある場合は、誤りの hint で「引用符で囲む」ことを示す。対象は、要素の数が合わない誤りや、数字だけの断片が並ぶ形など。\n- SKILL.md の書き方にも、「,」を含む値は引用符で囲むことを1行足す。\n- 例と試験は架空の値で書く。",
+      "doneWhen": "`[1,400万円, 7,980円]` のように引用符のない値を含む Markdown を parse・check すると、誤りの hint に引用符で囲む案が出る。その試験が go test で通る。SKILL.md に同じ注意がある。tools/ci.sh が通る。",
+      "resolution": null,
+      "refs": [
+        "docs/eval.md"
+      ],
+      "threads": [],
+      "createdAt": "2026-11-17T01:38:57.046Z",
+      "updatedAt": "2026-11-17T01:38:57.046Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
