@@ -4250,6 +4250,29 @@
       "updatedAt": "2026-11-17T01:38:57.046Z",
       "closedAt": null,
       "extra": {}
+    },
+    {
+      "id": "f9-hint",
+      "number": 188,
+      "kind": "bug",
+      "title": "F9: 囲みの置き場所・書き方の誤りに、置ける場所と正しい形の hint を出す",
+      "status": "ready",
+      "parent": null,
+      "dependsOn": [],
+      "milestone": null,
+      "priority": "normal",
+      "labels": [],
+      "body": "docs/eval.md 8.7 の F9。\n\n#186 の Haiku の作り手が2つの誤りを出した。\n- `:::source 文` のように、囲みを1行で書いた。\n- columns のまとまりの中に stat を置いた。\n\nSKILL.md の表だけでは、置ける場所が分からなかった。作り手は `boxloom schema` を使っていない(run.sh の外だと考えた)。\n\n直し方:\n- 囲みの開きの行に文が続いている誤りの hint に、正しい形(開き・本文・閉じ)を示す。:::source・:::lead・:::notes などの、文を持つ囲みが対象。\n- 置けない場所に置いた誤りの hint に、その型を置ける場所を書く。columns の中に置けない型なら「columns のまとまりに置けるのは …」のように示す。一覧は、コードの中の置ける型の定義から作る。手で書いた一覧と食い違わないようにする。\n- SKILL.md の囲みの表に、置ける場所を足す。\n- 例と試験は架空の文で書く。",
+      "doneWhen": "`:::source 文` の1行書きと columns の中の stat を check すると、それぞれの hint に正しい形・置ける場所が出る。その試験が go test で通る。SKILL.md に置ける場所がある。tools/ci.sh が通る。",
+      "resolution": null,
+      "refs": [
+        "docs/eval.md"
+      ],
+      "threads": [],
+      "createdAt": "2026-11-17T01:39:02.124Z",
+      "updatedAt": "2026-11-17T01:39:02.124Z",
+      "closedAt": null,
+      "extra": {}
     }
   ]
 }
