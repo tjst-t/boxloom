@@ -4256,7 +4256,7 @@
       "number": 188,
       "kind": "bug",
       "title": "F9: 囲みの置き場所・書き方の誤りに、置ける場所と正しい形の hint を出す",
-      "status": "ready",
+      "status": "in-progress",
       "parent": null,
       "dependsOn": [],
       "milestone": null,
@@ -4270,7 +4270,7 @@
       ],
       "threads": [],
       "createdAt": "2026-11-17T01:39:02.124Z",
-      "updatedAt": "2026-11-17T01:39:02.124Z",
+      "updatedAt": "2026-11-17T01:39:11.494Z",
       "closedAt": null,
       "extra": {}
     }
