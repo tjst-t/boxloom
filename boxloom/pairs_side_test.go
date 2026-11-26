@@ -301,7 +301,7 @@ func TestPairsSideBodyFallback(t *testing.T) {
 
 // report の pairs:対ごとに A・B・C の四角い印(基調色・白い字)を subject の頭に、側の
 // 間に丸い山形の印を置き、対の間に罫線(grid)を引く。側の見出しは帯を置かず基調色の字だけ。
-// dark・light にはどれも無い。
+// dark・light は側の間の山形と対の間の罫線を持ち、A・B・C の印は持たない(名前の無い対。#179)。
 func TestReportPairsMarks(t *testing.T) {
 	md, err := os.ReadFile(sideBodyMD)
 	if err != nil {
@@ -330,8 +330,11 @@ func TestReportPairsMarks(t *testing.T) {
 			gridRects := strings.Count(xml, `<a:prstGeom prst="rect"></a:prstGeom>
 <a:solidFill><a:srgbClr val="`+grid+`"/>`)
 			if tmpl != "report" {
-				if chevrons != 0 || ellipses != 0 {
-					t.Errorf("%s@%s: marks drawn (%d chevrons)", c.name, tmpl, chevrons)
+				if chevrons != c.n || ellipses != c.n || gridRects != c.n-1 {
+					t.Errorf("%s@%s: %d chevrons, %d circles, %d rules, want %d, %d, %d", c.name, tmpl, chevrons, ellipses, gridRects, c.n, c.n, c.n-1)
+				}
+				if strings.Contains(xml, `>A</a:t>`) {
+					t.Errorf("%s@%s: letter marks drawn for pairs without labels", c.name, tmpl)
 				}
 				continue
 			}

@@ -60,8 +60,8 @@ func TestMatrixDetailAndColumnGroupsRead(t *testing.T) {
 	}
 }
 
-// report は cellStyle mark:セルを塗らず、support は丸(support の色)に白い
-// チェック(2本の線)、none は何も描かない、その他は状態の色の丸。文は丸の下に
+// report は cellStyle mark:セルを塗らず、状態ごとに形の違う印(support は丸に白い
+// チェック(2本の線)、conditional は三角、danger は ×、none は —。#179)。文は印の下に
 // 小さい字。列の群の名前は span 列の幅で、下に罫線。light は filled のまま。
 func TestMatrixMarkStyle(t *testing.T) {
 	if v := figureFromIR(t, "light", "matrix", matrixStyleData).(*MatrixSubsystem).vals(); v.CellStyle != "filled" {
@@ -100,8 +100,8 @@ func TestMatrixMarkStyle(t *testing.T) {
 					if s.lineColor == th.c("bg") {
 						f.checks++
 					}
-				case s.prst == "ellipse":
-					f.dots = append(f.dots, s.fill)
+				case s.fill != "" && matrixMarkPrst(s.prst):
+					f.dots = append(f.dots, s.prst+":"+s.fill)
 				case s.fill != "":
 					f.filledCells++
 				case s.text != "":
@@ -118,8 +118,8 @@ func TestMatrixMarkStyle(t *testing.T) {
 		checks int
 		text   string
 	}{
-		{{"support", 2, "p.35"}, {"", 0, ""}, {"conditional", 0, ""}},
-		{{"", 0, "p.9"}, {"danger", 0, "p.12"}, {"support", 2, ""}},
+		{{"support", 2, "p.35"}, {"none", 0, ""}, {"conditional", 0, ""}},
+		{{"none", 0, "p.9"}, {"danger", 0, "p.12"}, {"support", 2, ""}},
 	}
 	for r := range want {
 		for c, w := range want[r] {
@@ -127,7 +127,7 @@ func TestMatrixMarkStyle(t *testing.T) {
 			if f.filledCells != 0 {
 				t.Errorf("cell %d,%d has %d filled shapes", r, c, f.filledCells)
 			}
-			if w.dot == "" && len(f.dots) != 0 || w.dot != "" && (len(f.dots) != 1 || f.dots[0] != th.c(w.dot)) {
+			if len(f.dots) != 1 || f.dots[0] != matrixMarkShapes[w.dot]+":"+th.c(w.dot) {
 				t.Errorf("cell %d,%d dots = %v, want %q", r, c, f.dots, w.dot)
 			}
 			if f.checks != w.checks {
@@ -152,13 +152,111 @@ func TestMatrixMarkStyle(t *testing.T) {
 			t.Errorf("no shape has %q", s)
 		}
 	}
-	// 凡例に none は出ない(セルに何も描かないので)。
-	for _, li := range sub.legend() {
-		if li.Role == "none" {
-			t.Error("mark legend lists none")
+	// 凡例は使った4つの状態とも(none も — の印を描く)。
+	if n := len(sub.legend()); n != 4 {
+		t.Errorf("legend = %+v, want 4 statuses", sub.legend())
+	}
+	if w := sub.Lint(subsystemDrawBox(leaf)); len(w) != 0 {
+		t.Errorf("lint = %v", w)
+	}
+}
+
+// matrixMarkPrst は状態の印の形か。
+func matrixMarkPrst(prst string) bool {
+	for _, p := range matrixMarkShapes {
+		if p == prst {
+			return true
+		}
+	}
+	return false
+}
+
+// 状態の印は4つとも形が違う(色を抜いても読める、#179)。
+func TestMatrixMarkShapesDistinct(t *testing.T) {
+	seen := map[string]string{}
+	for _, st := range figureStatuses {
+		p := matrixMarkShapes[st]
+		if p == "" {
+			t.Errorf("no mark shape for %s", st)
+		}
+		if o, ok := seen[p]; ok {
+			t.Errorf("%s and %s share the mark shape %s", o, st, p)
+		}
+		seen[p] = st
+	}
+}
+
+// cellStyle label:セルの頭に札(状態の色の枠・印・凡例の文)、その下に文。札の文は作者の
+// legend(無ければ既定の文)で、テンプレートの marks からは取らない。札の幅は Measure の
+// Min の幅に入り、狭い枠では Lint が札のはみ出しを知らせる。
+func TestMatrixLabelStyle(t *testing.T) {
+	data := strings.Replace(matrixStyleData, `"rows": [`, `"legend": {"support": "推す", "danger": "避ける"}, "rows": [`, 1)
+	sub := figureFromIR(t, "light", "matrix", data).(*MatrixSubsystem)
+	v := *sub.vals()
+	v.CellStyle = "label"
+	if err := v.check("matrix"); err != nil {
+		t.Fatal(err)
+	}
+	sub.V = &v
+	leaf := SubsystemNode(sub, WithGrow(1))
+	p := figureSlide(t, "light", leaf, "matrix-label-light")
+	th := mustTemplate("light").Theme
+	pl := sub.place(subsystemDrawBox(leaf))
+	in := func(b LBox, s *shape) bool {
+		cx, cy := s.box.X+s.box.Width/2, s.box.Y+s.box.Height/2
+		return cx >= b.X && cx <= b.X+b.Width && cy >= b.Y && cy <= b.Y+b.Height
+	}
+	want := [2][3]struct{ status, label, text string }{
+		{{"support", "推す", "p.35"}, {"none", "非対応", ""}, {"conditional", "条件つき", ""}},
+		{{"none", "非対応", "p.9"}, {"danger", "避ける", "p.12"}, {"support", "推す", ""}},
+	}
+	for r := range want {
+		for c, w := range want[r] {
+			b := pl.cells[r][c]
+			var tags, marks int
+			var texts []string
+			for i := range p.Shapes {
+				s := &p.Shapes[i]
+				if s.kind == skLine || !in(b, s) {
+					continue
+				}
+				switch {
+				case s.hasOutline && s.outlineColor == th.c(w.status):
+					tags++
+				case s.fill == th.c(w.status) && s.prst == matrixMarkShapes[w.status]:
+					marks++
+				case s.text != "" && s.fill == "":
+					texts = append(texts, s.text)
+				}
+			}
+			if tags != 1 || marks != 1 {
+				t.Errorf("cell %d,%d: tags %d marks %d, want 1 and 1", r, c, tags, marks)
+			}
+			wantTexts := []string{w.label}
+			if w.text != "" {
+				wantTexts = append(wantTexts, w.text)
+			}
+			if strings.Join(texts, "|") != strings.Join(wantTexts, "|") {
+				t.Errorf("cell %d,%d texts = %q, want %q", r, c, texts, wantTexts)
+			}
 		}
 	}
 	if w := sub.Lint(subsystemDrawBox(leaf)); len(w) != 0 {
 		t.Errorf("lint = %v", w)
+	}
+	// 札の幅は折り返さないので Min の幅に入る。
+	tw, _ := sub.tagSize("conditional")
+	if m := sub.widths(); m.colMin < tw+2*v.TextInsetX-0.01 {
+		t.Errorf("colMin %.2f < tag %.2f + insets", m.colMin, tw)
+	}
+	// 狭い枠では札がはみ出したことを Lint が知らせる。
+	if w := sub.Lint(LBox{Width: 200, Height: 400}); len(w) == 0 {
+		t.Error("no lint for a cramped label matrix")
+	}
+	// 札は既定ではない:同梱のテンプレートはどれも label を選ばない。
+	for _, name := range []string{"dark", "light", "report"} {
+		if cs := figureFromIR(t, name, "matrix", matrixStyleData).(*MatrixSubsystem).vals().CellStyle; cs == "label" {
+			t.Errorf("%s uses cellStyle label by default", name)
+		}
 	}
 }

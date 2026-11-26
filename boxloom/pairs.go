@@ -426,6 +426,9 @@ type pairsStyle struct {
 	// mark は対の k 番目(0 から)の印の箱。subject の頭(左)に置く(nil なら置かない)。
 	// label は印に書く対の名前(名前の無い pairs と、名前を見出しの列に書くときは "")。
 	mark func(t *Template, k int, label string) *Spec
+	// markLabeledOnly なら、印は対の名前を印の中に書けるときだけ置く(名前の無い pairs に
+	// A・B・C の印を足さない。dark・light、#179)。
+	markLabeledOnly bool
 	// markLabelMax は対の名前を印(mark)の中に書く字の数の上限。全ての対の名前が
 	// これ以下なら印の中に、1つでも長ければ見出しの列(labelColumn)に書く(0 なら
 	// 印の中には書かない)。
@@ -455,6 +458,48 @@ type pairsStyle struct {
 // 真上に来る。見出しと複数のブロックの側は、見出しと body を素直に縦に積む。
 func pairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
 	return pairsStyled(ctx, b, pairsStyle{})
+}
+
+// bundledPairsStyle は同梱の dark・light の pairs の見た目(#179):2つの側の間に山形の
+// 丸い印、対の間に罫線(grid)。印(mark)は対に2字までの名前があるときだけで、印の中に
+// 名前を書く(長い名前は subject の頭に太字)。対の行と罫線の間は値の表の pairsRowGap。
+var bundledPairsStyle = pairsStyle{
+	mark:            pairLetterMark,
+	markLabeledOnly: true,
+	markLabelMax:    pairLabelMarkMax,
+	between:         pairChevronMark,
+	rule:            pairRule,
+	spacer:          pairSpacer,
+}
+
+// bundledPairsComponent は bundledPairsStyle で組む pairs の組み方。
+func bundledPairsComponent(ctx componentContext, b *IRBlock) (*Spec, error) {
+	return pairsStyled(ctx, b, bundledPairsStyle)
+}
+
+// pairLetterMark は対の印の箱:四角い基調色の地に地の色の字(label が無ければ A・B・C)。
+// 一辺は値の表の pairMarkSize。
+func pairLetterMark(t *Template, k int, label string) *Spec {
+	if label == "" {
+		label = pairLetter(k)
+	}
+	return SubsystemNode(&pairMark{kind: pairMarkLetter, letter: label, fontSize: t.Values.Body, smallSize: t.Values.Small},
+		tokWidth("pairMarkSize"), tokHeight("pairMarkSize"))
+}
+
+// pairChevronMark は2つの側の間の印の箱:丸い基調色の地に山形。
+func pairChevronMark(t *Template) *Spec {
+	return SubsystemNode(&pairMark{kind: pairMarkChevron}, tokWidth("pairMarkSize"), tokHeight("pairMarkSize"))
+}
+
+// pairRule は対の間の罫線の箱(太さ tableRuleWidth・grid)。
+func pairRule(t *Template) *Spec {
+	return Col(nil, tokHeight("tableRuleWidth"), tokBackground("grid"))
+}
+
+// pairSpacer は見出しの行で印の幅だけ空ける箱。
+func pairSpacer(t *Template, mark *Spec) *Spec {
+	return Col(nil, tokWidth(mark.tok.width))
 }
 
 // pairsStyled は pairsComponent の見た目を st で差し替えたもの。
@@ -501,7 +546,7 @@ func pairsStyled(ctx componentContext, b *IRBlock, st pairsStyle) (*Spec, error)
 			m = st.labelColumn(t, labels[k])
 		case inMark:
 			m = st.mark(t, k, labels[k])
-		case st.mark != nil:
+		case st.mark != nil && !st.markLabeledOnly:
 			m = st.mark(t, k, "")
 		}
 		if st.between != nil {
@@ -906,7 +951,7 @@ func pairsNeed(info *pairsInfo, width float64) (func(share float64) float64, flo
 // (report.go)はそのままにする。
 func registerBundledComponents(r *componentRegistry) {
 	if !r.has(pairsType) {
-		must(r.register(pairsType, componentFunc(pairsComponent)))
+		must(r.register(pairsType, componentFunc(bundledPairsComponent)))
 	}
 	registerTopicsComponent(r)
 	if !r.has(peopleType) {

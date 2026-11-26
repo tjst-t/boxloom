@@ -2,8 +2,10 @@
 //
 // セルが「評価」(状態の役割名)を持つ表。セルの文字・数だけなら第1層の
 // table(パターンの2.1)で、こちらは使わない。列の見出しは列の真ん中に、行の
-// 見出しは左に揃えて縦の真ん中に置く。セルは塗りの箱に、状態の色の丸と文を
-// 置く(値の表の cellStyle が mark なら塗らず、丸とチェックの下に文)。行の題の
+// 見出しは左に揃えて縦の真ん中に置く。セルは塗りの箱に、状態の印と文を置く
+// (値の表の cellStyle が mark なら塗らず、印の下に文。label なら印と凡例の文の札を
+// セルの頭に置き、その下に文)。状態の印は状態ごとに形が違う(support は丸にチェック、
+// conditional は三角、danger は ×、none は —。色を抜いても読める、#179)。行の題の
 // 下に説明(detail)、列の見出しの上に列の群(columnGroups)を置ける。下に、使った
 // 状態の凡例を自動で付ける(文は data の legend、無ければ既定の文)。設計は docs/subsystem.md の11節。IR の data の形は
 // schema/subsystems/matrix.schema.json。
@@ -41,14 +43,14 @@ type MatrixValues struct {
 	GroupRuleW     float64 `json:"groupRuleWidth"`        // 列の群の名前の下の罫線の太さ
 	MarkSize       float64 `json:"markSize"`              // cellStyle mark の丸の直径
 	MarkGap        float64 `json:"markGap" scale:"space"` // cellStyle mark の丸と文の間
-	// CellStyle はセルの描き方: "filled"(塗りの箱に状態の色の丸と文)か "mark"
-	// (塗らない。support は丸にチェック、none は何も描かない、その他は状態の色の丸。
-	// 文は丸の下に小さい字で)。
+	// CellStyle はセルの描き方: "filled"(塗りの箱に状態の印と文)か "mark"
+	// (塗らない。印を横の真ん中に、文は印の下に小さい字で)か "label"(塗りの箱の頭に、
+	// 状態の印と凡例の文の札。文は札の下。#179)。印の形は状態ごと(drawMatrixMark)。
 	CellStyle string `json:"cellStyle"`
 }
 
 // matrixCellStyles は cellStyle に書ける形。
-var matrixCellStyles = []string{"filled", "mark"}
+var matrixCellStyles = []string{"filled", "mark", "label"}
 
 func (v *MatrixValues) check(at string) error {
 	if !contains(matrixCellStyles, v.CellStyle) {
@@ -58,6 +60,8 @@ func (v *MatrixValues) check(at string) error {
 }
 
 func (v *MatrixValues) mark() bool { return v.CellStyle == "mark" }
+
+func (v *MatrixValues) label() bool { return v.CellStyle == "label" }
 
 // MatrixCell は1つのセル。
 type MatrixCell struct {
@@ -154,22 +158,33 @@ func (s *MatrixSubsystem) legend() []LegendItem {
 			used[c.Status] = true
 		}
 	}
-	label := map[string]string{}
-	for _, li := range s.Data.Legend {
-		label[li.Role] = li.Label
-	}
 	var out []LegendItem
 	for _, st := range figureStatuses {
-		if !used[st] || (st == "none" && s.vals().mark()) {
-			continue // mark の none は何も描かないので、凡例の印も無い
+		if used[st] {
+			out = append(out, LegendItem{Role: st, Label: s.statusLabel(st)})
 		}
-		l, ok := label[st]
-		if !ok {
-			l = matrixDefaultLegend[st]
-		}
-		out = append(out, LegendItem{Role: st, Label: l})
 	}
 	return out
+}
+
+// statusLabel は状態の凡例の文:作者の data の legend、無ければ既定の文。cellStyle label の
+// 札もこの文(テンプレートの marks からは取らない)。
+func (s *MatrixSubsystem) statusLabel(status string) string {
+	for _, li := range s.Data.Legend {
+		if li.Role == status {
+			return li.Label
+		}
+	}
+	return matrixDefaultLegend[status]
+}
+
+// tagSize は cellStyle label の札の幅と高さ:左右に markGap、印(legendDotSize)、
+// dotGap/2 の空き、凡例の文(小さい字・折り返さない)。高さは小さい字の1行と上下の markGap。
+func (s *MatrixSubsystem) tagSize(status string) (w, h float64) {
+	v, tx := s.vals(), s.text()
+	w = 2*v.MarkGap + v.LegendDotSize + v.DotGap/2 + runWidthPt(s.statusLabel(status), tx.Small, false)
+	h = math.Max(v.LegendDotSize, tx.Small*lineHeightMult()) + 2*v.MarkGap
+	return w, h
 }
 
 type matrixGeom struct {
@@ -187,7 +202,7 @@ type matrixGeom struct {
 // cellTextWidth はセルの文に使える幅(丸と余白を除く。mark は丸の下なので余白だけ)。
 func (s *MatrixSubsystem) cellTextWidth(colW float64) float64 {
 	v := s.vals()
-	if v.mark() {
+	if v.mark() || v.label() {
 		return colW - 2*v.TextInsetX
 	}
 	return colW - 2*v.TextInsetX - v.DotSize - v.DotGap
@@ -201,10 +216,18 @@ func (s *MatrixSubsystem) cellTextSize() float64 {
 	return s.text().Sub
 }
 
-// cellNeed はセルの中身の高さ(余白を除く)。mark は丸と、文があれば空きと文。
+// cellNeed はセルの中身の高さ(余白を除く)。mark は印と、文があれば空きと文。label は
+// 札と、文があれば空きと文。
 func (s *MatrixSubsystem) cellNeed(c MatrixCell, colW float64) float64 {
 	v := s.vals()
 	_, h := runsBox(itemRuns(c.Text, "", nil), s.cellTextSize(), s.cellTextWidth(colW))
+	if v.label() {
+		_, th := s.tagSize(c.Status)
+		if len(c.Text) == 0 {
+			return th
+		}
+		return th + v.MarkGap + h
+	}
 	if !v.mark() {
 		return h
 	}
@@ -277,26 +300,6 @@ func (s *MatrixSubsystem) groupWidth(colW float64, span int) float64 {
 	return float64(span)*colW + float64(span-1)*s.vals().CellGap
 }
 
-// matrixDot は状態の丸の字。
-const matrixDot = "●"
-
-// matrixDotInk は ● の字の大きさに対する丸の直径の割合(和文の字体のおおよそ)。
-const matrixDotInk = 0.9
-
-// dotMark はセルの文の頭の印(● と、丸と文の間の空き)。● の字の大きさは、
-// 丸の直径が DotSize になる大きさ。印の幅は丸と空きの和
-// (DotSize+DotGap)になるように、空きの字の大きさで合わせる。PPTX では段落の
-// 箇条の印になり、文は印の幅だけ字下げした位置から始まる。
-func (s *MatrixSubsystem) dotMark(color string) []TextRun {
-	v := s.vals()
-	sz := v.DotSize / matrixDotInk
-	mark := []TextRun{{Text: matrixDot, Color: color, Size: sz, Mark: true}}
-	if gap := v.DotSize + v.DotGap - charEmWidth([]rune(matrixDot)[0], false)*sz; gap > 0 {
-		mark = append(mark, TextRun{Text: " ", Color: color, Size: gap / charEmWidth(' ', false), Mark: true})
-	}
-	return mark
-}
-
 func (s *MatrixSubsystem) legendItemW(li LegendItem) float64 {
 	v, tx := s.vals(), s.text()
 	return v.LegendDotSize + v.DotGap/2 + runWidthPt(li.Label, tx.Small, false)
@@ -349,8 +352,16 @@ func (s *MatrixSubsystem) widths() matrixWidths {
 		lead = 0
 		m.colNat, m.colFloor, m.colMin = math.Max(m.colNat, v.MarkSize), math.Max(m.colFloor, v.MarkSize), math.Max(m.colMin, v.MarkSize)
 	}
+	if v.label() {
+		lead = 0
+	}
 	for _, r := range s.Data.Rows {
 		for _, c := range r.Cells {
+			if v.label() {
+				// 札は折り返さないので、どの幅もその幅を下回らない。
+				tw, _ := s.tagSize(c.Status)
+				m.colNat, m.colFloor, m.colMin = math.Max(m.colNat, tw), math.Max(m.colFloor, tw), math.Max(m.colMin, tw)
+			}
 			if len(c.Text) == 0 {
 				continue
 			}
@@ -568,21 +579,11 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 			continue
 		}
 		for j, c := range r.Cells {
-			// 状態の丸は文の段落の印(a:buChar ●、a:buClr に状態の色)。文が無いセルは
-			// ● だけを真ん中に置く。丸はセルの図形の中にあるので、セルと一緒に動く。
-			o := ShapeOpts{Prst: "roundRect", Fill: ctx.Roles.Color("card_alt"), Radius: v.CellCornerRadi, FontSize: tx.Sub,
-				InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: "left"}
-			b := pl.cells[i][j]
-			color := ctx.Roles.Color(c.Status)
-			if len(c.Text) > 0 {
-				o.Runs = append(s.dotMark(color), itemRuns(c.Text, "text_primary", ctx.Roles)...)
+			if v.label() {
+				s.renderLabelCell(ctx, pl.cells[i][j], c)
 			} else {
-				// 印は文のある段落にしか出ないので、幅の無い文字(U+200B)を置き、
-				// 丸が真ん中に来るように左の余白を取る。
-				o.Runs = append(s.dotMark(color)[:1], TextRun{Text: "\u200b", Color: color})
-				o.InsetX = math.Max(0, (b.Width-v.DotSize)/2)
+				s.renderFilledCell(ctx, pl.cells[i][j], c)
 			}
-			p.AddShape(b, o)
 		}
 	}
 	// 推す列: 見出しから最後の行までを、アクセントの色の枠で囲む(塗らない)。
@@ -600,11 +601,7 @@ func (s *MatrixSubsystem) Render(ctx RenderContext, box LBox) {
 		y := pl.legendY + float64(k)*lineH
 		for _, i := range row {
 			li := legend[i]
-			if v.mark() {
-				drawMatrixMark(ctx, x, y+(lineH-v.LegendDotSize)/2, v.LegendDotSize, li.Role)
-			} else {
-				p.AddDot(x+v.LegendDotSize/2, y+lineH/2, v.LegendDotSize/2, ctx.Roles.Color(li.Role))
-			}
+			drawMatrixMark(ctx, x, y+(lineH-v.LegendDotSize)/2, v.LegendDotSize, li.Role)
 			lx := x + v.LegendDotSize + v.DotGap/2
 			w := runWidthPt(li.Label, tx.Small, false)
 			p.AddTextBoxNoWrap(LBox{X: lx, Y: y, Width: w + noWrapSlack, Height: lineH}, li.Label, tx.Small, ctx.Roles.Color("text_muted"), false, "left", "top")
@@ -618,10 +615,20 @@ var matrixCheck = [3][2]float64{{0.27, 0.52}, {0.43, 0.68}, {0.73, 0.35}}
 
 const matrixCheckWidth = 0.12
 
-// drawMatrixMark は直径 d の丸(左上 x, y)を状態の色で描く。support は丸に白い
-// チェック(bg の色の2本の線)を重ねる。
+// matrixMarkShapes は状態ごとの印の形(support は丸にチェックを重ねる)。形が違うので、
+// 色を抜いても状態が読める(#179)。
+var matrixMarkShapes = map[string]string{
+	"support": "ellipse", "conditional": "triangle", "danger": "mathMultiply", "none": "mathMinus",
+}
+
+// drawMatrixMark は一辺 d の正方形(左上 x, y)に状態の印を状態の色で描く:support は丸に
+// 地の色(bg)のチェック、conditional は三角(△)、danger は ×、none は —。
 func drawMatrixMark(ctx RenderContext, x, y, d float64, status string) {
-	ctx.Out.AddShape(LBox{X: x, Y: y, Width: d, Height: d}, ShapeOpts{Prst: "ellipse", Fill: ctx.Roles.Color(status)})
+	prst := matrixMarkShapes[status]
+	if prst == "" {
+		prst = "ellipse"
+	}
+	ctx.Out.AddShape(LBox{X: x, Y: y, Width: d, Height: d}, ShapeOpts{Prst: prst, Fill: ctx.Roles.Color(status)})
 	if status != "support" {
 		return
 	}
@@ -632,18 +639,56 @@ func drawMatrixMark(ctx RenderContext, x, y, d float64, status string) {
 	}
 }
 
-// renderMarkCell は cellStyle mark のセル:面は塗らず、丸(none は無し)を横の
-// 真ん中に、文をその下に小さい字で置く。丸と文の塊はセルの縦の真ん中。
+// renderFilledCell は cellStyle filled のセル:塗りの箱の左に状態の印(一辺 dotSize)、その右に
+// 文(印と dotGap の分だけ右から)。印は文の1行目の縦の真ん中。文の無いセルは印だけを真ん中に。
+func (s *MatrixSubsystem) renderFilledCell(ctx RenderContext, b LBox, c MatrixCell) {
+	v, tx := s.vals(), s.text()
+	p := ctx.Out
+	p.AddShape(b, ShapeOpts{Prst: "roundRect", Fill: ctx.Roles.Color("card_alt"), Radius: v.CellCornerRadi})
+	if len(c.Text) == 0 {
+		drawMatrixMark(ctx, b.X+(b.Width-v.DotSize)/2, b.Y+(b.Height-v.DotSize)/2, v.DotSize, c.Status)
+		return
+	}
+	runs := itemRuns(c.Text, "text_primary", ctx.Roles)
+	lead := v.DotSize + v.DotGap
+	_, h := runsBox(runs, tx.Sub, s.cellTextWidth(b.Width))
+	lineH := tx.Sub * lineHeightMult()
+	top := b.Y + (b.Height-h)/2
+	drawMatrixMark(ctx, b.X+v.TextInsetX, top+(math.Min(lineH, h)-v.DotSize)/2, v.DotSize, c.Status)
+	p.AddShape(LBox{X: b.X + lead, Y: b.Y, Width: b.Width - lead, Height: b.Height}, ShapeOpts{Prst: "rect", Runs: runs, FontSize: tx.Sub,
+		InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: "left"})
+}
+
+// renderLabelCell は cellStyle label のセル:塗りの箱の頭に札(状態の色の枠に、印と凡例の文)、
+// その下に文。札と文の塊はセルの縦の真ん中。
+func (s *MatrixSubsystem) renderLabelCell(ctx RenderContext, b LBox, c MatrixCell) {
+	v, tx := s.vals(), s.text()
+	p := ctx.Out
+	p.AddShape(b, ShapeOpts{Prst: "roundRect", Fill: ctx.Roles.Color("card_alt"), Radius: v.CellCornerRadi})
+	tw, th := s.tagSize(c.Status)
+	top := b.Y + (b.Height-s.cellNeed(c, b.Width))/2
+	tag := LBox{X: b.X + v.TextInsetX, Y: top, Width: tw, Height: th}
+	p.AddShape(tag, ShapeOpts{Prst: "roundRect", Outline: ctx.Roles.Color(c.Status), OutlineWidthPt: v.GroupRuleW, Radius: v.CellCornerRadi})
+	drawMatrixMark(ctx, tag.X+v.MarkGap, tag.Y+(th-v.LegendDotSize)/2, v.LegendDotSize, c.Status)
+	lx := tag.X + v.MarkGap + v.LegendDotSize + v.DotGap/2
+	lw := runWidthPt(s.statusLabel(c.Status), tx.Small, false)
+	p.AddTextBoxNoWrap(LBox{X: lx, Y: tag.Y + v.MarkGap, Width: lw + noWrapSlack, Height: th - 2*v.MarkGap},
+		s.statusLabel(c.Status), tx.Small, ctx.Roles.Color("text_primary"), false, "left", "middle")
+	if len(c.Text) == 0 {
+		return
+	}
+	y := top + th + v.MarkGap - v.TextInsetY
+	p.AddShape(LBox{X: b.X, Y: y, Width: b.Width, Height: b.Y + b.Height - y},
+		ShapeOpts{Prst: "rect", Runs: itemRuns(c.Text, "text_primary", ctx.Roles), FontSize: tx.Sub,
+			InsetX: v.TextInsetX, InsetY: v.TextInsetY, Align: "left", Anchor: "top"})
+}
+
+// renderMarkCell は cellStyle mark のセル:面は塗らず、状態の印を横の真ん中に、文を
+// その下に小さい字で置く。印と文の塊はセルの縦の真ん中。
 func (s *MatrixSubsystem) renderMarkCell(ctx RenderContext, b LBox, c MatrixCell) {
 	v := s.vals()
-	hasMark := c.Status != "none"
-	if !hasMark && len(c.Text) == 0 {
-		return // 当てはまらないセルは空ける
-	}
 	top := b.Y + (b.Height-s.cellNeed(c, b.Width))/2
-	if hasMark {
-		drawMatrixMark(ctx, b.X+(b.Width-v.MarkSize)/2, top, v.MarkSize, c.Status)
-	}
+	drawMatrixMark(ctx, b.X+(b.Width-v.MarkSize)/2, top, v.MarkSize, c.Status)
 	if len(c.Text) == 0 {
 		return
 	}
@@ -695,11 +740,24 @@ func (s *MatrixSubsystem) Lint(box LBox) []string {
 		}
 		for j, c := range r.Cells {
 			cb := pl.cells[i][j]
-			if v.mark() && len(c.Text) > 0 {
-				// 丸の下の文:セルの高さから丸と空きを引いた分に収まるか。
+			if v.label() {
+				// 札(折り返さない)がセルの幅に入るか。
+				textW, haveH := s.cellTextWidth(cb.Width), cb.Height-2*v.TextInsetY
+				if tw, th := s.tagSize(c.Status); len(c.Text) == 0 && !textFits(tw, th, textW, haveH) {
+					label := plainInline(s.statusLabel(c.Status))
+					out = append(out, overflowWarning("matrix", fmt.Sprintf("rows[%d].cells[%d]", i, j), label, tw, th, textW, haveH))
+					continue
+				}
+			}
+			if (v.mark() || v.label()) && len(c.Text) > 0 {
+				// 印・札の下の文:セルの高さから印・札と空きを引いた分に収まるか。
 				textW := s.cellTextWidth(cb.Width)
 				runs := itemRuns(c.Text, "", nil)
 				needW := runsMinWidth(runs, s.cellTextSize())
+				if v.label() {
+					tw, _ := s.tagSize(c.Status)
+					needW = math.Max(needW, tw)
+				}
 				needH := s.cellNeed(c, cb.Width)
 				if haveH := cb.Height - 2*v.TextInsetY; !textFits(needW, needH, textW, haveH) {
 					out = append(out, overflowWarning("matrix", fmt.Sprintf("rows[%d].cells[%d]", i, j), c.Text, needW, needH, textW, haveH))

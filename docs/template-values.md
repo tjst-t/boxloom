@@ -311,7 +311,7 @@ go run ./cmd/boxloom schema -template ./my-brand.json   # そのテンプレー�
               "fallbackFonts": ["BIZ UDPGothic", "…"], "widthMargin": 1.05, "fixedLineSpacing": true,
               "lineHeight": 1.35 },
   "dense":  { "body": 14, "subPoint": 12, "tableText": 12, "small": 10, "blockGap": 12, "itemGap": 4,
-              "tableCellPaddingX": 4, "tableCellPaddingY": 4, "pairsRowGap": 8, "pairMarkSize": 20, "matrixRowTitle": 12,
+              "tableCellPaddingX": 4, "tableCellPaddingY": 4, "pairsRowGap": 4, "pairMarkSize": 20, "matrixRowTitle": 12,
               "figureDetail": 12, "calloutMark": 24, "...": 0 },
   "fit":    { "shrink": [{ "body": 12, "...": 0 }, { "...": 0 }], "emergency": [{ "body": 8, "...": 0 }],
               "grow": [{ "body": 18, "...": 0 }, { "...": 0 }] },
@@ -532,8 +532,8 @@ theme の色は、スライドの図形に直接入るほか、PPTX のテーマ
 | `columnGap` | 並列のまとまりの間(32) |
 | `columnMainWeight` | 主のまとまり(`role: main`)の幅の比。ほかのまとまりは 1(2。倍率なので段階に載せない) |
 | `pairsSideMin` | 対の並び(pairs)の側の幅の下限(2つの側の幅の合計に対する割合、0.5 未満。0.2 → 各側 20〜80%)。この範囲で中身から割る(`docs/layers.md` の8.1) |
-| `pairsRowGap` | 対の並びの対の行の間(罫線を引く report では行と罫線の間。dark / light は `blockGap` と同じ 20、report は 4。#136) |
-| `pairMarkSize` | 対の印(A・B・C の四角・側の間の印)の一辺。印を描く report の対の行の高さの下限(24。dark / light は使わない) |
+| `pairsRowGap` | 対の並びの対の行と罫線の間(罫線の上と下に取る。dark / light は 8(#179 で罫線を引くまでは `blockGap` と同じ 20)、report は 4。#136) |
+| `pairMarkSize` | 対の印(A・B・C の四角・側の間の印)の一辺。対の行の高さの下限(24。dark / light も側の間の山形と、label が2字までのときの印に使う。#179) |
 | `matrixRowTitle` | matrix の行の題(行の見出しの列の名前)の字。列の見出し・列の群の名前は `body`(normal は `body` と同じ。dense で別に詰める、#136) |
 | `personPhoto` | 人物の紹介(people)の写真の一辺(64。正方形。縦横比の違う写真は端を切る) |
 | `personPhotoShape` | 写真の形(`circle` は円で切り抜く・`square` は四角。dark・report は circle、light は square) |
@@ -612,8 +612,8 @@ dark / light / report は `{n}/{m}`。`-fit` で分けた本文のスライド�
 | `itemGap` | 箇条の項目の間 | 4(8) | 2(2) |
 | `tableCellPaddingX` | 表のセルの左右の余白 | 4(8) | 2(4) |
 | `tableCellPaddingY` | 表のセルの上下の余白 | 4(4) | 0(2) |
-| `pairsRowGap` | 対の並びの対の行の間(report は行と罫線の間) | 8(20) | 2(4) |
-| `pairMarkSize` | 対の印の一辺(report の対の行の高さの下限。dark・light は使わない) | 20(24) | 20(24) |
+| `pairsRowGap` | 対の並びの対の行と罫線の間 | 4(8) | 2(4) |
+| `pairMarkSize` | 対の印の一辺(対の行の高さの下限) | 20(24) | 20(24) |
 | `matrixRowTitle` | matrix の行の題の字 | 12(16) | 11(14) |
 
 report の値は読む資料の密なページ(本文 10〜12pt、表 10〜11pt でセルの余白が小さい)
@@ -786,9 +786,11 @@ process・orgchart・funnel・phases の状態の凡例(`docs/subsystem.md` の1
 `legendSwatchHeight`(見本の箱)・`legendSwatchGap`(見本と文の間)。funnel の `rateGap` は
 帯の列と転換率の列の間。matrix の `emphasisLineWidth` は推す列の枠線の太さで、
 `naturalRowHeight` 36・`maxRowHeight` 44 は1行の文のセルが間延びしない高さ。
-matrix の `cellStyle` はセルの描き方で、`filled`(塗りの箱に状態の色の丸と文。既定・dark・light)か
-`mark`(塗らない。support は丸に白いチェック、none は何も描かない、その他は状態の色の丸。
-丸の直径 `markSize`、丸と文の間 `markGap`、文は丸の下に `small` の字)。ほかの形は誤り。
+matrix の `cellStyle` はセルの描き方で、`filled`(塗りの箱に状態の印と文。既定・dark・light)か
+`mark`(塗らない。印の一辺 `markSize`、印と文の間 `markGap`、文は印の下に `small` の字)か
+`label`(塗りの箱の頭に、印と凡例の文の札。文は札の下。同梱のテンプレートは選ばない)。
+ほかの形は誤り。状態の印はどの形でも状態ごとに形が違う(support ✓・conditional △・danger ×・
+none —。#179。色だけで意味を伝えない)。
 `groupRuleWidth` は列の群(`columnGroups`)の名前の下の罫線の太さ。report は matrix を
 書いていて、`mark`・`markSize` 14・行の高さ 48〜72・行の見出しの列は幅の 60% まで。
 `maxRowHeaderFraction`(既定 0.5)は行の見出しの列の幅の上限で、列の幅そのものは題と説明の

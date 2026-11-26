@@ -76,8 +76,9 @@ func TestPairsRowsAlign(t *testing.T) {
 				if !nearPt(s.Box.Y, r.Box.Y) || !nearPt(s.Box.Y, row.Box.Y) {
 					t.Errorf("%s@%s: pair %d tops differ: subject %.2f response %.2f row %.2f", f, tmpl, k, s.Box.Y, r.Box.Y, row.Box.Y)
 				}
-				// 中身(段落・箇条・引用)の高さの高い方が、対の行と2つの側の高さ。
-				tall := math.Max(s.Children[0].Box.Height, r.Children[0].Box.Height)
+				// 中身(段落・箇条・引用)の高さの高い方が、対の行と2つの側の高さ(側の間の山形の
+				// 印の一辺 pairMarkSize を下回らない。#179)。
+				tall := math.Max(math.Max(s.Children[0].Box.Height, r.Children[0].Box.Height), mustTemplate(tmpl).Values.PairMarkSize)
 				if !nearPt(row.Box.Height, tall) || !nearPt(s.Box.Height, tall) || !nearPt(r.Box.Height, tall) {
 					t.Errorf("%s@%s: pair %d heights: row %.2f subject %.2f response %.2f, contents %.2f / %.2f",
 						f, tmpl, k, row.Box.Height, s.Box.Height, r.Box.Height, s.Children[0].Box.Height, r.Children[0].Box.Height)
@@ -286,7 +287,9 @@ func TestPairsOverflowPerPair(t *testing.T) {
 				if (p.Overflow > 0) != (k >= 3) {
 					t.Errorf("%s@%s: pair %d overflow %.1f", f, tmpl, k, p.Overflow)
 				}
-				if p.Need != math.Max(p.Subject, p.Response) {
+				// 対の行は側の間の山形の印(pairMarkSize)より低くならない(#179)。
+				tm, _ := LookupTemplate(tmpl)
+				if p.Need != round1(math.Max(math.Max(p.Subject, p.Response), tm.Values.PairMarkSize)) {
 					t.Errorf("%s@%s: pair %d need %.1f, sides %.1f / %.1f", f, tmpl, k, p.Need, p.Subject, p.Response)
 				}
 			}

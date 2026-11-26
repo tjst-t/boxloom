@@ -496,51 +496,43 @@ func TestFunnelRates(t *testing.T) {
 	}
 }
 
-// matrix の状態の丸はセルの図形の段落の印(● の a:buChar、a:buClr に状態の色)で、
-// セルの上に別の丸を重ねない(セルを動かすと丸も付いてくる)。文の無いセルは ●
-// だけを真ん中に置く。丸の図形は凡例の分だけ。
-func TestMatrixDotIsBullet(t *testing.T) {
+// matrix の filled のセル:塗りの箱の左に状態ごとの形の印(#179。support は丸にチェック、
+// none は —)、文は印と空きの分だけ右から。文の無いセルは印だけを真ん中に置く。
+func TestMatrixFilledMarks(t *testing.T) {
 	sub := figureFromIR(t, "light", "matrix", `{"columns": ["A", "B"],
 	  "rows": [{"label": "x", "cells": [{"status": "support", "text": "ok"}, {"status": "none"}]}]}`).(*MatrixSubsystem)
 	leaf := SubsystemNode(sub, WithGrow(1))
 	p := figureSlide(t, "light", leaf, "matrix-dot-light")
 	th := mustTemplate("light").Theme
-	var cells []*shape
-	ellipses := 0
+	v := sub.vals()
+	pl := sub.place(subsystemDrawBox(leaf))
+	var cells, texts []*shape
+	marks := map[string]*shape{}
 	for i := range p.Shapes {
 		s := &p.Shapes[i]
 		switch {
-		case s.kind == skOval:
-			ellipses++
 		case s.prst == "roundRect" && s.fill == th.c("card_alt"):
 			cells = append(cells, s)
+		case s.prst == "ellipse" && s.fill == th.c("support") && s.box.Width == v.DotSize:
+			marks["support"] = s
+		case s.prst == "mathMinus" && s.fill == th.c("none") && s.box.Width == v.DotSize:
+			marks["none"] = s
+		case s.text == "ok":
+			texts = append(texts, s)
 		}
 	}
-	if ellipses != len(sub.legend()) {
-		t.Errorf("ellipses = %d, want only the %d legend dots", ellipses, len(sub.legend()))
+	if len(cells) != 2 || len(texts) != 1 || marks["support"] == nil || marks["none"] == nil {
+		t.Fatalf("cells %d texts %d marks %v", len(cells), len(texts), marks)
 	}
-	if len(cells) != 2 {
-		t.Fatalf("cell shapes = %d, want 2", len(cells))
+	b0, b1 := pl.cells[0][0], pl.cells[0][1]
+	if m := marks["support"]; math.Abs(m.box.X-(b0.X+v.TextInsetX)) > 0.01 {
+		t.Errorf("support mark x %.2f, want %.2f", m.box.X, b0.X+v.TextInsetX)
 	}
-	for i, want := range []string{"support", "none"} {
-		r := cells[i].runs
-		if len(r) == 0 || !r[0].Mark || r[0].Text != matrixDot || r[0].Color != th.c(want) {
-			t.Errorf("cell %d runs = %+v, want a %s ● mark first", i, r, want)
-		}
+	if tx := texts[0]; math.Abs(tx.box.Width-2*tx.insetX-sub.cellTextWidth(b0.Width)) > 0.01 {
+		t.Errorf("text width %.2f, want cellTextWidth %.2f", tx.box.Width-2*tx.insetX, sub.cellTextWidth(b0.Width))
 	}
-	pl := sub.place(subsystemDrawBox(leaf))
-	if b := pl.cells[0][1]; math.Abs(cells[1].insetX-(b.Width-sub.vals().DotSize)/2) > 0.01 {
-		t.Errorf("empty cell inset %.2f does not centre the dot in width %.2f", cells[1].insetX, b.Width)
-	}
-	var xml strings.Builder
-	for _, c := range cells {
-		xml.WriteString(p.shapeXML(c))
-	}
-	if n := strings.Count(xml.String(), `<a:buChar char="●"/>`); n != 2 {
-		t.Errorf("a:buChar ● = %d, want 2", n)
-	}
-	if !strings.Contains(xml.String(), `<a:buClr><a:srgbClr val="`+hexColor(th.c("support"))+`"/></a:buClr>`) {
-		t.Error("the mark lacks the status colour")
+	if m := marks["none"]; math.Abs(m.box.X+m.box.Width/2-(b1.X+b1.Width/2)) > 0.01 || math.Abs(m.box.Y+m.box.Height/2-(b1.Y+b1.Height/2)) > 0.01 {
+		t.Errorf("empty cell mark %+v is not centred in %+v", m.box, b1)
 	}
 }
 

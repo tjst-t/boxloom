@@ -79,7 +79,7 @@ func TestFitValuesChecked(t *testing.T) {
 		{"shrink padding above values", func(m map[string]any) { step(m, "shrink", 0)["cardPadding"] = 24 }, "fit.shrink[0].cardPadding: 24 is larger than values.cardPadding (20)"},
 		{"grow below values", func(m map[string]any) { step(m, "grow", 0)["body"] = 14 }, "fit.grow[0].body: 14 is smaller than values.body (16)"},
 		{"grow below previous", func(m map[string]any) { step(m, "grow", 1)["itemGap"] = 8 }, "fit.grow[1].itemGap: 8 is smaller than fit.grow[0].itemGap (12)"},
-		{"shrink row gap above dense", func(m map[string]any) { step(m, "shrink", 0)["pairsRowGap"] = 12 }, "fit.shrink[0].pairsRowGap: 12 is larger than dense.pairsRowGap (8)"},
+		{"shrink row gap above dense", func(m map[string]any) { step(m, "shrink", 0)["pairsRowGap"] = 12 }, "fit.shrink[0].pairsRowGap: 12 is larger than dense.pairsRowGap (4)"},
 		{"grow cell padding below values", func(m map[string]any) { step(m, "grow", 0)["tableCellPaddingY"] = 0 }, "fit.grow[0].tableCellPaddingY: 0 is smaller than values.tableCellPaddingY (4)"},
 		{"zero", func(m map[string]any) { step(m, "shrink", 1)["itemGap"] = 0 }, "fit.shrink[1].itemGap: must be greater than 0"},
 		{"unknown step key", func(m map[string]any) { step(m, "grow", 0)["slideTitle"] = 24 }, `unknown field "slideTitle"`},

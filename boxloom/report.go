@@ -440,29 +440,16 @@ var reportPairsStyle = pairsStyle{
 	},
 	titleGap: "itemGap",     // 側の見出しと箇条の間を詰める(#146。題と中身を1つのまとまりに見せる)
 	rowGap:   "pairsRowGap", // 値の表(normal は reportPairRowGap と同じ 4pt。dense で詰める、#136)
-	mark: func(t *Template, k int, label string) *Spec {
-		if label == "" {
-			label = pairLetter(k)
-		}
-		return SubsystemNode(&pairMark{kind: pairMarkLetter, letter: label, fontSize: t.Values.Body, smallSize: t.Values.Small},
-			tokWidth("pairMarkSize"), tokHeight("pairMarkSize"))
-	},
+	mark:     pairLetterMark,
 	// 2字までの対の名前(要因の番号など)は A・B・C の代わりに印の中に、3字以上は
 	// 行の左の見出しの列(基調色の太字。#118)に書く。
 	markLabelMax: pairLabelMarkMax,
 	labelColumn: func(t *Template, label string) *Spec {
 		return Col([]*Spec{t.text(plainInline(label), "body", "accent", true)}, tokWidth(reportPairLabelWidth), noShrink())
 	},
-	between: func(t *Template) *Spec {
-		return SubsystemNode(&pairMark{kind: pairMarkChevron},
-			tokWidth("pairMarkSize"), tokHeight("pairMarkSize"))
-	},
-	rule: func(t *Template) *Spec {
-		return Col(nil, tokHeight("tableRuleWidth"), tokBackground("grid"))
-	},
-	spacer: func(t *Template, mark *Spec) *Spec {
-		return Col(nil, tokWidth(mark.tok.width))
-	},
+	between: pairChevronMark,
+	rule:    pairRule,
+	spacer:  pairSpacer,
 }
 
 // reportTopicsStyle は report の topics の見た目:左に丸い印、基調色の題、塊の間の罫線。

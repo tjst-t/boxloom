@@ -77,7 +77,7 @@
     "columnGap": 32,
     "columnMainWeight": 2,
     "pairsSideMin": 0.2,
-    "pairsRowGap": 20,
+    "pairsRowGap": 8,
     "pairMarkSize": 24,
     "matrixRowTitle": 16,
     "personPhoto": 64,
@@ -131,7 +131,7 @@
     "itemGap": 4,
     "tableCellPaddingX": 4,
     "tableCellPaddingY": 4,
-    "pairsRowGap": 8,
+    "pairsRowGap": 4,
     "pairMarkSize": 20,
     "matrixRowTitle": 12,
     "figureDetail": 12,
@@ -229,14 +229,14 @@
         "matrixRowTitle": 18,
         "tableCellPaddingX": 12,
         "tableCellPaddingY": 8,
-        "pairsRowGap": 24,
+        "pairsRowGap": 12,
         "pairMarkSize": 28
       },
       {
         "blockGap": 32,
         "itemGap": 16,
         "cardPadding": 28,
-        "pairsRowGap": 32
+        "pairsRowGap": 16
       }
     ]
   },

@@ -104,9 +104,10 @@ func TestDenseRowSpacing(t *testing.T) {
 				}
 			}
 		}
-		// normal の値は従来の組み方と同じ(normal の出力を変えない):対の行の間は
-		// dark・light が blockGap・report が 4pt、matrix の行の題は本文の字。
-		wantGap := v.BlockGap
+		// normal の値:対の行の間(行と罫線の間)は dark・light が 8pt(罫線の上と下に取るので
+		// 対の間は約 17pt。#179 で罫線を引くまでは blockGap の 20pt)・report が 4pt、matrix の
+		// 行の題は本文の字。
+		wantGap := 8.0
 		if name == "report" {
 			wantGap = 4
 		}

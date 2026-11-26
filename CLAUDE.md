@@ -226,7 +226,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
   - `process.go` / `orgchart.go` / `matrix.go` / `funnel.go`(共通は `figures.go`、
     Markdown は `md_figures.go`)= 箱と線の図のサブシステム。作者は文・状態・強調だけを
     書き、置き場所・色はサブシステムが決める。線は箱に繋がった本物のコネクタ(組織図は
-    曲がる線)。check の誤り `matrix-cells`・`matrix-emphasis`・`matrix-column-groups`、警告 `figure-text-overflow`・`funnel-increase`・`figure-legend`・`orgchart-label-wrap`(組織図の箱の名前が3行以上に折れる、#176)・`process-detail-orphan`(process の段の補足の最後の行に1〜2字だけ残る、#184。補足の枠は箱の幅より `detailSlack` 広い)。状態の凡例(legend)は4つの図すべて、funnel は段の間の転換率を描き、matrix は推す列(emphasis)を持ち、行の説明(detail)は題の下に置く(#94)。
+    曲がる線)。check の誤り `matrix-cells`・`matrix-emphasis`・`matrix-column-groups`、警告 `figure-text-overflow`・`funnel-increase`・`figure-legend`・`orgchart-label-wrap`(組織図の箱の名前が3行以上に折れる、#176)・`process-detail-orphan`(process の段の補足の最後の行に1〜2字だけ残る、#184。補足の枠は箱の幅より `detailSlack` 広い)。状態の凡例(legend)は4つの図すべて、funnel は段の間の転換率を描き、matrix の状態の印は状態ごとに形が違い(support ✓・conditional △・danger ×・none —、#179)、cellStyle は filled・mark・label(札。テンプレートが選ぶだけ)、matrix は推す列(emphasis)を持ち、行の説明(detail)は題の下に置く(#94)。
   - `cycle.go` = 輪に並んだ段(cycle、#91)。段(3〜6)を上から時計回りに本物の `blockArc` の扇で
     並べ、基調色の濃淡で塗る。番号の丸は輪の外の縁、題は扇の中(扇に収まる枠を測って探す。
     入らなければ題を輪の外に置き輪を小さくする、#110。外で輪が `minDiameter` を下回るか題の枠が `labelMinWidth` より狭ければ警告 `cycle-cramped`、#155)、detail は輪の外。縦横比を保つ(FixedAspect、余りは spare-width)。columns の中に置ける
@@ -251,7 +251,7 @@ Boxloom の核は **テンプレートと意味論(コンテンツ)の分離** �
     (`testdata/outputs-golden.json`。出力を変える変更では `-update-golden` で書き直す)
   - `pairs.go` = 対の並び(`pairs`)。型の語彙に足した最初の標準でない型(Schema は
     `schema/types/pairs.schema.json`、Markdown は `::::pairs 見出し | 見出し` の中に
-    `:::subject`・`:::response` を交互に。側は1つのブロックか、見出しと1〜4個のブロック `{title, body}`、Markdown は `:::subject 見出し`)。対ごとの短い名前 `label`(`:::subject {label=…}`、12字まで、全ての対に書くか書かないか。混ざれば check の `pairs-label`)。report は A・B・C の印(label が2字までなら印の中に label、3字以上なら行の左の見出しの列)・側の間の山形・対の間の罫線を足し、dark・light は label を subject の頭に太字で。組み方は同梱のテンプレート(dark・light)が持ち、
+    `:::subject`・`:::response` を交互に。側は1つのブロックか、見出しと1〜4個のブロック `{title, body}`、Markdown は `:::subject 見出し`)。対ごとの短い名前 `label`(`:::subject {label=…}`、12字まで、全ての対に書くか書かないか。混ざれば check の `pairs-label`)。report は A・B・C の印(label が2字までなら印の中に label、3字以上なら行の左の見出しの列)・側の間の山形・対の間の罫線を足し、dark・light も側の間の山形・対の間の罫線を持ち(#179)、印は label が2字までのときだけ(印の中に label。3字以上は subject の頭に太字)。組み方は同梱のテンプレート(dark・light)が持ち、
     対ごとに2つの側の行をそろえる。側の幅は中身で割り(全ての側の形で同じ計算)、並べた後に図の側の余りをもう片側へ回す(`layoutPairs`。回せない余りは側ごとの spare-width)。はみ出しは対ごと(印 `measurePairRows`)。組み方を
     持たないテンプレートは `columns` で組んで `component-fallback`。`docs/layers.md` の8.1・8.3
   - `topics.go` = 印つきの塊の並び(`topics`、#119)。2つ目の標準でない型(Schema は
