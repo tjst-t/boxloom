@@ -1545,7 +1545,7 @@
       "number": 35,
       "kind": "task",
       "title": "公開前に履歴全体で固有名を検査する",
-      "status": "ready",
+      "status": "done",
       "parent": "oss-release-prep",
       "dependsOn": [
         "vision-doc",
@@ -1557,12 +1557,12 @@
       "labels": [],
       "body": "全コミット・全ブランチ(backlog のブランチを含む)・画像の文字を見る。公開そのものは人が決める。\n\n## 済んだこと(2026-11-26)\n- `tools/check_terms.py --history --require`(git log -p --all の文字と差分・履歴の全 PPTX の中)で、5語・当たり0件。語の一覧はリポジトリの外の一時ファイルから環境変数で渡した。\n\n## 残り\n- 履歴の PNG の文字(62個。examples/ir/images 7・examples/md/images 3・verification-screenshots 48)。OCR(tesseract-ocr・tesseract-ocr-jpn)を入れようとしたが、コンテナへの導入が権限で止められた。人が導入を許すか、別の方法で読むかを決めてから続ける。",
       "doneWhen": "git log -p --all と PPTX・PNG の中の文字に当たりが0件であることを記録した",
-      "resolution": null,
+      "resolution": "2026-11-26:check_terms.py --history --require(git log -p --all・履歴の全 PPTX)で5語・当たり0件。履歴の PNG 62個は tesseract(jpn+eng)で OCR し、語そのものと空白・ゆれを許す形(type v・N T T・全角など)でも当たり0件。語の一覧と取り出した画像・OCR の文はリポジトリの外の一時ファイルで扱い、終えて消した。OCR は小さな字を読み落とすことがあるので、完全な保証ではない。",
       "refs": [],
       "threads": [],
       "createdAt": "2026-11-11T02:02:59.118Z",
-      "updatedAt": "2026-11-26T11:32:33.174Z",
-      "closedAt": null,
+      "updatedAt": "2026-11-26T11:50:43.397Z",
+      "closedAt": "2026-11-26T11:50:43.397Z",
       "extra": {}
     },
     {
